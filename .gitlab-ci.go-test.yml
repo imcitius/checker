@@ -13,10 +13,8 @@ go lint:
   <<: *go_lint
   extends:
     - .docker_europe_tags
-    - .prepare_go
 
 go tests:
   <<: *go_tests
   extends:
     - .docker_europe_tags
-    - .prepare_go
