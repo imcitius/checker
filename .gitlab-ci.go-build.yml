@@ -8,11 +8,8 @@ variables:
   -o build/${BINARY_NAME}
 
 .build_inject_cmd: &build_inject_cmd |
-  go build -v -i -x \
-  --ldflags "-extldflags '-static'" \
-  --ldflags "-X main.Version=${CI_COMMIT_REF_NAME}" \
-  --ldflags "-X main.VersionSHA=${CI_COMMIT_SHORT_SHA}" \
-  --ldflags "-X main.VersionBuild=${CI_JOB_ID}" \
+  go build -v -i -x --ldflags \
+  "-extldflags '-static' -X main.Version=${CI_COMMIT_REF_NAME} -X main.VersionSHA=${CI_COMMIT_SHORT_SHA} -X main.VersionBuild=${CI_JOB_ID}" \
   -o build/${BINARY_NAME}
 
 .go_build_linux: &go_build_linux
