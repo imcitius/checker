@@ -2,8 +2,6 @@ variables:
   BINARY_NAME: ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}
 
 .go_build_linux: &go_build_linux
-  extends:
-    - .prepare_go
   stage: build
   variables:
     GOOS: "linux"
@@ -18,3 +16,4 @@ go linux:
   <<: *go_build_linux
   extends:
     - .docker_europe_tags
+    - .prepare_go
