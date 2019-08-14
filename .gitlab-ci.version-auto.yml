@@ -1,6 +1,7 @@
 .auto_version: &auto_version
   extends:
     - .create_version
+    - .docker_europe_tags
   only:
     refs:
       - master

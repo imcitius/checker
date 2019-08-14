@@ -2,6 +2,7 @@
   extends:
     - .create_version
     - .master_filter
+    - .docker_europe_tags
   when: manual
 
 release patch:

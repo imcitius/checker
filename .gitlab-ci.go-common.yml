@@ -26,5 +26,6 @@ update modules:
       - go.sum
   extends:
     - .cache_modules
+    - .docker_europe_tags
   cache:
     policy: push
