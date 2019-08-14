@@ -1,3 +1,6 @@
+include:
+  - local: .gitlab-ci.go-common.yml
+
 .go_lint: &go_lint
   extends:
     - prepare_go
