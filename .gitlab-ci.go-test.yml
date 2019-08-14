@@ -1,6 +1,6 @@
 include:
-  - local: ./.gitlab-ci.common.yml
-  - local: ./.gitlab-ci.go-common.yml
+  - local: .gitlab-ci.common.yml
+  - local: .gitlab-ci.go-common.yml
 
 .go_lint: &go_lint
   extends:
