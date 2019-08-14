@@ -11,7 +11,7 @@
     "gitlab_project": env.CI_PROJECT_URL,
     "commit_sha": env.CI_COMMIT_SHA,
     "commit_message": env.CI_COMMIT_MESSAGE,
-    "fail": "false",
+    "fail": "true",
     "run_time": ""
   }
 }
