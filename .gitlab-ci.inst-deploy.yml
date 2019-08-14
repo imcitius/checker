@@ -41,7 +41,7 @@ stop dev instance:
     action: stop
   extends:
     - .docker_europe_tags
-    - .dev_filter
+    - .dev_mr_filter
 
 review instance:
   <<: *deploy

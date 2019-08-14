@@ -14,9 +14,11 @@ go lint:
   extends:
     - .docker_europe_tags
     - .prepare_go
+    - .all_filter
 
 go tests:
   <<: *go_tests
   extends:
     - .docker_europe_tags
     - .prepare_go
+    - .all_filter

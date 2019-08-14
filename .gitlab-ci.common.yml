@@ -4,6 +4,21 @@
     - docker
     - europe
 
+.all_filter:
+  only:
+    - merge_requests
+    - branches
+    - tags
+
+.dev_mr_filter:
+  only:
+    - branches
+    - merge_requests
+  except:
+    - master
+    - tags
+
+
 .dev_filter:
   only:
     - branches
