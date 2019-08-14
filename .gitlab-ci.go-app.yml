@@ -15,8 +15,7 @@ include:
   - local: .gitlab-ci.deploy-dev.yml
   - local: .gitlab-ci.deploy-stage.yml
   - local: .gitlab-ci.deploy-prod.yml
-  - project: "ci-library/common"
-    file: ".gitlab-ci.version.yml"
+  - local: .gitlab-ci.version-common.yml
 
 retrive artifact:
   stage: package
