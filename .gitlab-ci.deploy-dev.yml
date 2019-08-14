@@ -2,6 +2,8 @@ dev instance:
   environment:
     name: dev/${CI_COMMIT_REF_NAME}
     on_stop: stop dev instance
+  before_script:
+    - env
   extends:
     - .deploy
     - .docker_europe_tags
