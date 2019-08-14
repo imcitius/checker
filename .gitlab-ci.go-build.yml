@@ -1,19 +1,53 @@
 variables:
   BINARY_NAME: ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}
+  INJECT_VERSION: "false"
+
+.build_cmd: &build_cmd |
+  go build -v -i -x \
+  --ldflags "-extldflags '-static'" \
+  -o build/${BINARY_NAME}
+
+.build_inject_cmd: &build_inject_cmd |
+  go build -v -i -x --ldflags \
+  "-extldflags '-static' -X main.Version=${CI_COMMIT_REF_NAME} -X main.VersionSHA=${CI_COMMIT_SHORT_SHA} -X main.VersionBuild=${CI_JOB_ID}" \
+  -o build/${BINARY_NAME}
 
 .go_build_linux: &go_build_linux
   stage: build
   variables:
     GOOS: "linux"
   script:
-    - go build -v -i -x --ldflags '-extldflags "-static"' -o build/${BINARY_NAME}
+    - *build_cmd
   artifacts:
     expire_in: 30m
     paths:
       - build/${BINARY_NAME}
+  only:
+    variables:
+      - $INJECT_VERSION != "true"
+
+.go_build_inject_linux: &go_build_inject_linux
+  stage: build
+  variables:
+    GOOS: "linux"
+  script:
+    - *build_inject_cmd
+  artifacts:
+    expire_in: 30m
+    paths:
+      - build/${BINARY_NAME}
+  only:
+    variables:
+      - $INJECT_VERSION == "true"
 
 go linux:
   <<: *go_build_linux
+  extends:
+    - .docker_europe_tags
+    - .go_image
+
+go inject linux:
+  <<: *go_build_inject_linux
   extends:
     - .docker_europe_tags
     - .go_image

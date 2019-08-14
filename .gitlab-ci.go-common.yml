@@ -29,4 +29,4 @@ update modules:
     - .cache_modules
     - .docker_europe_tags
   cache:
-    policy: push
+    policy: pull-push

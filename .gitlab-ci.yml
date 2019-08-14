@@ -1,5 +1,6 @@
 variables:
   GO_VERSION: "1.12.2" # override
+  INJECT_VERSION: "true"
 
 include:
   - local: ".gitlab-ci.go-app.yml"
