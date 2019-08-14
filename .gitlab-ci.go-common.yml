@@ -1,0 +1,13 @@
+variables:
+  GOOS: "linux"
+  GOARCH: "amd64"
+  CGO_ENABLED: 0
+  GO_VERSION: "latest"
+
+.prepare_go:
+  image: golang:${GO_VERSION}
+  before_script:
+    - go get -v -d ./...
+  cache:
+    paths:
+      - /go/pkg/mod

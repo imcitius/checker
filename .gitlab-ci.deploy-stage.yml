@@ -1,0 +1,8 @@
+stage instance:
+  environment:
+    name: stage/${CI_COMMIT_SHA[:8]}
+    on_stop: stop dev instance
+  extends:
+    - .deploy
+    - .docker_europe_tags
+    - .master_filter

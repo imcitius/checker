@@ -1,0 +1,19 @@
+variables:
+  BINARY_NAME: ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}
+
+.go_build_linux: &go_build_linux
+  stage: build
+  variables:
+    GOOS: "linux"
+  script:
+    - go build -v -i -x --ldflags '-extldflags "-static"' -o build/${BINARY_NAME}
+  artifacts:
+    expire_in: 30m
+    paths:
+      - build/${BINARY_NAME}
+
+go linux:
+  <<: *go_build_linux
+  extends:
+    - .docker_europe_tags
+    - .prepare_go

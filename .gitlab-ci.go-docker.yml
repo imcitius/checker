@@ -1,0 +1,21 @@
+variables:
+  REGISTRY_URL: "harbor-ks.jgit.me/library"
+  REGISTRY_USER: gitlab-uploader
+  REGISTRY_IMAGE: ${REGISTRY_URL}/${CI_PROJECT_PATH_SLUG}
+  REGISTRY_TAG: ${CI_COMMIT_REF_NAME}
+  PACKER_FILE: "scripts/packer.json"
+  HARBOR_SECRET: "secret/harbor/${REGISTRY_USER}"
+  SSH_SECRET: "secret/ansible"
+
+.pack_docker_image: &pack_docker_image
+  stage: package
+  before_script:
+    - export REGISTRY_PASSWORD=`vault read -field=token ${HARBOR_SECRET}`
+    - vault read -field=value ${SSH_SECRET} > id_git
+  script:
+    - packer build ${PACKER_FILE}
+
+docker image:
+  <<: *pack_docker_image
+  extends:
+    - .docker_europe_tags

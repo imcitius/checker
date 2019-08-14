@@ -1,0 +1,43 @@
+.docker_europe_tags:
+  tags:
+    - linux
+    - docker
+    - europe
+
+.all_filter:
+  only:
+    - merge_requests
+    - branches
+    - tags
+
+.dev_mr_filter:
+  only:
+    - branches
+    - merge_requests
+  except:
+    - master
+    - tags
+
+
+.dev_filter:
+  only:
+    - branches
+  except:
+    - master
+    - tags
+
+.master_filter:
+  only:
+    - master
+  except:
+    - tags
+
+.tag_filter:
+  only:
+    - tags
+  except:
+    - branches
+
+.mr_filter:
+  only:
+    - merge_requests

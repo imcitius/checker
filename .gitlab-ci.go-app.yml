@@ -1,0 +1,26 @@
+stages:
+  - test
+  - build
+  - package
+  - deploy
+  - version
+
+include:
+  - local: .gitlab-ci.common.yml
+  - local: .gitlab-ci.go-common.yml
+  - local: .gitlab-ci.go-test.yml
+  - local: .gitlab-ci.go-build.yml
+  - local: .gitlab-ci.go-docker.yml
+  - local: .gitlab-ci.deploy-common.yml
+  - local: .gitlab-ci.deploy-dev.yml
+  - project: "ci-library/common"
+    file: ".gitlab-ci.version.yml"
+
+retrive artifact:
+  stage: package
+  dependencies:
+    - go linux
+  script:
+    - echo "ok"
+  extends:
+    - .docker_europe_tags
