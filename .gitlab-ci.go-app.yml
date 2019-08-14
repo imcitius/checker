@@ -6,6 +6,9 @@ stages:
   - deploy
   - version
 
+variables:
+  VERSION_PREFIX: "true"
+
 include:
   - local: .gitlab-ci.common.yml
   - local: .gitlab-ci.go-common.yml
