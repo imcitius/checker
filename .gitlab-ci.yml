@@ -1,5 +1,5 @@
-variables:
-  GO_VERSION: "1.12.2"
+#variables:
+#  GO_VERSION: "1.12.2" # override
 
 include:
   - local: .gitlab-ci.go-app.yml
