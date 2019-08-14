@@ -15,4 +15,4 @@ stop stage instance:
   extends:
     - .destroy
     - .docker_europe_tags
-    - .dev_filter
+    - .master_filter
