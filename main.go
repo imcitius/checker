@@ -9,8 +9,13 @@ import (
 	"time"
 )
 
+var Version string
+
 func main() {
 	log.SetHandler(text.New(os.Stdout))
+	if Version != "" {
+		log.Infof("Start v%s", Version)
+	}
 	var timeout time.Duration
 	var timer *time.Timer
 	var ticker = time.NewTicker(time.Second)
