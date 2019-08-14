@@ -3,7 +3,7 @@ variables:
 
 .go_build_linux: &go_build_linux
   extends:
-    - prepare_go
+    - .prepare_go
   stage: build
   variables:
     GOOS: "linux"
@@ -17,4 +17,4 @@ variables:
 go linux:
   <<: *go_build_linux
   extends:
-    - docker_europe_tags
+    - .docker_europe_tags
