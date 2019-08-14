@@ -13,7 +13,7 @@ variables:
 .deploy:
   stage: deploy
   script:
-    - env
+    - jq --version
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json
     - *run_cmd
 

@@ -6,7 +6,7 @@
   "datacenters": [$ENV.INSTANCE_DC],
   "deploy_repository_url": "git::ssh://git@jgit.me/instantiator/guide-deploy",
   "params": {
-    "version": $ENV.CI_COMMIT_TAG,
+    "version": $ENV.CI_COMMIT_REF_NAME,
     "gitlab_project": $ENV.CI_PROJECT_URL
   }
 }
