@@ -12,6 +12,7 @@ stop dev instance:
   environment:
     name: dev/${CI_COMMIT_REF_NAME}
     action: stop
+  allow_failure: true
   extends:
     - .destroy
     - .docker_europe_tags

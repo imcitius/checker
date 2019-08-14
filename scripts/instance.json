@@ -8,9 +8,11 @@
   "params": {
     "image": env.REGISTRY_IMAGE,
     "version": env.CI_COMMIT_REF_NAME,
+    "major_version": env.CI_COMMIT_REF_SLUG | sub("(?<m>[0-9]+)-[0-9]+-[0-9]+"; .m),
     "gitlab_project": env.CI_PROJECT_URL,
     "commit_sha": env.CI_COMMIT_SHA,
     "commit_message": env.CI_COMMIT_MESSAGE,
+    "deploy_by": env.GITLAB_USER_NAME,
     "fail": "false",
     "run_time": ""
   }

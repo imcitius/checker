@@ -8,16 +8,28 @@ variables:
 .run_cmd: &run_cmd |
   curl -sf -X POST ${INST_API_URL}/instances \
   -H "Content-Type: application/json" \
-  -d "@params.json" | jq -r '.'
+  -d "@params.json" > result.json
+
+.check_result: &check_result |
+  if [[ `jq -r '.status' result.json` == "error" ]]; then \
+  jq -r '.message' result.json; \
+  exit 1; \
+  fi
 
 .deploy:
   stage: deploy
   script:
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json
+    - jq -r '.' params.json
     - *run_cmd
+    - *check_result
+    - export INSTANCE_UUID=`jq -r '.payload.uuid' result.json`
+    - echo "Status page - ${INST_UI_URL}/instance/${INSTANCE_UUID}"
 
 .destroy:
   stage: deploy
   when: manual
   script:
-    - curl -sf -X DELETE ${INST_API_URL}/instances/${CI_PROJECT_NAME}-${INSTANCE_NAME} | jq -r '.'
+    - curl -sf -X DELETE ${INST_API_URL}/instances/${CI_PROJECT_NAME}-${INSTANCE_NAME} > result.json
+    - *check_result
+    - echo "Instance destroyed"

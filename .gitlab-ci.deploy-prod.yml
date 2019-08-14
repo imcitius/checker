@@ -1,10 +1,21 @@
 prod instance:
   environment:
     name: release/${CI_COMMIT_REF_NAME}
-    on_stop: stop dev instance
-  variables:
-    INSTANCE_NAME: `echo ${CI_COMMIT_REF_SLUG} | cut -d'-' -f 1,2`
+    on_stop: stop prod instance
+  before_script:
+    - export INSTANCE_NAME=`echo ${CI_COMMIT_REF_SLUG} | cut -d'-' -f 1,2`
   extends:
     - .deploy
+    - .docker_europe_tags
+    - .tag_filter
+
+stop prod instance:
+  when: manual
+  environment:
+    name: release/${CI_COMMIT_REF_NAME}
+    action: stop
+  allow_failure: true
+  extends:
+    - .destroy
     - .docker_europe_tags
     - .tag_filter
