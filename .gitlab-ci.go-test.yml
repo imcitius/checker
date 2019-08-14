@@ -1,0 +1,28 @@
+include:
+  - local: ./.gitlab-ci.common.yml
+  - local: ./.gitlab-ci.go-common.yml
+
+.go_lint: &go_lint
+  extends:
+    - prepare_go
+  stage: test
+  script:
+    - go get -u golang.org/x/lint/golint
+    - golint ./...
+
+.go_tests: &go_tests
+  extends:
+    - prepare_go
+  stage: test
+  script:
+    - go test -cover -v -coverprofile .testCoverage.txt ./...
+
+go lint:
+  <<: *go_lint
+  extends:
+    - docker_europe_tags
+
+go tests:
+  <<: *go_tests
+  extends:
+    - docker_europe_tags

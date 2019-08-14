@@ -1,0 +1,24 @@
+include:
+  - local: ./.gitlab-ci.common.yml
+  - local: ./.gitlab-ci.go-common.yml
+
+variables:
+  BINARY_NAME: ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}
+
+.go_build_linux: &go_build_linux
+  extends:
+    - prepare_go
+  stage: build
+  variables:
+    GOOS: "linux"
+  script:
+    - go build -v -i -x --ldflags '-extldflags "-static"' -o build/${BINARY_NAME}
+  artifacts:
+    expire_in: 1h
+    paths:
+      - build/${BINARY_NAME}
+
+go linux:
+  <<: *go_build_linux
+  extends:
+    - docker_europe_tags

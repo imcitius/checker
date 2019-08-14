@@ -1,0 +1,24 @@
+.docker_europe_tags:
+  tags:
+    - linux
+    - docker
+    - europe
+
+.dev_filter:
+  only:
+    - branches
+  except:
+    - master
+    - tags
+
+.master_filter:
+  only:
+    - master
+  except:
+    - tags
+
+.tag_filter:
+  only:
+    - tags
+  except:
+    - branches
