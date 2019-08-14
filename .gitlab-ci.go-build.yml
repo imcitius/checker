@@ -16,3 +16,4 @@ go linux:
   <<: *go_build_linux
   extends:
     - .docker_europe_tags
+    - .go_image

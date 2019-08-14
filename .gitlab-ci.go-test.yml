@@ -2,6 +2,7 @@
   stage: test
   script:
     - go get -u golang.org/x/lint/golint
+    - whereis golint
     - golint ./...
 
 .go_tests: &go_tests
@@ -13,8 +14,10 @@ go lint:
   <<: *go_lint
   extends:
     - .docker_europe_tags
+    - .go_image
 
 go tests:
   <<: *go_tests
   extends:
     - .docker_europe_tags
+    - .go_image
