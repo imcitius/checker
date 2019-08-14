@@ -11,7 +11,7 @@ variables:
   stage: package
   before_script:
     - export REGISTRY_PASSWORD=`vault read -field=token ${VAULT_SECRET}`
-    - vault read -field=vault ${SSH_SECRET} > id_git
+    - vault read -field=value ${SSH_SECRET} > id_git
   script:
     - packer build ${PACKER_FILE}
 
