@@ -1,0 +1,27 @@
+.auto_version: &auto_version
+  extends:
+    - .create_version
+  only:
+    refs:
+      - master
+    variables:
+      - CI_COMMIT_MESSAGE =~ /##${ACTION}/
+  except:
+    refs:
+      - branches
+      - tags
+
+auto release patch:
+  variables:
+    ACTION: patch
+  <<: *auto_version
+
+auto release feature:
+  variables:
+    ACTION: feature
+  <<: *auto_version
+
+auto release major:
+  variables:
+    ACTION: major
+  <<: *auto_version

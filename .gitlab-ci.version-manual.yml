@@ -1,0 +1,26 @@
+.manual_version: &manual_version
+  extends:
+    - .create_version
+  when: manual
+  only:
+    refs:
+      - master
+  except:
+    refs:
+      - branches
+      - tags
+
+release patch:
+  variables:
+    ACTION: patch
+  <<: *manual_version
+
+release feature:
+  variables:
+    ACTION: feature
+  <<: *manual_version
+
+release major:
+  variables:
+    ACTION: major
+  <<: *manual_version
