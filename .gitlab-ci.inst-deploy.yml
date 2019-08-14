@@ -24,7 +24,6 @@ variables:
 
 dev instance:
   <<: *deploy
-  when: manual
   environment:
     name: dev/${CI_COMMIT_REF_NAME}
     url: ${INST_UI_URL}/${CI_PROJECT_NAME}-${INSTANCE_NAME}
