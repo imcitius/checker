@@ -10,7 +10,7 @@ variables:
 .pack_docker_image: &pack_docker_image
   stage: package
   before_script:
-    - export REGISTRY_PASSWORD=`vault read -field=token ${VAULT_SECRET}`
+    - export REGISTRY_PASSWORD=`vault read -field=token ${HARBOR_SECRET}`
     - vault read -field=value ${SSH_SECRET} > id_git
   script:
     - packer build ${PACKER_FILE}
