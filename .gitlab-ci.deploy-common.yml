@@ -8,7 +8,7 @@ variables:
 .run_cmd: &run_cmd |
   curl -s -X POST ${INST_API_URL}/instances \
   -H "Content-Type: application/json" \
-  -d "@params.json" | jq '.'
+  -d "@params.json" | jq -r '.'
 
 .deploy:
   stage: deploy
@@ -20,4 +20,4 @@ variables:
   stage: deploy
   when: manual
   script:
-    - curl -s -X DELETE ${INST_API_URL}/instances/${CI_PROJECT_NAME}-${INSTANCE_NAME} | jq '.'
+    - curl -s -X DELETE ${INST_API_URL}/instances/${CI_PROJECT_NAME}-${INSTANCE_NAME} | jq -r '.'
