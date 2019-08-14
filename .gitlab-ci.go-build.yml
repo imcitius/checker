@@ -1,7 +1,3 @@
-include:
-  - local: .gitlab-ci.common.yml
-  - local: .gitlab-ci.go-common.yml
-
 variables:
   BINARY_NAME: ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}
 
