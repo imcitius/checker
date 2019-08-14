@@ -10,6 +10,7 @@ variables:
 .cache_modules:
   cache:
     policy: pull
+    untracked: true
     paths:
       - /go/pkg/mod
       - /go/bin/golint

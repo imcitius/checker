@@ -5,8 +5,7 @@
   only:
     refs:
       - master
-    variables:
-      - $CI_COMMIT_MESSAGE =~ /##${ACTION}/
+
   except:
     refs:
       - tags
@@ -15,13 +14,22 @@ auto release patch:
   variables:
     ACTION: patch
   <<: *auto_version
+  only:
+    variables:
+      - $CI_COMMIT_MESSAGE =~ /##patch/
 
 auto release feature:
   variables:
     ACTION: feature
   <<: *auto_version
+  only:
+    variables:
+      - $CI_COMMIT_MESSAGE =~ /##feature/
 
 auto release major:
   variables:
     ACTION: major
   <<: *auto_version
+  only:
+    variables:
+      - $CI_COMMIT_MESSAGE =~ /##major/
