@@ -7,7 +7,6 @@
       - master
   except:
     refs:
-      - branches
       - tags
 
 release patch:
