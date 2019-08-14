@@ -76,6 +76,20 @@ func main() {
 			ticker.Stop()
 			os.Exit(2)
 		}
-
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println("working")
+				break
+			case <-stopSignal:
+				fmt.Println("graceful exit")
+				stopCh <- true
+				break
+			case <-stopCh:
+				ticker.Stop()
+				fmt.Println("exit")
+				os.Exit(0)
+			}
+		}
 	}
 }
