@@ -20,6 +20,7 @@ variables:
   stage: deploy
   script:
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json
+    - jq -r '.' params.json
     - *run_cmd
     - *check_result
     - export INSTANCE_UUID=`jq -r '.payload.uuid' result.json`
