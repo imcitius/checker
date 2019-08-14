@@ -6,7 +6,7 @@ variables:
   variables:
     GOOS: "linux"
   script:
-    - go build -v -i -x --ldflags '-extldflags "-static"' -o build/${BINARY_NAME}
+    - go build -v -i -x --ldflags "-extldflags '-static' -X main.Version=${CI_COMMIT_REF_NAME}" -o build/${BINARY_NAME}
   artifacts:
     expire_in: 30m
     paths:
