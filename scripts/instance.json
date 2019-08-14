@@ -4,7 +4,7 @@
   "auto_deploy": true,
   "overwrite": true,
   "datacenters": [env.INSTANCE_DC],
-  "deploy_repository_url": "git::ssh://git@jgit.me/instantiator/guide-deploy",
+  "deploy_repository_url": "git::ssh://git@jgit.me/instantiator/tests/guide-deploy",
   "params": {
     "version": env.CI_COMMIT_REF_NAME,
     "gitlab_project": env.CI_PROJECT_URL
