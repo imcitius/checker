@@ -27,9 +27,11 @@
 
 .master_filter:
   only:
-    - master
+    refs:
+      - master
   except:
-    - tags
+    refs:
+      - tags
 
 .tag_filter:
   only:
