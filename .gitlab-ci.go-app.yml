@@ -1,3 +1,6 @@
+variables:
+  VERSION_PREFIX: "true"
+
 stages:
   - cache
   - test
@@ -5,9 +8,6 @@ stages:
   - package
   - deploy
   - version
-
-variables:
-  VERSION_PREFIX: "true"
 
 include:
   - local: .gitlab-ci.common.yml
@@ -21,7 +21,7 @@ include:
   - local: .gitlab-ci.deploy-prod.yml
   - local: .gitlab-ci.version-common.yml
   - local: .gitlab-ci.version-auto.yml
-#  - local: .gitlab-ci.version-manual.yml
+  - local: .gitlab-ci.version-manual.yml
 
 retrive artifact:
   stage: package
