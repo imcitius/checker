@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"github.com/apex/log"
+	"github.com/apex/log/handlers/text"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,6 +10,7 @@ import (
 )
 
 func main() {
+	log.SetHandler(text.New(os.Stdout))
 	var timeout time.Duration
 	var timer *time.Timer
 	var ticker = time.NewTicker(time.Second)
@@ -43,14 +45,14 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				fmt.Println("working")
+				log.Debug("working")
 				break
 			case <-timer.C:
-				fmt.Println("time to exit")
+				log.Info("time to exit")
 				stopCh <- true
 				break
 			case <-stopSignal:
-				fmt.Println("graceful exit")
+				log.Info("graceful exit")
 				stopCh <- true
 				break
 			case <-stopCh:
@@ -60,7 +62,7 @@ func main() {
 				} else {
 					status = "success"
 				}
-				fmt.Printf("exit with %s\n", status)
+				log.Infof("exit with %s\n", status)
 				ticker.Stop()
 				timer.Stop()
 				if fail {
@@ -78,15 +80,15 @@ func main() {
 		for {
 			select {
 			case t := <-ticker.C:
-				fmt.Printf("working %d", t.Unix())
+				log.Debugf("working %d\n", t.Unix())
 				break
 			case <-stopSignal:
-				fmt.Println("graceful exit")
+				log.Info("graceful exit")
 				stopCh <- true
 				break
 			case <-stopCh:
 				ticker.Stop()
-				fmt.Println("exit")
+				log.Info("exit")
 				os.Exit(0)
 			}
 		}

@@ -12,6 +12,7 @@ variables:
     policy: pull
     paths:
       - /go/pkg/mod
+      - /go/bin/golint
 
 update modules:
   stage: cache
@@ -21,6 +22,7 @@ update modules:
   only:
     changes:
       - go.mod
+      - go.sum
   extends:
     - .go_image
     - .cache_modules
