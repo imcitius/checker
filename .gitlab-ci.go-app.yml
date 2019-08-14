@@ -16,6 +16,8 @@ include:
   - local: .gitlab-ci.deploy-stage.yml
   - local: .gitlab-ci.deploy-prod.yml
   - local: .gitlab-ci.version-common.yml
+  - local: .gitlab-ci.version-auto.yml
+  - local: .gitlab-ci.version-manual.yml
 
 retrive artifact:
   stage: package

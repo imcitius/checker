@@ -1,13 +1,8 @@
 .manual_version: &manual_version
   extends:
     - .create_version
+    - .master_filter
   when: manual
-  only:
-    refs:
-      - master
-  except:
-    refs:
-      - tags
 
 release patch:
   variables:

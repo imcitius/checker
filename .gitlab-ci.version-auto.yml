@@ -5,7 +5,7 @@
     refs:
       - master
     variables:
-      - CI_COMMIT_MESSAGE =~ /##${ACTION}/
+      - $CI_COMMIT_MESSAGE =~ /##${ACTION}/
   except:
     refs:
       - tags
