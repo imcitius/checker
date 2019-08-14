@@ -22,3 +22,7 @@
     - tags
   except:
     - branches
+
+.mr_filter:
+  only:
+    - merge_requests

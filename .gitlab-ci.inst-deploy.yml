@@ -1,0 +1,55 @@
+variables:
+  INSTANCE_DC: inst-dev
+  INST_API_URL: "http://inst-api-test.service.${INSTANCE_DC}.consul"
+  INST_UI_URL: "http://inst-ui-test.service.${INSTANCE_DC}.consul"
+  INSTANCE_NAME: $CI_COMMIT_REF_SLUG
+  REQUEST_FILE: "scripts/instance.json"
+
+.run_cmd: &run_cmd |
+  curl -X POST ${INST_API_URL}/instances \
+  -H "Content-Type: application/json" \
+  -d "@params.json"
+
+.deploy: &deploy
+  stage: deploy
+  script:
+    - echo "{}" | jq -f ${REQUEST_FILE} > params.json
+    - *run_cmd
+
+.destroy: &destroy
+  stage: deploy
+  when: manual
+  script:
+    - curl -X DELETE ${INST_API_URL}/instances/${CI_PROJECT_NAME}-${INSTANCE_NAME}
+
+dev instance:
+  <<: *deploy
+  when: manual
+  environment:
+    name: dev/${CI_COMMIT_REF_NAME}
+    url: ${INST_UI_URL}/${CI_PROJECT_NAME}-${INSTANCE_NAME}
+    on_stop: stop dev instance
+  extends:
+    - .docker_europe_tags
+    - .dev_filter
+
+stop dev instance:
+  <<: *destroy
+  when: manual
+  environment:
+    name: dev/${CI_COMMIT_REF_NAME}
+    action: stop
+  extends:
+    - .docker_europe_tags
+    - .dev_filter
+
+review instance:
+  <<: *deploy
+  environment:
+    name: dev/${CI_COMMIT_REF_NAME}
+    on_stop: stop dev instance
+    url: ${INST_UI_URL}/${CI_PROJECT_NAME}-${INSTANCE_NAME}
+  extends:
+    - .docker_europe_tags
+    - .mr_filter
+

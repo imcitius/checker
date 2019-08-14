@@ -1,6 +1,7 @@
 stages:
   - test
   - build
+  - package
   - deploy
   - version
 
@@ -9,3 +10,6 @@ include:
   - local: .gitlab-ci.go-common.yml
   - local: .gitlab-ci.go-test.yml
   - local: .gitlab-ci.go-build.yml
+  - local: .gitlab-ci.go-docker.yml
+  - project: "ci-library/common"
+    file: ".gitlab-ci.version.yml"

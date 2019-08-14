@@ -1,0 +1,12 @@
+{
+  "name": $ENV.INSTANCE_NAME,
+  "project_name": $ENV.CI_PROJECT_NAME,
+  "auto_deploy": true,
+  "overwrite": true,
+  "datacenters": [$ENV.INSTANCE_DC],
+  "deploy_repository_url": "git::ssh://git@jgit.me/instantiator/guide-deploy",
+  "params": {
+    "version": $ENV.CI_COMMIT_TAG,
+    "gitlab_project": $ENV.CI_PROJECT_URL
+  }
+}
