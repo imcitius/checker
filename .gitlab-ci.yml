@@ -3,4 +3,5 @@ variables:
 
 include:
   - project: "instantiator/tests/guide-app"
+    ref: test
     file: ".gitlab-ci.go-app.yml"
