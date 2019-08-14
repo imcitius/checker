@@ -22,6 +22,10 @@
   ],
   "provisioners": [
     {
+      "type": "shell",
+      "inline": ["mkdir -p /app"]
+    },
+    {
       "type": "file",
       "source": "build/{{user `binary_name`}}",
       "destination": "/app/{{user `binary_name`}}"
