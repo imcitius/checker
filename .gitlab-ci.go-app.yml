@@ -14,10 +14,3 @@ include:
   - local: .gitlab-ci.inst-deploy.yml
   - project: "ci-library/common"
     file: ".gitlab-ci.version.yml"
-
-retrive artifact:
-  stage: package
-  dependencies:
-    - go linux
-  extends:
-    - .docker_europe_tag
