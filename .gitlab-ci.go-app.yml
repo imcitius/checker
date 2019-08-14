@@ -13,6 +13,8 @@ include:
   - local: .gitlab-ci.go-docker.yml
   - local: .gitlab-ci.deploy-common.yml
   - local: .gitlab-ci.deploy-dev.yml
+  - local: .gitlab-ci.deploy-stage.yml
+  - local: .gitlab-ci.deploy-prod.yml
   - project: "ci-library/common"
     file: ".gitlab-ci.version.yml"
 
