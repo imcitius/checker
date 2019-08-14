@@ -2,6 +2,4 @@ variables:
   GO_VERSION: "1.12.2" # override
 
 include:
-  - project: "instantiator/tests/guide-app"
-    ref: test
-    file: ".gitlab-ci.go-app.yml"
+  - local: ".gitlab-ci.go-app.yml"
