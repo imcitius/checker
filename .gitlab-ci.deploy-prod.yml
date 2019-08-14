@@ -14,6 +14,7 @@ stop prod instance:
   environment:
     name: release/${CI_COMMIT_REF_NAME}
     action: stop
+  allow_failure: true
   extends:
     - .destroy
     - .docker_europe_tags

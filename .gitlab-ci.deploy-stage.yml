@@ -12,6 +12,7 @@ stop stage instance:
   environment:
     name: stage
     action: stop
+  allow_failure: true
   extends:
     - .destroy
     - .docker_europe_tags
