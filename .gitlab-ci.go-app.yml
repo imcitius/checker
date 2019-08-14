@@ -11,5 +11,6 @@ include:
   - local: .gitlab-ci.go-test.yml
   - local: .gitlab-ci.go-build.yml
   - local: .gitlab-ci.go-docker.yml
+  - local: .gitlab-ci.inst-deploy.yml
   - project: "ci-library/common"
     file: ".gitlab-ci.version.yml"
