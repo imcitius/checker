@@ -19,4 +19,3 @@ docker image:
   <<: *pack_docker_image
   extends:
     - .docker_europe_tags
-    - .all_filter

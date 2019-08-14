@@ -17,4 +17,3 @@ go linux:
   extends:
     - .docker_europe_tags
     - .prepare_go
-    - .all_filter

@@ -41,15 +41,4 @@ stop dev instance:
     action: stop
   extends:
     - .docker_europe_tags
-    - .dev_mr_filter
-
-review instance:
-  <<: *deploy
-  environment:
-    name: dev/${CI_COMMIT_REF_NAME}
-    on_stop: stop dev instance
-    url: ${INST_UI_URL}/${CI_PROJECT_NAME}-${INSTANCE_NAME}
-  extends:
-    - .docker_europe_tags
-    - .mr_filter
-
+    - .dev_filter
