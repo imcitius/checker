@@ -23,7 +23,7 @@ variables:
     - *run_cmd
     - *check_result
     - export INSTANCE_UUID=`jq -r '.payload.uuid' result.json`
-    - echo "Status page: ${INST_UI_URL}/instance/${INSTANCE_UUID}"
+    - echo "Status page - ${INST_UI_URL}/instance/${INSTANCE_UUID}"
 
 .destroy:
   stage: deploy
