@@ -72,11 +72,10 @@ func main() {
 			}
 		}
 	} else {
-		ticker.Stop()
 		if fail {
+			ticker.Stop()
 			os.Exit(2)
-		} else {
-			os.Exit(0)
 		}
+
 	}
 }
