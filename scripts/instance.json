@@ -8,7 +8,7 @@
   "params": {
     "image": env.REGISTRY_IMAGE,
     "version": env.CI_COMMIT_REF_NAME,
-    "major_version": env.CI_COMMIT_REF_SLUG | split("-") as $major | $major,
+    "major_version": env.CI_COMMIT_REF_SLUG | split("-") as $major | $major[0],
     "gitlab_project": env.CI_PROJECT_URL,
     "commit_sha": env.CI_COMMIT_SHA,
     "commit_message": env.CI_COMMIT_MESSAGE,
