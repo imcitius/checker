@@ -77,8 +77,8 @@ func main() {
 		}
 		for {
 			select {
-			case <-ticker.C:
-				fmt.Println("working")
+			case t := <-ticker.C:
+				fmt.Printf("working %d", t.Unix())
 				break
 			case <-stopSignal:
 				fmt.Println("graceful exit")
