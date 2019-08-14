@@ -25,8 +25,7 @@ func main() {
 		useTimer = true
 		timeout, err = time.ParseDuration(e)
 		if err != nil {
-			fmt.Println("Wrong value in GUIDE_RUN_TIME")
-			os.Exit(1)
+			useTimer = false
 		}
 	}
 
