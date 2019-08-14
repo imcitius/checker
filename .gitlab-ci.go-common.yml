@@ -4,7 +4,7 @@ variables:
   CGO_ENABLED: 0
   GO_VERSION: "latest"
 
-.go_image:
+.go_image: &go_image
   image: golang:${GO_VERSION}
 
 .cache_modules:
@@ -15,6 +15,7 @@ variables:
       - /go/bin/golint
 
 update modules:
+  <<: *go_image
   stage: cache
   script:
     - go get -v -d ./...
@@ -24,7 +25,6 @@ update modules:
       - go.mod
       - go.sum
   extends:
-    - .go_image
     - .cache_modules
   cache:
     policy: push
