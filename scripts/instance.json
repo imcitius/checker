@@ -1,12 +1,12 @@
 {
-  "name": $ENV.INSTANCE_NAME,
-  "project_name": $ENV.CI_PROJECT_NAME,
+  "name": env.INSTANCE_NAME,
+  "project_name": env.CI_PROJECT_NAME,
   "auto_deploy": true,
   "overwrite": true,
-  "datacenters": [$ENV.INSTANCE_DC],
+  "datacenters": [env.INSTANCE_DC],
   "deploy_repository_url": "git::ssh://git@jgit.me/instantiator/guide-deploy",
   "params": {
-    "version": $ENV.CI_COMMIT_REF_NAME,
-    "gitlab_project": $ENV.CI_PROJECT_URL
+    "version": env.CI_COMMIT_REF_NAME,
+    "gitlab_project": env.CI_PROJECT_URL
   }
 }
