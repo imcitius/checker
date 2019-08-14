@@ -1,0 +1,19 @@
+dev instance:
+  environment:
+    name: dev/${CI_COMMIT_REF_NAME}
+    url: ${INST_UI_URL}/${CI_PROJECT_NAME}-${INSTANCE_NAME}
+    on_stop: stop dev instance
+  extends:
+    - .deploy
+    - .docker_europe_tags
+    - .dev_filter
+
+stop dev instance:
+  when: manual
+  environment:
+    name: dev/${CI_COMMIT_REF_NAME}
+    action: stop
+  extends:
+    - .destroy
+    - .docker_europe_tags
+    - .dev_filter

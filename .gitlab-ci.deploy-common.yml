@@ -10,34 +10,14 @@ variables:
   -H "Content-Type: application/json" \
   -d "@params.json"
 
-.deploy: &deploy
+.deploy:
   stage: deploy
   script:
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json
     - *run_cmd
 
-.destroy: &destroy
+.destroy:
   stage: deploy
   when: manual
   script:
     - curl -X DELETE ${INST_API_URL}/instances/${CI_PROJECT_NAME}-${INSTANCE_NAME}
-
-dev instance:
-  <<: *deploy
-  environment:
-    name: dev/${CI_COMMIT_REF_NAME}
-    url: ${INST_UI_URL}/${CI_PROJECT_NAME}-${INSTANCE_NAME}
-    on_stop: stop dev instance
-  extends:
-    - .docker_europe_tags
-    - .dev_filter
-
-stop dev instance:
-  <<: *destroy
-  when: manual
-  environment:
-    name: dev/${CI_COMMIT_REF_NAME}
-    action: stop
-  extends:
-    - .docker_europe_tags
-    - .dev_filter
