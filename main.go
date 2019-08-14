@@ -9,10 +9,12 @@ import (
 )
 
 var Version string
+var VersionSHA string
+var VersionBuild string
 
 func main() {
-	if Version != "" {
-		fmt.Printf("Start v%s\n", Version)
+	if Version != "" && VersionSHA != "" && VersionBuild != "" {
+		fmt.Printf("Start v%s (commit: %s; build: %s)\n", Version, VersionSHA, VersionBuild)
 	}
 	var timeout time.Duration
 	var timer *time.Timer
