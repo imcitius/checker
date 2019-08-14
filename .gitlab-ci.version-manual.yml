@@ -12,7 +12,7 @@ release patch:
 
 release feature:
   variables:
-    ACTION: feature
+    ACTION: minor
   <<: *manual_version
 
 release major:

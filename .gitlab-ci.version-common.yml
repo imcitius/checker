@@ -6,4 +6,4 @@ variables:
   stage: version
   script:
     - export URL="${VERSIONING_URL}/push/?project=${CI_PROJECT_ID}&ref=${CI_COMMIT_SHA}&action=${ACTION}&prefix=${VERSION_PREFIX}"
-    - curl -s -X POST $URL
+    - curl -s -f -X POST $URL

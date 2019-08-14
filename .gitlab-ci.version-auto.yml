@@ -20,7 +20,7 @@ auto release patch:
 
 auto release feature:
   variables:
-    ACTION: feature
+    ACTION: minor
   <<: *auto_version
   only:
     variables:
