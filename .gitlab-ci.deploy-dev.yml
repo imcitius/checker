@@ -1,7 +1,6 @@
 dev instance:
   environment:
     name: dev/${CI_COMMIT_REF_NAME}
-    url: ${INST_UI_URL}/${CI_PROJECT_NAME}-${INSTANCE_NAME}
     on_stop: stop dev instance
   extends:
     - .deploy
