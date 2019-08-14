@@ -11,6 +11,7 @@
     {
       "type": "docker",
       "image": "alpine",
+      "run_command": ["-d", "-i", "-t", "{{.Image}}", "/bin/sh"],
       "commit": "true",
       "privileged": "false",
       "changes": [
