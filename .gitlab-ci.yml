@@ -5,5 +5,5 @@ stages:
   - version
 
 include:
-  - local: "./.gitlab-ci.go-test.yml"
-  - local: "./.gitlab-ci.go-build.yml"
+  - local: ".gitlab-ci.go-test.yml"
+  - local: ".gitlab-ci.go-build.yml"
