@@ -7,4 +7,4 @@ variables:
 
 include:
   - project: "ci-library/go"
-    file: ".gitlab-ci.go-app.yml"
+    file: "go-app.yml"
