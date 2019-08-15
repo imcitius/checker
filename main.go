@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 var Version string
@@ -16,15 +15,15 @@ var VersionBuild string
 
 func main() {
 	if Version != "" && VersionSHA != "" && VersionBuild != "" {
-		fmt.Printf("Start v%s (commit: %s; build: %s)\n", Version, VersionSHA, VersionBuild)
+		fmt.Printf("Start %s (commit: %s; build: %s)\n", Version, VersionSHA, VersionBuild)
 	} else {
 		fmt.Println("Start dev")
 	}
-	var timeout time.Duration
-	var timer *time.Timer
-	var ticker = time.NewTicker(time.Second * 30)
+	//var timeout time.Duration
+	//var timer *time.Timer
+	//var ticker = time.NewTicker(time.Second * 30)
 
-	var err error
+	/*var err error
 
 	fail := false
 	if e, ok := os.LookupEnv("GUIDE_FAIL"); ok {
@@ -42,7 +41,7 @@ func main() {
 
 	if useTimer {
 		timer = time.NewTimer(timeout)
-	}
+	}*/
 
 	stopSignal := make(chan os.Signal)
 	signal.Notify(stopSignal, syscall.SIGTERM)
@@ -51,16 +50,16 @@ func main() {
 	stopCh := make(chan bool, 1)
 
 	healthcheck := func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(200)
 		_, err := w.Write([]byte(""))
 		if err != nil {
 			fmt.Printf("responce error: %s", err.Error())
 		}
-		w.WriteHeader(200)
 	}
 
 	http.HandleFunc("/healthcheck", healthcheck)
 
-	go func() {
+	/*go func() {
 		if useTimer {
 			for {
 				select {
@@ -111,6 +110,20 @@ func main() {
 					fmt.Println("exit")
 					os.Exit(0)
 				}
+			}
+		}
+	}()*/
+
+	go func() {
+		for {
+			select {
+			case <-stopSignal:
+				fmt.Println("graceful exit")
+				stopCh <- true
+				break
+			case <-stopCh:
+				fmt.Println("exit")
+				os.Exit(0)
 			}
 		}
 	}()
