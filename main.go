@@ -61,59 +61,59 @@ func main() {
 	http.HandleFunc("/healthcheck", healthcheck)
 
 	go func() {
-		log.Fatal(http.ListenAndServe(":80", nil))
-	}()
-
-	if useTimer {
-		for {
-			select {
-			case t := <-ticker.C:
-				fmt.Printf("working %d\n", t.Unix())
-				break
-			case <-timer.C:
-				fmt.Println("time to exit")
-				stopCh <- true
-				break
-			case <-stopSignal:
-				fmt.Println("graceful exit")
-				stopCh <- true
-				break
-			case <-stopCh:
-				var status string
-				if fail {
-					status = "fail"
-				} else {
-					status = "success"
+		if useTimer {
+			for {
+				select {
+				case t := <-ticker.C:
+					fmt.Printf("working %d\n", t.Unix())
+					break
+				case <-timer.C:
+					fmt.Println("time to exit")
+					stopCh <- true
+					break
+				case <-stopSignal:
+					fmt.Println("graceful exit")
+					stopCh <- true
+					break
+				case <-stopCh:
+					var status string
+					if fail {
+						status = "fail"
+					} else {
+						status = "success"
+					}
+					fmt.Printf("exit with %s\n", status)
+					ticker.Stop()
+					timer.Stop()
+					if fail {
+						os.Exit(1)
+					} else {
+						os.Exit(0)
+					}
 				}
-				fmt.Printf("exit with %s\n", status)
+			}
+		} else {
+			if fail {
 				ticker.Stop()
-				timer.Stop()
-				if fail {
-					os.Exit(1)
-				} else {
+				os.Exit(2)
+			}
+			for {
+				select {
+				case t := <-ticker.C:
+					fmt.Printf("working %d\n", t.Unix())
+					break
+				case <-stopSignal:
+					fmt.Println("graceful exit")
+					stopCh <- true
+					break
+				case <-stopCh:
+					ticker.Stop()
+					fmt.Println("exit")
 					os.Exit(0)
 				}
 			}
 		}
-	} else {
-		if fail {
-			ticker.Stop()
-			os.Exit(2)
-		}
-		for {
-			select {
-			case t := <-ticker.C:
-				fmt.Printf("working %d\n", t.Unix())
-				break
-			case <-stopSignal:
-				fmt.Println("graceful exit")
-				stopCh <- true
-				break
-			case <-stopCh:
-				ticker.Stop()
-				fmt.Println("exit")
-				os.Exit(0)
-			}
-		}
-	}
+	}()
+
+	log.Fatal(http.ListenAndServe(":80", nil))
 }
