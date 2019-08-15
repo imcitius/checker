@@ -1,4 +1,5 @@
 variables:
+  #CI_DEBUG_TRACE: "true"
   DEPLOY_REPO_URL: "git::ssh://git@jgit.me/instantiator/tests/guide-deploy"
   GO_VERSION: "1.12.2"
   INJECT_VERSION: "true"
@@ -6,4 +7,4 @@ variables:
 
 include:
   - project: "ci-library/go"
-    file: ".gitlab-ci.go-app.yml"
+    file: "go-app.wait-deploy.yml"
