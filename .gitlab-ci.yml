@@ -7,4 +7,4 @@ variables:
 
 include:
   - project: "ci-library/go"
-    file: "go-app.wait-deploy.yml"
+    file: "go-app.full.yml"
