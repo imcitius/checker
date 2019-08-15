@@ -2,7 +2,7 @@ variables:
   #CI_DEBUG_TRACE: "true"
   DEPLOY_REPO_URL: "git::ssh://git@jgit.me/instantiator/tests/guide-deploy"
   GO_VERSION: "1.12.2"
-  INJECT_VERSION: "true"
+  INJECT_VERSION: "false"
   PACKER_ONLY: "alpine"
 
 include:
