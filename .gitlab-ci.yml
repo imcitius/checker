@@ -1,6 +1,6 @@
 variables:
   #CI_DEBUG_TRACE: "true"
-  DEPLOY_REPO_URL: "git::ssh://git@jgit.me/instantiator/tests/guide-deploy"
+  DEPLOY_REPO_URL: "git::ssh://git@jgit.me/instantiator/tests/guide-deploy//go-app"
   GO_VERSION: "1.12.2"
   INJECT_VERSION: "true"
   PACKER_ONLY: "alpine"
