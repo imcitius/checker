@@ -17,7 +17,7 @@ func main() {
 	if Version != "" && VersionSHA != "" && VersionBuild != "" {
 		fmt.Printf("Start %s (commit: %s; build: %s)\n", Version, VersionSHA, VersionBuild)
 	} else {
-		fmt.Println("Start dev")
+		fmt.Println("Start dev ")
 	}
 	//var timeout time.Duration
 	//var timer *time.Timer
