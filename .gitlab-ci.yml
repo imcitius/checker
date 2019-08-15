@@ -1,6 +1,9 @@
 variables:
-  GO_VERSION: "1.12.2" # override
+  DEPLOY_REPO_URL: "git::ssh://git@jgit.me/instantiator/tests/guide-deploy"
+  GO_VERSION: "1.12.2"
   INJECT_VERSION: "true"
+  PACKER_ONLY: "alpine"
 
 include:
-  - local: ".gitlab-ci.go-app.yml"
+  - project: "ci-library/go"
+    file: ".gitlab-ci.go-app.yml"

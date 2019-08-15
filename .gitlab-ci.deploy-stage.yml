@@ -1,7 +1,0 @@
-stage instance:
-  environment:
-    name: stage
-  extends:
-    - .deploy
-    - .docker_europe_tags
-    - .master_filter
