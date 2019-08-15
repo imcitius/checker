@@ -6,5 +6,5 @@ variables:
   PACKER_ONLY: "alpine"
 
 include:
-  - project: "ci-library/go"
+  - project: "ci-library/ci-collections"
     file: "go-app.full.yml"
