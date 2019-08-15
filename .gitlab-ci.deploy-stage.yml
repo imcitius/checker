@@ -1,19 +1,7 @@
 stage instance:
   environment:
     name: stage
-    on_stop: stop stage instance
   extends:
     - .deploy
-    - .docker_europe_tags
-    - .master_filter
-
-stop stage instance:
-  when: manual
-  environment:
-    name: stage
-    action: stop
-  allow_failure: true
-  extends:
-    - .destroy
     - .docker_europe_tags
     - .master_filter

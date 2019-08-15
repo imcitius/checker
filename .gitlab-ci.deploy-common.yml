@@ -19,6 +19,7 @@ variables:
 .deploy:
   stage: deploy
   script:
+    - echo
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json
     - jq -r '.' params.json
     - *run_cmd
@@ -29,6 +30,8 @@ variables:
 .destroy:
   stage: deploy
   when: manual
+  variables:
+    GIT_STRATEGY: none
   script:
     - curl -sf -X DELETE ${INST_API_URL}/instances/${CI_PROJECT_NAME}-${INSTANCE_NAME} > result.json
     - *check_result
