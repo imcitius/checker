@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -47,6 +49,20 @@ func main() {
 	signal.Notify(stopSignal, syscall.SIGINT)
 
 	stopCh := make(chan bool, 1)
+
+	healthcheck := func(w http.ResponseWriter, _ *http.Request) {
+		_, err := w.Write([]byte(""))
+		if err != nil {
+			fmt.Printf("responce error: %s", err.Error())
+		}
+		w.WriteHeader(200)
+	}
+
+	http.HandleFunc("/healthcheck", healthcheck)
+
+	go func() {
+		log.Fatal(http.ListenAndServe(":80", nil))
+	}()
 
 	if useTimer {
 		for {
