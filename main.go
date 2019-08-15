@@ -22,7 +22,7 @@ func main() {
 	}
 	var timeout time.Duration
 	var timer *time.Timer
-	var ticker = time.NewTicker(time.Second)
+	var ticker = time.NewTicker(time.Second * 30)
 
 	var err error
 
