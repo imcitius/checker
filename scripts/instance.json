@@ -13,5 +13,7 @@
     "commit_sha": env.CI_COMMIT_SHA,
     "commit_message": env.CI_COMMIT_MESSAGE,
     "deploy_by": env.GITLAB_USER_NAME,
+    "fail": "false",
+    "run_time": ""
   }
 }
