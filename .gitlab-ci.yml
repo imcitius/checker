@@ -8,3 +8,4 @@ variables:
 include:
   - project: "ci-library/ci-collections"
     file: "go-app.base.yml"
+
