@@ -1,6 +1,6 @@
 {
   "name": env.INSTANCE_NAME,
-  "project_name": env.CI_PROJECT_NAME,
+  "project_name": env.PROJECT_NAME,
   "auto_deploy": true,
   "overwrite": true,
   "datacenters": [env.INSTANCE_DC],
