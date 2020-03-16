@@ -4,6 +4,7 @@ variables:
   GO_VERSION: "1.14"
   INJECT_VERSION: "true"
   PACKER_ONLY: "centos"
+  BINARY_NAME: "checker"
 
 include:
   - project: "ci-library/ci-collections"
