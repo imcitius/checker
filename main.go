@@ -2,11 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 )
 
-type Config struct {
+type configFile struct {
 	Secs     int    `json:"secs"`
 	BotToken string `json:"bot_token"`
 }
@@ -15,27 +14,31 @@ type urlCheck struct {
 	Channel int    `json:"channel"`
 }
 
-var config Config
+var config configFile
 var probes []urlCheck
 
 func jsonLoad(fileName string, destination interface{}) error {
 	configFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		fmt.Println(err.Error())
 		return err
 	}
 	err = json.Unmarshal(configFile, &destination)
 	if err != nil {
-		fmt.Println(err.Error())
 		return err
 	}
-
 	return nil
 }
 
 func main() {
-	jsonLoad("config.json", &config)
-	jsonLoad("data.json", &probes)
+
+	err := jsonLoad("config.json", &config)
+	if err != nil {
+		panic(err)
+	}
+	err = jsonLoad("data.json", &probes)
+	if err != nil {
+		panic(err)
+	}
 
 	go runListenBot(config.BotToken)
 	urlChecks(config.BotToken)
