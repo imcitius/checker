@@ -3,7 +3,7 @@ variables:
   DEPLOY_REPO_URL: "git::ssh://git@jgit.me/instantiator/tests/guide-deploy//go-app"
   GO_VERSION: "1.12.2"
   INJECT_VERSION: "true"
-  PACKER_ONLY: "alpine"
+  PACKER_ONLY: "centos"
 
 include:
   - project: "ci-library/ci-collections"
