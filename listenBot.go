@@ -18,17 +18,17 @@ func runListenBot(token string) {
 		log.Fatal(err)
 	}
 
-	bot.Handle("/ttt", func(m *tb.Message) {
-		answer := "yes"
+	bot.Handle("/pause", func(m *tb.Message) {
+		config.Mode = "quiet"
+		answer := "Messages ceased"
 		bot.Send(m.Sender, answer)
 	})
 
-	// b.Handle("/test", func(m *tb.Message) {
-	// 	jsonM, _ := json.Marshal(m.Sender)
-	// 	fmt.Println(string(jsonM))
-	// 	answer := "printed"
-	// 	b.Send(m.Sender, answer)
-	// })
+	bot.Handle("/unpause", func(m *tb.Message) {
+		config.Mode = "loud"
+		answer := "Messages reenabled"
+		bot.Send(m.Sender, answer)
+	})
 
 	bot.Start()
 }

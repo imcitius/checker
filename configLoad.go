@@ -8,6 +8,8 @@ import (
 type configFile struct {
 	Secs     int    `json:"secs"`
 	BotToken string `json:"bot_token"`
+	// Messages mode quiet/loud
+	Mode string `json:"mode"`
 }
 type urlCheck struct {
 	URL     string `json:"URL"`
