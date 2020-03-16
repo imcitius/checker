@@ -9,7 +9,7 @@ import (
 
 func runListenBot(token string) {
 
-	b, err := tb.NewBot(tb.Settings{
+	bot, err := tb.NewBot(tb.Settings{
 		Token:  token,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	})
@@ -18,9 +18,9 @@ func runListenBot(token string) {
 		log.Fatal(err)
 	}
 
-	b.Handle("/ttt", func(m *tb.Message) {
+	bot.Handle("/ttt", func(m *tb.Message) {
 		answer := "yes"
-		b.Send(m.Sender, answer)
+		bot.Send(m.Sender, answer)
 	})
 
 	// b.Handle("/test", func(m *tb.Message) {
@@ -30,5 +30,5 @@ func runListenBot(token string) {
 	// 	b.Send(m.Sender, answer)
 	// })
 
-	b.Start()
+	bot.Start()
 }

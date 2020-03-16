@@ -8,7 +8,7 @@ import (
 )
 
 func postChannel(channelID int, token, text string) error {
-	b, err := tb.NewBot(tb.Settings{
+	bot, err := tb.NewBot(tb.Settings{
 		Token:  token,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	})
@@ -16,7 +16,7 @@ func postChannel(channelID int, token, text string) error {
 		log.Fatal(err)
 	}
 	user := tb.User{ID: channelID}
-	b.Send(&user, text)
+	bot.Send(&user, text)
 
 	return nil
 
