@@ -1,7 +1,7 @@
 variables:
   #CI_DEBUG_TRACE: "true"
   DEPLOY_REPO_URL: "git::ssh://git@jgit.me/instantiator/tests/guide-deploy//go-app"
-  GO_VERSION: "1.15"
+  GO_VERSION: "1.14"
   INJECT_VERSION: "true"
   PACKER_ONLY: "centos"
 
