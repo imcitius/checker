@@ -8,13 +8,14 @@ import (
 )
 
 type urlCheck struct {
-	URL string
+	URL     string `json:"URL"`
+	Channel int    `json:"channel"`
 }
 
 func urlChecks(token string) {
 	probes := []urlCheck{}
 	for {
-		<-time.After(2 * time.Second)
+		<-time.After(time.Duration(config.Secs) * time.Second)
 
 		data, err := ioutil.ReadFile("data.json")
 		if err != nil {

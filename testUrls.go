@@ -20,12 +20,12 @@ func testurls(probes []urlCheck) {
 		response, err := http.Get(s.URL)
 
 		switch code := response.StatusCode; {
-		default:
+		case code == 200:
 			continue
-		case code > 400 && code < 500:
+		default:
 			fmt.Printf("The HTTP request failed with error %d\n", response.StatusCode)
 			message := fmt.Sprintf("URL: %s\nError code: %d\n", s.URL, response.StatusCode)
-			postChannel(1390752, token, message)
+			postChannel(s.Channel, config.BotToken, message)
 		}
 	}
 }
