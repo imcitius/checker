@@ -22,6 +22,7 @@ type CheckDataFile struct {
 		Urlchecks       []string `json:"urlchecks"`
 		ProjectChannel  int      `json:"project_channel"`
 		CriticalChannel int      `json:"critical_channel"`
+		BotToken        string   `json:"bot_token"`
 	} `json:"projects"`
 }
 
@@ -70,5 +71,5 @@ func main() {
 	}
 
 	go runListenBot(CheckData.BotToken)
-	urlChecks(CheckData.BotToken)
+	runTimer()
 }
