@@ -16,7 +16,7 @@ func postChannel(channelID int, token, text string) error {
 		log.Fatal(err)
 	}
 	user := tb.User{ID: channelID}
-	if config.Mode == "quiet" {
+	if CheckData.Mode == "loud" {
 		log.Println("Loud mode: ", text)
 		bot.Send(&user, text)
 	} else {

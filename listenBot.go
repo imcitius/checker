@@ -19,13 +19,13 @@ func runListenBot(token string) {
 	}
 
 	bot.Handle("/pause", func(m *tb.Message) {
-		config.Mode = "quiet"
+		CheckData.Mode = "quiet"
 		answer := "Messages ceased"
 		bot.Send(m.Sender, answer)
 	})
 
 	bot.Handle("/unpause", func(m *tb.Message) {
-		config.Mode = "loud"
+		CheckData.Mode = "loud"
 		answer := "Messages reenabled"
 		bot.Send(m.Sender, answer)
 	})

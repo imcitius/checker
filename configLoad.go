@@ -5,20 +5,6 @@ import (
 	"io/ioutil"
 )
 
-type configFile struct {
-	Secs     int    `json:"secs"`
-	BotToken string `json:"bot_token"`
-	// Messages mode quiet/loud
-	Mode string `json:"mode"`
-}
-type urlCheck struct {
-	URL     string `json:"URL"`
-	Channel int    `json:"channel"`
-}
-
-var config configFile
-var probes []urlCheck
-
 func jsonLoad(fileName string, destination interface{}) error {
 	configFile, err := ioutil.ReadFile(fileName)
 	if err != nil {

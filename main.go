@@ -12,6 +12,21 @@ var Version string
 var VersionSHA string
 var VersionBuild string
 
+type CheckDataFile struct {
+	Secs     int    `json:"secs"`
+	BotToken string `json:"bot_token"`
+	// Messages mode quiet/loud
+	Mode     string `json:"mode"`
+	Projects []struct {
+		Name            string   `json:"name"`
+		Urlchecks       []string `json:"urlchecks"`
+		ProjectChannel  int      `json:"project_channel"`
+		CriticalChannel int      `json:"critical_channel"`
+	} `json:"projects"`
+}
+
+var CheckData CheckDataFile
+
 func main() {
 	if Version != "" && VersionSHA != "" && VersionBuild != "" {
 		fmt.Printf("Start %s (commit: %s; build: %s)\n", Version, VersionSHA, VersionBuild)
@@ -49,15 +64,11 @@ func main() {
 		}
 	}()
 
-	err := jsonLoad("config.json", &config)
-	if err != nil {
-		panic(err)
-	}
-	err = jsonLoad("data.json", &probes)
+	err := jsonLoad("data.json", &CheckData)
 	if err != nil {
 		panic(err)
 	}
 
-	go runListenBot(config.BotToken)
-	urlChecks(config.BotToken)
+	go runListenBot(CheckData.BotToken)
+	urlChecks(CheckData.BotToken)
 }
