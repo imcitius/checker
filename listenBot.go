@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -19,15 +21,37 @@ func runListenBot(token string) {
 	}
 
 	bot.Handle("/pause", func(m *tb.Message) {
-		CheckData.Mode = "quiet"
-		answer := "Messages ceased"
-		bot.Send(m.Sender, answer)
+		if m.IsReply() {
+			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
+			projectName := extractProject(jsonMessage)
+			fmt.Printf("Pause req for project: %+v\n", projectName)
+			err = ceaseProject(projectName)
+			if err == nil {
+				answer := fmt.Sprintf("Messages ceased for project %v", projectName)
+				bot.Send(m.Sender, answer)
+			}
+		} else {
+			CheckData.Defaults.Mode = "quiet"
+			answer := "All messages ceased"
+			bot.Send(m.Sender, answer)
+		}
 	})
 
 	bot.Handle("/unpause", func(m *tb.Message) {
-		CheckData.Mode = "loud"
-		answer := "Messages reenabled"
-		bot.Send(m.Sender, answer)
+		if m.IsReply() {
+			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
+			projectName := extractProject(jsonMessage)
+			fmt.Printf("Unpause req for project: %+v\n", projectName)
+			err = enableProject(projectName)
+			if err == nil {
+				answer := fmt.Sprintf("Messages enabled for project %v", projectName)
+				bot.Send(m.Sender, answer)
+			}
+		} else {
+			CheckData.Defaults.Mode = "loud"
+			answer := "Messages reenabled"
+			bot.Send(m.Sender, answer)
+		}
 	})
 
 	bot.Start()
