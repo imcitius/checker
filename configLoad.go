@@ -33,6 +33,10 @@ func fillDefaults() {
 		if project.Parameters.CriticalChannel == 0 {
 			project.Parameters.CriticalChannel = Config.Defaults.Parameters.CriticalChannel
 		}
+		if project.Parameters.AllowFails == 0 {
+			project.Parameters.AllowFails = Config.Defaults.Parameters.AllowFails
+		}
+
 		Config.Projects[i] = project
 	}
 	// fmt.Printf("Updated config %+v\n\n", Config.Projects)

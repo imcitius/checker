@@ -9,8 +9,13 @@ import (
 	"time"
 )
 
+// Version - version number
 var Version string
+
+// VersionSHA - version sha
 var VersionSHA string
+
+// VersionBuild - build number
 var VersionBuild string
 
 type parameters struct {
@@ -24,7 +29,19 @@ type parameters struct {
 	CriticalChannel int `json:"critical_channel"`
 	// Empty by default, alerts will not be sent unless critical
 	ProjectChannel int `json:"project_channel"`
+	// minimum passed checks to consider project healthy
+	MinHealth int `json:"min_health"`
+	// how much consecutive critical checks may fail to consider not healthy
+	AllowFails int `json:"allow_fails"`
 }
+
+type urlCheck struct {
+	URL    string `json:"url"`
+	Code   int    `json:"code"`
+	Answer string `json:"answer"`
+}
+
+// ConfigFile - main config structure
 type ConfigFile struct {
 	Defaults struct {
 		// Main timer evaluates every TimerStep seconds
@@ -32,14 +49,17 @@ type ConfigFile struct {
 		Parameters parameters `json:"parameters"`
 	}
 	Projects []struct {
-		Name      string   `json:"name"`
-		Urlchecks []string `json:"urlchecks"`
-
+		Name       string     `json:"name"`
+		URLChecks  []urlCheck `json:"checks"`
 		Parameters parameters `json:"parameters"`
+		Fails      int        `json:"fails"`
 	} `json:"projects"`
 }
 
+// Config - main config object
 var Config ConfigFile
+
+// Timeouts - slice of all timeouts needed by checks
 var Timeouts []int
 
 func main() {
@@ -95,8 +115,6 @@ func main() {
 
 	Timeouts = append(Timeouts, Config.Defaults.Parameters.RunEvery)
 	for _, project := range Config.Projects {
-		// use default value if not specified for project
-
 		if project.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
 			Timeouts = append(Timeouts, project.Parameters.RunEvery)
 		}

@@ -1,36 +1,52 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"time"
 )
 
 func checkProjects(timeout int) {
 
-	for _, project := range Config.Projects {
+	var (
+		healthy      int
+		checkNum     int
+		failedChecks []string
+	)
+
+	for i, project := range Config.Projects {
 
 		if project.Parameters.RunEvery == timeout {
 
 			fmt.Printf("Time: %v\nTimeout: %v\nProject: %v\n\n", time.Now(), timeout, project.Name)
+			// fmt.Printf("%v\n", project.URLChecks)
 
-			for _, uri := range project.Urlchecks {
-				fmt.Println("test: ", uri)
-				_, err := url.Parse(uri)
+			for _, urlcheck := range project.URLChecks {
+				fmt.Println("test: ", urlcheck.URL)
+				_, err := url.Parse(urlcheck.URL)
 				if err != nil {
 					log.Fatal(err)
 				}
+				checkNum++
 
-				response, err := http.Get(uri)
+				response, err := http.Get(urlcheck.URL)
+				buf := new(bytes.Buffer)
+				buf.ReadFrom(response.Body)
 
-				switch code := response.StatusCode; {
-				case code == 200:
+				// check that response code is correct
+				code := urlcheck.Code == response.StatusCode
+				answer, err := regexp.Match(urlcheck.Answer, buf.Bytes())
+
+				if code && answer {
+					healthy++
 					continue
-				default:
-					fmt.Printf("The HTTP request %v failed with error %d\n", uri, response.StatusCode)
-					message := fmt.Sprintf("Project: %v;\nURL: %s\nError code: %d\n", project.Name, uri, response.StatusCode)
+				} else {
+					fmt.Printf("The HTTP request %v failed with error %d\n", urlcheck.URL, response.StatusCode)
+					message := nonCritical(project.Name, urlcheck.URL, response.StatusCode)
 
 					if Config.Defaults.Parameters.Mode == "loud" && project.Parameters.Mode == "loud" {
 						log.Printf("Loud mode:\n%v\n", message)
@@ -38,8 +54,20 @@ func checkProjects(timeout int) {
 					} else {
 						log.Printf("Quiet mode:\n%v\n", message)
 					}
+					failedChecks = append(failedChecks, fmt.Sprintf("{Url: %s, code %d}\n", urlcheck.URL, response.StatusCode))
 				}
 			}
+		}
+		// fmt.Printf("Healthy %d of %d\n", healthy, project.Parameters.MinHealth)
+		if healthy < project.Parameters.MinHealth {
+			Config.Projects[i].Fails++
+			fmt.Printf("Critical fails: %d on project %s\n", Config.Projects[i].Fails, project.Name)
+		} else {
+			Config.Projects[i].Fails = 0
+		}
+		if Config.Projects[i].Fails > project.Parameters.AllowFails {
+			message := critical(project.Name, healthy, checkNum, project.Parameters.MinHealth, failedChecks)
+			postChannel(project.Parameters.CriticalChannel, project.Parameters.BotToken, message)
 		}
 	}
 }
