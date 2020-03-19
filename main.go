@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 // Version - version number
@@ -57,13 +56,9 @@ func main() {
 
 	// load config
 	loadConfig()
-
 	// fire listen bot in goroutine
-	go runListenBot(Config.Defaults.Parameters.BotToken)
-
+	initBots()
 	// init timer and start scheduler
-	StartTime := time.Now()
-	Ticker := time.NewTicker(time.Duration(Config.Defaults.TimerStep) * time.Second)
-	runScheduler(Ticker, StartTime)
+	runScheduler()
 
 }

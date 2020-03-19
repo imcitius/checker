@@ -9,6 +9,10 @@ import (
 	tb "gopkg.in/tucnak/telebot.v2"
 )
 
+func initBots() {
+	go runListenBot(Config.Defaults.Parameters.BotToken)
+}
+
 func runListenBot(token string) {
 
 	bot, err := tb.NewBot(tb.Settings{
