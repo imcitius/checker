@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func schedule(ticker *time.Ticker, starttime time.Time) {
+func runScheduler(ticker *time.Ticker, starttime time.Time) {
 	done := make(chan bool)
 
 	for {
