@@ -14,9 +14,9 @@ type parameters struct {
 	// Checks should be run every RunEvery seconds
 	RunEvery int `json:"run_every"`
 	// Tg channel for critical alerts
-	CriticalChannel int `json:"critical_channel"`
+	CriticalChannel int64 `json:"critical_channel"`
 	// Empty by default, alerts will not be sent unless critical
-	ProjectChannel int `json:"project_channel"`
+	ProjectChannel int64 `json:"project_channel"`
 	// minimum passed checks to consider project healthy
 	MinHealth int `json:"min_health"`
 	// how much consecutive critical checks may fail to consider not healthy

@@ -60,3 +60,18 @@ func runListenBot(token string) {
 
 	bot.Start()
 }
+
+func postChannel(channelID int64, token, message string) error {
+	bot, err := tb.NewBot(tb.Settings{
+		Token:  token,
+		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	user := tb.Chat{ID: channelID}
+
+	bot.Send(&user, message)
+	return nil
+
+}
