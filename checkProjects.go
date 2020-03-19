@@ -10,9 +10,9 @@ import (
 
 func checkProjects(timeout int) {
 
-	for _, project := range CheckData.Projects {
+	for _, project := range Config.Projects {
 
-		if project.RunEvery == timeout {
+		if project.Parameters.RunEvery == timeout {
 
 			fmt.Printf("Time: %v\nTimeout: %v\nProject: %v\n\n", time.Now(), timeout, project.Name)
 
@@ -32,11 +32,11 @@ func checkProjects(timeout int) {
 					fmt.Printf("The HTTP request %v failed with error %d\n", uri, response.StatusCode)
 					message := fmt.Sprintf("Project: %v;\nURL: %s\nError code: %d\n", project.Name, uri, response.StatusCode)
 
-					if CheckData.Defaults.Mode == "loud" && project.Mode == "loud" {
-						log.Printf("Loud mode: %v\n", message)
-						postChannel(project.ProjectChannel, project.BotToken, message)
+					if Config.Defaults.Parameters.Mode == "loud" && project.Parameters.Mode == "loud" {
+						log.Printf("Loud mode:\n%v\n", message)
+						postChannel(project.Parameters.ProjectChannel, project.Parameters.BotToken, message)
 					} else {
-						log.Printf("Quiet mode: %v\n", message)
+						log.Printf("Quiet mode:\n%v\n", message)
 					}
 				}
 			}

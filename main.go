@@ -13,27 +13,33 @@ var Version string
 var VersionSHA string
 var VersionBuild string
 
-type CheckDataFile struct {
+type parameters struct {
+	// Tg token for bot
+	BotToken string `json:"bot_token"`
+	// Messages mode quiet/loud
+	Mode string `json:"mode"`
+	// Checks should be run every RunEvery seconds
+	RunEvery int `json:"run_every"`
+	// Tg channel for critical alerts
+	CriticalChannel int `json:"critical_channel"`
+	// Empty by default, alerts will not be sent unless critical
+	ProjectChannel int `json:"project_channel"`
+}
+type ConfigFile struct {
 	Defaults struct {
-		TimerStep int    `json:"timer_step"`
-		BotToken  string `json:"bot_token"`
-		// Messages mode quiet/loud
-		Mode            string `json:"mode"`
-		RunEvery        int    `json:"run_every"`
-		CriticalChannel int    `json:"critical_channel"`
+		// Main timer evaluates every TimerStep seconds
+		TimerStep  int        `json:"timer_step"`
+		Parameters parameters `json:"parameters"`
 	}
 	Projects []struct {
-		Name            string   `json:"name"`
-		Urlchecks       []string `json:"urlchecks"`
-		ProjectChannel  int      `json:"project_channel"`
-		CriticalChannel int      `json:"critical_channel"`
-		BotToken        string   `json:"bot_token"`
-		RunEvery        int      `json:"run_every"`
-		Mode            string   `json:"mode"`
+		Name      string   `json:"name"`
+		Urlchecks []string `json:"urlchecks"`
+
+		Parameters parameters `json:"parameters"`
 	} `json:"projects"`
 }
 
-var CheckData CheckDataFile
+var Config ConfigFile
 var Timeouts []int
 
 func main() {
@@ -74,7 +80,7 @@ func main() {
 	}()
 
 	// load config file
-	err := jsonLoad("data.json", &CheckData)
+	err := jsonLoad("config.json", &Config)
 	if err != nil {
 		panic(err)
 	}
@@ -82,20 +88,20 @@ func main() {
 	fillDefaults()
 
 	// fire listen Bot
-	go runListenBot(CheckData.Defaults.BotToken)
+	go runListenBot(Config.Defaults.Parameters.BotToken)
 
 	StartTime := time.Now()
-	Ticker := time.NewTicker(time.Duration(CheckData.Defaults.TimerStep) * time.Second)
+	Ticker := time.NewTicker(time.Duration(Config.Defaults.TimerStep) * time.Second)
 
-	Timeouts = append(Timeouts, CheckData.Defaults.RunEvery)
-	for _, project := range CheckData.Projects {
+	Timeouts = append(Timeouts, Config.Defaults.Parameters.RunEvery)
+	for _, project := range Config.Projects {
 		// use default value if not specified for project
 
-		if project.RunEvery != CheckData.Defaults.RunEvery {
-			Timeouts = append(Timeouts, project.RunEvery)
+		if project.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
+			Timeouts = append(Timeouts, project.Parameters.RunEvery)
 		}
 	}
-	fmt.Printf("Timeouts found: %v", Timeouts)
+	fmt.Printf("Timeouts found: %v\n\n", Timeouts)
 
 	schedule(Ticker, StartTime)
 }

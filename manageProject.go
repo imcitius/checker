@@ -7,11 +7,11 @@ import (
 
 func ceaseProject(projectName string) error {
 	var done bool
-	for i, project := range CheckData.Projects {
+	for i, project := range Config.Projects {
 		if project.Name == projectName {
-			fmt.Printf("Project: %v, Initial mode: %v,", project.Name, CheckData.Projects[i].Mode)
-			CheckData.Projects[i].Mode = "quiet"
-			fmt.Printf("Current mode: %v\n", CheckData.Projects[i].Mode)
+			fmt.Printf("Project: %v, Initial mode: %v,", project.Name, Config.Projects[i].Parameters.Mode)
+			Config.Projects[i].Parameters.Mode = "quiet"
+			fmt.Printf("Current mode: %v\n", Config.Projects[i].Parameters.Mode)
 			done = true
 		}
 	}
@@ -25,11 +25,11 @@ func ceaseProject(projectName string) error {
 
 func enableProject(projectName string) error {
 	var done bool
-	for i, project := range CheckData.Projects {
+	for i, project := range Config.Projects {
 		if project.Name == projectName {
-			CheckData.Projects[i].Mode = "loud"
+			Config.Projects[i].Parameters.Mode = "loud"
 			done = true
-			fmt.Printf("Project: %v, Current mode: %v\n", project.Name, CheckData.Projects[i].Mode)
+			fmt.Printf("Project: %v, Current mode: %v\n", project.Name, Config.Projects[i].Parameters.Mode)
 		}
 	}
 

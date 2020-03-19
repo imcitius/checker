@@ -31,7 +31,7 @@ func runListenBot(token string) {
 				bot.Send(m.Sender, answer)
 			}
 		} else {
-			CheckData.Defaults.Mode = "quiet"
+			Config.Defaults.Parameters.Mode = "quiet"
 			answer := "All messages ceased"
 			bot.Send(m.Sender, answer)
 		}
@@ -48,7 +48,7 @@ func runListenBot(token string) {
 				bot.Send(m.Sender, answer)
 			}
 		} else {
-			CheckData.Defaults.Mode = "loud"
+			Config.Defaults.Parameters.Mode = "loud"
 			answer := "Messages reenabled"
 			bot.Send(m.Sender, answer)
 		}
