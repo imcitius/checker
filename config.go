@@ -29,6 +29,15 @@ type urlCheck struct {
 	Answer string `json:"answer"`
 }
 
+type project struct {
+	Name       string     `json:"name"`
+	URLChecks  []urlCheck `json:"checks"`
+	Parameters parameters `json:"parameters"`
+	Runtime    struct {
+		Fails int
+	}
+}
+
 // ConfigFile - main config structure
 type ConfigFile struct {
 	Defaults struct {
@@ -36,12 +45,7 @@ type ConfigFile struct {
 		TimerStep  int        `json:"timer_step"`
 		Parameters parameters `json:"parameters"`
 	}
-	Projects []struct {
-		Name       string     `json:"name"`
-		URLChecks  []urlCheck `json:"checks"`
-		Parameters parameters `json:"parameters"`
-		Fails      int        `json:"fails"`
-	} `json:"projects"`
+	Projects []project `json:"projects"`
 }
 
 // Config - main config object

@@ -60,12 +60,12 @@ func checkProjects(timeout int) {
 		}
 		// fmt.Printf("Healthy %d of %d\n", healthy, project.Parameters.MinHealth)
 		if healthy < project.Parameters.MinHealth {
-			Config.Projects[i].Fails++
-			fmt.Printf("Critical fails: %d on project %s\n", Config.Projects[i].Fails, project.Name)
+			Config.Projects[i].Runtime.Fails++
+			fmt.Printf("Critical fails: %d on project %s\n", Config.Projects[i].Runtime.Fails, project.Name)
 		} else {
-			Config.Projects[i].Fails = 0
+			Config.Projects[i].Runtime.Fails = 0
 		}
-		if Config.Projects[i].Fails > project.Parameters.AllowFails {
+		if Config.Projects[i].Runtime.Fails > project.Parameters.AllowFails {
 			message := critical(project.Name, healthy, checkNum, project.Parameters.MinHealth, failedChecks)
 			postChannel(project.Parameters.CriticalChannel, project.Parameters.BotToken, message)
 		}
