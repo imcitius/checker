@@ -2,7 +2,7 @@
 
 Загружает конфиг из файла config.json.
 
-;;;
+<code>
 {
     "defaults": {
         "timer_step": 5,
@@ -39,7 +39,7 @@
         }
     ]
 }
-;;;
+</code>
 
 
 Конфигурация состоит из блоков `defaults`, и `projects`.
