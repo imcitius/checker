@@ -1,6 +1,46 @@
-*** Реализация чекалки на Go ***
+* Реализация чекалки на Go *
 
 Загружает конфиг из файла config.json.
+
+;;;
+{
+    "defaults": {
+        "timer_step": 5,
+        "parameters": {
+            "run_every": 60,
+            "bot_token": "201865937:AAHBSXrIlEFSbVfUCvkkd3y4kbvJNgNIJuM",
+            "critical_channel": 1390752,
+            "min_health": 1,
+            "allow_fails": 0,
+            "mode": "loud"
+        }
+    },
+    "projects": [
+        {
+            "name": "admitlead",
+            "checks": [
+                {
+                    "url": "http://ams.admitlead.ru/main/check1",
+                    "code": 200,
+                    "answer": "AdmitLead"
+                },
+                {
+                    "url": "http://ks.admitlead.ru/main/check",
+                    "code": 200,
+                    "answer": "zhopa"
+                }
+            ],
+            "parameters": {
+                "run_every": 5,
+                "min_health": 1,
+                "allow_fails": 2,
+                "project_channel": 1390752
+            }
+        }
+    ]
+}
+;;;
+
 
 Конфигурация состоит из блоков `defaults`, и `projects`.
 
