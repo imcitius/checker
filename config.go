@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+
+	"github.com/lithammer/shortuuid"
 )
 
 type parameters struct {
@@ -23,10 +25,15 @@ type parameters struct {
 	AllowFails int `json:"allow_fails"`
 }
 
+type checkUUID struct {
+	UUID string
+}
+
 type urlCheck struct {
 	URL    string `json:"url"`
 	Code   int    `json:"code"`
 	Answer string `json:"answer"`
+	uuID   string
 }
 
 type project struct {
@@ -63,10 +70,24 @@ func jsonLoad(fileName string, destination interface{}) error {
 	if err != nil {
 		return err
 	}
+
+	// WIP write error processing
 	return nil
 }
 
-func fillDefaults() {
+func fillUUID() error {
+
+	for i := range Config.Projects {
+		for j := range Config.Projects[i].URLChecks {
+			Config.Projects[i].URLChecks[j].uuID = shortuuid.New()
+		}
+	}
+
+	// WIP write error processing
+	return nil
+}
+
+func fillDefaults() error {
 	// fmt.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, project := range Config.Projects {
 		if project.Parameters.RunEvery == 0 {
@@ -89,16 +110,21 @@ func fillDefaults() {
 		Config.Projects[i] = project
 	}
 	// fmt.Printf("Updated config %+v\n\n", Config.Projects)
+
+	// WIP write error processing
+	return nil
+
 }
 
-func loadConfig() {
+func loadConfig() error {
 	// load config file
 	err := jsonLoad("config.json", &Config)
 	if err != nil {
 		panic(err)
 	}
-	// fill default project configs
+	// fill default project configs and generate UUIDs
 	fillDefaults()
+	fillUUID()
 
 	Timeouts = append(Timeouts, Config.Defaults.Parameters.RunEvery)
 	for _, project := range Config.Projects {
@@ -108,4 +134,6 @@ func loadConfig() {
 	}
 	fmt.Printf("Timeouts found: %v\n\n", Timeouts)
 
+	// WIP write error processing
+	return nil
 }

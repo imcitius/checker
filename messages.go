@@ -2,9 +2,9 @@ package main
 
 import "fmt"
 
-func nonCritical(name, url string, code int) string {
+func nonCritical(name, url, uuid string, code int) string {
 
-	return fmt.Sprintf("Project: %s;\nURL: %s, code: %d\n", name, url, code)
+	return fmt.Sprintf("Project: %s;\nURL: %s, code: %d\nUUID: %s\n", name, url, code, uuid)
 
 }
 

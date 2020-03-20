@@ -46,11 +46,11 @@ func checkHTTP(timeout int) {
 					continue
 				} else {
 					fmt.Printf("The HTTP request %v failed with error %d\n", urlcheck.URL, response.StatusCode)
-					message := nonCritical(project.Name, urlcheck.URL, response.StatusCode)
+					message := nonCritical(project.Name, urlcheck.URL, urlcheck.uuID, response.StatusCode)
 
 					if Config.Defaults.Parameters.Mode == "loud" && project.Parameters.Mode == "loud" {
 						log.Printf("Loud mode:\n%v\n", message)
-						postChannel(project.Parameters.ProjectChannel, project.Parameters.BotToken, message)
+						sendAlert(project.Parameters.ProjectChannel, project.Parameters.BotToken, message)
 					} else {
 						log.Printf("Quiet mode:\n%v\n", message)
 					}
@@ -67,7 +67,7 @@ func checkHTTP(timeout int) {
 		}
 		if Config.Projects[i].Runtime.Fails > project.Parameters.AllowFails {
 			message := critical(project.Name, healthy, checkNum, project.Parameters.MinHealth, failedChecks)
-			postChannel(project.Parameters.CriticalChannel, project.Parameters.BotToken, message)
+			sendAlert(project.Parameters.CriticalChannel, project.Parameters.BotToken, message)
 		}
 	}
 }
