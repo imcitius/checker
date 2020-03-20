@@ -21,7 +21,7 @@ func runScheduler() {
 				for _, timeout := range Timeouts {
 					if math.Remainder(dif, float64(timeout)) == 0 {
 						// fmt.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
-						checkProjects(timeout)
+						checkHTTP(timeout)
 					}
 				}
 			}

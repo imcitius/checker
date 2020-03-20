@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func checkProjects(timeout int) {
+func checkHTTP(timeout int) {
 
 	var (
 		healthy      int
