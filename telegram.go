@@ -24,7 +24,21 @@ func runListenBot(token string) {
 		log.Fatal(err)
 	}
 
-	bot.Handle("/pause", func(m *tb.Message) {
+	bot.Handle("/pauseall", func(m *tb.Message) {
+		Config.Defaults.Parameters.Mode = "quiet"
+		answer := "All messages ceased"
+		bot.Send(m.Sender, answer)
+
+	})
+
+	bot.Handle("/unpauseall", func(m *tb.Message) {
+		Config.Defaults.Parameters.Mode = "loud"
+		answer := "Messages reenabled"
+		bot.Send(m.Sender, answer)
+
+	})
+
+	bot.Handle("/pauseproject", func(m *tb.Message) {
 		if m.IsReply() {
 			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
 			projectName := extractProject(jsonMessage)
@@ -35,13 +49,12 @@ func runListenBot(token string) {
 				bot.Send(m.Sender, answer)
 			}
 		} else {
-			Config.Defaults.Parameters.Mode = "quiet"
-			answer := "All messages ceased"
-			bot.Send(m.Sender, answer)
+			// WIP add return error text if not reply
+			return
 		}
 	})
 
-	bot.Handle("/unpause", func(m *tb.Message) {
+	bot.Handle("/unpauseproject", func(m *tb.Message) {
 		if m.IsReply() {
 			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
 			projectName := extractProject(jsonMessage)
@@ -52,9 +65,40 @@ func runListenBot(token string) {
 				bot.Send(m.Sender, answer)
 			}
 		} else {
-			Config.Defaults.Parameters.Mode = "loud"
-			answer := "Messages reenabled"
-			bot.Send(m.Sender, answer)
+			// WIP add return error text if not reply
+			return
+		}
+	})
+
+	bot.Handle("/pauseid", func(m *tb.Message) {
+		if m.IsReply() {
+			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
+			uuID := extractUUID(jsonMessage)
+			fmt.Printf("Pause req for UUID: %+v\n", uuID)
+			err = ceaseUUID(uuID)
+			if err == nil {
+				answer := fmt.Sprintf("Messages ceased for UUID %v", uuID)
+				bot.Send(m.Sender, answer)
+			}
+		} else {
+			// WIP add return error text if not reply
+			return
+		}
+	})
+
+	bot.Handle("/unpauseid", func(m *tb.Message) {
+		if m.IsReply() {
+			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
+			uuID := extractUUID(jsonMessage)
+			fmt.Printf("Unpause req for UUID: %+v\n", uuID)
+			err = enableUUID(uuID)
+			if err == nil {
+				answer := fmt.Sprintf("Messages enabled for UUID %v", uuID)
+				bot.Send(m.Sender, answer)
+			}
+		} else {
+			// WIP add return error text if not reply
+			return
 		}
 	})
 

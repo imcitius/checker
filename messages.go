@@ -4,7 +4,7 @@ import "fmt"
 
 func nonCritical(name, url, uuid string, code int) string {
 
-	return fmt.Sprintf("Project: %s;\nURL: %s, code: %d\nUUID: %s\n", name, url, code, uuid)
+	return fmt.Sprintf("Project: %s;\nURL: %s, code: %d\nUUID: %s;\n", name, url, code, uuid)
 
 }
 

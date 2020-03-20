@@ -49,10 +49,15 @@ func checkHTTP(timeout int) {
 					message := nonCritical(project.Name, urlcheck.URL, urlcheck.uuID, response.StatusCode)
 
 					if Config.Defaults.Parameters.Mode == "loud" && project.Parameters.Mode == "loud" {
-						log.Printf("Loud mode:\n%v\n", message)
-						sendAlert(project.Parameters.ProjectChannel, project.Parameters.BotToken, message)
+						log.Printf("Project Loud mode,")
+						if urlcheck.Mode != "quiet" {
+							log.Printf("Check Loud mode:\n%v\n", message)
+							sendAlert(project.Parameters.ProjectChannel, project.Parameters.BotToken, message)
+						} else {
+							log.Printf("Check Quiet mode:\n%v\n", message)
+						}
 					} else {
-						log.Printf("Quiet mode:\n%v\n", message)
+						log.Printf("Project Quiet mode:\n%v\n", message)
 					}
 					failedChecks = append(failedChecks, fmt.Sprintf("{Url: %s, code %d}\n", urlcheck.URL, response.StatusCode))
 				}

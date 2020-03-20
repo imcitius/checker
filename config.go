@@ -34,6 +34,7 @@ type urlCheck struct {
 	Code   int    `json:"code"`
 	Answer string `json:"answer"`
 	uuID   string
+	Mode   string
 }
 
 type project struct {
