@@ -106,6 +106,8 @@ func runListenBot(token string) {
 }
 
 func sendAlert(channelID int64, token, message string) error {
+
+	// log.Printf("Sending alert: channel %d, token %s, message %s", channelID, token, message)
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  token,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},

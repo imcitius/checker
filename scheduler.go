@@ -5,6 +5,25 @@ import (
 	"time"
 )
 
+func runChecks(timeout uint) {
+
+	for _, project := range Config.Projects {
+		if project.Parameters.RunEvery == timeout {
+			if project.Checks.URLChecks != nil {
+				// log.Printf("HTTP checks for project %s\n", project.Name)
+				go runHTTPCheck(project)
+			}
+
+			if project.Checks.PingChecks != nil {
+				// log.Printf("PING checks for project %s\n", project.Name)
+				go runPingChecks(project)
+			}
+
+		}
+	}
+
+}
+
 func runScheduler() {
 	done := make(chan bool)
 	StartTime := time.Now()
@@ -21,7 +40,7 @@ func runScheduler() {
 				for _, timeout := range Timeouts {
 					if math.Remainder(dif, float64(timeout)) == 0 {
 						// fmt.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
-						checkHTTP(timeout)
+						runChecks(timeout)
 					}
 				}
 			}

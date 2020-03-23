@@ -2,14 +2,18 @@ package main
 
 import "fmt"
 
-func nonCritical(name, url, uuid string, code int) string {
-
-	return fmt.Sprintf("Project: %s;\nURL: %s, code: %d\nUUID: %s;\n", name, url, code, uuid)
-
+func nonCriticalHTTP(name, url, uuid string, code int) string {
+	return fmt.Sprintf("Http check error\nProject: %s;\nURL: %s, code: %d\nUUID: %s;\n", name, url, code, uuid)
 }
 
-func critical(name string, healthy, num, minnum int, failed []string) string {
-
+func criticalHTTP(name string, healthy, num, minnum uint, failed []string) string {
 	return fmt.Sprintf("Project: %s critical (healthy %d of %d, need %d)\nFailed checks: %v", name, healthy, num, minnum, failed)
+}
 
+func nonCriticalPING(name, host, uuid string) string {
+	return fmt.Sprintf("Ping check error\nProject: %s;\nHOST: %s\nUUID: %s;\n", name, host, uuid)
+}
+
+func criticalPING(name string, healthy, num, minnum uint, failed []string) string {
+	return fmt.Sprintf("Project: %s critical (healthy %d of %d, need %d)\nFailed checks: %v", name, healthy, num, minnum, failed)
 }

@@ -45,11 +45,11 @@ func enableProject(projectName string) error {
 func ceaseUUID(uuID string) error {
 	var done bool
 	for i := range Config.Projects {
-		for j := range Config.Projects[i].URLChecks {
-			if Config.Projects[i].URLChecks[j].uuID == uuID {
-				fmt.Printf("Project: %v, Initial mode: %v,", Config.Projects[i].Name, Config.Projects[i].URLChecks[j].Mode)
-				Config.Projects[i].URLChecks[j].Mode = "quiet"
-				fmt.Printf("Current mode: %v\n", Config.Projects[i].URLChecks[j].Mode)
+		for j := range Config.Projects[i].Checks.URLChecks {
+			if Config.Projects[i].Checks.URLChecks[j].uuID == uuID {
+				fmt.Printf("Project: %v, Initial mode: %v,", Config.Projects[i].Name, Config.Projects[i].Checks.URLChecks[j].Mode)
+				Config.Projects[i].Checks.URLChecks[j].Mode = "quiet"
+				fmt.Printf("Current mode: %v\n", Config.Projects[i].Checks.URLChecks[j].Mode)
 				done = true
 			}
 		}
@@ -65,11 +65,11 @@ func ceaseUUID(uuID string) error {
 func enableUUID(uuID string) error {
 	var done bool
 	for i := range Config.Projects {
-		for j := range Config.Projects[i].URLChecks {
-			if Config.Projects[i].URLChecks[j].uuID == uuID {
-				fmt.Printf("Project: %v, Initial mode: %v,", Config.Projects[i].Name, Config.Projects[i].URLChecks[j].Mode)
-				Config.Projects[i].URLChecks[j].Mode = "loud"
-				fmt.Printf("Current mode: %v\n", Config.Projects[i].URLChecks[j].Mode)
+		for j := range Config.Projects[i].Checks.URLChecks {
+			if Config.Projects[i].Checks.URLChecks[j].uuID == uuID {
+				fmt.Printf("Project: %v, Initial mode: %v,", Config.Projects[i].Name, Config.Projects[i].Checks.URLChecks[j].Mode)
+				Config.Projects[i].Checks.URLChecks[j].Mode = "loud"
+				fmt.Printf("Current mode: %v\n", Config.Projects[i].Checks.URLChecks[j].Mode)
 				done = true
 			}
 		}
