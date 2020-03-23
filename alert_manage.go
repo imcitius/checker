@@ -42,6 +42,7 @@ func enableProject(projectName string) error {
 	return nil
 }
 
+/// WIP сделать управление всеми типами проверок одним интерфейсом, скорее всего нужен map по всем проектам, а не конкретные настрйоки на уровне каждого проекта
 func ceaseUUID(uuID string) error {
 	var done bool
 	for i := range Config.Projects {
