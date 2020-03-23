@@ -147,20 +147,16 @@
 
 Поддерживаются проверки трех разных типов:
 
-* HTTP check
-
+* HTTP check (блок http)
+```
 *url*: URL для проверки методом GET
-
 *code*: HTTP код успешного ответа
-
 *answer*: Текст для поиска в HTTP Body ответа
-
 *answer_present*: проверять факт наличия текста (по умолчанию, или "present"), или его отсутствия ("absent")
-
 *headers*: Массив HTTP заголовков для передачи в HTTP запросе, в виде `"User-Agent": "mediaget"`
+```
 
-
-* ICMP Ping Check
+* ICMP Ping Check (блок icmp_ping)
 
 *host*: имя или IP адрес узла для проверки
 
@@ -169,7 +165,7 @@
 *count*: кол-во отправляемых запросов
 
 
-* TCP Ping check
+* TCP Ping check (блок tcp_ping)
 
 *host*: имя или IP адрес узла для проверки
 
