@@ -35,7 +35,7 @@ type urlCheck struct {
 	URL           string       `json:"url"`
 	Code          int          `json:"code"`
 	Answer        string       `json:"answer"`
-	AnswerPresent bool         `json:"answer_present"`
+	AnswerPresent string       `json:"answer_present"`
 	Headers       []httpHeader `json:"headers"`
 	uuID          string
 	Mode          string

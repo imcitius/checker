@@ -13,10 +13,13 @@ import (
 func checkHTTP(timeout int) {
 
 	var (
-		healthy      int
-		checkNum     int
-		failedChecks []string
+		healthy       int
+		checkNum      int
+		failedChecks  []string
+		answerPresent bool
 	)
+	// set default
+	answerPresent = true
 
 	for i, project := range Config.Projects {
 
@@ -56,7 +59,10 @@ func checkHTTP(timeout int) {
 				answer, err := regexp.Match(urlcheck.Answer, buf.Bytes())
 
 				// check answer_present condition
-				answerGood := answer == urlcheck.AnswerPresent
+				if urlcheck.AnswerPresent == "absent" {
+					answerPresent = false
+				}
+				answerGood := answer == answerPresent
 				// log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, urlcheck.AnswerPresent, answerGood)
 
 				if code && answerGood {
