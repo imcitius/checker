@@ -52,9 +52,14 @@ func checkHTTP(timeout int) {
 
 				// check that response code is correct
 				code := urlcheck.Code == response.StatusCode
+
 				answer, err := regexp.Match(urlcheck.Answer, buf.Bytes())
 
-				if code && answer {
+				// check answer_present condition
+				answerGood := answer == urlcheck.AnswerPresent
+				// log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, urlcheck.AnswerPresent, answerGood)
+
+				if code && answerGood {
 					healthy++
 					continue
 				} else {
