@@ -42,7 +42,7 @@ type urlCheck struct {
 	Mode          string
 }
 
-type pingCheck struct {
+type icmpPingCheck struct {
 	Host    string
 	Timeout time.Duration
 	Count   uint
@@ -50,11 +50,21 @@ type pingCheck struct {
 	Mode    string
 }
 
+type tcpPingCheck struct {
+	Host     string
+	Timeout  time.Duration
+	Port     uint
+	Attempts uint
+	uuID     string
+	Mode     string
+}
+
 type project struct {
 	Name   string `json:"name"`
 	Checks struct {
-		URLChecks  []urlCheck  `json:"http"`
-		PingChecks []pingCheck `json:"ping"`
+		URLChecks      []urlCheck      `json:"http"`
+		ICMPPingChecks []icmpPingCheck `json:"icmp_ping"`
+		TCPPingChecks  []tcpPingCheck  `json:"tcp_ping"`
 	} `json:"checks"`
 	Parameters parameters `json:"parameters"`
 	Runtime    struct {
@@ -98,8 +108,11 @@ func fillUUID() error {
 		for j := range Config.Projects[i].Checks.URLChecks {
 			Config.Projects[i].Checks.URLChecks[j].uuID = shortuuid.New()
 		}
-		for j := range Config.Projects[i].Checks.PingChecks {
-			Config.Projects[i].Checks.PingChecks[j].uuID = shortuuid.New()
+		for j := range Config.Projects[i].Checks.ICMPPingChecks {
+			Config.Projects[i].Checks.ICMPPingChecks[j].uuID = shortuuid.New()
+		}
+		for j := range Config.Projects[i].Checks.TCPPingChecks {
+			Config.Projects[i].Checks.TCPPingChecks[j].uuID = shortuuid.New()
 		}
 
 	}
@@ -112,8 +125,9 @@ func fillUUID() error {
 var Runtime *runtime
 
 type fails struct {
-	HTTP map[string]uint
-	PING map[string]uint
+	HTTP     map[string]uint
+	ICMPPing map[string]uint
+	TCPPing  map[string]uint
 }
 type runtime struct {
 	Fails fails
@@ -123,7 +137,8 @@ func fillDefaults() error {
 	// fmt.Printf("Loaded config %+v\n\n", Config.Projects)
 	Run := runtime{}
 	Run.Fails.HTTP = make(map[string]uint)
-	Run.Fails.PING = make(map[string]uint)
+	Run.Fails.ICMPPing = make(map[string]uint)
+	Run.Fails.TCPPing = make(map[string]uint)
 	Runtime = &Run
 
 	for i, project := range Config.Projects {
@@ -151,7 +166,8 @@ func fillDefaults() error {
 		}
 		Config.Projects[i] = project
 		Runtime.Fails.HTTP[project.Name] = 0
-		Runtime.Fails.PING[project.Name] = 0
+		Runtime.Fails.ICMPPing[project.Name] = 0
+		Runtime.Fails.TCPPing[project.Name] = 0
 	}
 	// fmt.Printf("Updated config %+v\n\n", Config.Projects)
 

@@ -14,9 +14,14 @@ func runChecks(timeout uint) {
 				go runHTTPCheck(project)
 			}
 
-			if project.Checks.PingChecks != nil {
+			if project.Checks.ICMPPingChecks != nil {
 				// log.Printf("PING checks for project %s\n", project.Name)
-				go runPingChecks(project)
+				go runICMPPingChecks(project)
+			}
+
+			if project.Checks.TCPPingChecks != nil {
+				// log.Printf("PING checks for project %s\n", project.Name)
+				go runTCPPingChecks(project)
 			}
 
 		}
