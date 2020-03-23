@@ -9,6 +9,7 @@
         "parameters": {
             "run_every": 60,
             "bot_token": "201865937:AAHBSXrIlEFSbVfUCvkkd3y4kbvJNgNIJuM",
+            "project_channel": 1390752,
             "critical_channel": 1390752,
             "min_health": 1,
             "allow_fails": 0,
@@ -17,24 +18,94 @@
     },
     "projects": [
         {
-            "name": "admitlead",
-            "checks": [
-                {
-                    "url": "http://ams.admitlead.ru/main/check1",
-                    "code": 200,
-                    "answer": "AdmitLead"
-                },
-                {
-                    "url": "http://ks.admitlead.ru/main/check",
-                    "code": 200,
-                    "answer": "zhopa"
-                }
-            ],
+            "name": "icmp_ping",
+            "checks": {
+                "icmp_ping": [
+                    {
+                        "host": "8.8.8.8",
+                        "timeout": 50,
+                        "count": 1
+                    },
+                    {
+                        "host": "1.1.1.1",
+                        "timeout": 10,
+                        "count": 1
+                    }
+                ]
+            },
             "parameters": {
-                "run_every": 5,
+                "run_every": 60
+            }
+        },
+        {
+            "name": "tcp_ping",
+            "checks": {
+                "tcp_ping": [
+                    {
+                        "host": "mail.ru",
+                        "port": 80,
+                        "timeout": 500,
+                        "attempts": 3
+                    }
+                ]
+            },
+            "parameters": {
+                "run_every": 5
+            }
+        },
+        {
+            "name": "admitlead",
+            "checks": {
+                "http": [
+                    {
+                        "url": "http://ams.admitlead.ru/main/check",
+                        "code": 200,
+                        "answer": "AdmitLead"
+                    },
+                    {
+                        "url": "http://ks.admitlead.ru/main/check",
+                        "code": 200,
+                        "answer": "AdmitLead"
+                    }
+                ]
+            },
+            "parameters": {
+                "run_every": 60,
                 "min_health": 1,
                 "allow_fails": 2,
                 "project_channel": 1390752
+            }
+        },
+        {
+            "name": "mgshare",
+            "checks": {
+                "http": [
+                    {
+                        "url": "http://mg-ams.mgshare.com/monitor.php",
+                        "code": 200,
+                        "answer": "OK",
+                        "headers": [
+                            {
+                                "User-Agent": "mediaget"
+                            }
+                        ]
+                    },
+                    {
+                        "url": "http://mg-bl1.mgshare.com/monitor.php",
+                        "code": 200,
+                        "answer": "zhopa",
+                        "answer_present": "absent",
+                        "headers": [
+                            {
+                                "User-Agent": "mediaget"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "parameters": {
+                "run_every": 30,
+                "min_health": 2
             }
         }
     ]
@@ -74,7 +145,9 @@
 
 ## Описание проверок содержится в блоке `checks` проекта.
 
-Содержит в себе следующие параметры:
+Поддерживаются проверки трех разных типов:
+
+* HTTP check
 
 *url*: URL для проверки методом GET
 
@@ -82,6 +155,29 @@
 
 *answer*: Текст для поиска в HTTP Body ответа
 
+*answer_present*: проверять факт наличия текста (по умолчанию, или "present"), или его отсутствия ("absent")
+
+*headers*: Массив HTTP заголовков для передачи в HTTP запросе, в виде `"User-Agent": "mediaget"`
+
+
+* ICMP Ping Check
+
+*host*: имя или IP адрес узла для проверки
+
+*timeout*: время ожидания ответа в миллисекундах
+
+*count*: кол-во отправляемых запросов
+
+
+* TCP Ping check
+
+*host*: имя или IP адрес узла для проверки
+
+*port*: номер TCP порта
+
+*timeout*: время ожидания ответа в миллисекундах
+
+*attemts*: кол-во попыток открыть порт
 
 
 Нужно учитывать, что параметр `run_every` должен быть кратен параметру `timer_step`.
