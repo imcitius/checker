@@ -33,7 +33,20 @@ func checkHTTP(timeout int) {
 				}
 				checkNum++
 
-				response, err := http.Get(urlcheck.URL)
+				client := &http.Client{}
+				req, err := http.NewRequest("GET", urlcheck.URL, nil)
+
+				// if custom headers requested
+				if urlcheck.Headers != nil {
+					for _, headers := range urlcheck.Headers {
+						for header, value := range headers {
+							req.Header.Add(header, value)
+						}
+					}
+				}
+				// log.Printf("http request: %v", req)
+				response, err := client.Do(req)
+
 				buf := new(bytes.Buffer)
 				buf.ReadFrom(response.Body)
 

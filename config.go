@@ -29,12 +29,15 @@ type checkUUID struct {
 	UUID string
 }
 
+type httpHeader map[string]string
+
 type urlCheck struct {
-	URL    string `json:"url"`
-	Code   int    `json:"code"`
-	Answer string `json:"answer"`
-	uuID   string
-	Mode   string
+	URL     string       `json:"url"`
+	Code    int          `json:"code"`
+	Answer  string       `json:"answer"`
+	Headers []httpHeader `json:"headers"`
+	uuID    string
+	Mode    string
 }
 
 type project struct {
