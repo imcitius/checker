@@ -65,7 +65,7 @@ func runHTTPCheck(project project) {
 			fmt.Printf("The HTTP request %v failed with error %d\n", check.URL, response.StatusCode)
 			message := nonCriticalHTTP(project.Name, check.URL, check.uuID, response.StatusCode)
 
-			if Config.Defaults.Parameters.Mode == "loud" && project.Parameters.Mode == "loud" {
+			if Config.Defaults.Parameters.Mode == "loud" && Runtime.Alerts.Project[project.Name] == "loud" && Runtime.Alerts.UUID[check.uuID] != "quiet" {
 				log.Printf("Project Loud mode,")
 				if check.Mode != "quiet" {
 					log.Printf("Check Loud mode:\n%v\n", message)

@@ -26,10 +26,6 @@ type parameters struct {
 	AllowFails uint `json:"allow_fails"`
 }
 
-type checkUUID struct {
-	UUID string
-}
-
 type httpHeader map[string]string
 
 type urlCheck struct {
@@ -67,9 +63,6 @@ type project struct {
 		TCPPingChecks  []tcpPingCheck  `json:"tcp_ping"`
 	} `json:"checks"`
 	Parameters parameters `json:"parameters"`
-	Runtime    struct {
-		Fails uint
-	}
 }
 
 // ConfigFile - main config structure
@@ -82,11 +75,28 @@ type ConfigFile struct {
 	Projects []project `json:"projects"`
 }
 
-// Config - main config object
-var Config ConfigFile
+type fails struct {
+	HTTP     map[string]uint
+	ICMPPing map[string]uint
+	TCPPing  map[string]uint
+}
+type alerts struct {
+	Project map[string]string
+	UUID    map[string]string
+}
+type runtime struct {
+	Fails  fails
+	Alerts alerts
+}
 
-// Timeouts - slice of all timeouts needed by checks
-var Timeouts []uint
+var (
+	// Config - main config object
+	Config ConfigFile
+	// Timeouts - slice of all timeouts needed by all checks
+	Timeouts []uint
+	// Runtime - map of runtime data
+	Runtime *runtime
+)
 
 func jsonLoad(fileName string, destination interface{}) error {
 	configFile, err := ioutil.ReadFile(fileName)
@@ -102,44 +112,8 @@ func jsonLoad(fileName string, destination interface{}) error {
 	return nil
 }
 
-func fillUUID() error {
-
-	for i := range Config.Projects {
-		for j := range Config.Projects[i].Checks.URLChecks {
-			Config.Projects[i].Checks.URLChecks[j].uuID = shortuuid.New()
-		}
-		for j := range Config.Projects[i].Checks.ICMPPingChecks {
-			Config.Projects[i].Checks.ICMPPingChecks[j].uuID = shortuuid.New()
-		}
-		for j := range Config.Projects[i].Checks.TCPPingChecks {
-			Config.Projects[i].Checks.TCPPingChecks[j].uuID = shortuuid.New()
-		}
-
-	}
-
-	// WIP write error processing
-	return nil
-}
-
-// Runtime - map of projects errors count
-var Runtime *runtime
-
-type fails struct {
-	HTTP     map[string]uint
-	ICMPPing map[string]uint
-	TCPPing  map[string]uint
-}
-type runtime struct {
-	Fails fails
-}
-
 func fillDefaults() error {
 	// fmt.Printf("Loaded config %+v\n\n", Config.Projects)
-	Run := runtime{}
-	Run.Fails.HTTP = make(map[string]uint)
-	Run.Fails.ICMPPing = make(map[string]uint)
-	Run.Fails.TCPPing = make(map[string]uint)
-	Runtime = &Run
 
 	for i, project := range Config.Projects {
 		if project.Parameters.RunEvery == 0 {
@@ -165,9 +139,39 @@ func fillDefaults() error {
 			project.Parameters.MinHealth = Config.Defaults.Parameters.MinHealth
 		}
 		Config.Projects[i] = project
-		Runtime.Fails.HTTP[project.Name] = 0
-		Runtime.Fails.ICMPPing[project.Name] = 0
-		Runtime.Fails.TCPPing[project.Name] = 0
+	}
+	// fmt.Printf("Updated config %+v\n\n", Config.Projects)
+
+	// WIP write error processing
+	return nil
+
+}
+
+func fillUUIDs() error {
+	for i := range Config.Projects {
+		for j := range Config.Projects[i].Checks.URLChecks {
+			Config.Projects[i].Checks.URLChecks[j].uuID = shortuuid.New()
+		}
+		for j := range Config.Projects[i].Checks.ICMPPingChecks {
+			Config.Projects[i].Checks.ICMPPingChecks[j].uuID = shortuuid.New()
+		}
+		for j := range Config.Projects[i].Checks.TCPPingChecks {
+			Config.Projects[i].Checks.TCPPingChecks[j].uuID = shortuuid.New()
+		}
+	}
+	// WIP write error processing
+	return nil
+}
+
+func fillAlerts() error {
+	// fmt.Printf("Loaded config %+v\n\n", Config.Projects)
+
+	for _, project := range Config.Projects {
+		if project.Parameters.Mode == Config.Defaults.Parameters.Mode {
+			Runtime.Alerts.Project[project.Name] = Config.Defaults.Parameters.Mode
+		} else {
+			Runtime.Alerts.Project[project.Name] = project.Parameters.Mode
+		}
 	}
 	// fmt.Printf("Updated config %+v\n\n", Config.Projects)
 
@@ -177,6 +181,15 @@ func fillDefaults() error {
 }
 
 func loadConfig() error {
+
+	Run := runtime{}
+	Run.Alerts.Project = make(map[string]string)
+	Run.Alerts.UUID = make(map[string]string)
+	Run.Fails.HTTP = make(map[string]uint)
+	Run.Fails.ICMPPing = make(map[string]uint)
+	Run.Fails.TCPPing = make(map[string]uint)
+	Runtime = &Run
+
 	// load config file
 	err := jsonLoad("config.json", &Config)
 	if err != nil {
@@ -184,7 +197,8 @@ func loadConfig() error {
 	}
 	// fill default project configs and generate UUIDs
 	fillDefaults()
-	fillUUID()
+	fillUUIDs()
+	fillAlerts()
 
 	Timeouts = append(Timeouts, Config.Defaults.Parameters.RunEvery)
 	for _, project := range Config.Projects {

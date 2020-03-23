@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func nonCriticalHTTP(name, url, uuid string, code int) string {
-	return fmt.Sprintf("Http check error\nProject: %s;\nURL: %s, code: %d\nUUID: %s;\n", name, url, code, uuid)
+	return fmt.Sprintf("Http check error\nProject: %s\nURL: %s, code: %d\nUUID: %s\n", name, url, code, uuid)
 }
 
 func criticalHTTP(name string, healthy, num, minnum uint, failed []string) string {
@@ -11,7 +11,7 @@ func criticalHTTP(name string, healthy, num, minnum uint, failed []string) strin
 }
 
 func nonCriticalPING(name, host, uuid string) string {
-	return fmt.Sprintf("Ping check error\nProject: %s;\nHOST: %s\nUUID: %s;\n", name, host, uuid)
+	return fmt.Sprintf("Ping check error\nProject: %s\nHOST: %s\nUUID: %s\n", name, host, uuid)
 }
 
 func criticalPING(name string, healthy, num, minnum uint, failed []string) string {

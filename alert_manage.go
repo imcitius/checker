@@ -6,114 +6,55 @@ import (
 )
 
 func ceaseProject(projectName string) error {
-	var done bool
-	for i, project := range Config.Projects {
-		if project.Name == projectName {
-			fmt.Printf("Project: %v, Initial mode: %v,", project.Name, Config.Projects[i].Parameters.Mode)
-			Config.Projects[i].Parameters.Mode = "quiet"
-			fmt.Printf("Current mode: %v\n", Config.Projects[i].Parameters.Mode)
-			done = true
-		}
-	}
-
-	if !done {
-		return fmt.Errorf("Project not found trying to cease: %v", projectName)
-
-	}
-	// WIP test and write error handling
+	Runtime.Alerts.Project[projectName] = "quiet"
 	return nil
 }
 
 func enableProject(projectName string) error {
-	var done bool
-	for i, project := range Config.Projects {
-		if project.Name == projectName {
-			fmt.Printf("Project: %v, Initial mode: %v,", project.Name, Config.Projects[i].Parameters.Mode)
-			Config.Projects[i].Parameters.Mode = "loud"
-			fmt.Printf("Current mode: %v\n", Config.Projects[i].Parameters.Mode)
-			done = true
-		}
-	}
-
-	if !done {
-		return fmt.Errorf("Project not found trying to enable: %v", projectName)
-	}
-	// WIP test and write error handling
+	Runtime.Alerts.Project[projectName] = "loud"
 	return nil
 }
 
-/// WIP сделать управление всеми типами проверок одним интерфейсом, скорее всего нужен map по всем проектам, а не конкретные настрйоки на уровне каждого проекта
 func ceaseUUID(uuID string) error {
-	var done bool
-	for i := range Config.Projects {
-		for j := range Config.Projects[i].Checks.URLChecks {
-			if Config.Projects[i].Checks.URLChecks[j].uuID == uuID {
-				fmt.Printf("Project: %v, Initial mode: %v,", Config.Projects[i].Name, Config.Projects[i].Checks.URLChecks[j].Mode)
-				Config.Projects[i].Checks.URLChecks[j].Mode = "quiet"
-				fmt.Printf("Current mode: %v\n", Config.Projects[i].Checks.URLChecks[j].Mode)
-				done = true
-			}
-		}
-	}
-
-	if !done {
-		return fmt.Errorf("UUID not found trying to cease: %v", uuID)
-	}
-	// WIP test and write error handling
+	Runtime.Alerts.UUID[uuID] = "quiet"
 	return nil
 }
 
 func enableUUID(uuID string) error {
-	var done bool
-	for i := range Config.Projects {
-		for j := range Config.Projects[i].Checks.URLChecks {
-			if Config.Projects[i].Checks.URLChecks[j].uuID == uuID {
-				fmt.Printf("Project: %v, Initial mode: %v,", Config.Projects[i].Name, Config.Projects[i].Checks.URLChecks[j].Mode)
-				Config.Projects[i].Checks.URLChecks[j].Mode = "loud"
-				fmt.Printf("Current mode: %v\n", Config.Projects[i].Checks.URLChecks[j].Mode)
-				done = true
-			}
-		}
-	}
-
-	if !done {
-		return fmt.Errorf("UUID not found trying to enable: %v", uuID)
-	}
-	// WIP test and write error handling
+	Runtime.Alerts.UUID[uuID] = "loud"
 	return nil
 }
 
-func extractProject(message []byte) string {
+func extractProject(message string) string {
+	var projectName string
 
-	fmt.Printf("result: %v\n", string(message))
-
-	pattern := regexp.MustCompile(`Project: (.*);.*`)
-	template := []byte("$1")
-	result := []byte{}
-
-	for _, submatches := range pattern.FindAllSubmatchIndex(message, -1) {
-		result = pattern.Expand(result, template, message, submatches)
+	fmt.Printf("message: %v\n", message)
+	pattern := regexp.MustCompile("Project: (.*)\n")
+	result := pattern.FindStringSubmatch(message)
+	if result == nil {
+		fmt.Printf("Project extraction error.")
+	} else {
+		fmt.Printf("Project extracted: %v\n", result[1])
+		projectName = result[1]
 	}
-	fmt.Printf("result: %v\n", result)
-	return string(result)
 
-	// WIP test and write error handling
-
+	return projectName
 }
 
-func extractUUID(message []byte) string {
+func extractUUID(message string) string {
+	var uuid string
 
-	fmt.Printf("result: %v\n", string(message))
-
-	pattern := regexp.MustCompile(`.*UUID: (.*);`)
-	template := []byte("$1")
-	result := []byte{}
-
-	for _, submatches := range pattern.FindAllSubmatchIndex(message, -1) {
-		result = pattern.Expand(result, template, message, submatches)
+	fmt.Printf("message: %v\n", message)
+	pattern := regexp.MustCompile("UUID: (.*)")
+	result := pattern.FindStringSubmatch(message)
+	if result == nil {
+		fmt.Printf("UUID extraction error.")
+	} else {
+		fmt.Printf("UUID extracted: %v\n", result[1])
+		uuid = result[1]
 	}
-	fmt.Printf("result: %v\n", result)
-	return string(result)
+
+	return uuid
 
 	// WIP test and write error handling
 }

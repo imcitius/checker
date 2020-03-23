@@ -33,6 +33,7 @@ func runICMPPingChecks(project project) error {
 		if stats.PacketLoss == 0 && stats.AvgRtt > check.Timeout {
 			checkGood = true
 		}
+
 		if checkGood {
 			healthy++
 			continue
@@ -40,7 +41,7 @@ func runICMPPingChecks(project project) error {
 			fmt.Printf("Ping host %v error %v\n", check.Host, err)
 			message := nonCriticalPING(project.Name, check.Host, check.uuID)
 
-			if Config.Defaults.Parameters.Mode == "loud" && project.Parameters.Mode == "loud" {
+			if Config.Defaults.Parameters.Mode == "loud" && Runtime.Alerts.Project[project.Name] == "loud" && Runtime.Alerts.UUID[check.uuID] != "quiet" {
 				log.Printf("Project Loud mode,")
 				if check.Mode != "quiet" {
 					log.Printf("Check Loud mode:\n%v\n", message)
@@ -55,7 +56,7 @@ func runICMPPingChecks(project project) error {
 			failedChecks = append(failedChecks, fmt.Sprintf("{Host: %s}\n", check.Host))
 		}
 
-		fmt.Printf("Ping stats: %+v\n\n", stats)
+		// fmt.Printf("Ping stats: %+v\n\n", stats)
 		fmt.Printf("Healthy %d of minimum %d, its %d fail (%d fails allowed)\n", healthy, project.Parameters.MinHealth, projectFails, project.Parameters.AllowFails)
 		if healthy >= project.Parameters.MinHealth {
 			if projectFails > 0 {
@@ -72,6 +73,8 @@ func runICMPPingChecks(project project) error {
 			}
 		}
 	}
+
+	fmt.Printf("Healthy %d of minimum %d, its %d fail (%d fails allowed)\n", healthy, project.Parameters.MinHealth, projectFails, project.Parameters.AllowFails)
 
 	return nil
 }
@@ -120,7 +123,7 @@ func runTCPPingChecks(project project) error {
 			fmt.Printf("TCP ping host error %v in %d attempts\n", check.Host, check.Attempts)
 			message := nonCriticalPING(project.Name, check.Host, check.uuID)
 
-			if Config.Defaults.Parameters.Mode == "loud" && project.Parameters.Mode == "loud" {
+			if Config.Defaults.Parameters.Mode == "loud" && Runtime.Alerts.Project[project.Name] == "loud" && Runtime.Alerts.UUID[check.uuID] != "quiet" {
 				log.Printf("Project Loud mode,")
 				if check.Mode != "quiet" {
 					log.Printf("Check Loud mode:\n%v\n", message)

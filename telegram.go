@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -24,24 +23,23 @@ func runListenBot(token string) {
 		log.Fatal(err)
 	}
 
-	bot.Handle("/pauseall", func(m *tb.Message) {
+	bot.Handle("/pa", func(m *tb.Message) {
 		Config.Defaults.Parameters.Mode = "quiet"
 		answer := "All messages ceased"
 		bot.Send(m.Sender, answer)
 
 	})
 
-	bot.Handle("/unpauseall", func(m *tb.Message) {
+	bot.Handle("/ua", func(m *tb.Message) {
 		Config.Defaults.Parameters.Mode = "loud"
 		answer := "Messages reenabled"
 		bot.Send(m.Sender, answer)
 
 	})
 
-	bot.Handle("/pauseproject", func(m *tb.Message) {
+	bot.Handle("/pp", func(m *tb.Message) {
 		if m.IsReply() {
-			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
-			projectName := extractProject(jsonMessage)
+			projectName := extractProject(m.ReplyTo.Text)
 			fmt.Printf("Pause req for project: %+v\n", projectName)
 			err = ceaseProject(projectName)
 			if err == nil {
@@ -54,10 +52,9 @@ func runListenBot(token string) {
 		}
 	})
 
-	bot.Handle("/unpauseproject", func(m *tb.Message) {
+	bot.Handle("/up", func(m *tb.Message) {
 		if m.IsReply() {
-			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
-			projectName := extractProject(jsonMessage)
+			projectName := extractProject(m.ReplyTo.Text)
 			fmt.Printf("Unpause req for project: %+v\n", projectName)
 			err = enableProject(projectName)
 			if err == nil {
@@ -70,10 +67,9 @@ func runListenBot(token string) {
 		}
 	})
 
-	bot.Handle("/pauseid", func(m *tb.Message) {
+	bot.Handle("/pu", func(m *tb.Message) {
 		if m.IsReply() {
-			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
-			uuID := extractUUID(jsonMessage)
+			uuID := extractUUID(m.ReplyTo.Text)
 			fmt.Printf("Pause req for UUID: %+v\n", uuID)
 			err = ceaseUUID(uuID)
 			if err == nil {
@@ -86,10 +82,9 @@ func runListenBot(token string) {
 		}
 	})
 
-	bot.Handle("/unpauseid", func(m *tb.Message) {
+	bot.Handle("/uu", func(m *tb.Message) {
 		if m.IsReply() {
-			jsonMessage, _ := json.Marshal(m.ReplyTo.Text)
-			uuID := extractUUID(jsonMessage)
+			uuID := extractUUID(m.ReplyTo.Text)
 			fmt.Printf("Unpause req for UUID: %+v\n", uuID)
 			err = enableUUID(uuID)
 			if err == nil {
