@@ -28,11 +28,14 @@ func runICMPPingChecks(project project) error {
 		pinger.Run()
 		stats := pinger.Statistics()
 
-		// log.Printf("Ping host %s, res: %+v (err: %+v, stats: %+v)", check.Host, pinger, err, stats)
-
 		if stats.PacketLoss == 0 && stats.AvgRtt > check.Timeout {
 			checkGood = true
+		} else {
+			checkGood = false
 		}
+
+		log.Printf("Ping host %s, res: %+v (err: %+v, stats: %+v)", check.Host, pinger, err, stats)
+		log.Printf("CheckGood: %v", checkGood)
 
 		if checkGood {
 			healthy++
@@ -102,9 +105,9 @@ func runTCPPingChecks(project project) error {
 			endTime := time.Now()
 
 			if err != nil {
-
 				log.Printf("connection failed: %v (attempt %d)\n", err, checkAttempts)
 				checkAttempts++
+				checkGood = false
 			} else {
 				defer conn.Close()
 				var t = float64(endTime.Sub(startTime)) / float64(time.Millisecond)
