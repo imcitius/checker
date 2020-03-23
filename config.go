@@ -41,6 +41,14 @@ type urlCheck struct {
 	Mode          string
 }
 
+type fails map[string]int
+type runtime struct {
+	Fails fails
+}
+
+// Runtime - map of projects errors count
+var Runtime runtime
+
 type project struct {
 	Name       string     `json:"name"`
 	URLChecks  []urlCheck `json:"checks"`
@@ -111,8 +119,11 @@ func fillDefaults() error {
 		if project.Parameters.AllowFails == 0 {
 			project.Parameters.AllowFails = Config.Defaults.Parameters.AllowFails
 		}
-
+		if project.Parameters.MinHealth == 0 {
+			project.Parameters.MinHealth = Config.Defaults.Parameters.MinHealth
+		}
 		Config.Projects[i] = project
+		Runtime.Fails = make(map[string]int)
 	}
 	// fmt.Printf("Updated config %+v\n\n", Config.Projects)
 

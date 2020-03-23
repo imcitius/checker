@@ -21,7 +21,7 @@ func checkHTTP(timeout int) {
 	// set default
 	answerPresent = true
 
-	for i, project := range Config.Projects {
+	for _, project := range Config.Projects {
 
 		if project.Parameters.RunEvery == timeout {
 
@@ -87,16 +87,20 @@ func checkHTTP(timeout int) {
 				}
 			}
 		}
-		// fmt.Printf("Healthy %d of %d\n", healthy, project.Parameters.MinHealth)
-		if healthy < project.Parameters.MinHealth {
-			Config.Projects[i].Runtime.Fails++
-			fmt.Printf("Critical fails: %d on project %s\n", Config.Projects[i].Runtime.Fails, project.Name)
+		fmt.Printf("Healthy %d of minimum %d, its %d fail (%d fails allowed)\n", healthy, project.Parameters.MinHealth, Runtime.Fails[project.Name], project.Parameters.AllowFails)
+		if healthy >= project.Parameters.MinHealth {
+			if Runtime.Fails[project.Name] > 0 {
+				Runtime.Fails[project.Name]--
+			}
+			continue
 		} else {
-			Config.Projects[i].Runtime.Fails = 0
-		}
-		if Config.Projects[i].Runtime.Fails > project.Parameters.AllowFails {
-			message := critical(project.Name, healthy, checkNum, project.Parameters.MinHealth, failedChecks)
-			sendAlert(project.Parameters.CriticalChannel, project.Parameters.BotToken, message)
+			if project.Parameters.AllowFails > Runtime.Fails[project.Name] {
+				Runtime.Fails[project.Name]++
+				continue
+			} else {
+				message := critical(project.Name, healthy, checkNum, project.Parameters.MinHealth, failedChecks)
+				sendAlert(project.Parameters.CriticalChannel, project.Parameters.BotToken, message)
+			}
 		}
 	}
 }
