@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/lithammer/shortuuid"
+	"github.com/google/uuid"
 )
 
 type parameters struct {
@@ -148,19 +148,26 @@ func fillDefaults() error {
 }
 
 func fillUUIDs() error {
+
+	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
+
 	for i := range Config.Projects {
 		for j := range Config.Projects[i].Checks.URLChecks {
-			Config.Projects[i].Checks.URLChecks[j].uuID = shortuuid.New()
+			u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Checks.URLChecks[j].URL))
+			Config.Projects[i].Checks.URLChecks[j].uuID = u2.String()
 		}
 		for j := range Config.Projects[i].Checks.ICMPPingChecks {
-			Config.Projects[i].Checks.ICMPPingChecks[j].uuID = shortuuid.New()
+			u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Checks.ICMPPingChecks[j].Host))
+			Config.Projects[i].Checks.ICMPPingChecks[j].uuID = u2.String()
 		}
 		for j := range Config.Projects[i].Checks.TCPPingChecks {
-			Config.Projects[i].Checks.TCPPingChecks[j].uuID = shortuuid.New()
+			u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Checks.TCPPingChecks[j].Host))
+			Config.Projects[i].Checks.TCPPingChecks[j].uuID = u2.String()
 		}
 	}
+	// log.Printf("%+v", Config)
 	// WIP write error processing
-	return nil
+	return err
 }
 
 func fillAlerts() error {
