@@ -41,8 +41,10 @@ func runHTTPCheck(project project) {
 			}
 		}
 		// log.Printf("http request: %v", req)
-		response, err := client.Do(req)
-
+		response, _ := client.Do(req)
+		if response != nil {
+			defer response.Body.Close()
+		}
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(response.Body)
 
@@ -55,10 +57,10 @@ func runHTTPCheck(project project) {
 		if check.AnswerPresent == "absent" {
 			answerPresent = false
 		}
-		answerGood := answer == answerPresent
+		answerGood := (answer == answerPresent) && code
 		// log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, urlcheck.AnswerPresent, answerGood)
 
-		if code && answerGood {
+		if answerGood {
 			healthy++
 			continue
 		} else {
