@@ -44,7 +44,7 @@ func runScheduler() {
 			return
 		case t := <-Ticker.C:
 			dif := float64(t.Sub(StartTime) / time.Second)
-			for _, timeout := range Timeouts {
+			for _, timeout := range Timeouts.periods {
 				if math.Remainder(dif, float64(timeout)) == 0 {
 					// fmt.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
 					runChecks(timeout)

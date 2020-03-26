@@ -31,20 +31,7 @@ func runICMPPingChecks(project project) error {
 
 		// fmt.Printf("Ping stats: %+v\n\n", stats)
 		fmt.Printf("Healthy %d of minimum %d, its %d fail (%d fails allowed)\n", healthy, project.Parameters.MinHealth, projectFails, project.Parameters.AllowFails)
-		if healthy >= project.Parameters.MinHealth {
-			if projectFails > 0 {
-				projectFails--
-			}
-			continue
-		} else {
-			if project.Parameters.AllowFails > projectFails {
-				projectFails++
-				continue
-			} else {
-				alert.Message = criticalPING(project.Name, healthy, project.Parameters.MinHealth, failedChecks)
-				alert.SendCrit(project)
-			}
-		}
+		checkHealth(project, projectFails, healthy, failedChecks)
 	}
 
 	fmt.Printf("Healthy %d of minimum %d, its %d fail (%d fails allowed)\n", healthy, project.Parameters.MinHealth, projectFails, project.Parameters.AllowFails)
@@ -83,20 +70,8 @@ func runTCPPingChecks(project project) error {
 		// log.Printf("Ping host %s, res: %+v (err: %+v, stats: %+v)", check.Host, pinger, err, stats)
 		// fmt.Printf("Ping stats: %+v\n\n", stats)
 		fmt.Printf("Healthy %d of minimum %d, its %d fail (%d fails allowed)\n", healthy, project.Parameters.MinHealth, projectFails, project.Parameters.AllowFails)
-		if healthy >= project.Parameters.MinHealth {
-			if projectFails > 0 {
-				projectFails--
-			}
-			continue
-		} else {
-			if project.Parameters.AllowFails > projectFails {
-				projectFails++
-				continue
-			} else {
-				alert.Message = criticalPING(project.Name, healthy, project.Parameters.MinHealth, failedChecks)
-				alert.SendCrit(project)
-			}
-		}
+		checkHealth(project, projectFails, healthy, failedChecks)
+
 	}
 
 	return nil

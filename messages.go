@@ -2,12 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 )
 
-func nonCriticalHTTP(name, url, uuid string, code int) string {
-	log.Println("2")
-	return fmt.Sprintf("Http check error\nProject: %s\nURL: %s, code: %d\nUUID: %s\n", name, url, code, uuid)
+func nonCriticalHTTP(err error, name, url, uuid string, code int) string {
+	return fmt.Sprintf("%s\nProject: %s\nURL: %s, code: %d\nUUID: %s\n", err.Error(), name, url, code, uuid)
 }
 
 func criticalHTTP(name string, healthy, num, minnum uint, failed []string) string {

@@ -63,10 +63,26 @@ var (
 	// Config - main config object
 	Config ConfigFile
 	// Timeouts - slice of all timeouts needed by all checks
-	Timeouts []uint
 	// Runtime - map of runtime data
-	Runtime *runtime
+	Runtime  *runtime
+	Timeouts TimeoutCollection
 )
+
+type TimeoutCollection struct {
+	periods []uint
+}
+
+func (p *TimeoutCollection) Add(period uint) {
+	var found bool
+	for _, item := range p.periods {
+		if item == period {
+			found = true
+		}
+	}
+	if !found {
+		p.periods = append(p.periods, period)
+	}
+}
 
 func jsonLoad(fileName string, destination interface{}) error {
 	configFile, err := ioutil.ReadFile(fileName)
@@ -177,10 +193,10 @@ func loadConfig() error {
 	fillUUIDs()
 	fillAlerts()
 
-	Timeouts = append(Timeouts, Config.Defaults.Parameters.RunEvery)
+	Timeouts.Add(Config.Defaults.Parameters.RunEvery)
 	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
-			Timeouts = append(Timeouts, project.Parameters.RunEvery)
+			Timeouts.Add(project.Parameters.RunEvery)
 		}
 	}
 	fmt.Printf("Timeouts found: %v\n\n", Timeouts)

@@ -182,7 +182,7 @@ func (c urlCheck) Execute() (result, error) {
 	// log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, urlcheck.AnswerPresent, answerGood)
 
 	if !answerGood {
-		errorMessage := fmt.Sprintf("Http check error: %+v", response.(*http.Response))
+		errorMessage := fmt.Sprintf("Http answer text error\nFound '%s' ('%s' should be present: %t)", string(buf.Bytes()), c.Answer, answerPresent)
 		return response, errors.New(errorMessage)
 	}
 	return response, checkerr
@@ -238,4 +238,24 @@ func (c tcpPingCheck) Execute() (result, error) {
 		checkAttempts++
 	}
 	return checkAttempts, checkerr
+}
+
+func checkHealth(project project, projectFails, healthy uint, failedChecks []string) error {
+	var alert TgAlert
+	if healthy >= project.Parameters.MinHealth {
+		if projectFails > 0 {
+			projectFails--
+		}
+		//continue
+	} else {
+		if project.Parameters.AllowFails > projectFails {
+			projectFails++
+			//continue
+		} else {
+			alert.Message = criticalPING(project.Name, healthy, project.Parameters.MinHealth, failedChecks)
+			alert.SendCrit(project)
+		}
+	}
+
+	return nil
 }
