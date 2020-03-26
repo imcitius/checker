@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -24,35 +23,6 @@ type parameters struct {
 	MinHealth uint `json:"min_health"`
 	// how much consecutive critical checks may fail to consider not healthy
 	AllowFails uint `json:"allow_fails"`
-}
-
-type httpHeader map[string]string
-
-type urlCheck struct {
-	URL           string       `json:"url"`
-	Code          uint         `json:"code"`
-	Answer        string       `json:"answer"`
-	AnswerPresent string       `json:"answer_present"`
-	Headers       []httpHeader `json:"headers"`
-	uuID          string
-	Mode          string
-}
-
-type icmpPingCheck struct {
-	Host    string
-	Timeout time.Duration
-	Count   uint
-	uuID    string
-	Mode    string
-}
-
-type tcpPingCheck struct {
-	Host     string
-	Timeout  time.Duration
-	Port     uint
-	Attempts uint
-	uuID     string
-	Mode     string
 }
 
 type project struct {
@@ -80,13 +50,13 @@ type fails struct {
 	ICMPPing map[string]uint
 	TCPPing  map[string]uint
 }
-type alerts struct {
-	Project map[string]string
-	UUID    map[string]string
+type alertFlags struct {
+	ByProject map[string]string
+	ByUUID    map[string]string
 }
 type runtime struct {
-	Fails  fails
-	Alerts alerts
+	Fails      fails
+	AlertFlags alertFlags
 }
 
 var (
@@ -175,9 +145,9 @@ func fillAlerts() error {
 
 	for _, project := range Config.Projects {
 		if project.Parameters.Mode == Config.Defaults.Parameters.Mode {
-			Runtime.Alerts.Project[project.Name] = Config.Defaults.Parameters.Mode
+			Runtime.AlertFlags.ByProject[project.Name] = Config.Defaults.Parameters.Mode
 		} else {
-			Runtime.Alerts.Project[project.Name] = project.Parameters.Mode
+			Runtime.AlertFlags.ByProject[project.Name] = project.Parameters.Mode
 		}
 	}
 	// fmt.Printf("Updated config %+v\n\n", Config.Projects)
@@ -190,8 +160,8 @@ func fillAlerts() error {
 func loadConfig() error {
 
 	Run := runtime{}
-	Run.Alerts.Project = make(map[string]string)
-	Run.Alerts.UUID = make(map[string]string)
+	Run.AlertFlags.ByProject = make(map[string]string)
+	Run.AlertFlags.ByUUID = make(map[string]string)
 	Run.Fails.HTTP = make(map[string]uint)
 	Run.Fails.ICMPPing = make(map[string]uint)
 	Run.Fails.TCPPing = make(map[string]uint)

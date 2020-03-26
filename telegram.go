@@ -27,23 +27,22 @@ func runListenBot(token string) {
 		Config.Defaults.Parameters.Mode = "quiet"
 		answer := "All messages ceased"
 		bot.Send(m.Sender, answer)
-
 	})
 
 	bot.Handle("/ua", func(m *tb.Message) {
 		Config.Defaults.Parameters.Mode = "loud"
 		answer := "Messages reenabled"
 		bot.Send(m.Sender, answer)
-
 	})
 
-	bot.Handle("/pp", func(m *tb.Message) {
+	bot.Handle("/pp", func(m *TgMessage) {
+		var project project
 		if m.IsReply() {
-			projectName := extractProject(m.ReplyTo.Text)
-			fmt.Printf("Pause req for project: %+v\n", projectName)
-			err = ceaseProject(projectName)
+			project.Name = m.GetProject()
+			fmt.Printf("Pause req for project: %+v\n", project.Name)
+			err = project.CeaseAlerts()
 			if err == nil {
-				answer := fmt.Sprintf("Messages ceased for project %v", projectName)
+				answer := fmt.Sprintf("Messages ceased for project %v", project.Name)
 				bot.Send(m.Sender, answer)
 			}
 		} else {
@@ -52,13 +51,14 @@ func runListenBot(token string) {
 		}
 	})
 
-	bot.Handle("/up", func(m *tb.Message) {
+	bot.Handle("/up", func(m *TgMessage) {
+		var project project
 		if m.IsReply() {
-			projectName := extractProject(m.ReplyTo.Text)
-			fmt.Printf("Unpause req for project: %+v\n", projectName)
-			err = enableProject(projectName)
+			project.Name = m.GetProject()
+			fmt.Printf("Unpause req for project: %+v\n", project.Name)
+			err = project.EnableAlerts()
 			if err == nil {
-				answer := fmt.Sprintf("Messages enabled for project %v", projectName)
+				answer := fmt.Sprintf("Messages enabled for project %v", project.Name)
 				bot.Send(m.Sender, answer)
 			}
 		} else {
@@ -67,9 +67,9 @@ func runListenBot(token string) {
 		}
 	})
 
-	bot.Handle("/pu", func(m *tb.Message) {
+	bot.Handle("/pu", func(m *TgMessage) {
 		if m.IsReply() {
-			uuID := extractUUID(m.ReplyTo.Text)
+			uuID := m.GetUUID()
 			fmt.Printf("Pause req for UUID: %+v\n", uuID)
 			err = ceaseUUID(uuID)
 			if err == nil {
@@ -82,9 +82,9 @@ func runListenBot(token string) {
 		}
 	})
 
-	bot.Handle("/uu", func(m *tb.Message) {
+	bot.Handle("/uu", func(m *TgMessage) {
 		if m.IsReply() {
-			uuID := extractUUID(m.ReplyTo.Text)
+			uuID := m.GetUUID()
 			fmt.Printf("Unpause req for UUID: %+v\n", uuID)
 			err = enableUUID(uuID)
 			if err == nil {
@@ -100,8 +100,7 @@ func runListenBot(token string) {
 	bot.Start()
 }
 
-func sendAlert(channelID int64, token, message string) error {
-
+func sendAlert(channelID int64, token string, m string) error {
 	// log.Printf("Sending alert: channel %d, token %s, message %s", channelID, token, message)
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  token,
@@ -112,7 +111,6 @@ func sendAlert(channelID int64, token, message string) error {
 	}
 	user := tb.Chat{ID: channelID}
 
-	bot.Send(&user, message)
+	bot.Send(&user, m)
 	return nil
-
 }

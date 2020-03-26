@@ -15,17 +15,21 @@ func runChecks(timeout uint) {
 			}
 
 			if project.Checks.ICMPPingChecks != nil {
-				// log.Printf("PING checks for project %s\n", project.Name)
+				// log.Printf("ICMP ping checks for project %s\n", project.Name)
 				go runICMPPingChecks(project)
 			}
 
 			if project.Checks.TCPPingChecks != nil {
-				// log.Printf("PING checks for project %s\n", project.Name)
+				// log.Printf("TCP ping checks for project %s\n", project.Name)
 				go runTCPPingChecks(project)
 			}
 
 		}
 	}
+
+}
+
+func sendAlerts() {
 
 }
 
@@ -35,18 +39,16 @@ func runScheduler() {
 	Ticker := time.NewTicker(time.Duration(Config.Defaults.TimerStep) * time.Second)
 
 	for {
-
-		for {
-			select {
-			case <-done:
-				return
-			case t := <-Ticker.C:
-				dif := float64(t.Sub(StartTime) / time.Second)
-				for _, timeout := range Timeouts {
-					if math.Remainder(dif, float64(timeout)) == 0 {
-						// fmt.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
-						runChecks(timeout)
-					}
+		select {
+		case <-done:
+			return
+		case t := <-Ticker.C:
+			dif := float64(t.Sub(StartTime) / time.Second)
+			for _, timeout := range Timeouts {
+				if math.Remainder(dif, float64(timeout)) == 0 {
+					// fmt.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
+					runChecks(timeout)
+					sendAlerts()
 				}
 			}
 		}

@@ -3,34 +3,41 @@ package main
 import (
 	"fmt"
 	"regexp"
+
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
-func ceaseProject(projectName string) error {
-	Runtime.Alerts.Project[projectName] = "quiet"
+// TgMessage - new type to define own methods
+type TgMessage struct {
+	*tb.Message
+}
+
+func (p project) CeaseAlerts() error {
+	Runtime.AlertFlags.ByProject[p.Name] = "quiet"
 	return nil
 }
 
-func enableProject(projectName string) error {
-	Runtime.Alerts.Project[projectName] = "loud"
+func (p project) EnableAlerts() error {
+	Runtime.AlertFlags.ByProject[p.Name] = "loud"
 	return nil
 }
 
 func ceaseUUID(uuID string) error {
-	Runtime.Alerts.UUID[uuID] = "quiet"
+	Runtime.AlertFlags.ByUUID[uuID] = "quiet"
 	return nil
 }
 
 func enableUUID(uuID string) error {
-	Runtime.Alerts.UUID[uuID] = "loud"
+	Runtime.AlertFlags.ByUUID[uuID] = "loud"
 	return nil
 }
 
-func extractProject(message string) string {
+func (m *TgMessage) GetProject() string {
 	var projectName string
 
-	fmt.Printf("message: %v\n", message)
+	fmt.Printf("message: %v\n", m)
 	pattern := regexp.MustCompile("Project: (.*)\n")
-	result := pattern.FindStringSubmatch(message)
+	result := pattern.FindStringSubmatch(m.ReplyTo.Text)
 	if result == nil {
 		fmt.Printf("Project extraction error.")
 	} else {
@@ -41,12 +48,12 @@ func extractProject(message string) string {
 	return projectName
 }
 
-func extractUUID(message string) string {
+func (m *TgMessage) GetUUID() string {
 	var uuid string
 
-	fmt.Printf("message: %v\n", message)
+	fmt.Printf("message: %v\n", m)
 	pattern := regexp.MustCompile("UUID: (.*)")
-	result := pattern.FindStringSubmatch(message)
+	result := pattern.FindStringSubmatch(m.ReplyTo.Text)
 	if result == nil {
 		fmt.Printf("UUID extraction error.")
 	} else {
