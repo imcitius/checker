@@ -49,7 +49,7 @@ type AlertConfigs struct {
 	// Messages mode quiet/loud
 	CriticalChannel int64 `json:"critical_channel"`
 	// Empty by default, alerts will not be sent unless critical
-	ProjectChannel int64 `json:"project_channel"`
+	ProjectChannel int64 `json:"noncritical_channel"`
 }
 
 type Project struct {
