@@ -56,7 +56,7 @@ func (p *Project) Alert(e error) {
 				//log.Printf("%+v", alert)
 				if alert.GetName() == p.Parameters.Alert {
 					//log.Printf("Alert details: %+v\n\n", alert)
-					alert.Send(p, e)
+					alert.Send(e)
 				}
 			}
 		}
@@ -69,7 +69,7 @@ func (p *Project) CritAlert(e error) {
 		//log.Printf("%+v", alert)
 		if alert.GetName() == p.Parameters.CritAlert {
 			//log.Printf("Alert details: %+v\n\n", alert)
-			alert.Send(p, e)
+			alert.Send(e)
 		}
 	}
 

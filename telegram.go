@@ -79,9 +79,11 @@ func runListenTgBot(token string) {
 			uuID := tgMessage.GetUUID()
 			log.Printf("Pause req for UUID: %+v\n", uuID)
 			for _, project := range Config.Projects {
-				for _, check := range project.Checks {
-					if uuID == check.uuID {
-						_ = check.CeaseAlerts()
+				for _, healthcheck := range project.Healtchecks {
+					for _, check := range healthcheck.Checks {
+						if uuID == check.uuID {
+							_ = check.CeaseAlerts()
+						}
 					}
 				}
 			}
@@ -103,9 +105,11 @@ func runListenTgBot(token string) {
 			uuID := tgMessage.GetUUID()
 			log.Printf("Resume req for UUID: %+v\n", uuID)
 			for _, project := range Config.Projects {
-				for _, check := range project.Checks {
-					if uuID == check.uuID {
-						_ = check.EnableAlerts()
+				for _, healthcheck := range project.Healtchecks {
+					for _, check := range healthcheck.Checks {
+						if uuID == check.uuID {
+							_ = check.EnableAlerts()
+						}
 					}
 				}
 			}

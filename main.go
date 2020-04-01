@@ -15,7 +15,8 @@ func main() {
 		}
 		fillTimeouts()
 	}
-	//log.Printf("Config: %+v\n\n", Config)
+	//conf, _ := json.Marshal(Config)
+	//log.Printf("Config: %+v\n\n", string(conf))
 
 	initBots()
 	runScheduler()

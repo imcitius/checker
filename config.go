@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"io/ioutil"
-	"log"
 	"time"
 )
 
@@ -24,7 +23,7 @@ type Parameters struct {
 }
 
 type ChatAlert interface {
-	Send(p *Project, e error) error
+	Send(e error) error
 	GetName() string
 	GetType() string
 	GetCreds() string
@@ -47,13 +46,14 @@ type Alerts struct {
 }
 
 type Project struct {
-	Name       string     `json:"name"`
-	Checks     []*Check   `json:"checks"`
-	Parameters Parameters `json:"parameters"`
+	Name        string         `json:"name"`
+	Healtchecks []*Healtchecks `json:"healthchecks"`
+	Parameters  Parameters     `json:"parameters"`
 
 	// Runtime data
 	ErrorsCount int
 	FailsCount  int
+	Timeouts    TimeoutCollection
 }
 
 // ConfigFile - main config structure
@@ -65,6 +65,14 @@ type ConfigFile struct {
 	}
 	Alerts   []*Alerts  `json:"alerts"`
 	Projects []*Project `json:"projects"`
+}
+
+type Healtchecks struct {
+	Name   string
+	Checks []*Check
+
+	// check level parameters
+	Parameters Parameters `json:"parameters"`
 }
 
 type Check struct {
@@ -140,9 +148,11 @@ func fillDefaults() error {
 func fillUUIDs() error {
 	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
 	for i := range Config.Projects {
-		for j := range Config.Projects[i].Checks {
-			u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Checks[j].Host))
-			Config.Projects[i].Checks[j].uuID = u2.String()
+		for j := range Config.Projects[i].Healtchecks {
+			for k := range Config.Projects[i].Healtchecks[j].Checks {
+				u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Healtchecks[j].Checks[k].Host))
+				Config.Projects[i].Healtchecks[j].Checks[k].uuID = u2.String()
+			}
 		}
 	}
 	return err
@@ -155,9 +165,15 @@ func fillTimeouts() {
 		if project.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
 			Timeouts.Add(project.Parameters.RunEvery)
 		}
+		for _, healthcheck := range project.Healtchecks {
+			if healthcheck.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
+				Timeouts.Add(healthcheck.Parameters.RunEvery)
+				project.Timeouts.Add(healthcheck.Parameters.RunEvery)
+			}
+			//log.Printf("Project %s timeouts found: %v\n", project.Name, project.Timeouts)
+		}
 	}
-	log.Printf("Timeouts found: %v\n\n", Timeouts)
-
+	//log.Printf("Timeouts found: %v\n\n", Timeouts)
 }
 
 func (p *TimeoutCollection) Add(period int) {
