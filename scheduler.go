@@ -32,7 +32,6 @@ func runChecks(timeout int) {
 }
 
 func runAlerts(timeout int) {
-
 	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery == timeout {
 			if project.ErrorsCount > project.Parameters.MinHealth {
@@ -45,6 +44,18 @@ func runAlerts(timeout int) {
 				project.CritAlert(errors.New(errorMessage))
 			}
 		}
+	}
+}
+
+func runReports(timeout int) {
+	for _, project := range Config.Projects {
+		if project.Parameters.PeriodicReport == timeout {
+			err := project.SendReport()
+			if err != nil {
+				log.Printf("Cannot send report for project %s: %+v", project.Name, err)
+			}
+		}
+		//project.SendReport()
 	}
 }
 
@@ -63,6 +74,7 @@ func runScheduler() {
 				if math.Remainder(dif, float64(timeout)) == 0 {
 					log.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
 					go runChecks(timeout)
+					go runReports(timeout)
 					runAlerts(timeout)
 				}
 			}

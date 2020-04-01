@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func (a Alerts) Send(e error) error {
+func (a *AlertConfigs) Send(e error) error {
 
 	switch a.Type {
 	case "telegram":
@@ -17,14 +17,14 @@ func (a Alerts) Send(e error) error {
 	}
 }
 
-func (a Alerts) GetName() string {
+func (a *AlertConfigs) GetName() string {
 	return a.Name
 }
 
-func (a Alerts) GetType() string {
+func (a *AlertConfigs) GetType() string {
 	return a.Type
 }
 
-func (a Alerts) GetCreds() string {
+func (a *AlertConfigs) GetCreds() string {
 	return a.BotToken
 }

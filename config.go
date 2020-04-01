@@ -11,7 +11,8 @@ type Parameters struct {
 	// Messages mode quiet/loud
 	Mode string `json:"mode"`
 	// Checks should be run every RunEvery seconds
-	RunEvery int `json:"run_every"`
+	RunEvery       int `json:"run_every"`
+	PeriodicReport int `json:"periodic_report_time"`
 	// minimum passed checks to consider project healthy
 	MinHealth int `json:"min_health"`
 	// how much consecutive critical checks may fail to consider not healthy
@@ -29,12 +30,18 @@ type ChatAlert interface {
 	GetCreds() string
 }
 
-type ChatMessage interface {
+type IncomingChatMessage interface {
 	GetUUID() string
 	GetProject() string
 }
 
-type Alerts struct {
+type CommonProject interface {
+	SendReport() error
+	GetName() string
+	GetMode() string
+}
+
+type AlertConfigs struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 	// Tg token for bot
@@ -63,8 +70,8 @@ type ConfigFile struct {
 		TimerStep  int         `json:"timer_step"`
 		Parameters *Parameters `json:"parameters"`
 	}
-	Alerts   []*Alerts  `json:"alerts"`
-	Projects []*Project `json:"projects"`
+	Alerts   []*AlertConfigs `json:"alerts"`
+	Projects []*Project      `json:"projects"`
 }
 
 type Healtchecks struct {
@@ -138,6 +145,9 @@ func fillDefaults() error {
 		}
 		if project.Parameters.CritAlert == "" {
 			project.Parameters.CritAlert = Config.Defaults.Parameters.Alert
+		}
+		if project.Parameters.PeriodicReport == 0 {
+			project.Parameters.PeriodicReport = Config.Defaults.Parameters.PeriodicReport
 		}
 		Config.Projects[i] = project
 	}
