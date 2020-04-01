@@ -1,36 +1,47 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"log"
 	"math"
 	"time"
 )
 
-func runChecks(timeout uint) {
+func runChecks(timeout int) {
+	for _, project := range Config.Projects {
+		if project.Parameters.RunEvery == timeout {
+			for _, check := range project.Checks {
+				err := check.Execute(project)
+				//log.Printf("Return err: %+v\n", err)
+				if err != nil {
+					if check.Mode != "quiet" {
+						project.Alert(err)
+					}
+					project.AddError()
+				} else {
+					project.DecError()
+				}
+			}
+		}
+	}
+}
+
+func runAlerts(timeout int) {
 
 	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery == timeout {
-			if project.Checks.URLChecks != nil {
-				// log.Printf("HTTP checks for project %s\n", project.Name)
-				go runHTTPCheck(project)
+			if project.ErrorsCount > project.Parameters.MinHealth {
+				project.AddFail()
+			} else {
+				project.DecFail()
 			}
-
-			if project.Checks.ICMPPingChecks != nil {
-				// log.Printf("ICMP ping checks for project %s\n", project.Name)
-				go runICMPPingChecks(project)
+			if project.FailsCount > project.Parameters.AllowFails {
+				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
+				project.CritAlert(errors.New(errorMessage))
 			}
-
-			if project.Checks.TCPPingChecks != nil {
-				// log.Printf("TCP ping checks for project %s\n", project.Name)
-				go runTCPPingChecks(project)
-			}
-
 		}
 	}
-
-}
-
-func sendAlerts() {
-
 }
 
 func runScheduler() {
@@ -46,9 +57,9 @@ func runScheduler() {
 			dif := float64(t.Sub(StartTime) / time.Second)
 			for _, timeout := range Timeouts.periods {
 				if math.Remainder(dif, float64(timeout)) == 0 {
-					// fmt.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
-					runChecks(timeout)
-					sendAlerts()
+					log.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
+					go runChecks(timeout)
+					runAlerts(timeout)
 				}
 			}
 		}

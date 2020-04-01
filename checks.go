@@ -4,142 +4,110 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sparrc/go-ping"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"regexp"
-	"time"
-
-	"github.com/sparrc/go-ping"
 )
 
-type httpHeader map[string]string
+func (c *Check) Execute(p *Project) error {
 
-// UniversalCheck - Interface to any possible healthcheck
-type UniversalCheck interface {
-	Execute() (result, error)
-	UUID() string
-	HostName() string
+	switch c.Type {
+	case "http":
+		//log.Printf("http check execute: %+v\n", c.Host)
+		err := runHTTPCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
+		return err
+	case "icmp":
+		//log.Printf("icmp check execute %+v\n", c)
+		err := runICMPCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
+		return err
+	case "tcp":
+		//log.Printf("tcp check execute %+v\n", c)
+		err := runTCPCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
+		return err
+	default:
+		return errors.New("check not implemented")
+	}
 }
 
-type result interface{}
-
-type urlCheck struct {
-	URL           string       `json:"url"`
-	Code          uint         `json:"code"`
-	Answer        string       `json:"answer"`
-	AnswerPresent string       `json:"answer_present"`
-	Headers       []httpHeader `json:"headers"`
-	uuID          string
-	Mode          string
-}
-
-type icmpPingCheck struct {
-	Host    string
-	Timeout time.Duration
-	Count   uint
-	uuID    string
-	Mode    string
-}
-
-type tcpPingCheck struct {
-	Host     string
-	Timeout  time.Duration
-	Port     uint
-	Attempts uint
-	uuID     string
-	Mode     string
-}
-
-func (c urlCheck) UUID() string {
-	var uuID string
-	for _, project := range Config.Projects {
-		for _, check := range project.Checks.URLChecks {
-			if check.URL == c.URL {
-				uuID = check.uuID
+func (p *Project) Alert(e error) {
+	//log.Printf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
+	//log.Printf("%+v", Config.Alerts)
+	if Config.Defaults.Parameters.Mode == "loud" && p.Parameters.Mode == "loud" {
+		if p.Parameters.Mode == "loud" {
+			for _, alert := range Config.Alerts {
+				//log.Printf("%+v", alert)
+				if alert.GetName() == p.Parameters.Alert {
+					//log.Printf("Alert details: %+v\n\n", alert)
+					alert.Send(p, e)
+				}
 			}
 		}
 	}
-	return uuID
 }
 
-func (c urlCheck) HostName() string {
-	var host string
-	for _, project := range Config.Projects {
-		for _, check := range project.Checks.URLChecks {
-			if check.URL == c.URL {
-				host = check.URL
-			}
+func (p *Project) CritAlert(e error) {
+	log.Printf("Send critical alert for project: %+v with error %+v\n\n", p, e)
+	for _, alert := range Config.Alerts {
+		//log.Printf("%+v", alert)
+		if alert.GetName() == p.Parameters.CritAlert {
+			//log.Printf("Alert details: %+v\n\n", alert)
+			alert.Send(p, e)
 		}
 	}
-	return host
+
 }
 
-func (c icmpPingCheck) UUID() string {
-	var uuID string
-	for _, project := range Config.Projects {
-		for _, check := range project.Checks.TCPPingChecks {
-			if check.Host == c.Host {
-				uuID = check.uuID
-			}
-		}
-	}
-	return uuID
+func (c *Check) UUID() string {
+	return c.uuID
 }
 
-func (c icmpPingCheck) HostName() string {
-	var host string
-	for _, project := range Config.Projects {
-		for _, check := range project.Checks.TCPPingChecks {
-			if check.Host == c.Host {
-				host = check.Host
-			}
-		}
-	}
-	return host
+func (c *Check) HostName() string {
+	return c.Host
 }
 
-func (c tcpPingCheck) UUID() string {
-	var uuID string
-	for _, project := range Config.Projects {
-		for _, check := range project.Checks.ICMPPingChecks {
-			if check.Host == c.Host {
-				uuID = check.uuID
-			}
-		}
-	}
-	return uuID
-}
-
-func (c tcpPingCheck) HostName() string {
-	var host string
-	for _, project := range Config.Projects {
-		for _, check := range project.Checks.ICMPPingChecks {
-			if check.Host == c.Host {
-				host = check.Host
-			}
-		}
-	}
-	return host
-}
-
-func (c urlCheck) Execute() (result, error) {
+func runHTTPCheck(c *Check, p *Project) error {
 	var (
 		answerPresent bool = true
-		checkNum      uint
-		response      result
-		checkerr      error
+		checkNum      int
+		checkErr      error
+		errorHeader   string
 	)
-	fmt.Println("test: ", c.URL)
-	_, err := url.Parse(c.URL)
+
+	if c.AnswerPresent == "absent" {
+		answerPresent = false
+	} else {
+		answerPresent = true
+	}
+
+	errorHeader = fmt.Sprintf("HTTP error at project: %s\nCheck URL: %s\nCheck UUID: %s\n", p.Name, c.Host, c.uuID)
+
+	//fmt.Println("test: ", c.Host)
+	_, err := url.Parse(c.Host)
 	if err != nil {
 		log.Fatal(err)
 	}
 	checkNum++
 
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", c.URL, nil)
+	req, err := http.NewRequest("GET", c.Host, nil)
 
 	// if custom headers requested
 	if c.Headers != nil {
@@ -149,113 +117,127 @@ func (c urlCheck) Execute() (result, error) {
 			}
 		}
 	}
+
 	// log.Printf("http request: %v", req)
-	response, err = client.Do(req)
+	response, err := client.Do(req)
 	if err != nil {
-		errorMessage := fmt.Sprintf("Http asnwer error: %+v", err)
-		return response, errors.New(errorMessage)
+		errorMessage := errorHeader + fmt.Sprintf("asnwer error: %+v", err)
+		return errors.New(errorMessage)
 	}
 
-	if response.(*http.Response).Body != nil {
-		defer response.(*http.Response).Body.Close()
+	if response.Body != nil {
+		defer response.Body.Close()
 	} else {
-		errorMessage := fmt.Sprintf("Http empty body: %+v", response.(*http.Response))
-		return response, errors.New(errorMessage)
+		errorMessage := errorHeader + fmt.Sprintf("empty body: %+v", response)
+		return errors.New(errorMessage)
 	}
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(response.(*http.Response).Body)
-
+	buf.ReadFrom(response.Body)
+	//log.Printf("Server: %s, http answer body: %s\n", c.URL, buf)
 	// check that response code is correct
-	code := c.Code == uint(response.(*http.Response).StatusCode)
+	code := c.Code == int(response.StatusCode)
 	if !code {
-		errorMessage := fmt.Sprintf("Http code error: %d (want %d)", response.(*http.Response).StatusCode, c.Code)
-		return response, errors.New(errorMessage)
+		errorMessage := errorHeader + fmt.Sprintf("code error: %d (want %d)", response.StatusCode, c.Code)
+		return errors.New(errorMessage)
 	}
 
 	answer, _ := regexp.Match(c.Answer, buf.Bytes())
 	// check answer_present condition
-	if c.AnswerPresent == "absent" {
-		answerPresent = false
-	}
 	answerGood := (answer == answerPresent) && code
-	// log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, urlcheck.AnswerPresent, answerGood)
+	//log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, c.AnswerPresent, answerGood)
 
 	if !answerGood {
-		errorMessage := fmt.Sprintf("Http answer text error\nFound '%s' ('%s' should be present: %t)", string(buf.Bytes()), c.Answer, answerPresent)
-		return response, errors.New(errorMessage)
+		errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' ('%s' should be %s)", string(buf.Bytes()), c.Answer, c.AnswerPresent)
+		return errors.New(errorMessage)
 	}
-	return response, checkerr
+
+	return checkErr
 }
 
-func (c icmpPingCheck) Execute() (result, error) {
+func runICMPCheck(c *Check, p *Project) error {
 	var (
-		checkNum uint
-		checkerr error
+		errorHeader, errorMessage string
 	)
 
+	errorHeader = fmt.Sprintf("ICMP error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.uuID)
+
 	fmt.Println("icmp ping test: ", c.Host)
-	checkNum++
-	pinger, _ := ping.NewPinger(c.Host)
-	pinger.Count = int(c.Count)
-	pinger.Timeout = c.Timeout * 1000 * 1000 //milliseconds
+	pinger, err := ping.NewPinger(c.Host)
+	pinger.Count = c.Count
+	pinger.Timeout = c.Timeout * 1000 * 1000
 	pinger.Run()
 	stats := pinger.Statistics()
 
-	// log.Printf("Ping host %s, res: %+v (err: %+v, stats: %+v)", c.Host, pinger, err, stats)
+	//log.Printf("Ping host %s, res: %+v (err: %+v, stats: %+v)", c.Host, pinger, err, stats)
 
-	if stats.PacketLoss == 0 && stats.AvgRtt < c.Timeout {
-		return stats, checkerr
+	if err == nil && stats.PacketLoss == 0 && stats.AvgRtt >= c.Timeout {
+		return nil
+	} else {
+		switch {
+		case stats.AvgRtt >= c.Timeout*1000*1000 && stats.PacketLoss == 0:
+			//log.Printf("Ping stats: %+v", stats)
+			errorMessage = errorHeader + fmt.Sprintf("ping error avg rtt: %d ms (want %v)\n", stats.AvgRtt.Milliseconds(), c.Timeout)
+		case stats.PacketLoss > 0:
+			//log.Printf("Ping stats: %+v", stats)
+			errorMessage = errorHeader + fmt.Sprintf("ping error: %v percent packet loss\n", stats.PacketLoss)
+		default:
+			//log.Printf("Ping stats: %+v", stats)
+			errorMessage = errorHeader + fmt.Sprintf("other ping error: %+v\n", err)
+		}
 	}
-	return stats, checkerr
+
+	//log.Println(errorMessage)
+	return errors.New(errorMessage)
+
 }
 
-func (c tcpPingCheck) Execute() (result, error) {
+func runTCPCheck(c *Check, p *Project) error {
 	var (
-		checkNum      uint
-		checkAttempts uint
-		checkerr      error
+		errorHeader, errorMessage string
+		checkAttempts             int
 	)
 
-	checkNum++
-	checkhost := fmt.Sprintf("%s:%d", c.Host, c.Port)
+	//log.Panic(projectName)
+
+	errorHeader = fmt.Sprintf("TCP error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.uuID)
+
+	fmt.Println("tcp ping test: ", c.Host)
+
 	timeout := c.Timeout * 1000 * 1000 // millisecond
-	fmt.Printf("tcp ping test: %s\n", checkhost)
 
 	for checkAttempts < c.Attempts {
-		startTime := time.Now()
-		conn, err := net.DialTimeout("tcp", checkhost, timeout)
-		endTime := time.Now()
+		//startTime := time.Now()
+		conn, err := net.DialTimeout("tcp", c.Host+":"+c.Port, timeout)
+		//endTime := time.Now()
 
 		if err == nil {
-			defer conn.Close()
-			var t = float64(endTime.Sub(startTime)) / float64(time.Millisecond)
-			log.Printf("Connection to host %v succeed, took %v millisec", conn.RemoteAddr().String(), t)
-			return checkAttempts, err
+			conn.Close()
+			//t := float64(endTime.Sub(startTime)) / float64(time.Millisecond)
+			//log.Printf("Connection to host %v succeed, took %v millisec", conn.RemoteAddr().String(), t)
+			return nil
 		}
 
-		log.Printf("connection failed: %v (attempt %d)\n", err, checkAttempts)
+		errorMessage = errorHeader + fmt.Sprintf("connection to host %s failed: %v (attempt %d)\n", c.Host+":"+c.Port, err, checkAttempts)
+		//log.Printf(errorMessage)
 		checkAttempts++
 	}
-	return checkAttempts, checkerr
+
+	fmt.Println(errorMessage)
+	return errors.New(errorMessage)
+
 }
 
-func checkHealth(project project, projectFails, healthy uint, failedChecks []string) error {
-	var alert TgAlert
-	if healthy >= project.Parameters.MinHealth {
-		if projectFails > 0 {
-			projectFails--
-		}
-		//continue
-	} else {
-		if project.Parameters.AllowFails > projectFails {
-			projectFails++
-			//continue
-		} else {
-			alert.Message = criticalPING(project.Name, healthy, project.Parameters.MinHealth, failedChecks)
-			alert.SendCrit(project)
-		}
-	}
+func (c *Check) CeaseAlerts() error {
+	log.Printf("Old mode: %s", c.Mode)
+	c.Mode = "quiet"
+	log.Printf("New mode: %s", c.Mode)
+	return nil
+}
 
+func (c *Check) EnableAlerts() error {
+	log.Printf("Old mode: %s", c.Mode)
+	c.Mode = "loud"
+	log.Printf("New mode: %s", c.Mode)
 	return nil
 }

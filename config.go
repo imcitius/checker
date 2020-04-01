@@ -2,86 +2,92 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-
 	"github.com/google/uuid"
+	"io/ioutil"
+	"log"
+	"time"
 )
 
-type parameters struct {
-	// Tg token for bot
-	BotToken string `json:"bot_token"`
+type Parameters struct {
 	// Messages mode quiet/loud
 	Mode string `json:"mode"`
 	// Checks should be run every RunEvery seconds
-	RunEvery uint `json:"run_every"`
-	// Tg channel for critical alerts
+	RunEvery int `json:"run_every"`
+	// minimum passed checks to consider project healthy
+	MinHealth int `json:"min_health"`
+	// how much consecutive critical checks may fail to consider not healthy
+	AllowFails int `json:"allow_fails"`
+	// alert name
+	Alert          string `json:"noncrit_alert"`
+	CritAlert      string `json:"crit_alert"`
+	CommandChannel string `json:"command_channel"`
+}
+
+type ChatAlert interface {
+	Send(p *Project, e error) error
+	GetName() string
+	GetType() string
+	GetCreds() string
+}
+
+type ChatMessage interface {
+	GetUUID() string
+	GetProject() string
+}
+
+type Alerts struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+	// Tg token for bot
+	BotToken string `json:"bot_token"`
+	// Messages mode quiet/loud
 	CriticalChannel int64 `json:"critical_channel"`
 	// Empty by default, alerts will not be sent unless critical
 	ProjectChannel int64 `json:"project_channel"`
-	// minimum passed checks to consider project healthy
-	MinHealth uint `json:"min_health"`
-	// how much consecutive critical checks may fail to consider not healthy
-	AllowFails uint `json:"allow_fails"`
 }
 
-type project struct {
-	Name   string `json:"name"`
-	Checks struct {
-		URLChecks      []urlCheck      `json:"http"`
-		ICMPPingChecks []icmpPingCheck `json:"icmp_ping"`
-		TCPPingChecks  []tcpPingCheck  `json:"tcp_ping"`
-	} `json:"checks"`
-	Parameters parameters `json:"parameters"`
+type Project struct {
+	Name       string     `json:"name"`
+	Checks     []*Check   `json:"checks"`
+	Parameters Parameters `json:"parameters"`
+
+	// Runtime data
+	ErrorsCount int
+	FailsCount  int
 }
 
 // ConfigFile - main config structure
 type ConfigFile struct {
 	Defaults struct {
 		// Main timer evaluates every TimerStep seconds
-		TimerStep  uint       `json:"timer_step"`
-		Parameters parameters `json:"parameters"`
+		TimerStep  int         `json:"timer_step"`
+		Parameters *Parameters `json:"parameters"`
 	}
-	Projects []project `json:"projects"`
+	Alerts   []*Alerts  `json:"alerts"`
+	Projects []*Project `json:"projects"`
 }
 
-type fails struct {
-	HTTP     map[string]uint
-	ICMPPing map[string]uint
-	TCPPing  map[string]uint
-}
-type alertFlags struct {
-	ByProject map[string]string
-	ByUUID    map[string]string
-}
-type runtime struct {
-	Fails      fails
-	AlertFlags alertFlags
-}
+type Check struct {
+	// Parameters related to healthcheck execution
+	Type          string
+	Host          string
+	Timeout       time.Duration
+	Port          string
+	Attempts      int
+	Mode          string
+	Count         int
+	Code          int
+	Answer        string
+	AnswerPresent string `json:"answer_present"`
+	Headers       []map[string]string
 
-var (
-	// Config - main config object
-	Config ConfigFile
-	// Timeouts - slice of all timeouts needed by all checks
-	// Runtime - map of runtime data
-	Runtime  *runtime
-	Timeouts TimeoutCollection
-)
+	// Runtime data
+	uuID       string
+	LastResult bool
+}
 
 type TimeoutCollection struct {
-	periods []uint
-}
-
-func (p *TimeoutCollection) Add(period uint) {
-	var found bool
-	for _, item := range p.periods {
-		if item == period {
-			found = true
-		}
-	}
-	if !found {
-		p.periods = append(p.periods, period)
-	}
+	periods []int
 }
 
 func jsonLoad(fileName string, destination interface{}) error {
@@ -93,30 +99,22 @@ func jsonLoad(fileName string, destination interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	// WIP write error processing
 	return nil
 }
 
-func fillDefaults() error {
-	// fmt.Printf("Loaded config %+v\n\n", Config.Projects)
+var (
+	Config   *ConfigFile
+	Timeouts TimeoutCollection
+)
 
+func fillDefaults() error {
+	// log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, project := range Config.Projects {
 		if project.Parameters.RunEvery == 0 {
 			project.Parameters.RunEvery = Config.Defaults.Parameters.RunEvery
 		}
-		// use default token if not specified for project
-		if project.Parameters.BotToken == "" {
-			project.Parameters.BotToken = Config.Defaults.Parameters.BotToken
-		}
 		if project.Parameters.Mode == "" {
 			project.Parameters.Mode = Config.Defaults.Parameters.Mode
-		}
-		if project.Parameters.CriticalChannel == 0 {
-			project.Parameters.CriticalChannel = Config.Defaults.Parameters.CriticalChannel
-		}
-		if project.Parameters.ProjectChannel == 0 {
-			project.Parameters.ProjectChannel = Config.Defaults.Parameters.ProjectChannel
 		}
 		if project.Parameters.AllowFails == 0 {
 			project.Parameters.AllowFails = Config.Defaults.Parameters.AllowFails
@@ -124,83 +122,52 @@ func fillDefaults() error {
 		if project.Parameters.MinHealth == 0 {
 			project.Parameters.MinHealth = Config.Defaults.Parameters.MinHealth
 		}
+		if project.Parameters.MinHealth == 0 {
+			project.Parameters.MinHealth = Config.Defaults.Parameters.MinHealth
+		}
+		if project.Parameters.Alert == "" {
+			project.Parameters.Alert = Config.Defaults.Parameters.Alert
+		}
+		if project.Parameters.CritAlert == "" {
+			project.Parameters.CritAlert = Config.Defaults.Parameters.Alert
+		}
 		Config.Projects[i] = project
 	}
-	// fmt.Printf("Updated config %+v\n\n", Config.Projects)
 
-	// WIP write error processing
 	return nil
-
 }
 
 func fillUUIDs() error {
-
 	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
-
 	for i := range Config.Projects {
-		for j := range Config.Projects[i].Checks.URLChecks {
-			u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Checks.URLChecks[j].URL))
-			Config.Projects[i].Checks.URLChecks[j].uuID = u2.String()
-		}
-		for j := range Config.Projects[i].Checks.ICMPPingChecks {
-			u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Checks.ICMPPingChecks[j].Host))
-			Config.Projects[i].Checks.ICMPPingChecks[j].uuID = u2.String()
-		}
-		for j := range Config.Projects[i].Checks.TCPPingChecks {
-			u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Checks.TCPPingChecks[j].Host))
-			Config.Projects[i].Checks.TCPPingChecks[j].uuID = u2.String()
+		for j := range Config.Projects[i].Checks {
+			u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Checks[j].Host))
+			Config.Projects[i].Checks[j].uuID = u2.String()
 		}
 	}
-	// log.Printf("%+v", Config)
-	// WIP write error processing
 	return err
 }
 
-func fillAlerts() error {
-	// fmt.Printf("Loaded config %+v\n\n", Config.Projects)
-
-	for _, project := range Config.Projects {
-		if project.Parameters.Mode == Config.Defaults.Parameters.Mode {
-			Runtime.AlertFlags.ByProject[project.Name] = Config.Defaults.Parameters.Mode
-		} else {
-			Runtime.AlertFlags.ByProject[project.Name] = project.Parameters.Mode
-		}
-	}
-	// fmt.Printf("Updated config %+v\n\n", Config.Projects)
-
-	// WIP write error processing
-	return nil
-
-}
-
-func loadConfig() error {
-
-	Run := runtime{}
-	Run.AlertFlags.ByProject = make(map[string]string)
-	Run.AlertFlags.ByUUID = make(map[string]string)
-	Run.Fails.HTTP = make(map[string]uint)
-	Run.Fails.ICMPPing = make(map[string]uint)
-	Run.Fails.TCPPing = make(map[string]uint)
-	Runtime = &Run
-
-	// load config file
-	err := jsonLoad("config.json", &Config)
-	if err != nil {
-		panic(err)
-	}
-	// fill default project configs and generate UUIDs
-	fillDefaults()
-	fillUUIDs()
-	fillAlerts()
-
+func fillTimeouts() {
 	Timeouts.Add(Config.Defaults.Parameters.RunEvery)
+	//fmt.Println("1")
 	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
 			Timeouts.Add(project.Parameters.RunEvery)
 		}
 	}
-	fmt.Printf("Timeouts found: %v\n\n", Timeouts)
+	log.Printf("Timeouts found: %v\n\n", Timeouts)
 
-	// WIP write error processing
-	return nil
+}
+
+func (p *TimeoutCollection) Add(period int) {
+	var found bool
+	for _, item := range p.periods {
+		if item == period {
+			found = true
+		}
+	}
+	if !found {
+		p.periods = append(p.periods, period)
+	}
 }
