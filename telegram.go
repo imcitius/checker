@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	tb "gopkg.in/tucnak/telebot.v2"
 	"log"
@@ -13,32 +14,52 @@ type TgMessage struct {
 }
 
 func (m TgMessage) GetProject() string {
-	var projectName string
+	var (
+		result      []string
+		projectName string
+	)
 
-	fmt.Printf("message: %v\n", m)
-	pattern := regexp.MustCompile("roject: (.*)\n")
-	result := pattern.FindStringSubmatch(m.ReplyTo.Text)
+	conf, _ := json.Marshal(m)
+	log.Printf("Message: %+v\n\n", string(conf))
+
+	if m.IsReply() {
+		// try to get from reply
+		pattern := regexp.MustCompile("roject: (.*)\n")
+		result = pattern.FindStringSubmatch(m.ReplyTo.Text)
+		projectName = result[1]
+	} else {
+		projectName = m.Payload
+	}
+
 	if result == nil {
 		fmt.Printf("Project extraction error.")
 	} else {
-		fmt.Printf("Project extracted: %v\n", result[1])
-		projectName = result[1]
+		fmt.Printf("Project extracted: %v\n", projectName)
 	}
 
 	return projectName
 }
 
 func (m TgMessage) GetUUID() string {
-	var uuid string
+	var (
+		result []string
+		uuid   string
+	)
+	fmt.Printf("message: %v\n", m.Text)
 
-	fmt.Printf("message: %v\n", m)
-	pattern := regexp.MustCompile("UUID: (.*)")
-	result := pattern.FindStringSubmatch(m.ReplyTo.Text)
+	if m.IsReply() {
+		// try to get uuid from reply
+		pattern := regexp.MustCompile("UUID: (.*)")
+		result = pattern.FindStringSubmatch(m.ReplyTo.Text)
+		uuid = result[1]
+	} else {
+		uuid = m.Payload
+	}
+
 	if result == nil {
 		fmt.Printf("UUID extraction error.")
 	} else {
-		fmt.Printf("UUID extracted: %v\n", result[1])
-		uuid = result[1]
+		fmt.Printf("UUID extracted: %v\n", uuid)
 	}
 
 	return uuid
@@ -70,97 +91,88 @@ func runListenTgBot(token string) {
 	})
 
 	bot.Handle("/pu", func(m *tb.Message) {
-		var tgMessage ChatMessage
+		var tgMessage IncomingChatMessage
 		tgMessage = TgMessage{m}
 
 		log.Printf("/pu")
 
-		if m.IsReply() {
-			uuID := tgMessage.GetUUID()
-			log.Printf("Pause req for UUID: %+v\n", uuID)
-			for _, project := range Config.Projects {
-				for _, healthcheck := range project.Healtchecks {
-					for _, check := range healthcheck.Checks {
-						if uuID == check.uuID {
-							_ = check.CeaseAlerts()
-						}
+		uuID := tgMessage.GetUUID()
+		log.Printf("Pause req for UUID: %+v\n", uuID)
+		for _, project := range Config.Projects {
+			for _, healthcheck := range project.Healtchecks {
+				for _, check := range healthcheck.Checks {
+					if uuID == check.uuID {
+						_ = check.CeaseAlerts()
 					}
 				}
 			}
-			if err == nil {
-				answer := fmt.Sprintf("Messages ceased for UUID %v", uuID)
-				bot.Send(m.Sender, answer)
-			}
 		}
-
+		if err == nil {
+			answer := fmt.Sprintf("Messages ceased for UUID %v", uuID)
+			bot.Send(m.Sender, answer)
+		}
 	})
 
 	bot.Handle("/uu", func(m *tb.Message) {
-		var tgMessage ChatMessage
+		var tgMessage IncomingChatMessage
 		tgMessage = TgMessage{m}
 
 		log.Printf("/uu")
 
-		if m.IsReply() {
-			uuID := tgMessage.GetUUID()
-			log.Printf("Resume req for UUID: %+v\n", uuID)
-			for _, project := range Config.Projects {
-				for _, healthcheck := range project.Healtchecks {
-					for _, check := range healthcheck.Checks {
-						if uuID == check.uuID {
-							_ = check.EnableAlerts()
-						}
+		uuID := tgMessage.GetUUID()
+		log.Printf("Resume req for UUID: %+v\n", uuID)
+		for _, project := range Config.Projects {
+			for _, healthcheck := range project.Healtchecks {
+				for _, check := range healthcheck.Checks {
+					if uuID == check.uuID {
+						_ = check.EnableAlerts()
 					}
 				}
 			}
-			if err == nil {
-				answer := fmt.Sprintf("Messages resumed for UUID %v", uuID)
-				bot.Send(m.Sender, answer)
-			}
+		}
+		if err == nil {
+			answer := fmt.Sprintf("Messages resumed for UUID %v", uuID)
+			bot.Send(m.Sender, answer)
 		}
 
 	})
 
 	bot.Handle("/pp", func(m *tb.Message) {
-		var tgMessage ChatMessage
+		var tgMessage IncomingChatMessage
 		tgMessage = TgMessage{m}
 
 		log.Printf("/pp")
 
-		if m.IsReply() {
-			projectName := tgMessage.GetProject()
-			log.Printf("Pause req for project: %s\n", projectName)
-			for _, project := range Config.Projects {
-				if projectName == project.Name {
-					_ = project.CeaseAlerts()
-				}
+		projectName := tgMessage.GetProject()
+		log.Printf("Pause req for project: %s\n", projectName)
+		for _, project := range Config.Projects {
+			if projectName == project.Name {
+				_ = project.CeaseAlerts()
 			}
-			if err == nil {
-				answer := fmt.Sprintf("Messages ceased for project %s", projectName)
-				bot.Send(m.Sender, answer)
-			}
+		}
+		if err == nil {
+			answer := fmt.Sprintf("Messages ceased for project %s", projectName)
+			bot.Send(m.Sender, answer)
 		}
 
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
-		var tgMessage ChatMessage
+		var tgMessage IncomingChatMessage
 		tgMessage = TgMessage{m}
 
 		log.Printf("/up")
 
-		if m.IsReply() {
-			projectName := tgMessage.GetProject()
-			log.Printf("Resume req for project: %s\n", projectName)
-			for _, project := range Config.Projects {
-				if projectName == project.Name {
-					_ = project.EnableAlerts()
-				}
+		projectName := tgMessage.GetProject()
+		log.Printf("Resume req for project: %s\n", projectName)
+		for _, project := range Config.Projects {
+			if projectName == project.Name {
+				_ = project.EnableAlerts()
 			}
-			if err == nil {
-				answer := fmt.Sprintf("Messages resumed for project %s", projectName)
-				bot.Send(m.Sender, answer)
-			}
+		}
+		if err == nil {
+			answer := fmt.Sprintf("Messages resumed for project %s", projectName)
+			bot.Send(m.Sender, answer)
 		}
 
 	})
@@ -184,7 +196,7 @@ func initBots() {
 	}
 }
 
-func sendTgMessage(a Alerts, e error) error {
+func sendTgMessage(a *AlertConfigs, e error) error {
 	//log.Printf("Alert send: %s (alert details %+v)", e, a)
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  a.BotToken,
