@@ -93,3 +93,30 @@ func (p *Project) GetName() string {
 func (p *Project) GetMode() string {
 	return p.Parameters.Mode
 }
+
+func (p *Project) Alert(e error) {
+	//log.Printf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
+	//log.Printf("%+v", Config.Alerts)
+	if Config.Defaults.Parameters.Mode == "loud" && p.Parameters.Mode == "loud" {
+		if p.Parameters.Mode == "loud" {
+			for _, alert := range Config.Alerts {
+				//log.Printf("%+v", alert)
+				if alert.GetName() == p.Parameters.Alert {
+					//log.Printf("Alert details: %+v\n\n", alert)
+					alert.Send(e)
+				}
+			}
+		}
+	}
+}
+
+func (p *Project) CritAlert(e error) {
+	log.Printf("Send critical alert for project: %+v with error %+v\n\n", p, e)
+	for _, alert := range Config.Alerts {
+		//log.Printf("%+v", alert)
+		if alert.GetName() == p.Parameters.CritAlert {
+			//log.Printf("Alert details: %+v\n\n", alert)
+			alert.Send(e)
+		}
+	}
+}

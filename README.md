@@ -57,15 +57,28 @@ critical_channel: Канал для критичных оповещений
 
 Поддерживаются проверки трех разных типов:
 
- HTTP check
+ HTTP check (обазательные параметры помечены *)
 ```
-type: "http"
-url: URL для проверки методом GET
-code: HTTP код успешного ответа
+*type: "http"
+*url: URL для проверки методом GET
+code: HTTP код успешного ответа (по умолчанию 200)
 answer: Текст для поиска в HTTP Body ответа
-answer_present: проверять факт наличия текста (по умолчанию, или "present"), или его отсутствия ("absent")
-headers: Массив HTTP заголовков для передачи в HTTP запросе, в виде `"User-Agent": "mediaget"`
+answer_present: проверять факт наличия текста (по умолчанию, или "present"), либо его отсутствия ("absent")
+headers: Массив HTTP заголовков для передачи в HTTP запросе
+        {
+          "User-Agent": "custom_user_aget"
+        }
+
+timeout: время ожидания ответа в миллисекундах
+auth: блок содержащий учетные данные, если требуется http basic аутентикация.
+      "auth": {
+        "user": "username",
+        "password": "S3cr3t!"
+      }
+skip_check_ssl: не проверять валидность серверного SSL сертификата
+stop_follow_redirects: не следовать HTTP редиректам
 ```
+
 
  ICMP Ping Check
 ```

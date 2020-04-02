@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/sparrc/go-ping"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"time"
 )
 
 func (c *Check) Execute(p *Project) error {
@@ -47,34 +49,6 @@ func (c *Check) Execute(p *Project) error {
 	}
 }
 
-func (p *Project) Alert(e error) {
-	//log.Printf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
-	//log.Printf("%+v", Config.Alerts)
-	if Config.Defaults.Parameters.Mode == "loud" && p.Parameters.Mode == "loud" {
-		if p.Parameters.Mode == "loud" {
-			for _, alert := range Config.Alerts {
-				//log.Printf("%+v", alert)
-				if alert.GetName() == p.Parameters.Alert {
-					//log.Printf("Alert details: %+v\n\n", alert)
-					alert.Send(e)
-				}
-			}
-		}
-	}
-}
-
-func (p *Project) CritAlert(e error) {
-	log.Printf("Send critical alert for project: %+v with error %+v\n\n", p, e)
-	for _, alert := range Config.Alerts {
-		//log.Printf("%+v", alert)
-		if alert.GetName() == p.Parameters.CritAlert {
-			//log.Printf("Alert details: %+v\n\n", alert)
-			alert.Send(e)
-		}
-	}
-
-}
-
 func (c *Check) UUID() string {
 	return c.uuID
 }
@@ -89,6 +63,7 @@ func runHTTPCheck(c *Check, p *Project) error {
 		checkNum      int
 		checkErr      error
 		errorHeader   string
+		tlsConfig     tls.Config
 	)
 
 	if c.AnswerPresent == "absent" {
@@ -99,16 +74,33 @@ func runHTTPCheck(c *Check, p *Project) error {
 
 	errorHeader = fmt.Sprintf("HTTP error at project: %s\nCheck URL: %s\nCheck UUID: %s\n", p.Name, c.Host, c.uuID)
 
-	//fmt.Println("test: ", c.Host)
+	fmt.Printf("test: %s\n", c.Host)
 	_, err := url.Parse(c.Host)
 	if err != nil {
 		log.Fatal(err)
 	}
 	checkNum++
 
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", c.Host, nil)
+	if c.SkipCheckSSL {
+		tlsConfig.InsecureSkipVerify = true
+	}
 
+	// for advanced http client config we need transport
+	transport := &http.Transport{}
+	transport.TLSClientConfig = &tlsConfig
+
+	client := &http.Client{Transport: transport}
+	client.Timeout = c.Timeout * time.Millisecond // milliseconds
+	if c.StopFollowRedirects {
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return errors.New("Asked to stop redirects")
+		}
+	}
+
+	req, err := http.NewRequest("GET", c.Host, nil)
+	if c.Auth.User != "" {
+		req.SetBasicAuth(c.Auth.User, c.Auth.Password)
+	}
 	// if custom headers requested
 	if c.Headers != nil {
 		for _, headers := range c.Headers {
@@ -136,9 +128,13 @@ func runHTTPCheck(c *Check, p *Project) error {
 	buf.ReadFrom(response.Body)
 	//log.Printf("Server: %s, http answer body: %s\n", c.URL, buf)
 	// check that response code is correct
+
+	if c.Code == 0 {
+		c.Code = 200
+	}
 	code := c.Code == int(response.StatusCode)
 	if !code {
-		errorMessage := errorHeader + fmt.Sprintf("code error: %d (want %d)", response.StatusCode, c.Code)
+		errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode, c.Code)
 		return errors.New(errorMessage)
 	}
 
@@ -165,19 +161,16 @@ func runICMPCheck(c *Check, p *Project) error {
 	fmt.Println("icmp ping test: ", c.Host)
 	pinger, err := ping.NewPinger(c.Host)
 	pinger.Count = c.Count
-	pinger.Timeout = c.Timeout * 1000 * 1000
+	pinger.Timeout = c.Timeout * time.Millisecond
 	pinger.Run()
 	stats := pinger.Statistics()
 
 	//log.Printf("Ping host %s, res: %+v (err: %+v, stats: %+v)", c.Host, pinger, err, stats)
 
-	if err == nil && stats.PacketLoss == 0 && stats.AvgRtt >= c.Timeout {
+	if err == nil && stats.PacketLoss == 0 {
 		return nil
 	} else {
 		switch {
-		case stats.AvgRtt >= c.Timeout*1000*1000 && stats.PacketLoss == 0:
-			//log.Printf("Ping stats: %+v", stats)
-			errorMessage = errorHeader + fmt.Sprintf("ping error avg rtt: %d ms (want %v)\n", stats.AvgRtt.Milliseconds(), c.Timeout)
 		case stats.PacketLoss > 0:
 			//log.Printf("Ping stats: %+v", stats)
 			errorMessage = errorHeader + fmt.Sprintf("ping error: %v percent packet loss\n", stats.PacketLoss)
@@ -204,7 +197,7 @@ func runTCPCheck(c *Check, p *Project) error {
 
 	fmt.Println("tcp ping test: ", c.Host)
 
-	timeout := c.Timeout * 1000 * 1000 // millisecond
+	timeout := c.Timeout * time.Millisecond
 
 	for checkAttempts < c.Attempts {
 		//startTime := time.Now()

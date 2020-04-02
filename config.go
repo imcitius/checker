@@ -84,17 +84,25 @@ type Healtchecks struct {
 
 type Check struct {
 	// Parameters related to healthcheck execution
-	Type          string
-	Host          string
-	Timeout       time.Duration
-	Port          string
-	Attempts      int
-	Mode          string
-	Count         int
+	Type     string
+	Host     string
+	Timeout  time.Duration
+	Port     string
+	Attempts int
+	Mode     string
+	Count    int
+
+	// http checks optional parameters
 	Code          int
 	Answer        string
 	AnswerPresent string `json:"answer_present"`
 	Headers       []map[string]string
+	Auth          struct {
+		User     string
+		Password string
+	}
+	SkipCheckSSL        bool `json:"skip_check_ssl"`
+	StopFollowRedirects bool `json:"stop_follow_redirects"`
 
 	// Runtime data
 	uuID       string
