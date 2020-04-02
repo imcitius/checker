@@ -65,18 +65,26 @@ code: HTTP код успешного ответа (по умолчанию 200)
 answer: Текст для поиска в HTTP Body ответа
 answer_present: проверять факт наличия текста (по умолчанию, или "present"), либо его отсутствия ("absent")
 headers: Массив HTTP заголовков для передачи в HTTP запросе
-        {
-          "User-Agent": "custom_user_aget"
-        }
+    {
+        "User-Agent": "custom_user_aget"
+    }
 
 timeout: время ожидания ответа в миллисекундах
 auth: блок содержащий учетные данные, если требуется http basic аутентикация.
-      "auth": {
+    "auth": {
         "user": "username",
         "password": "S3cr3t!"
-      }
+    }
 skip_check_ssl: не проверять валидность серверного SSL сертификата
 stop_follow_redirects: не следовать HTTP редиректам
+cookies: массив объектов http.Cookie (можно передавать любые параметры из https://golang.org/src/net/http/cookie.go
+    "cookies": [
+        {
+          "name": "test_cookie",
+          "value": "12345"
+        }
+    ]
+
 ```
 
 

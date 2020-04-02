@@ -110,6 +110,12 @@ func runHTTPCheck(c *Check, p *Project) error {
 		}
 	}
 
+	if c.Cookies != nil {
+		for _, cookie := range c.Cookies {
+			req.AddCookie(cookie)
+		}
+	}
+
 	// log.Printf("http request: %v", req)
 	response, err := client.Do(req)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"io/ioutil"
+	"net/http"
 	"time"
 )
 
@@ -103,6 +104,7 @@ type Check struct {
 	}
 	SkipCheckSSL        bool `json:"skip_check_ssl"`
 	StopFollowRedirects bool `json:"stop_follow_redirects"`
+	Cookies             []*http.Cookie
 
 	// Runtime data
 	uuID       string
