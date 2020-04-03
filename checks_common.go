@@ -49,6 +49,22 @@ func (c *Check) Execute(p *Project) error {
 		} else {
 			c.LastResult = false
 		}
+	case "clickhouse_query":
+		//log.Printf("postgres_query check execute %+v\n", c)
+		err = runMysqlQueryCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
+	case "redis_pubsub":
+		//log.Printf("postgres_query check execute %+v\n", c)
+		err = runRedisPubSubCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
 	default:
 		err = errors.New("check not implemented")
 	}

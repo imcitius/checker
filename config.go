@@ -111,6 +111,10 @@ type Check struct {
 		DBName, UserName, Password, Query, Response string
 	} `json:"sql_query_config"`
 
+	PubSub struct {
+		Password, Channel string
+	} `json:"pubsub_config"`
+
 	// Runtime data
 	uuID       string
 	LastResult bool
