@@ -10,7 +10,7 @@ import (
 func runTCPCheck(c *Check, p *Project) error {
 	var (
 		errorHeader, errorMessage string
-		checkAttempts             int
+		checkAttempts             int = 3
 	)
 
 	//log.Panic(projectName)
