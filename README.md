@@ -154,7 +154,10 @@ password: пароль
       "type": "redis_pubsub",
       "host": "master.redis.service.iron-staging.consul",
       "pubsub_config": {
-        "channel": "ticks_EURUSD_OTC"
+        "channels": [
+          "ticks_EURUSD_OTC",
+          "ticks_USBRUB_OTC"
+        ]
       },
       "timeout": 5000
     }

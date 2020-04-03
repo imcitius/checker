@@ -37,28 +37,33 @@ func runRedisPubSubCheck(c *Check, p *Project) error {
 		return msg
 	}
 
-	pubsub := client.Subscribe(c.PubSub.Channel)
+	for _, channel := range c.PubSub.Channels {
 
-	for {
-		msgi, err := pubsub.ReceiveTimeout(dbConnectTimeout)
-		if err != nil {
-			return err
-		} else {
-			switch msg := msgi.(type) {
-			case *redis.Subscription:
-				log.Println("Received Subscription", msg.Channel, "retry")
-				continue
-			case *redis.Pong:
-				log.Println("Received Pong ", msg.Payload, " on channel")
-				continue
-			case *redis.Message:
-				//log.Println("Received ", msg.Payload, " on channel")
-				return nil
-			default:
-				err := fmt.Errorf("redis: unknown message: %T", msg)
+		pubsub := client.Subscribe(channel)
+	loop:
+
+		for {
+			msgi, err := pubsub.ReceiveTimeout(dbConnectTimeout)
+			if err != nil {
 				return err
+			} else {
+				switch msg := msgi.(type) {
+				case *redis.Subscription:
+					log.Printf("Received Subscription message on channel %s\n", channel)
+					continue
+				case *redis.Pong:
+					log.Printf("Received Pong message on channel %s\n", channel)
+					continue
+				case *redis.Message:
+					log.Printf("Received Data message on channel %s\n", channel)
+					log.Println(msg.Payload, "\n\n")
+					break loop
+				default:
+					err := fmt.Errorf("redis: unknown message: %T on channel %s", msg, channel)
+					return err
+				}
 			}
 		}
 	}
-
+	return nil
 }

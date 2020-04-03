@@ -112,7 +112,8 @@ type Check struct {
 	} `json:"sql_query_config"`
 
 	PubSub struct {
-		Password, Channel string
+		Password string
+		Channels []string
 	} `json:"pubsub_config"`
 
 	// Runtime data
