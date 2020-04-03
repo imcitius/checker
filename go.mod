@@ -3,6 +3,7 @@ module my/checker
 go 1.14
 
 require (
+	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/lib/pq v1.3.0 // indirect
 	github.com/sparrc/go-ping v0.0.0-20190613174326-4e5b6552494c

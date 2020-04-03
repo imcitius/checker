@@ -107,9 +107,9 @@ type Check struct {
 	Cookies             []*http.Cookie
 
 	// Check PG query parameters
-	PostgresQueryConfig struct {
+	SqlQueryConfig struct {
 		DBName, UserName, Password, Query, Response string
-	} `json:"postgres_query_config"`
+	} `json:"sql_query_config"`
 
 	// Runtime data
 	uuID       string

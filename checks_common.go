@@ -33,9 +33,17 @@ func (c *Check) Execute(p *Project) error {
 		} else {
 			c.LastResult = false
 		}
-	case "postgres_query":
+	case "pgsql_query":
 		//log.Printf("postgres_query check execute %+v\n", c)
-		err = runPostgresQueryCheck(c, p)
+		err = runPgsqlQueryCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
+	case "mysql_query":
+		//log.Printf("postgres_query check execute %+v\n", c)
+		err = runMysqlQueryCheck(c, p)
 		if err == nil {
 			return nil
 		} else {

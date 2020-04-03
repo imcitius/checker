@@ -14,15 +14,19 @@ func runChecks(timeout int) {
 			for _, check := range healthcheck.Checks {
 				//log.Println(check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
-					log.Printf("Checking project '%s' check '%s'\n", project.Name, check.Type)
+					log.Printf("Checking project '%s' check '%s' ... ", project.Name, check.Type)
+					startTime := time.Now()
 					err := check.Execute(project)
-					//log.Printf("Return err: %+v\n", err)
+					endTime := time.Now()
+					t := endTime.Sub(startTime)
 					if err != nil {
+						log.Printf("failure: %+v, took %d millisec\n", err, t.Milliseconds())
 						if check.Mode != "quiet" {
 							project.Alert(err)
 						}
 						project.AddError()
 					} else {
+						log.Printf("success, took %d millisec\n", t.Milliseconds())
 						project.DecError()
 					}
 				}
