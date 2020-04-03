@@ -88,7 +88,7 @@ type Check struct {
 	Type     string
 	Host     string
 	Timeout  time.Duration
-	Port     string
+	Port     int
 	Attempts int
 	Mode     string
 	Count    int
@@ -105,6 +105,11 @@ type Check struct {
 	SkipCheckSSL        bool `json:"skip_check_ssl"`
 	StopFollowRedirects bool `json:"stop_follow_redirects"`
 	Cookies             []*http.Cookie
+
+	// Check PG query parameters
+	PostgresQueryConfig struct {
+		DBName, UserName, Password, Query, Response string
+	} `json:"postgres_query_config"`
 
 	// Runtime data
 	uuID       string

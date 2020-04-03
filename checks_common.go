@@ -2,45 +2,49 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
-	"net"
-	"time"
 )
 
 func (c *Check) Execute(p *Project) error {
+	var err error
 
 	switch c.Type {
 	case "http":
 		//log.Printf("http check execute: %+v\n", c.Host)
-		err := runHTTPCheck(c, p)
+		err = runHTTPCheck(c, p)
 		if err == nil {
 			return nil
 		} else {
 			c.LastResult = false
 		}
-		return err
 	case "icmp":
 		//log.Printf("icmp check execute %+v\n", c)
-		err := runICMPCheck(c, p)
+		err = runICMPCheck(c, p)
 		if err == nil {
 			return nil
 		} else {
 			c.LastResult = false
 		}
-		return err
 	case "tcp":
 		//log.Printf("tcp check execute %+v\n", c)
-		err := runTCPCheck(c, p)
+		err = runTCPCheck(c, p)
 		if err == nil {
 			return nil
 		} else {
 			c.LastResult = false
 		}
-		return err
+	case "postgres_query":
+		//log.Printf("postgres_query check execute %+v\n", c)
+		err = runPostgresQueryCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
 	default:
-		return errors.New("check not implemented")
+		err = errors.New("check not implemented")
 	}
+	return err
 }
 
 func (c *Check) UUID() string {

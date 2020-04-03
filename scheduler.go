@@ -10,11 +10,11 @@ import (
 
 func runChecks(timeout int) {
 	for _, project := range Config.Projects {
-		log.Println(project.Name)
 		for _, healthcheck := range project.Healtchecks {
 			for _, check := range healthcheck.Checks {
 				//log.Println(check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
+					log.Printf("Checking project '%s' check '%s'\n", project.Name, check.Type)
 					err := check.Execute(project)
 					//log.Printf("Return err: %+v\n", err)
 					if err != nil {

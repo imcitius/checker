@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -22,7 +23,7 @@ func runTCPCheck(c *Check, p *Project) error {
 
 	for checkAttempts < c.Attempts {
 		//startTime := time.Now()
-		conn, err := net.DialTimeout("tcp", c.Host+":"+c.Port, timeout)
+		conn, err := net.DialTimeout("tcp", c.Host+":"+string(c.Port), timeout)
 		//endTime := time.Now()
 
 		if err == nil {
@@ -32,7 +33,7 @@ func runTCPCheck(c *Check, p *Project) error {
 			return nil
 		}
 
-		errorMessage = errorHeader + fmt.Sprintf("connection to host %s failed: %v (attempt %d)\n", c.Host+":"+c.Port, err, checkAttempts)
+		errorMessage = errorHeader + fmt.Sprintf("connection to host %s failed: %v (attempt %d)\n", c.Host+":"+string(c.Port), err, checkAttempts)
 		//log.Printf(errorMessage)
 		checkAttempts++
 	}
