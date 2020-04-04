@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"log"
 )
 
@@ -41,8 +41,16 @@ func (c *Check) Execute(p *Project) error {
 		} else {
 			c.LastResult = false
 		}
-	case "mysql_query":
+	case "pgsql_replication":
 		//log.Printf("postgres_query check execute %+v\n", c)
+		err = runPgsqlReplicationCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
+	case "mysql_query":
+		//log.Printf("mysql_query check execute %+v\n", c)
 		err = runMysqlQueryCheck(c, p)
 		if err == nil {
 			return nil
@@ -50,15 +58,15 @@ func (c *Check) Execute(p *Project) error {
 			c.LastResult = false
 		}
 	case "clickhouse_query":
-		//log.Printf("postgres_query check execute %+v\n", c)
-		err = runMysqlQueryCheck(c, p)
+		//log.Printf("clickhouse_query check execute %+v\n", c)
+		err = runClickhouseQueryCheck(c, p)
 		if err == nil {
 			return nil
 		} else {
 			c.LastResult = false
 		}
 	case "redis_pubsub":
-		//log.Printf("postgres_query check execute %+v\n", c)
+		//log.Printf("redis_pubsub check execute %+v\n", c)
 		err = runRedisPubSubCheck(c, p)
 		if err == nil {
 			return nil
@@ -66,7 +74,7 @@ func (c *Check) Execute(p *Project) error {
 			c.LastResult = false
 		}
 	default:
-		err = errors.New("check not implemented")
+		err = fmt.Errorf("Check %s not implemented", c.Type)
 	}
 	return err
 }

@@ -111,6 +111,12 @@ type Check struct {
 		DBName, UserName, Password, Query, Response string
 	} `json:"sql_query_config"`
 
+	// Check PG query parameters
+	SqlReplicationConfig struct {
+		DBName, UserName, Password, TableName string
+		ServerList                            []string
+	} `json:"sql_repl_config"`
+
 	PubSub struct {
 		Password string
 		Channels []string

@@ -135,6 +135,37 @@ response: ответ, с которым сверяется вернувшеес�
 
 ```
 
+### Проверка репликации баз данных
+```
+Настройка аналогно проверке запросом, вместо параметров query/response параметры tablename и serverlist.
+В tablename передается имя таблицы для вставки тестовой записи (по-умолчанию "repl_test"). В блоке serverlist - список серверов для проверки.
+В список лучше всего включить и мастер.
+
+Пример конфигурации:
+    {
+      "type": "pgsql_replication",
+      "host": "master.pgsql.service.iron-staging.consul",
+      "port": 5432,
+        "sql_repl_config": {
+        "dbname": "irontrade",
+        "username": "irontrade",
+        "password": "mDe6jkcpJtrF",
+        "tablename": "repl_test",
+        "serverlist": [
+          "pgsql-main-0.node.iron-staging.consul",
+          "pgsql-main-1.node.iron-staging.consul",
+          "pgsql-main-2.node.iron-staging.consul"
+        ]
+      }
+    }
+
+Таблица для проверки должна соответствовать схеме:
+    CREATE TABLE repl_test (
+       id int,
+       test_value int
+    )
+```
+
 ### Проверка Pub/Sub
 ```
 *type: тип проверки - redis_pubsub
