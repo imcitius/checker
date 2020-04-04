@@ -72,8 +72,8 @@ func runMysqlReplicationCheck(c *Check, p *Project) error {
 
 	var dbPort, recordId, recordValue, id int
 
-	recordId = rand.Intn(5 - 1)
-	recordValue = rand.Intn(9999 - 1)
+	recordId = rand.Intn(5-1) + 1
+	recordValue = rand.Intn(9999-1) + 1
 
 	dbUser := c.SqlReplicationConfig.UserName
 	dbPassword := c.SqlReplicationConfig.Password
@@ -81,22 +81,25 @@ func runMysqlReplicationCheck(c *Check, p *Project) error {
 	dbName := c.SqlReplicationConfig.DBName
 	dbTable := c.SqlReplicationConfig.TableName
 	if c.Port == 0 {
-		dbPort = 5432
+		dbPort = 3306
 	} else {
 		dbPort = c.Port
 	}
 
 	dbConnectTimeout := c.Timeout / 1000 // milliseconds to seconds
 
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
+	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbUser, dbPassword, dbHost, dbPort, dbName)
+	if dbConnectTimeout > 0 {
+		connStr = connStr + fmt.Sprintf("?timeout=%ds", dbConnectTimeout)
+	}
 
 	if dbConnectTimeout > 0 {
-		connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
+		connStr = connStr + fmt.Sprintf("?timeout=%ds", dbConnectTimeout)
 	}
 
 	//log.Printf("Replication Connect string: %s", connStr)
 
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("mysql", connStr)
 	if err != nil {
 		log.Printf("Error: The data source arguments are not valid: %+v", err)
 		return err
@@ -108,10 +111,10 @@ func runMysqlReplicationCheck(c *Check, p *Project) error {
 		return err
 	}
 
-	insertSql := "INSERT INTO %s (id,test_value) VALUES (%d,%d) ON CONFLICT (id) DO UPDATE set test_value=%d where %s.id=%d;"
+	insertSql := "INSERT INTO %s (id,test_value) VALUES (%d,%d) ON DUPLICATE KEY UPDATE test_value=%d, id=%d;"
 
-	sqlStatement := fmt.Sprintf(insertSql, dbTable, recordId, recordValue, recordValue, dbTable, recordId)
-	//log.Printf("sqlStatement string: %s", sqlStatement)
+	sqlStatement := fmt.Sprintf(insertSql, dbTable, recordId, recordValue, recordValue, recordId)
+	//log.Printf( "Insert statement string: %s", sqlStatement)
 	_, err = db.Exec(sqlStatement)
 	if err != nil {
 		panic(err)
@@ -121,18 +124,17 @@ func runMysqlReplicationCheck(c *Check, p *Project) error {
 	time.Sleep(1 * time.Second)
 
 	for _, server := range c.SqlReplicationConfig.ServerList {
-		selectSql := "SELECT test_value FROM %s where %s.id=%d;"
-		sqlStatement := fmt.Sprintf(selectSql, dbTable, dbTable, recordId)
+		selectSql := "SELECT test_value FROM %s where id=%d;"
+		sqlStatement := fmt.Sprintf(selectSql, dbTable, recordId)
 
 		//log.Printf("Read from %s", server)
 		//log.Printf(" query: %s\n", sqlStatement)
-		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, server, dbPort, dbName)
+		connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbUser, dbPassword, server, dbPort, dbName)
 
 		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
+			connStr = connStr + fmt.Sprintf("?timeout=%ds", dbConnectTimeout)
 		}
-
-		db, err := sql.Open("postgres", connStr)
+		db, err := sql.Open("mysql", connStr)
 		if err != nil {
 			log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return err
@@ -146,7 +148,7 @@ func runMysqlReplicationCheck(c *Check, p *Project) error {
 
 		err = db.QueryRow(sqlStatement).Scan(&id)
 		if err != nil {
-			log.Printf("Error: Could not query database: %+v", err)
+			log.Printf("Error: Could not query database: %+v (server %s)", err, server)
 			return err
 		}
 

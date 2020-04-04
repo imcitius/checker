@@ -57,6 +57,14 @@ func (c *Check) Execute(p *Project) error {
 		} else {
 			c.LastResult = false
 		}
+	case "mysql_replication":
+		//log.Printf("mysql_query check execute %+v\n", c)
+		err = runMysqlReplicationCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
 	case "clickhouse_query":
 		//log.Printf("clickhouse_query check execute %+v\n", c)
 		err = runClickhouseQueryCheck(c, p)
