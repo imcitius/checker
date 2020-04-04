@@ -117,7 +117,7 @@ func runMysqlReplicationCheck(c *Check, p *Project) error {
 	//log.Printf( "Insert statement string: %s", sqlStatement)
 	_, err = db.Exec(sqlStatement)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Mysql insert error: %+v\n", err)
 	}
 
 	// allow replication to pass

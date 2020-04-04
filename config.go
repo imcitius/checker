@@ -106,12 +106,12 @@ type Check struct {
 	StopFollowRedirects bool `json:"stop_follow_redirects"`
 	Cookies             []*http.Cookie
 
-	// Check PG query parameters
+	// Check SQL query parameters
 	SqlQueryConfig struct {
 		DBName, UserName, Password, Query, Response string
 	} `json:"sql_query_config"`
 
-	// Check PG query parameters
+	// Check SQL replication parameters
 	SqlReplicationConfig struct {
 		DBName, UserName, Password, TableName string
 		ServerList                            []string

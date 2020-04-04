@@ -4,7 +4,6 @@ import (
 	//"encoding/json"
 	"fmt"
 	redis "github.com/go-redis/redis/v7"
-	"log"
 	"time"
 )
 
@@ -49,14 +48,14 @@ func runRedisPubSubCheck(c *Check, p *Project) error {
 			} else {
 				switch msg := msgi.(type) {
 				case *redis.Subscription:
-					log.Printf("Received Subscription message on channel %s\n", channel)
+					//log.Printf("Received Subscription message on channel %s\n", channel)
 					continue
 				case *redis.Pong:
-					log.Printf("Received Pong message on channel %s\n", channel)
+					//log.Printf("Received Pong message on channel %s\n", channel)
 					continue
 				case *redis.Message:
-					log.Printf("Received Data message on channel %s\n", channel)
-					log.Println(msg.Payload, "\n\n")
+					//log.Printf("Received Data message on channel %s\n", channel)
+					//log.Println(msg.Payload, "\n\n")
 					break loop
 				default:
 					err := fmt.Errorf("redis: unknown message: %T on channel %s", msg, channel)

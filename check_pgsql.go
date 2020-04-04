@@ -121,7 +121,7 @@ func runPgsqlReplicationCheck(c *Check, p *Project) error {
 	//log.Printf("sqlStatement string: %s", sqlStatement)
 	_, err = db.Exec(sqlStatement)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("pgsql insert error: %+v\n", err)
 	}
 
 	// allow replication to pass
