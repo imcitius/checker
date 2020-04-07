@@ -12,8 +12,10 @@ import (
 
 func runPgsqlQueryCheck(c *Check, p *Project) error {
 
-	var id, query string
-	var dbPort int
+	var (
+		id, query string
+		dbPort    int
+	)
 
 	dbUser := c.SqlQueryConfig.UserName
 	dbPassword := c.SqlQueryConfig.Password
@@ -68,6 +70,73 @@ func runPgsqlQueryCheck(c *Check, p *Project) error {
 	return nil
 }
 
+func runPgsqlUnixtimeCheck(c *Check, p *Project) error {
+
+	var (
+		id     int64
+		query  string
+		dbPort int
+	)
+
+	dbUser := c.SqlQueryConfig.UserName
+	dbPassword := c.SqlQueryConfig.Password
+	dbHost := c.Host
+	dbName := c.SqlQueryConfig.DBName
+	if c.Port == 0 {
+		dbPort = 5432
+	} else {
+		dbPort = c.Port
+	}
+	dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+
+	dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
+	if err != nil {
+		log.Printf("Cannot parse differenct value: %v", dif)
+	}
+
+	if c.SqlQueryConfig.Query == "" {
+		query = "select 1;"
+	} else {
+		query = c.SqlQueryConfig.Query
+	}
+
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
+
+	if dbConnectTimeout > 0 {
+		connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
+	}
+
+	//log.Printf("Connect string: %s", connStr)
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Printf("Error: The data source arguments are not valid: %+v", err)
+		return err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Printf("Error: Could not establish a connection with the database: %+v", err)
+		return err
+	}
+
+	err = db.QueryRow(query).Scan(&id)
+	if err != nil {
+		log.Printf("Error: Could not query database: %+v", err)
+		return err
+	}
+
+	if dif > 0 {
+		lastRecord := time.Unix(id, 0)
+		curDif := time.Now().Sub(lastRecord)
+		if curDif > dif {
+			err := fmt.Errorf("Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
+			return err
+		}
+	}
+
+	return nil
+}
 func runPgsqlReplicationCheck(c *Check, p *Project) error {
 
 	var (

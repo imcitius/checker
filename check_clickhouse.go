@@ -11,8 +11,10 @@ import (
 
 func runClickhouseQueryCheck(c *Check, p *Project) error {
 
-	var query, id string
-	var dbPort int
+	var (
+		query, id string
+		dbPort    int
+	)
 	//var items interface{}
 
 	dbUser := c.SqlQueryConfig.UserName
@@ -70,10 +72,11 @@ func runClickhouseQueryCheck(c *Check, p *Project) error {
 
 func runClickhouseUnixtimeCheck(c *Check, p *Project) error {
 
-	var query string
-	var id int64
-	var dbPort int
-	//var items interface{}
+	var (
+		query  string
+		id     int64
+		dbPort int
+	)
 
 	dbUser := c.SqlQueryConfig.UserName
 	dbPassword := c.SqlQueryConfig.Password

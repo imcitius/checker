@@ -12,8 +12,10 @@ import (
 
 func runMysqlQueryCheck(c *Check, p *Project) error {
 
-	var id, query string
-	var dbport int
+	var (
+		id, query string
+		dbport    int
+	)
 
 	dbuser := c.SqlQueryConfig.UserName
 	dbpassword := c.SqlQueryConfig.Password
@@ -61,6 +63,74 @@ func runMysqlQueryCheck(c *Check, p *Project) error {
 	if c.SqlQueryConfig.Response != "" {
 		if id != c.SqlQueryConfig.Response {
 			err = errors.New(fmt.Sprintf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response))
+			return err
+		}
+	}
+
+	return nil
+}
+
+func runMysqlUnixtimeCheck(c *Check, p *Project) error {
+
+	var (
+		id     int64
+		query  string
+		dbport int
+	)
+
+	dbuser := c.SqlQueryConfig.UserName
+	dbpassword := c.SqlQueryConfig.Password
+	dbhost := c.Host
+	dbname := c.SqlQueryConfig.DBName
+	if c.Port == 0 {
+		dbport = 3306
+	} else {
+		dbport = c.Port
+	}
+
+	dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+
+	dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
+	if err != nil {
+		log.Printf("Cannot parse differenct value: %v", dif)
+	}
+
+	if c.SqlQueryConfig.Query == "" {
+		query = "select 1;"
+	} else {
+		query = c.SqlQueryConfig.Query
+	}
+
+	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbuser, dbpassword, dbhost, dbport, dbname)
+	if dbConnectTimeout > 0 {
+		connStr = connStr + fmt.Sprintf("?timeout=%ds", int(dbConnectTimeout.Seconds()))
+	}
+
+	//log.Printf("Connect string: %s", connStr)
+
+	db, err := sql.Open("mysql", connStr)
+	if err != nil {
+		log.Printf("Error: The data source arguments are not valid: %+v", err)
+		return err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Printf("Error: Could not establish a connection with the database: %+v", err)
+		return err
+	}
+
+	err = db.QueryRow(query).Scan(&id)
+	if err != nil {
+		log.Printf("Error: Could not query database: %+v", err)
+		return err
+	}
+
+	if dif > 0 {
+		lastRecord := time.Unix(id, 0)
+		curDif := time.Now().Sub(lastRecord)
+		if curDif > dif {
+			err := fmt.Errorf("Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
 			return err
 		}
 	}

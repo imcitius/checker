@@ -42,6 +42,14 @@ func (c *Check) Execute(p *Project) error {
 		} else {
 			c.LastResult = false
 		}
+	case "pgsql_query_unixtime":
+		//log.Printf("postgres_query check execute %+v\n", c)
+		err = runPgsqlUnixtimeCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
 	case "pgsql_replication":
 		//log.Printf("postgres_query check execute %+v\n", c)
 		err = runPgsqlReplicationCheck(c, p)
@@ -53,6 +61,14 @@ func (c *Check) Execute(p *Project) error {
 	case "mysql_query":
 		//log.Printf("mysql_query check execute %+v\n", c)
 		err = runMysqlQueryCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
+	case "mysql_query_unixtime":
+		//log.Printf("mysql_query check execute %+v\n", c)
+		err = runMysqlUnixtimeCheck(c, p)
 		if err == nil {
 			return nil
 		} else {
