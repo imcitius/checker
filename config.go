@@ -5,7 +5,6 @@ import (
 	"github.com/google/uuid"
 	"io/ioutil"
 	"net/http"
-	"time"
 )
 
 type Parameters struct {
@@ -88,7 +87,7 @@ type Check struct {
 	// Parameters related to healthcheck execution
 	Type     string
 	Host     string
-	Timeout  time.Duration
+	Timeout  string
 	Port     int
 	Attempts int
 	Mode     string
@@ -109,7 +108,7 @@ type Check struct {
 
 	// Check SQL query parameters
 	SqlQueryConfig struct {
-		DBName, UserName, Password, Query, Response string
+		DBName, UserName, Password, Query, Response, Difference string
 	} `json:"sql_query_config"`
 
 	// Check SQL replication parameters
