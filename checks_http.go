@@ -73,6 +73,14 @@ func runHTTPCheck(c *Check, p *Project) error {
 
 	// log.Printf("http request: %v", req)
 	response, err := client.Do(req)
+
+	for i, cert := range response.TLS.PeerCertificates {
+		if cert.NotAfter.Sub(time.Now()) < 720*time.Hour {
+			log.Printf("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
+		}
+		//log.Printf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
+	}
+
 	if err != nil {
 		errorMessage := errorHeader + fmt.Sprintf("asnwer error: %+v", err)
 		return errors.New(errorMessage)
