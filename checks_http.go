@@ -50,7 +50,7 @@ func runHTTPCheck(c *Check, p *Project) error {
 	transport.TLSClientConfig = &tlsConfig
 
 	client := &http.Client{Transport: transport}
-	client.Timeout = c.Timeout * time.Millisecond // milliseconds
+	client.Timeout, _ = time.ParseDuration(c.Timeout)
 	if c.StopFollowRedirects {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return errors.New("Asked to stop redirects")

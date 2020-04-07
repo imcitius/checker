@@ -17,7 +17,7 @@ func runICMPCheck(c *Check, p *Project) error {
 	fmt.Println("icmp ping test: ", c.Host)
 	pinger, err := ping.NewPinger(c.Host)
 	pinger.Count = c.Count
-	pinger.Timeout = c.Timeout * time.Millisecond
+	pinger.Timeout, _ = time.ParseDuration(c.Timeout)
 	pinger.Run()
 	stats := pinger.Statistics()
 

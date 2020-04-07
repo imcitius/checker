@@ -17,7 +17,8 @@ func runRedisPubSubCheck(c *Check, p *Project) error {
 	} else {
 		dbPort = c.Port
 	}
-	dbConnectTimeout := c.Timeout * time.Millisecond
+	dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+
 	dbPassword := c.PubSub.Password
 
 	connStr := fmt.Sprintf("%s:%d", dbHost, dbPort)
@@ -30,7 +31,7 @@ func runRedisPubSubCheck(c *Check, p *Project) error {
 		ReadTimeout: dbConnectTimeout,
 	})
 
-	_, err := client.Ping().Result()
+	_, err = client.Ping().Result()
 	if err != nil {
 		msg := fmt.Errorf("redis connect error %+v", err)
 		return msg

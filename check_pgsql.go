@@ -24,8 +24,7 @@ func runPgsqlQueryCheck(c *Check, p *Project) error {
 	} else {
 		dbPort = c.Port
 	}
-
-	dbConnectTimeout := c.Timeout / 1000 // milliseconds to seconds
+	dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 	if c.SqlQueryConfig.Query == "" {
 		query = "select 1;"
@@ -36,7 +35,7 @@ func runPgsqlQueryCheck(c *Check, p *Project) error {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
 
 	if dbConnectTimeout > 0 {
-		connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
+		connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
 	}
 
 	//log.Printf("Connect string: %s", connStr)
@@ -93,7 +92,7 @@ func runPgsqlReplicationCheck(c *Check, p *Project) error {
 		dbPort = c.Port
 	}
 
-	dbConnectTimeout := c.Timeout / 1000 // milliseconds to seconds
+	dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
 

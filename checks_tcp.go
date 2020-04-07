@@ -25,7 +25,8 @@ func runTCPCheck(c *Check, p *Project) error {
 
 	fmt.Printf("tcp ping test: %s\n`", address)
 
-	timeout := c.Timeout * time.Millisecond
+	timeout, _ := time.ParseDuration(c.Timeout)
+
 	//log.Panic(timeout)
 
 	for checkAttempt < checkAttempts {

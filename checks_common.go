@@ -73,6 +73,14 @@ func (c *Check) Execute(p *Project) error {
 		} else {
 			c.LastResult = false
 		}
+	case "clickhouse_query_unixtime":
+		//log.Printf("clickhouse_query check execute %+v\n", c)
+		err = runClickhouseUnixtimeCheck(c, p)
+		if err == nil {
+			return nil
+		} else {
+			c.LastResult = false
+		}
 	case "redis_pubsub":
 		//log.Printf("redis_pubsub check execute %+v\n", c)
 		err = runRedisPubSubCheck(c, p)

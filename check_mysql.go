@@ -25,7 +25,7 @@ func runMysqlQueryCheck(c *Check, p *Project) error {
 		dbport = c.Port
 	}
 
-	dbConnectTimeout := c.Timeout / 1000 // milliseconds to seconds
+	dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 	if c.SqlQueryConfig.Query == "" {
 		query = "select 1;"
@@ -35,7 +35,7 @@ func runMysqlQueryCheck(c *Check, p *Project) error {
 
 	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbuser, dbpassword, dbhost, dbport, dbname)
 	if dbConnectTimeout > 0 {
-		connStr = connStr + fmt.Sprintf("?timeout=%ds", dbConnectTimeout)
+		connStr = connStr + fmt.Sprintf("?timeout=%ds", int(dbConnectTimeout.Seconds()))
 	}
 
 	//log.Printf("Connect string: %s", connStr)
@@ -86,7 +86,7 @@ func runMysqlReplicationCheck(c *Check, p *Project) error {
 		dbPort = c.Port
 	}
 
-	dbConnectTimeout := c.Timeout / 1000 // milliseconds to seconds
+	dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbUser, dbPassword, dbHost, dbPort, dbName)
 	if dbConnectTimeout > 0 {
