@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"regexp"
 )
 
 func (c *Check) Execute(p *Project) error {
@@ -97,6 +98,12 @@ func (c *Check) Execute(p *Project) error {
 
 func (c *Check) UUID() string {
 	return c.uuID
+}
+
+func (c *Check) GetScheme() string {
+	pattern := regexp.MustCompile("(.*)://")
+	result := pattern.FindStringSubmatch(c.Host)
+	return result[1]
 }
 
 func (c *Check) HostName() string {

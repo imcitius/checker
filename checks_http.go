@@ -76,20 +76,25 @@ func runHTTPCheck(c *Check, p *Project) error {
 		}
 	}
 
-	// log.Printf("http request: %v", req)
+	//log.Printf("http request: %v", req)
 	response, err := client.Do(req)
 
-	for i, cert := range response.TLS.PeerCertificates {
-		if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
-			log.Printf("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
+	if c.GetScheme() == "https" {
+		for i, cert := range response.TLS.PeerCertificates {
+			if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
+				log.Printf("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
+			}
+			//log.Printf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
 		}
-		//log.Printf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
+
 	}
+	//log.Printf("2")
 
 	if err != nil {
 		errorMessage := errorHeader + fmt.Sprintf("asnwer error: %+v", err)
 		return errors.New(errorMessage)
 	}
+	//log.Printf("3")
 
 	if response.Body != nil {
 		defer response.Body.Close()
@@ -97,10 +102,11 @@ func runHTTPCheck(c *Check, p *Project) error {
 		errorMessage := errorHeader + fmt.Sprintf("empty body: %+v", response)
 		return errors.New(errorMessage)
 	}
+	//log.Printf("4")
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(response.Body)
-	//log.Printf("Server: %s, http answer body: %s\n", c.URL, buf)
+	//log.Printf("Server: %s, http answer body: %s\n", c.Host, buf)
 	// check that response code is correct
 
 	if c.Code == 0 {
