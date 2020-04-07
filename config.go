@@ -19,9 +19,10 @@ type Parameters struct {
 	// how much consecutive critical checks may fail to consider not healthy
 	AllowFails int `json:"allow_fails"`
 	// alert name
-	Alert          string `json:"noncrit_alert"`
-	CritAlert      string `json:"crit_alert"`
-	CommandChannel string `json:"command_channel"`
+	Alert               string `json:"noncrit_alert"`
+	CritAlert           string `json:"crit_alert"`
+	CommandChannel      string `json:"command_channel"`
+	SSLExpirationPeriod string `json:"ssl_expiration_period"`
 }
 
 type ChatAlert interface {
@@ -174,6 +175,9 @@ func fillDefaults() error {
 		}
 		if project.Parameters.PeriodicReport == 0 {
 			project.Parameters.PeriodicReport = Config.Defaults.Parameters.PeriodicReport
+		}
+		if project.Parameters.SSLExpirationPeriod == "" {
+			project.Parameters.SSLExpirationPeriod = Config.Defaults.Parameters.SSLExpirationPeriod
 		}
 		Config.Projects[i] = project
 	}

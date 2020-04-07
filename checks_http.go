@@ -27,10 +27,15 @@ func runHTTPCheck(c *Check, p *Project) error {
 		answerPresent = true
 	}
 
+	sslExpTimeout, err := time.ParseDuration(p.Parameters.SSLExpirationPeriod)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	errorHeader = fmt.Sprintf("HTTP error at project: %s\nCheck URL: %s\nCheck UUID: %s\n", p.Name, c.Host, c.uuID)
 
 	fmt.Printf("test: %s\n", c.Host)
-	_, err := url.Parse(c.Host)
+	_, err = url.Parse(c.Host)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,7 +80,7 @@ func runHTTPCheck(c *Check, p *Project) error {
 	response, err := client.Do(req)
 
 	for i, cert := range response.TLS.PeerCertificates {
-		if cert.NotAfter.Sub(time.Now()) < 720*time.Hour {
+		if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
 			log.Printf("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
 		}
 		//log.Printf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
