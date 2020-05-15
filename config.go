@@ -71,6 +71,8 @@ type ConfigFile struct {
 		// Main timer evaluates every TimerStep seconds
 		TimerStep  int         `json:"timer_step"`
 		Parameters *Parameters `json:"parameters"`
+		// HTTP port web interface listen
+		HTTPPort string `json:"http_port"`
 	}
 	Alerts   []*AlertConfigs `json:"alerts"`
 	Projects []*Project      `json:"projects"`
@@ -142,7 +144,7 @@ func jsonLoad(fileName string, destination interface{}) error {
 	if err != nil {
 		return err
 	}
-return nil
+	return nil
 }
 
 var (
