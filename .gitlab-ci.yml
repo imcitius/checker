@@ -1,10 +1,13 @@
 variables:
   #CI_DEBUG_TRACE: "true"
-  DEPLOY_REPO_URL: "git::ssh://git@jgit.me/instantiator/tests/guide-deploy//go-app"
+  DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator"
+  INST_API_URL: "http://inst-api.service.${INSTANCE_DC}.consul"
+  INST_UI_URL: "http://inst-ui.service.${INSTANCE_DC}.consul"
   GO_VERSION: "1.14"
   INJECT_VERSION: "true"
   PACKER_ONLY: "centos"
   BINARY_NAME: "checker"
+  INSTANCE_DC: ks-1
 
 include:
   - project: "ci-library/ci-collections"

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"io/ioutil"
+	//"log"
 	"net/http"
 )
 
@@ -132,6 +133,7 @@ type TimeoutCollection struct {
 }
 
 func jsonLoad(fileName string, destination interface{}) error {
+
 	configFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return err
@@ -140,7 +142,7 @@ func jsonLoad(fileName string, destination interface{}) error {
 	if err != nil {
 		return err
 	}
-	return nil
+return nil
 }
 
 var (
@@ -149,7 +151,7 @@ var (
 )
 
 func fillDefaults() error {
-	// log.Printf("Loaded config %+v\n\n", Config.Projects)
+	//log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, project := range Config.Projects {
 		if project.Parameters.RunEvery == 0 {
 			project.Parameters.RunEvery = Config.Defaults.Parameters.RunEvery
