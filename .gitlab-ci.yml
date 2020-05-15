@@ -9,7 +9,7 @@ variables:
   BINARY_NAME: "checker"
   INSTANCE_DC: ks-1
   VERSION: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
-  REGISTRY_TAG: ${VERSION}
+  REGISTRY_TAG: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
 
 include:
   - project: "ci-library/ci-collections"
