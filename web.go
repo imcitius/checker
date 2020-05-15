@@ -30,7 +30,7 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Ok!\n")
 }
 
-func WebInterface() {
+func webInterface() {
 	if Config.Defaults.HTTPEnabled != "" {
 		return
 	}

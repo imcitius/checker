@@ -8,6 +8,8 @@ import (
 )
 
 func runChecks(timeout int) {
+	log.Debug("runChecks")
+
 	for _, project := range Config.Projects {
 		for _, healthcheck := range project.Healtchecks {
 			for _, check := range healthcheck.Checks {
@@ -35,6 +37,7 @@ func runChecks(timeout int) {
 }
 
 func runAlerts(timeout int) {
+	log.Debug("runAlerts")
 	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery == timeout {
 			if project.ErrorsCount > project.Parameters.MinHealth {
@@ -51,6 +54,7 @@ func runAlerts(timeout int) {
 }
 
 func runReports(timeout int) {
+	log.Debug("runReports")
 	for _, project := range Config.Projects {
 		if project.Parameters.PeriodicReport == timeout {
 			err := project.SendReport()
@@ -67,6 +71,8 @@ func runScheduler() {
 	StartTime := time.Now()
 	Ticker := time.NewTicker(time.Duration(Config.Defaults.TimerStep) * time.Second)
 
+	log.Debug("Scheduler started")
+
 	for {
 		select {
 		case <-done:
@@ -75,7 +81,7 @@ func runScheduler() {
 			dif := float64(t.Sub(StartTime) / time.Second)
 			for _, timeout := range Timeouts.periods {
 				if math.Remainder(dif, float64(timeout)) == 0 {
-					log.Printf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
+					log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
 					go runChecks(timeout)
 					go runReports(timeout)
 					runAlerts(timeout)
