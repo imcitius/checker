@@ -3,9 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/teris-io/shortid"
 	"math"
+	"math/rand"
 	"time"
 )
+
+func getRandomId() string {
+	sid, _ := shortid.New(1, shortid.DefaultABC, rand.Uint64())
+	checkRuntimeId, _ := sid.Generate()
+	return checkRuntimeId
+}
 
 func runChecks(timeout int) {
 	log.Debug("runChecks")
@@ -15,19 +23,21 @@ func runChecks(timeout int) {
 			for _, check := range healthcheck.Checks {
 				log.Debug(check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
-					log.Infof("Checking project '%s' check '%s' ... ", project.Name, check.Type)
+					checkRandomId := getRandomId()
+					log.Infof("(%s) Checking project '%s' check '%s' ... ", checkRandomId, project.Name, check.Type)
 					startTime := time.Now()
-					err := check.Execute(project)
+					tempErr := check.Execute(project)
 					endTime := time.Now()
 					t := endTime.Sub(startTime)
-					if err != nil {
-						log.Infof("failure: %+v, took %d millisec\n", err, t.Milliseconds())
+					if tempErr != nil {
+						err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
+						log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
 						if check.Mode != "quiet" {
 							project.Alert(err)
 						}
 						project.AddError()
 					} else {
-						log.Infof("success, took %d millisec\n", t.Milliseconds())
+						log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
 						project.DecError()
 					}
 				}
