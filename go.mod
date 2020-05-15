@@ -9,6 +9,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.3.0
+	github.com/sirupsen/logrus v1.6.0
 	github.com/sparrc/go-ping v0.0.0-20190613174326-4e5b6552494c
 	github.com/valyala/fastjson v1.5.1
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect

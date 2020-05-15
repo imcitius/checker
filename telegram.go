@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	tb "gopkg.in/tucnak/telebot.v2"
-	"log"
 	"regexp"
 	"time"
 )

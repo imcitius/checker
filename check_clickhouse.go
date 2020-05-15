@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/ClickHouse/clickhouse-go"
-	"log"
 	"time"
 )
 

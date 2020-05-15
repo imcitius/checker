@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
-	"log"
 	"math/rand"
 	"time"
 )

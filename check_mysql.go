@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"log"
 	"math/rand"
 	"time"
 )
