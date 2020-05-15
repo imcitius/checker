@@ -73,6 +73,8 @@ type ConfigFile struct {
 		Parameters *Parameters `json:"parameters"`
 		// HTTP port web interface listen
 		HTTPPort string `json:"http_port"`
+		// If not empty HTPP server not enabled
+		HTTPEnabled string `json:"http_enabled"`
 	}
 	Alerts   []*AlertConfigs `json:"alerts"`
 	Projects []*Project      `json:"projects"`

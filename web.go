@@ -31,6 +31,9 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func WebInterface() {
+	if Config.Defaults.HTTPEnabled != "" {
+		return
+	}
 	var addr string = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
 	log.Infof("HTTP listen on: %s", addr)
 
