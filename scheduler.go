@@ -69,7 +69,13 @@ func runReports(timeout int) {
 func runScheduler() {
 	done := make(chan bool)
 	StartTime := time.Now()
-	Ticker := time.NewTicker(time.Duration(Config.Defaults.TimerStep) * time.Second)
+
+	timeStep, err := time.ParseDuration(Config.Defaults.TimerStep)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	Ticker := time.NewTicker(timeStep)
 
 	log.Debug("Scheduler started")
 

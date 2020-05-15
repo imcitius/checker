@@ -69,7 +69,7 @@ type Project struct {
 type ConfigFile struct {
 	Defaults struct {
 		// Main timer evaluates every TimerStep seconds
-		TimerStep  int         `json:"timer_step"`
+		TimerStep  string      `json:"timer_step"`
 		Parameters *Parameters `json:"parameters"`
 		// HTTP port web interface listen
 		HTTPPort string `json:"http_port"`
