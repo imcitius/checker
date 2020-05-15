@@ -209,7 +209,7 @@ func sendTgMessage(a *AlertConfigs, e error) error {
 
 	_, err = bot.Send(&user, e.Error())
 	if err != nil {
-		log.Printf("sendTgMessage error: ", err)
+		log.Warnf("sendTgMessage error: %v", err)
 	}
 	return err
 }
