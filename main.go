@@ -47,6 +47,8 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
+	WebInterface()
+
 	initBots()
 	runScheduler()
 

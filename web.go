@@ -32,6 +32,7 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func WebInterface() {
 	var addr string = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
+	log.Infof("HTTP listen on: %s", addr)
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/healthcheck", healthCheck)
