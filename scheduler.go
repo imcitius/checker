@@ -24,7 +24,7 @@ func runChecks(timeout string) {
 				log.Debug(check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
 					checkRandomId := getRandomId()
-					log.Infof("(%s) Checking project '%s' check '%s' ... ", checkRandomId, project.Name, check.Type)
+					log.Infof("(%s) Checking project '%s' check '%s' (type: %s) ... ", checkRandomId, project.Name, healthcheck.Name, check.Type)
 					startTime := time.Now()
 					tempErr := check.Execute(project)
 					endTime := time.Now()
