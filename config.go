@@ -222,12 +222,16 @@ func fillTimeouts() {
 
 func (p *TimeoutCollection) Add(period string) {
 	var found bool
-	for _, item := range p.periods {
-		if item == period {
-			found = true
+	if period != "" {
+		for _, item := range p.periods {
+			if item == period {
+				found = true
+			}
 		}
-	}
-	if !found {
-		p.periods = append(p.periods, period)
+		if !found {
+			p.periods = append(p.periods, period)
+		}
+	} else {
+		log.Debug("Empty timeout not adding")
 	}
 }

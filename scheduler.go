@@ -77,6 +77,8 @@ func runReports(timeout string) {
 }
 
 func runScheduler() {
+	var scheduleLoop int
+
 	done := make(chan bool)
 	StartTime := time.Now()
 
@@ -89,7 +91,9 @@ func runScheduler() {
 
 	log.Debug("Scheduler started")
 	log.Debugf("Timeouts: %+v", Timeouts.periods)
+
 	for {
+		log.Debugf("Scheduler loop #: %d", scheduleLoop)
 		select {
 		case <-done:
 			return
@@ -97,14 +101,13 @@ func runScheduler() {
 			dif := float64(t.Sub(StartTime) / time.Second)
 
 			for i, timeout := range Timeouts.periods {
-				log.Info(timeout)
-				log.Debugf("#%d Got timeout: %s", i, timeout)
+				log.Debugf("Got timeout #%d: %s", i, timeout)
 
 				tf, err := time.ParseDuration(timeout)
 				if err != nil {
 					log.Errorf("Cannot parse timeout: %s", err)
 				}
-				log.Debugf("#%d Parsed timeout: %+v", i, tf)
+				log.Debugf("Parsed timeout #%d: %+v", i, tf)
 
 				if math.Remainder(dif, tf.Seconds()) == 0 {
 					log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
@@ -114,5 +117,6 @@ func runScheduler() {
 				}
 			}
 		}
+		scheduleLoop++
 	}
 }
