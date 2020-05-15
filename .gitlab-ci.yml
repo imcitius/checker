@@ -8,7 +8,8 @@ variables:
   PACKER_ONLY: "centos"
   BINARY_NAME: "checker"
   INSTANCE_DC: ks-1
-  REGISTRY_TAG: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
+  VERSION: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
+  REGISTRY_TAG: ${VERSION}
 
 include:
   - project: "ci-library/ci-collections"

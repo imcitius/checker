@@ -118,16 +118,16 @@ group "checkers" {
         {$ end -$}
         canary_tags = ["{$- if ne .P.version .I.Name -$}{$ replace .P.version "." "-" $}-{$- end -$}canary"]
 
-        check {
-          address_mode = "driver"
-          port = "80"
-          type = "http"
-          path = "/healthcheck"
-          method = "GET"
-          interval = "5s"
-          timeout = "1s"
-          initial_status = "passing"
-        }
+          check {
+            address_mode = "driver"
+            port = "80"
+            type = "http"
+            path = "/healthcheck"
+            method = "GET"
+            interval = "5s"
+            timeout = "1s"
+            initial_status = "passing"
+          }
 
         check_restart {
           limit = 5
