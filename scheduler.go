@@ -15,7 +15,7 @@ func getRandomId() string {
 	return checkRuntimeId
 }
 
-func runChecks(timeout int) {
+func runChecks(timeout string) {
 	log.Debug("runChecks")
 
 	for _, project := range Config.Projects {
@@ -46,7 +46,7 @@ func runChecks(timeout int) {
 	}
 }
 
-func runAlerts(timeout int) {
+func runAlerts(timeout string) {
 	log.Debug("runAlerts")
 	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery == timeout {
@@ -63,7 +63,7 @@ func runAlerts(timeout int) {
 	}
 }
 
-func runReports(timeout int) {
+func runReports(timeout string) {
 	log.Debug("runReports")
 	for _, project := range Config.Projects {
 		if project.Parameters.PeriodicReport == timeout {
@@ -88,15 +88,25 @@ func runScheduler() {
 	Ticker := time.NewTicker(timeStep)
 
 	log.Debug("Scheduler started")
-
+	log.Debugf("Timeouts: %+v", Timeouts.periods)
 	for {
 		select {
 		case <-done:
 			return
 		case t := <-Ticker.C:
 			dif := float64(t.Sub(StartTime) / time.Second)
-			for _, timeout := range Timeouts.periods {
-				if math.Remainder(dif, float64(timeout)) == 0 {
+
+			for i, timeout := range Timeouts.periods {
+				log.Info(timeout)
+				log.Debugf("#%d Got timeout: %s", i, timeout)
+
+				tf, err := time.ParseDuration(timeout)
+				if err != nil {
+					log.Errorf("Cannot parse timeout: %s", err)
+				}
+				log.Debugf("#%d Parsed timeout: %+v", i, tf)
+
+				if math.Remainder(dif, tf.Seconds()) == 0 {
 					log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
 					go runChecks(timeout)
 					go runReports(timeout)

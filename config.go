@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"io/ioutil"
-	//"log"
 	"net/http"
 )
 
@@ -12,8 +11,8 @@ type Parameters struct {
 	// Messages mode quiet/loud
 	Mode string `json:"mode"`
 	// Checks should be run every RunEvery seconds
-	RunEvery       int `json:"run_every"`
-	PeriodicReport int `json:"periodic_report_time"`
+	RunEvery       string `json:"run_every"`
+	PeriodicReport string `json:"periodic_report_time"`
 	// minimum passed checks to consider project healthy
 	MinHealth int `json:"min_health"`
 	// how much consecutive critical checks may fail to consider not healthy
@@ -133,7 +132,7 @@ type Check struct {
 }
 
 type TimeoutCollection struct {
-	periods []int
+	periods []string
 }
 
 func jsonLoad(fileName string, destination interface{}) error {
@@ -157,7 +156,7 @@ var (
 func fillDefaults() error {
 	//log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, project := range Config.Projects {
-		if project.Parameters.RunEvery == 0 {
+		if project.Parameters.RunEvery == "" {
 			project.Parameters.RunEvery = Config.Defaults.Parameters.RunEvery
 		}
 		if project.Parameters.Mode == "" {
@@ -178,7 +177,7 @@ func fillDefaults() error {
 		if project.Parameters.CritAlert == "" {
 			project.Parameters.CritAlert = Config.Defaults.Parameters.Alert
 		}
-		if project.Parameters.PeriodicReport == 0 {
+		if project.Parameters.PeriodicReport == "" {
 			project.Parameters.PeriodicReport = Config.Defaults.Parameters.PeriodicReport
 		}
 		if project.Parameters.SSLExpirationPeriod == "" {
@@ -215,13 +214,13 @@ func fillTimeouts() {
 				Timeouts.Add(healthcheck.Parameters.RunEvery)
 				project.Timeouts.Add(healthcheck.Parameters.RunEvery)
 			}
-			//log.Printf("Project %s timeouts found: %v\n", project.Name, project.Timeouts)
+			log.Debugf("Project %s timeouts found: %+v\n", project.Name, project.Timeouts)
 		}
 	}
-	//log.Printf("Timeouts found: %v\n\n", Timeouts)
+	log.Debugf("Total timeouts found: %+v\n\n", Timeouts)
 }
 
-func (p *TimeoutCollection) Add(period int) {
+func (p *TimeoutCollection) Add(period string) {
 	var found bool
 	for _, item := range p.periods {
 		if item == period {
