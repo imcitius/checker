@@ -15,3 +15,6 @@ include:
   - project: "ci-library/ci-collections"
     file: "go-app.base.yml"
 
+dev instance:
+  script:
+    - /bin/true
