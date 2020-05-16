@@ -138,3 +138,67 @@ func (c *Check) EnableAlerts() error {
 	log.Printf("New mode: %s", c.Mode)
 	return nil
 }
+
+func (c *Check) AddError() error {
+	c.ErrorsCount++
+	return nil
+}
+
+func (c *Check) DecError() error {
+	if c.ErrorsCount > 0 {
+		c.ErrorsCount--
+	}
+	return nil
+}
+
+func (c *Check) GetErrors() int {
+	return c.ErrorsCount
+}
+
+func (c *Check) AddFail() error {
+	c.FailsCount++
+	return nil
+}
+
+func (c *Check) DecFail() error {
+	if c.FailsCount > 0 {
+		c.FailsCount--
+	}
+	return nil
+}
+
+func (c *Check) GetFails() int {
+	return c.FailsCount
+}
+
+func (h *Healtchecks) AddError() error {
+	h.ErrorsCount++
+	return nil
+}
+
+func (h *Healtchecks) DecError() error {
+	if h.ErrorsCount > 0 {
+		h.ErrorsCount--
+	}
+	return nil
+}
+
+func (h *Healtchecks) GetErrors() int {
+	return h.ErrorsCount
+}
+
+func (h *Healtchecks) AddFail() error {
+	h.FailsCount++
+	return nil
+}
+
+func (h *Healtchecks) DecFail() error {
+	if h.FailsCount > 0 {
+		h.FailsCount--
+	}
+	return nil
+}
+
+func (h *Healtchecks) GetFails() int {
+	return h.FailsCount
+}

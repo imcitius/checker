@@ -23,6 +23,8 @@ func runChecks(timeout string) {
 			for _, check := range healthcheck.Checks {
 				log.Debug(check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
+					healthcheck.RunCount++
+					check.RunCount++
 					checkRandomId := getRandomId()
 					log.Infof("(%s) Checking project '%s' check '%s' (type: %s) ... ", checkRandomId, project.Name, healthcheck.Name, check.Type)
 					startTime := time.Now()
@@ -36,6 +38,8 @@ func runChecks(timeout string) {
 							project.Alert(err)
 						}
 						project.AddError()
+						healthcheck.AddError()
+						check.AddError()
 					} else {
 						log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
 						project.DecError()
@@ -77,7 +81,6 @@ func runReports(timeout string) {
 }
 
 func runScheduler() {
-	var scheduleLoop int
 
 	done := make(chan bool)
 	StartTime := time.Now()
@@ -93,7 +96,7 @@ func runScheduler() {
 	log.Debugf("Timeouts: %+v", Timeouts.periods)
 
 	for {
-		log.Debugf("Scheduler loop #: %d", scheduleLoop)
+		log.Debugf("Scheduler loop #: %d", ScheduleLoop)
 		select {
 		case <-done:
 			return
@@ -117,6 +120,6 @@ func runScheduler() {
 				}
 			}
 		}
-		scheduleLoop++
+		ScheduleLoop++
 	}
 }

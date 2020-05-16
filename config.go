@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+var ScheduleLoop int
+
 type Parameters struct {
 	// Messages mode quiet/loud
 	Mode string `json:"mode"`
@@ -85,6 +87,10 @@ type Healtchecks struct {
 
 	// check level parameters
 	Parameters Parameters `json:"parameters"`
+
+	RunCount    int
+	ErrorsCount int
+	FailsCount  int
 }
 
 type Check struct {
@@ -129,6 +135,10 @@ type Check struct {
 	// Runtime data
 	uuID       string
 	LastResult bool
+
+	RunCount    int
+	ErrorsCount int
+	FailsCount  int
 }
 
 type TimeoutCollection struct {

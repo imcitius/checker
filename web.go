@@ -34,11 +34,12 @@ func getAllProjectsHealthchecks() string {
 	var output string
 
 	for _, p := range Config.Projects {
-		output += "Project: " + p.Name + "\n"
+		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, p.getRuns(), p.GetErrors(), p.GetFails())
 
 		for _, h := range p.Healtchecks {
+			output += fmt.Sprintf("\tHealthCheck: %s\truns: %d, errors: %d\n", h.Name, h.RunCount, h.ErrorsCount)
 			for _, c := range h.Checks {
-				output += "\tCheck: " + c.Type + "\t host: " + c.Host + "\n"
+				output += fmt.Sprintf("\t\tCheck: %s\thost: %s, runs: %d, errors: %d\n", c.Type, c.Host, c.RunCount, c.ErrorsCount)
 			}
 		}
 	}
@@ -50,17 +51,33 @@ func getCeasedProjectsHealthchecks() string {
 
 	for _, p := range Config.Projects {
 		if p.Parameters.Mode == "quiet" {
-			output += "Project: " + p.Name + "\n"
+			output += fmt.Sprintf("Project: %s\n", p.Name)
 		}
 
 		for _, h := range p.Healtchecks {
 			for _, c := range h.Checks {
 				if c.Mode == "quiet" {
-					output += "\tCheck: " + c.Type + "\t host: " + c.Host + "\n"
+					output += fmt.Sprintf("\t\tCheck: %s\t host: %s\n", c.Type, c.Host)
 				}
 			}
 		}
 	}
+	return output
+}
+
+func getMetrics() string {
+	var (
+		output      string
+		projectRuns int
+	)
+
+	for _, p := range Config.Projects {
+		projectRuns += p.getRuns()
+	}
+
+	output += fmt.Sprintf("Loop cycles (%s): %d\n", Config.Defaults.TimerStep, ScheduleLoop)
+	output += fmt.Sprintf("Total checks runs: %d\n", projectRuns)
+
 	return output
 }
 
@@ -81,8 +98,11 @@ func runtimeStats(w http.ResponseWriter, r *http.Request) {
 	output += "==========================\n\n"
 	output += getAllProjectsHealthchecks()
 	output += "\n\n\nCeased projects and checks\n"
-	output += getCeasedProjectsHealthchecks()
 	output += "==========================\n\n"
+	output += getCeasedProjectsHealthchecks()
+	output += "\n\n\nRuntime metrics\n"
+	output += "==========================\n\n"
+	output += getMetrics()
 
 	io.WriteString(w, output)
 }

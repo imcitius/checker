@@ -15,7 +15,10 @@ func (p *Project) DecError() error {
 		p.ErrorsCount--
 	}
 	return nil
+}
 
+func (p *Project) GetErrors() int {
+	return p.ErrorsCount
 }
 
 func (p *Project) AddFail() error {
@@ -28,7 +31,10 @@ func (p *Project) DecFail() error {
 		p.FailsCount--
 	}
 	return nil
+}
 
+func (p *Project) GetFails() int {
+	return p.FailsCount
 }
 
 func (p *Project) CeaseAlerts() error {
@@ -118,4 +124,12 @@ func (p *Project) CritAlert(e error) {
 			alert.Send(e)
 		}
 	}
+}
+
+func (p *Project) getRuns() int {
+	var counter int
+	for _, h := range p.Healtchecks {
+		counter += h.RunCount
+	}
+	return counter
 }
