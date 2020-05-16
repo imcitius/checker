@@ -78,6 +78,7 @@ func runtimeStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	output += "Total projects\n"
+	output += "==========================\n\n"
 	output += getAllProjectsHealthchecks()
 	output += "\n\n\nCeased projects and checks\n"
 	output += getCeasedProjectsHealthchecks()
