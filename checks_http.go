@@ -75,7 +75,7 @@ func runHTTPCheck(c *Check, p *Project) error {
 		}
 	}
 
-	//log.Printf("http request: %v", req)
+	log.Debugf("http request: %v", req)
 	response, err := client.Do(req)
 
 	if c.GetScheme() == "https" {
@@ -83,7 +83,7 @@ func runHTTPCheck(c *Check, p *Project) error {
 			if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
 				log.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
 			}
-			//log.Printf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
+			log.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
 		}
 
 	}
