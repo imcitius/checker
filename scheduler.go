@@ -35,7 +35,7 @@ func runChecks(timeout string) {
 						err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
 						log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
 						if check.Mode != "quiet" {
-							project.Alert(err)
+							project.Alert("noncrit", err)
 						}
 						project.AddError()
 						healthcheck.AddError()
@@ -61,7 +61,7 @@ func runAlerts(timeout string) {
 			}
 			if project.FailsCount > project.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
-				project.CritAlert(errors.New(errorMessage))
+				project.CritAlert("crit", errors.New(errorMessage))
 			}
 		}
 	}

@@ -27,7 +27,7 @@ type Parameters struct {
 }
 
 type ChatAlert interface {
-	Send(e error) error
+	Send(alerttype string, e error) error
 	GetName() string
 	GetType() string
 	GetCreds() string
@@ -53,19 +53,11 @@ type AlertConfigs struct {
 	CriticalChannel int64 `json:"critical_channel"`
 	// Empty by default, alerts will not be sent unless critical
 	ProjectChannel int64 `json:"noncritical_channel"`
-}
 
-type AlertStatCounter struct {
-	Name        string
 	AlertCount  int
 	NonCritical int
 	Critical    int
 }
-type AlertStatCounters struct {
-	Counters []AlertStatCounter
-}
-
-var AlertStats *AlertStatCounters
 
 type Project struct {
 	Name        string         `json:"name"`

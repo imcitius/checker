@@ -211,15 +211,8 @@ func sendTgMessage(alerttype string, a *AlertConfigs, e error) error {
 	if err != nil {
 		log.Warnf("sendTgMessage error: %v", err)
 	} else {
-		switch alerttype {
-		case "crit":
-			addAlertCounterCrit(a)
-		case "noncrit":
-			addAlertCounterNoncrit(a)
-		default:
-			log.Errorf("Undefined alert type")
-		}
-		addAlertCounter(a)
+		log.Debugf("sendTgMessage success")
+		addAlertCounter(alerttype, a)
 	}
 	return err
 }

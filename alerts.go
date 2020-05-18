@@ -29,26 +29,24 @@ func (a *AlertConfigs) GetCreds() string {
 	return a.BotToken
 }
 
-func addAlertCounter(a *AlertConfigs) {
-	for _, counter := range AlertStats.Counters {
+func addAlertCounter(alerttype string, a *AlertConfigs) {
+	log.Debugf("increase alert counter")
+
+	for _, counter := range Config.Alerts {
+		log.Debugf("%s .... %s", a.Name, counter.Name)
 		if a.Name == counter.Name {
+			log.Debugf("Increase total %s counter %s", alerttype, counter.Name)
+			switch alerttype {
+			case "crit":
+				counter.Critical++
+			case "noncrit":
+				counter.NonCritical++
+			case "report":
+				counter.NonCritical++
+			default:
+				log.Errorf("Undefined alert type")
+			}
 			counter.AlertCount++
-		}
-	}
-}
-
-func addAlertCounterNoncrit(a *AlertConfigs) {
-	for _, counter := range AlertStats.Counters {
-		if a.Name == counter.Name {
-			counter.NonCritical++
-		}
-	}
-}
-
-func addAlertCounterCrit(a *AlertConfigs) {
-	for _, counter := range AlertStats.Counters {
-		if a.Name == counter.Name {
-			counter.Critical++
 		}
 	}
 }

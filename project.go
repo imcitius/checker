@@ -81,7 +81,7 @@ func (p *Project) SendReport() error {
 				switch alertName {
 				case "telegram":
 					log.Printf("Sending report for project %s\n", project.GetName())
-					sendTgMessage(alert, errors.New(reportMessage))
+					sendTgMessage("report", alert, errors.New(reportMessage))
 				default:
 					errors.New("Alert method not implemented")
 				}
@@ -100,7 +100,7 @@ func (p *Project) GetMode() string {
 }
 
 func (p *Project) Alert(alerttype string, e error) {
-	//log.Printf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
+	log.Debugf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
 	//log.Printf("%+v", Config.Alerts)
 	if Config.Defaults.Parameters.Mode == "loud" && p.Parameters.Mode == "loud" {
 		if p.Parameters.Mode == "loud" {

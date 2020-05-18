@@ -67,16 +67,26 @@ func getCeasedProjectsHealthchecks() string {
 
 func getMetrics() string {
 	var (
-		output      string
-		projectRuns int
+		output                                         string
+		projectRuns, alertsSent, critSent, nonCritSent int
 	)
 
 	for _, p := range Config.Projects {
 		projectRuns += p.getRuns()
 	}
 
+	for _, c := range Config.Alerts {
+		alertsSent += c.AlertCount
+		critSent += c.Critical
+		nonCritSent += c.NonCritical
+		log.Debugf("Counter: %s", c.Name)
+	}
+
 	output += fmt.Sprintf("Loop cycles (%s): %d\n", Config.Defaults.TimerStep, ScheduleLoop)
-	output += fmt.Sprintf("Total checks runs: %d\n", projectRuns)
+	output += fmt.Sprintf("Total checks runs: %d\n\n", projectRuns)
+	output += fmt.Sprintf("Total alerts/reports sent: %d\n", alertsSent)
+	output += fmt.Sprintf("\tNonCritical alerts sent: %d\n", nonCritSent)
+	output += fmt.Sprintf("\tCritical alerts sent: %d\n", critSent)
 
 	return output
 }

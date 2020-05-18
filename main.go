@@ -14,6 +14,7 @@ func main() {
 
 	configPath := flag.String("config", "config.json", "Config file path")
 	debugLevel := flag.String("debug", "Info", "Debug,Info,Warn,Error,Fatal,Panic")
+	botsEnabled := flag.String("bots", "enabled", "enabled/disabled")
 	flag.Parse()
 
 	dl, err := logrus.ParseLevel(*debugLevel)
@@ -49,7 +50,9 @@ func main() {
 
 	go webInterface()
 
-	initBots()
+	if *botsEnabled == "enabled" {
+		initBots()
+	}
 	runScheduler()
 
 }
