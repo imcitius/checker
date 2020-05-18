@@ -195,8 +195,8 @@ func initBots() {
 	}
 }
 
-func sendTgMessage(a *AlertConfigs, e error) error {
-	//log.Printf("Alert send: %s (alert details %+v)", e, a)
+func sendTgMessage(alerttype string, a *AlertConfigs, e error) error {
+	log.Debugf("Alert send: %s (alert details %+v)", e, a)
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  a.BotToken,
 		Poller: &tb.LongPoller{Timeout: 5 * time.Second},
@@ -205,11 +205,21 @@ func sendTgMessage(a *AlertConfigs, e error) error {
 		log.Fatal(err)
 	}
 	user := tb.Chat{ID: a.ProjectChannel}
-	//log.Printf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
+	log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
 
 	_, err = bot.Send(&user, e.Error())
 	if err != nil {
 		log.Warnf("sendTgMessage error: %v", err)
+	} else {
+		switch alerttype {
+		case "crit":
+			addAlertCounterCrit(a)
+		case "noncrit":
+			addAlertCounterNoncrit(a)
+		default:
+			log.Errorf("Undefined alert type")
+		}
+		addAlertCounter(a)
 	}
 	return err
 }

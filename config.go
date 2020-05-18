@@ -55,6 +55,18 @@ type AlertConfigs struct {
 	ProjectChannel int64 `json:"noncritical_channel"`
 }
 
+type AlertStatCounter struct {
+	Name        string
+	AlertCount  int
+	NonCritical int
+	Critical    int
+}
+type AlertStatCounters struct {
+	Counters []AlertStatCounter
+}
+
+var AlertStats *AlertStatCounters
+
 type Project struct {
 	Name        string         `json:"name"`
 	Healtchecks []*Healtchecks `json:"healthchecks"`
