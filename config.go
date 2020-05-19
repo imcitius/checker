@@ -165,9 +165,11 @@ func jsonLoad(fileName string, destination interface{}) error {
 var (
 	Config   *ConfigFile
 	Timeouts TimeoutCollection
+	Checks   map[string]func(c *Check, p *Project) error = make(map[string]func(c *Check, p *Project) error)
 )
 
 func fillDefaults() error {
+
 	//log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, project := range Config.Projects {
 		if project.Parameters.RunEvery == "" {
