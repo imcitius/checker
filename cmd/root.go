@@ -26,7 +26,6 @@ var (
 	doneCh, schedulerSignalCh, webSignalCh chan bool
 	wg                                     sync.WaitGroup
 	interrupt                              bool = false
-	log                                         = logrus.New()
 )
 
 // Execute executes the root command.
@@ -75,14 +74,14 @@ func initConfig() {
 
 	dl, err := logrus.ParseLevel(viper.GetString("debugLevel"))
 	if err != nil {
-		log.Panicf("Cannot parse debug level: %v", err)
+		config.Log.Panicf("Cannot parse debug level: %v", err)
 	} else {
-		log.SetLevel(dl)
+		config.Log.SetLevel(dl)
 	}
 
-	err = config.LoadConfig()
+	err = config.LoadConfig(log)
 	if err != nil {
-		log.Infof("Config load error: %s", err)
+		config.Log.Infof("Config load error: %s", err)
 	}
 
 	err = config.FillDefaults()
@@ -117,7 +116,7 @@ func mainChecker(cmd *cobra.Command, args []string) {
 
 	wg.Add(1)
 	go runScheduler(schedulerSignalCh, &wg)
-	go web.WebInterface(log, &wg, webSignalCh)
+	go web.WebInterface(webSignalCh, &wg)
 	wg.Wait()
 
 	if !interrupt {
@@ -129,11 +128,11 @@ func signalWait() {
 
 	select {
 	case <-signalINT:
-		log.Infof("Got SIGINT")
+		config.Log.Infof("Got SIGINT")
 		interrupt = true
 		schedulerSignalCh <- true
 	case <-signalHUP:
-		log.Infof("Got SIGHUP")
+		config.Log.Infof("Got SIGHUP")
 		schedulerSignalCh <- true
 	}
 }
@@ -144,6 +143,6 @@ var testCfg = &cobra.Command{
 	Long:  `All software has versions. This is Hugo's`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		log.Infof("Config :\n%+v\n\n\n", config.Config)
+		config.Log.Infof("Config :\n%+v\n\n\n", config.Config)
 	},
 }

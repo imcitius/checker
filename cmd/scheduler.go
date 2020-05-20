@@ -13,8 +13,8 @@ func fillTimeouts(c *config.ConfigFile, t *config.TimeoutsCollection) error {
 
 	for _, project := range c.Projects {
 
-		//log.Debugf("Project name: %s", project.Name)
-		//log.Debugf("Parameters: %+v", project.Parameters)
+		//config.Log.Debugf("Project name: %s", project.Name)
+		//config.Log.Debugf("Parameters: %+v", project.Parameters)
 
 		if project.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
 			t.Add(project.Parameters.RunEvery)
@@ -24,10 +24,10 @@ func fillTimeouts(c *config.ConfigFile, t *config.TimeoutsCollection) error {
 				t.Add(healthcheck.Parameters.RunEvery)
 				project.Timeouts.Add(healthcheck.Parameters.RunEvery)
 			}
-			log.Debugf("Project %s timeouts found: %+v\n", project.Name, project.Timeouts)
+			config.Log.Debugf("Project %s timeouts found: %+v\n", project.Name, project.Timeouts)
 		}
 	}
-	log.Debugf("Total timeouts found: %+v\n\n", t)
+	config.Log.Debugf("Total timeouts found: %+v\n\n", t)
 
 	return nil
 }
@@ -41,36 +41,36 @@ func runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 	timerStep, err := time.ParseDuration(viper.GetString("defaults.timer_step"))
 	if err != nil {
-		log.Fatal(err)
+		config.Log.Fatal(err)
 	}
 
 	Ticker := time.NewTicker(timerStep)
 
-	log.Debug("Scheduler started")
-	log.Debugf("Timeouts: %+v", Timeouts.Periods)
+	config.Log.Debug("Scheduler started")
+	config.Log.Debugf("Timeouts: %+v", Timeouts.Periods)
 
 	for {
-		log.Debugf("Scheduler loop #: %d", config.ScheduleLoop)
+		config.Log.Debugf("Scheduler loop #: %d", config.ScheduleLoop)
 		select {
 		case <-signalCh:
-			log.Infof("Exit scheduler")
+			config.Log.Infof("Exit scheduler")
 			wg.Done()
 		case t := <-Ticker.C:
 			dif := float64(t.Sub(StartTime) / time.Second)
 
 			for i, timeout := range Timeouts.Periods {
-				log.Debugf("Got timeout #%d: %s", i, timeout)
+				config.Log.Debugf("Got timeout #%d: %s", i, timeout)
 
 				tf, err := time.ParseDuration(timeout)
 				if err != nil {
-					log.Errorf("Cannot parse timeout: %s", err)
+					config.Log.Errorf("Cannot parse timeout: %s", err)
 				}
-				log.Debugf("Parsed timeout #%d: %+v", i, tf)
+				config.Log.Debugf("Parsed timeout #%d: %+v", i, tf)
 
 				if math.Remainder(dif, tf.Seconds()) == 0 {
-					log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
+					config.Log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
 
-					log.Infof("Schedule: %s", timeout)
+					config.Log.Infof("Schedule: %s", timeout)
 
 					//go runChecks(timeout)
 					//go runReports(timeout)

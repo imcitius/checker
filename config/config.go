@@ -10,7 +10,7 @@ import (
 var (
 	ScheduleLoop int
 	Config       ConfigFile
-	log          *logrus.Logger = logrus.New()
+	Log          *logrus.Logger = logrus.New()
 )
 
 type Parameters struct {
@@ -134,14 +134,14 @@ func LoadConfig() error {
 
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
-		log.Panicf("Fatal error config file: %s \n", err)
+		Log.Panicf("Fatal error config file: %s \n", err)
 	}
 
 	dl, err := logrus.ParseLevel(viper.GetString("debugLevel"))
 	if err != nil {
-		log.Panicf("Cannot parse debug level: %v", err)
+		Log.Panicf("Cannot parse debug level: %v", err)
 	} else {
-		log.SetLevel(dl)
+		Log.SetLevel(dl)
 	}
 
 	viper.Unmarshal(&Config)
@@ -161,13 +161,13 @@ func (p *TimeoutsCollection) Add(period string) {
 			p.Periods = append(p.Periods, period)
 		}
 	} else {
-		log.Debug("Empty timeout not adding")
+		Log.Debug("Empty timeout not adding")
 	}
 }
 
 func FillDefaults() error {
 
-	//log.Printf("Loaded config %+v\n\n", Config.Projects)
+	//config.Log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, project := range Config.Projects {
 		if project.Parameters.RunEvery == "" {
 			project.Parameters.RunEvery = Config.Defaults.Parameters.RunEvery
@@ -227,6 +227,6 @@ func (p *TimeoutCollection) Add(period string) {
 			p.periods = append(p.periods, period)
 		}
 	} else {
-		log.Debug("Empty timeout not adding")
+		Log.Debug("Empty timeout not adding")
 	}
 }
