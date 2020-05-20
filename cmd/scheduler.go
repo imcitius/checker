@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/spf13/viper"
 	"math"
+	"sync"
 	"time"
 )
 
@@ -30,12 +31,11 @@ func fillTimeouts(c *ConfigFile, t *TimeoutsCollection) error {
 	return nil
 }
 
-func (c *ConfigFile) runScheduler() {
+func (c *ConfigFile) runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 	Timeouts := new(TimeoutsCollection)
 	err := fillTimeouts(c, Timeouts)
 
-	done := make(chan bool)
 	StartTime := time.Now()
 
 	timerStep, err := time.ParseDuration(viper.GetString("defaults.timer_step"))
@@ -51,8 +51,9 @@ func (c *ConfigFile) runScheduler() {
 	for {
 		log.Debugf("Scheduler loop #: %d", ScheduleLoop)
 		select {
-		case <-done:
-			return
+		case <-signalCh:
+			log.Infof("Exit scheduler")
+			wg.Done()
 		case t := <-Ticker.C:
 			dif := float64(t.Sub(StartTime) / time.Second)
 

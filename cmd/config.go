@@ -6,11 +6,18 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"net/http"
+	"os"
+	"sync"
 )
 
 var (
-	ScheduleLoop int
-	Config       ConfigFile
+	ScheduleLoop              int
+	Config                    ConfigFile
+	log                       *logrus.Logger = logrus.New()
+	signalINT, signalHUP      chan os.Signal
+	doneCh, schedulerSignalCh chan bool
+	wg                        sync.WaitGroup
+	interrupt                 bool = false
 )
 
 type Parameters struct {

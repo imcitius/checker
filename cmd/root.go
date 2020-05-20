@@ -3,10 +3,11 @@ package cmd
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -15,10 +16,8 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "go-boilerplate",
-		Short: "A generator for Cobra based Applications",
-		Long: `Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+		Short: "Checker runner",
+		Long:  `^_^`,
 	}
 )
 
@@ -86,12 +85,45 @@ func initConfig() {
 	if err != nil {
 		panic(err)
 	}
+
+	signalINT = make(chan os.Signal, 1)
+	signalHUP = make(chan os.Signal, 1)
+	doneCh = make(chan bool)
+	schedulerSignalCh = make(chan bool)
+	signal.Notify(signalINT, syscall.SIGINT)
+	signal.Notify(signalHUP, syscall.SIGHUP)
+
 }
 
 var checkCommand = &cobra.Command{
 	Use:   "check",
 	Short: "Run scheduler and execute checks",
-	Run: func(cmd *cobra.Command, args []string) {
-		Config.runScheduler()
-	},
+	Run:   mainChecker,
+}
+
+func mainChecker(cmd *cobra.Command, args []string) {
+	initConfig()
+
+	go signalWait()
+
+	wg.Add(1)
+	go Config.runScheduler(schedulerSignalCh, &wg)
+	wg.Wait()
+
+	if !interrupt {
+		mainChecker(rootCmd, []string{})
+	}
+}
+
+func signalWait() {
+
+	select {
+	case <-signalINT:
+		log.Infof("Got SIGINT")
+		interrupt = true
+		schedulerSignalCh <- true
+	case <-signalHUP:
+		log.Infof("Got SIGHUP")
+		schedulerSignalCh <- true
+	}
 }
