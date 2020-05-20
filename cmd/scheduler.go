@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"github.com/spf13/viper"
@@ -11,11 +11,8 @@ func fillTimeouts(t *TimeoutsCollection) error {
 
 	for _, project := range Config.Projects {
 
-		log.Debugf("Project name: %s", project.Name)
-		log.Debugf("Parameters: %+v", project.Parameters)
-
-
-
+		//log.Debugf("Project name: %s", project.Name)
+		//log.Debugf("Parameters: %+v", project.Parameters)
 
 		if project.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
 			t.Add(project.Parameters.RunEvery)
@@ -33,7 +30,7 @@ func fillTimeouts(t *TimeoutsCollection) error {
 	return nil
 }
 
-func runScheduler() {
+func (c *ConfigFile) runScheduler() {
 
 	Timeouts := new(TimeoutsCollection)
 	err := fillTimeouts(Timeouts)
