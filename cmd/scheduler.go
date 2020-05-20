@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-func fillTimeouts(t *TimeoutsCollection) error {
+func fillTimeouts(c *ConfigFile, t *TimeoutsCollection) error {
 	t.Add(Config.Defaults.Parameters.RunEvery)
 
-	for _, project := range Config.Projects {
+	for _, project := range c.Projects {
 
 		//log.Debugf("Project name: %s", project.Name)
 		//log.Debugf("Parameters: %+v", project.Parameters)
 
-		if project.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
+		if project.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
 			t.Add(project.Parameters.RunEvery)
 		}
 		for _, healthcheck := range project.Healtchecks {
-			if healthcheck.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
+			if healthcheck.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
 				t.Add(healthcheck.Parameters.RunEvery)
 				project.Timeouts.Add(healthcheck.Parameters.RunEvery)
 			}
@@ -33,7 +33,7 @@ func fillTimeouts(t *TimeoutsCollection) error {
 func (c *ConfigFile) runScheduler() {
 
 	Timeouts := new(TimeoutsCollection)
-	err := fillTimeouts(Timeouts)
+	err := fillTimeouts(c, Timeouts)
 
 	done := make(chan bool)
 	StartTime := time.Now()

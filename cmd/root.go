@@ -11,8 +11,7 @@ import (
 
 var (
 	// Used for flags.
-	cfgFile     string
-	userLicense string
+	cfgFile string
 
 	rootCmd = &cobra.Command{
 		Use:   "go-boilerplate",
@@ -91,10 +90,8 @@ func initConfig() {
 
 var checkCommand = &cobra.Command{
 	Use:   "check",
-	Short: "unmarshal config file into config structure",
-	Long:  `All software has versions. This is Hugo's`,
+	Short: "Run scheduler and execute checks",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		Config.runScheduler()
 	},
 }
