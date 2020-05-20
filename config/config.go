@@ -1,23 +1,16 @@
-package cmd
+package config
 
 import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"net/http"
-	"os"
-	"sync"
 )
 
 var (
-	ScheduleLoop              int
-	Config                    ConfigFile
-	log                       *logrus.Logger = logrus.New()
-	signalINT, signalHUP      chan os.Signal
-	doneCh, schedulerSignalCh chan bool
-	wg                        sync.WaitGroup
-	interrupt                 bool = false
+	ScheduleLoop int
+	Config       ConfigFile
+	log          *logrus.Logger = logrus.New()
 )
 
 type Parameters struct {
@@ -63,7 +56,7 @@ type AlertConfigs struct {
 }
 
 type TimeoutsCollection struct {
-	periods []string
+	Periods []string
 }
 
 type Project struct {
@@ -137,7 +130,7 @@ type TimeoutCollection struct {
 	periods []string
 }
 
-func (c *ConfigFile) loadConfig() error {
+func LoadConfig() error {
 
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
@@ -151,7 +144,7 @@ func (c *ConfigFile) loadConfig() error {
 		log.SetLevel(dl)
 	}
 
-	viper.Unmarshal(c)
+	viper.Unmarshal(&Config)
 
 	return nil
 }
@@ -159,59 +152,49 @@ func (c *ConfigFile) loadConfig() error {
 func (p *TimeoutsCollection) Add(period string) {
 	var found bool
 	if period != "" {
-		for _, item := range p.periods {
+		for _, item := range p.Periods {
 			if item == period {
 				found = true
 			}
 		}
 		if !found {
-			p.periods = append(p.periods, period)
+			p.Periods = append(p.Periods, period)
 		}
 	} else {
 		log.Debug("Empty timeout not adding")
 	}
 }
 
-var testCfg = &cobra.Command{
-	Use:   "testcfg",
-	Short: "unmarshal config file into config structure",
-	Long:  `All software has versions. This is Hugo's`,
-	Run: func(cmd *cobra.Command, args []string) {
-
-		log.Infof("Config :\n%+v\n\n\n", Config)
-	},
-}
-
-func (c *ConfigFile) fillDefaults() error {
+func FillDefaults() error {
 
 	//log.Printf("Loaded config %+v\n\n", Config.Projects)
-	for i, project := range c.Projects {
+	for i, project := range Config.Projects {
 		if project.Parameters.RunEvery == "" {
-			project.Parameters.RunEvery = c.Defaults.Parameters.RunEvery
+			project.Parameters.RunEvery = Config.Defaults.Parameters.RunEvery
 		}
 		if project.Parameters.Mode == "" {
-			project.Parameters.Mode = c.Defaults.Parameters.Mode
+			project.Parameters.Mode = Config.Defaults.Parameters.Mode
 		}
 		if project.Parameters.AllowFails == 0 {
-			project.Parameters.AllowFails = c.Defaults.Parameters.AllowFails
+			project.Parameters.AllowFails = Config.Defaults.Parameters.AllowFails
 		}
 		if project.Parameters.MinHealth == 0 {
-			project.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
+			project.Parameters.MinHealth = Config.Defaults.Parameters.MinHealth
 		}
 		if project.Parameters.MinHealth == 0 {
-			project.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
+			project.Parameters.MinHealth = Config.Defaults.Parameters.MinHealth
 		}
 		if project.Parameters.Alert == "" {
-			project.Parameters.Alert = c.Defaults.Parameters.Alert
+			project.Parameters.Alert = Config.Defaults.Parameters.Alert
 		}
 		if project.Parameters.CritAlert == "" {
-			project.Parameters.CritAlert = c.Defaults.Parameters.Alert
+			project.Parameters.CritAlert = Config.Defaults.Parameters.Alert
 		}
 		if project.Parameters.PeriodicReport == "" {
-			project.Parameters.PeriodicReport = c.Defaults.Parameters.PeriodicReport
+			project.Parameters.PeriodicReport = Config.Defaults.Parameters.PeriodicReport
 		}
 		if project.Parameters.SSLExpirationPeriod == "" {
-			project.Parameters.SSLExpirationPeriod = c.Defaults.Parameters.SSLExpirationPeriod
+			project.Parameters.SSLExpirationPeriod = Config.Defaults.Parameters.SSLExpirationPeriod
 		}
 		Config.Projects[i] = project
 	}
@@ -219,13 +202,13 @@ func (c *ConfigFile) fillDefaults() error {
 	return nil
 }
 
-func (c *ConfigFile) fillUUIDs() error {
+func FillUUIDs() error {
 	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
-	for i := range c.Projects {
-		for j := range c.Projects[i].Healtchecks {
-			for k := range c.Projects[i].Healtchecks[j].Checks {
+	for i := range Config.Projects {
+		for j := range Config.Projects[i].Healtchecks {
+			for k := range Config.Projects[i].Healtchecks[j].Checks {
 				u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Healtchecks[j].Checks[k].Host))
-				c.Projects[i].Healtchecks[j].Checks[k].uuID = u2.String()
+				Config.Projects[i].Healtchecks[j].Checks[k].uuID = u2.String()
 			}
 		}
 	}

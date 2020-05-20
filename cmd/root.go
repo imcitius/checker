@@ -5,8 +5,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go-boilerplate/config"
+	"go-boilerplate/web"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
@@ -19,6 +22,11 @@ var (
 		Short: "Checker runner",
 		Long:  `^_^`,
 	}
+	signalINT, signalHUP                   chan os.Signal
+	doneCh, schedulerSignalCh, webSignalCh chan bool
+	wg                                     sync.WaitGroup
+	interrupt                              bool = false
+	log                                         = logrus.New()
 )
 
 // Execute executes the root command.
@@ -72,16 +80,16 @@ func initConfig() {
 		log.SetLevel(dl)
 	}
 
-	err = Config.loadConfig()
+	err = config.LoadConfig()
 	if err != nil {
 		log.Infof("Config load error: %s", err)
 	}
 
-	err = Config.fillDefaults()
+	err = config.FillDefaults()
 	if err != nil {
 		panic(err)
 	}
-	Config.fillUUIDs()
+	config.FillUUIDs()
 	if err != nil {
 		panic(err)
 	}
@@ -90,6 +98,7 @@ func initConfig() {
 	signalHUP = make(chan os.Signal, 1)
 	doneCh = make(chan bool)
 	schedulerSignalCh = make(chan bool)
+	webSignalCh = make(chan bool)
 	signal.Notify(signalINT, syscall.SIGINT)
 	signal.Notify(signalHUP, syscall.SIGHUP)
 
@@ -107,7 +116,8 @@ func mainChecker(cmd *cobra.Command, args []string) {
 	go signalWait()
 
 	wg.Add(1)
-	go Config.runScheduler(schedulerSignalCh, &wg)
+	go runScheduler(schedulerSignalCh, &wg)
+	go web.WebInterface(log, &wg, webSignalCh)
 	wg.Wait()
 
 	if !interrupt {
@@ -126,4 +136,14 @@ func signalWait() {
 		log.Infof("Got SIGHUP")
 		schedulerSignalCh <- true
 	}
+}
+
+var testCfg = &cobra.Command{
+	Use:   "testcfg",
+	Short: "unmarshal config file into config structure",
+	Long:  `All software has versions. This is Hugo's`,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		log.Infof("Config :\n%+v\n\n\n", config.Config)
+	},
 }

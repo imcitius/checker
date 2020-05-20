@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"github.com/spf13/viper"
+	"go-boilerplate/config"
 	"math"
 	"sync"
 	"time"
 )
 
-func fillTimeouts(c *ConfigFile, t *TimeoutsCollection) error {
-	t.Add(Config.Defaults.Parameters.RunEvery)
+func fillTimeouts(c *config.ConfigFile, t *config.TimeoutsCollection) error {
+	t.Add(config.Config.Defaults.Parameters.RunEvery)
 
 	for _, project := range c.Projects {
 
@@ -31,10 +32,10 @@ func fillTimeouts(c *ConfigFile, t *TimeoutsCollection) error {
 	return nil
 }
 
-func (c *ConfigFile) runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
+func runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
-	Timeouts := new(TimeoutsCollection)
-	err := fillTimeouts(c, Timeouts)
+	Timeouts := new(config.TimeoutsCollection)
+	err := fillTimeouts(&config.Config, Timeouts)
 
 	StartTime := time.Now()
 
@@ -46,10 +47,10 @@ func (c *ConfigFile) runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 	Ticker := time.NewTicker(timerStep)
 
 	log.Debug("Scheduler started")
-	log.Debugf("Timeouts: %+v", Timeouts.periods)
+	log.Debugf("Timeouts: %+v", Timeouts.Periods)
 
 	for {
-		log.Debugf("Scheduler loop #: %d", ScheduleLoop)
+		log.Debugf("Scheduler loop #: %d", config.ScheduleLoop)
 		select {
 		case <-signalCh:
 			log.Infof("Exit scheduler")
@@ -57,7 +58,7 @@ func (c *ConfigFile) runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 		case t := <-Ticker.C:
 			dif := float64(t.Sub(StartTime) / time.Second)
 
-			for i, timeout := range Timeouts.periods {
+			for i, timeout := range Timeouts.Periods {
 				log.Debugf("Got timeout #%d: %s", i, timeout)
 
 				tf, err := time.ParseDuration(timeout)
@@ -77,6 +78,6 @@ func (c *ConfigFile) runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 				}
 			}
 		}
-		ScheduleLoop++
+		config.ScheduleLoop++
 	}
 }
