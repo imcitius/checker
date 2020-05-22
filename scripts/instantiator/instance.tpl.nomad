@@ -79,7 +79,7 @@ group "checkers" {
         ]
 
         args = [
-          "-config", "/app/config.json",
+          "check", "--config", "/app/config.json",
         ]
 
         port_map = {
