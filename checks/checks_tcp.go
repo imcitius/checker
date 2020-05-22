@@ -1,33 +1,34 @@
-package main
+package check
 
 import (
 	"errors"
 	"fmt"
+	"my/checker/config"
 	"net"
 	"time"
 )
 
 func init() {
-	Checks["tcp"] = func(c *Check, p *Project) error {
+	config.Checks["tcp"] = func (c *config.Check, p *config.Project) error {
 		var (
-			errorMessage  string
+			errorMessage string
 			checkAttempts int = 3
-			checkAttempt  int
+			checkAttempt int
 		)
 
 		if c.Attempts != 0 {
 			checkAttempts = c.Attempts
 		}
-		//log.Panicf("%+v", c)
+		//config.Log.Panicf("%+v", c)
 
 		address := fmt.Sprintf("%s:%d", c.Host, c.Port)
-		errorHeader := fmt.Sprintf("TCP error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, address, c.uuID)
+		errorHeader := fmt.Sprintf("TCP error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, address, c.UUid)
 
 		fmt.Printf("tcp ping test: %s\n`", address)
 
 		timeout, _ := time.ParseDuration(c.Timeout)
 
-		//log.Panic(timeout)
+		//config.Log.Panic(timeout)
 
 		for checkAttempt < checkAttempts {
 			//startTime := time.Now()
@@ -37,12 +38,12 @@ func init() {
 			if err == nil {
 				defer conn.Close()
 				//t := float64(endTime.Sub(startTime)) / float64(time.Millisecond)
-				//log.Printf("Connection to host %v succeed, took %v millisec", conn.RemoteAddr().String(), t)
+				//config.Log.Printf("Connection to host %v succeed, took %v millisec", conn.RemoteAddr().String(), t)
 				return nil
 			}
 
 			errorMessage = errorHeader + fmt.Sprintf("connection to host %s failed: %v (attempt %d)\n", c.Host+":"+string(c.Port), err, checkAttempts)
-			log.Printf(errorMessage)
+			config.Log.Printf(errorMessage)
 			checkAttempt++
 		}
 		fmt.Println(errorMessage)

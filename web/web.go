@@ -1,10 +1,16 @@
-package main
+package web
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"my/checker/config"
+	"my/checker/metrics"
 	"net/http"
+	"sync"
 )
+
+var m *metrics.MetricsCollection = metrics.Metrics
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -33,13 +39,20 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 func getAllProjectsHealthchecks() string {
 	var output string
 
-	for _, p := range Config.Projects {
-		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, p.getRuns(), p.GetErrors(), p.GetFails())
+	for _, p := range config.Config.Projects {
+
+		config.Log.Debug(p.Name)
+		config.Log.Debug(p.Parameters.RunEvery)
+		config.Log.Debug(m.Projects[p.Name].RunCount)
+		config.Log.Debug(m.Projects[p.Name].ErrorsCount)
+		config.Log.Debug(m.Projects[p.Name].FailsCount)
+
+		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, metrics.Metrics.Projects[p.Name].RunCount, metrics.Metrics.Projects[p.Name].ErrorsCount, metrics.Metrics.Projects[p.Name].FailsCount)
 
 		for _, h := range p.Healtchecks {
-			output += fmt.Sprintf("\tHealthCheck: %s\truns: %d, errors: %d\n", h.Name, h.RunCount, h.ErrorsCount)
+			output += fmt.Sprintf("\tHealthCheck: %s\truns: %d, errors: %d\n", h.Name, metrics.Metrics.Healthchecks[h.Name].RunCount, metrics.Metrics.Healthchecks[h.Name].ErrorsCount)
 			for _, c := range h.Checks {
-				output += fmt.Sprintf("\t\tCheck: %s\thost: %s, runs: %d, errors: %d\n", c.Type, c.Host, c.RunCount, c.ErrorsCount)
+				output += fmt.Sprintf("\t\tCheck: %s\thost: %s, runs: %d, errors: %d\n", c.Type, c.Host, metrics.Metrics.Checks[c.UUid].RunCount, metrics.Metrics.Checks[c.UUid].ErrorsCount)
 			}
 		}
 	}
@@ -49,7 +62,7 @@ func getAllProjectsHealthchecks() string {
 func getCeasedProjectsHealthchecks() string {
 	var output string
 
-	for _, p := range Config.Projects {
+	for _, p := range config.Config.Projects {
 		if p.Parameters.Mode == "quiet" {
 			output += fmt.Sprintf("Project: %s\n", p.Name)
 		}
@@ -71,18 +84,18 @@ func getMetrics() string {
 		projectRuns, alertsSent, critSent, nonCritSent int
 	)
 
-	for _, p := range Config.Projects {
-		projectRuns += p.getRuns()
+	for _, p := range config.Config.Projects {
+		projectRuns += metrics.Metrics.Projects[p.Name].RunCount
 	}
 
-	for _, c := range Config.Alerts {
+	for _, c := range metrics.Metrics.Alerts {
 		alertsSent += c.AlertCount
 		critSent += c.Critical
 		nonCritSent += c.NonCritical
-		log.Debugf("Counter: %s", c.Name)
+		config.Log.Debugf("Counter: %s", c.Name)
 	}
 
-	output += fmt.Sprintf("Loop cycles (%s): %d\n", Config.Defaults.TimerStep, ScheduleLoop)
+	output += fmt.Sprintf("Loop cycles (%s): %d\n", config.Config.Defaults.TimerStep, config.ScheduleLoop)
 	output += fmt.Sprintf("Total checks runs: %d\n\n", projectRuns)
 	output += fmt.Sprintf("Total alerts/reports sent: %d\n", alertsSent)
 	output += fmt.Sprintf("\tNonCritical alerts sent: %d\n", nonCritSent)
@@ -117,19 +130,35 @@ func runtimeStats(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, output)
 }
 
-func webInterface() {
-	if Config.Defaults.HTTPEnabled != "" {
+func WebInterface(webSignalCh chan bool, wg *sync.WaitGroup) {
+	var server *http.Server
+	defer wg.Done()
+
+	if config.Config.Defaults.HTTPEnabled != "" {
 		return
 	}
-	var addr string = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
-	log.Infof("HTTP listen on: %s", addr)
+	var addr string = fmt.Sprintf(":%s", config.Config.Defaults.HTTPPort)
+	server = new(http.Server)
+	server.Addr = addr
+	config.Log.Infof("HTTP listen on: %s", addr)
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/healthcheck", healthCheck)
 	http.HandleFunc("/stats", runtimeStats)
 
-	err := http.ListenAndServe(addr, nil)
-	if err != nil {
-		log.Fatalf("ListenAndServe: %s", err)
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			config.Log.Fatalf("ListenAndServe: %s", err)
+		}
+	}()
+
+	select {
+	case <-webSignalCh:
+
+		config.Log.Infof("Exit web interface")
+		if err := server.Shutdown(context.Background()); err != nil {
+			config.Log.Infof("Web server shutdown failed: %s", err)
+		}
+		return
 	}
 }

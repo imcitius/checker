@@ -1,19 +1,20 @@
-package main
+package check
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
 	_ "github.com/ClickHouse/clickhouse-go"
+	"my/checker/config"
 	"time"
 )
 
 func init() {
-	Checks["clickhouse_query"] = func(c *Check, p *Project) error {
+	config.Checks["clickhouse_query"] = func (c *config.Check, p *config.Project) error {
 
 		var (
 			query, id string
-			dbPort    int
+			dbPort  int
 		)
 		//var items interface{}
 
@@ -41,22 +42,22 @@ func init() {
 			connStr = connStr + fmt.Sprintf("&read_timeout=%d", int(dbConnectTimeout.Seconds()))
 		}
 
-		//log.Printf("Clickhouse connect string: %s", connStr)
+		//config.Log.Printf("Clickhouse connect string: %s", connStr)
 
 		db, err := sql.Open("clickhouse", connStr)
 		if err != nil {
-			log.Fatal(err)
+			config.Log.Fatal(err)
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Printf("Error: Could not query database: %+v", err)
 			return err
 		}
 
@@ -70,11 +71,11 @@ func init() {
 		return nil
 	}
 
-	Checks["clickhouse_query_unixtime"] = func(c *Check, p *Project) error {
+	config.Checks["clickhouse_query_unixtime"] = func (c *config.Check, p *config.Project) error {
 
 		var (
-			query  string
-			id     int64
+			query string
+			id   int64
 			dbPort int
 		)
 
@@ -92,7 +93,7 @@ func init() {
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		if err != nil {
-			log.Printf("Cannot parse differenct value: %v", dif)
+			config.Log.Printf("Cannot parse differenct value: %v", dif)
 		}
 
 		if c.SqlQueryConfig.Query == "" {
@@ -107,22 +108,22 @@ func init() {
 			connStr = connStr + fmt.Sprintf("&read_timeout=%d", int(dbConnectTimeout.Seconds()))
 		}
 
-		//log.Printf("Clickhouse connect string: %s", connStr)
+		//config.Log.Printf("Clickhouse connect string: %s", connStr)
 
 		db, err := sql.Open("clickhouse", connStr)
 		if err != nil {
-			log.Fatal(err)
+			config.Log.Fatal(err)
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Printf("Error: Could not query database: %+v", err)
 			return err
 		}
 

@@ -1,4 +1,4 @@
-package main
+package check
 
 import (
 	"database/sql"
@@ -6,15 +6,16 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"math/rand"
+	"my/checker/config"
 	"time"
 )
 
 func init() {
-	Checks["mysql_query"] = func(c *Check, p *Project) error {
+	config.Checks["mysql_query"] = func (c *config.Check, p *config.Project) error {
 
 		var (
 			id, query string
-			dbport    int
+			dbport  int
 		)
 
 		dbuser := c.SqlQueryConfig.UserName
@@ -40,23 +41,23 @@ func init() {
 			connStr = connStr + fmt.Sprintf("?timeout=%ds", int(dbConnectTimeout.Seconds()))
 		}
 
-		//log.Printf("Connect string: %s", connStr)
+		//config.Log.Printf("Connect string: %s", connStr)
 
 		db, err := sql.Open("mysql", connStr)
 		if err != nil {
-			log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Printf("Error: Could not query database: %+v", err)
 			return err
 		}
 
@@ -70,11 +71,11 @@ func init() {
 		return nil
 	}
 
-	Checks["mysql_query_unixtime"] = func(c *Check, p *Project) error {
+	config.Checks["mysql_query_unixtime"] = func (c *config.Check, p *config.Project) error {
 
 		var (
-			id     int64
-			query  string
+			id   int64
+			query string
 			dbport int
 		)
 
@@ -92,7 +93,7 @@ func init() {
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		if err != nil {
-			log.Printf("Cannot parse differenct value: %v", dif)
+			config.Log.Printf("Cannot parse differenct value: %v", dif)
 		}
 
 		if c.SqlQueryConfig.Query == "" {
@@ -106,23 +107,23 @@ func init() {
 			connStr = connStr + fmt.Sprintf("?timeout=%ds", int(dbConnectTimeout.Seconds()))
 		}
 
-		//log.Printf("Connect string: %s", connStr)
+		//config.Log.Printf("Connect string: %s", connStr)
 
 		db, err := sql.Open("mysql", connStr)
 		if err != nil {
-			log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Printf("Error: Could not query database: %+v", err)
 			return err
 		}
 
@@ -138,7 +139,7 @@ func init() {
 		return nil
 	}
 
-	Checks["mysql_replication"] = func(c *Check, p *Project) error {
+	config.Checks["mysql_replication"] = func (c *config.Check, p *config.Project) error {
 
 		var dbPort, recordId, recordValue, id int
 
@@ -167,24 +168,24 @@ func init() {
 			connStr = connStr + fmt.Sprintf("?timeout=%ds", dbConnectTimeout)
 		}
 
-		//log.Printf("Replication Connect string: %s", connStr)
+		//config.Log.Printf("Replication Connect string: %s", connStr)
 
 		db, err := sql.Open("mysql", connStr)
 		if err != nil {
-			log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		insertSql := "INSERT INTO %s (id,test_value) VALUES (%d,%d) ON DUPLICATE KEY UPDATE test_value=%d, id=%d;"
 
 		sqlStatement := fmt.Sprintf(insertSql, dbTable, recordId, recordValue, recordValue, recordId)
-		//log.Printf( "Insert statement string: %s", sqlStatement)
+		//config.Log.Printf( "Insert statement string: %s", sqlStatement)
 		_, err = db.Exec(sqlStatement)
 		if err != nil {
 			return fmt.Errorf("Mysql insert error: %+v\n", err)
@@ -197,8 +198,8 @@ func init() {
 			selectSql := "SELECT test_value FROM %s where id=%d;"
 			sqlStatement := fmt.Sprintf(selectSql, dbTable, recordId)
 
-			//log.Printf("Read from %s", server)
-			//log.Printf(" query: %s\n", sqlStatement)
+			//config.Log.Printf("Read from %s", server)
+			//config.Log.Printf(" query: %s\n", sqlStatement)
 			connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbUser, dbPassword, server, dbPort, dbName)
 
 			if dbConnectTimeout > 0 {
@@ -206,19 +207,19 @@ func init() {
 			}
 			db, err := sql.Open("mysql", connStr)
 			if err != nil {
-				log.Printf("Error: The data source arguments are not valid: %+v", err)
+				config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 				return err
 			}
 
 			err = db.Ping()
 			if err != nil {
-				log.Printf("Error: Could not establish a connection with the database: %+v", err)
+				config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 				return err
 			}
 
 			err = db.QueryRow(sqlStatement).Scan(&id)
 			if err != nil {
-				log.Printf("Error: Could not query database: %+v (server %s)", err, server)
+				config.Log.Printf("Error: Could not query database: %+v (server %s)", err, server)
 				return err
 			}
 

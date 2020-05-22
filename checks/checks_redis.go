@@ -1,14 +1,15 @@
-package main
+package check
 
 import (
 	//"encoding/json"
 	"fmt"
 	redis "github.com/go-redis/redis/v7"
+	"my/checker/config"
 	"time"
 )
 
 func init() {
-	Checks["redis_pubsub"] = func(c *Check, p *Project) error {
+	config.Checks["redis_pubsub"] = func (c *config.Check, p *config.Project) error {
 
 		var dbPort int
 
@@ -25,9 +26,9 @@ func init() {
 		connStr := fmt.Sprintf("%s:%d", dbHost, dbPort)
 
 		client := redis.NewClient(&redis.Options{
-			Addr:        connStr,
-			Password:    dbPassword, // no password set
-			DB:          0,          // use default DB
+			Addr:    connStr,
+			Password:  dbPassword, // no password set
+			DB:     0,     // use default DB
 			DialTimeout: dbConnectTimeout,
 			ReadTimeout: dbConnectTimeout,
 		})
@@ -50,14 +51,14 @@ func init() {
 				} else {
 					switch msg := msgi.(type) {
 					case *redis.Subscription:
-						//log.Printf("Received Subscription message on channel %s\n", channel)
+						//config.Log.Printf("Received Subscription message on channel %s\n", channel)
 						continue
 					case *redis.Pong:
-						//log.Printf("Received Pong message on channel %s\n", channel)
+						//config.Log.Printf("Received Pong message on channel %s\n", channel)
 						continue
 					case *redis.Message:
-						//log.Printf("Received Data message on channel %s\n", channel)
-						//log.Println(msg.Payload, "\n\n")
+						//config.Log.Printf("Received Data message on channel %s\n", channel)
+						//config.Log.Println(msg.Payload, "\n\n")
 						break loop
 					default:
 						err := fmt.Errorf("redis: unknown message: %T on channel %s", msg, channel)

@@ -1,4 +1,4 @@
-package main
+package check
 
 import (
 	"database/sql"
@@ -6,15 +6,16 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"math/rand"
+	"my/checker/config"
 	"time"
 )
 
 func init() {
-	Checks["pgsql_query"] = func(c *Check, p *Project) error {
+	config.Checks["pgsql_query"] = func (c *config.Check, p *config.Project) error {
 
 		var (
 			id, query string
-			dbPort    int
+			dbPort  int
 		)
 
 		dbUser := c.SqlQueryConfig.UserName
@@ -40,23 +41,23 @@ func init() {
 			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
 		}
 
-		//log.Printf("Connect string: %s", connStr)
+		//config.Log.Printf("Connect string: %s", connStr)
 
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
-			log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Printf("Error: Could not query database: %+v", err)
 			return err
 		}
 
@@ -70,11 +71,11 @@ func init() {
 		return nil
 	}
 
-	Checks["pgsql_query_unixtime"] = func(c *Check, p *Project) error {
+	config.Checks["pgsql_query_unixtime"] = func (c *config.Check, p *config.Project) error {
 
 		var (
-			id     int64
-			query  string
+			id   int64
+			query string
 			dbPort int
 		)
 
@@ -91,7 +92,7 @@ func init() {
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		if err != nil {
-			log.Printf("Cannot parse differenct value: %v", dif)
+			config.Log.Printf("Cannot parse differenct value: %v", dif)
 		}
 
 		if c.SqlQueryConfig.Query == "" {
@@ -106,23 +107,23 @@ func init() {
 			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
 		}
 
-		//log.Printf("Connect string: %s", connStr)
+		//config.Log.Printf("Connect string: %s", connStr)
 
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
-			log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Printf("Error: Could not query database: %+v", err)
 			return err
 		}
 
@@ -138,11 +139,11 @@ func init() {
 		return nil
 	}
 
-	Checks["pgsql_replication"] = func(c *Check, p *Project) error {
+	config.Checks["pgsql_replication"] = func (c *config.Check, p *config.Project) error {
 
 		var (
 			dbPort, recordId, recordValue, id int
-			dbTable                           string = "repl_test"
+			dbTable              string = "repl_test"
 		)
 
 		recordId = rand.Intn(5 - 1)
@@ -170,24 +171,24 @@ func init() {
 			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
 		}
 
-		//log.Printf("Replication Connect string: %s", connStr)
+		//config.Log.Printf("Replication Connect string: %s", connStr)
 
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
-			log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		insertSql := "INSERT INTO %s (id,test_value) VALUES (%d,%d) ON CONFLICT (id) DO UPDATE set test_value=%d where %s.id=%d;"
 
 		sqlStatement := fmt.Sprintf(insertSql, dbTable, recordId, recordValue, recordValue, dbTable, recordId)
-		//log.Printf("sqlStatement string: %s", sqlStatement)
+		//config.Log.Printf("sqlStatement string: %s", sqlStatement)
 		_, err = db.Exec(sqlStatement)
 		if err != nil {
 			return fmt.Errorf("pgsql insert error: %+v\n", err)
@@ -200,8 +201,8 @@ func init() {
 			selectSql := "SELECT test_value FROM %s where %s.id=%d;"
 			sqlStatement := fmt.Sprintf(selectSql, dbTable, dbTable, recordId)
 
-			//log.Printf("Read from %s", server)
-			//log.Printf(" query: %s\n", sqlStatement)
+			//config.Log.Printf("Read from %s", server)
+			//config.Log.Printf(" query: %s\n", sqlStatement)
 			connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, server, dbPort, dbName)
 
 			if dbConnectTimeout > 0 {
@@ -210,19 +211,19 @@ func init() {
 
 			db, err := sql.Open("postgres", connStr)
 			if err != nil {
-				log.Printf("Error: The data source arguments are not valid: %+v", err)
+				config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 				return err
 			}
 
 			err = db.Ping()
 			if err != nil {
-				log.Printf("Error: Could not establish a connection with the database: %+v", err)
+				config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
 				return err
 			}
 
 			err = db.QueryRow(sqlStatement).Scan(&id)
 			if err != nil {
-				log.Printf("Error: Could not query database: %+v", err)
+				config.Log.Printf("Error: Could not query database: %+v", err)
 				return err
 			}
 
