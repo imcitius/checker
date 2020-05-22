@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"my/checker/config"
-	projects "my/checker/projects"
+	"my/checker/metrics"
 	"net/http"
 	"sync"
 )
+
+var m *metrics.MetricsCollection = metrics.Metrics
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -38,12 +40,19 @@ func getAllProjectsHealthchecks() string {
 	var output string
 
 	for _, p := range config.Config.Projects {
-		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, projects.GetProjectRuns(&p), projects.GetErrors(&p), projects.GetFails(&p))
+
+		config.Log.Debug(p.Name)
+		config.Log.Debug(p.Parameters.RunEvery)
+		config.Log.Debug(m.Projects[p.Name].RunCount)
+		config.Log.Debug(m.Projects[p.Name].ErrorsCount)
+		config.Log.Debug(m.Projects[p.Name].FailsCount)
+
+		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, metrics.Metrics.Projects[p.Name].RunCount, metrics.Metrics.Projects[p.Name].ErrorsCount, metrics.Metrics.Projects[p.Name].FailsCount)
 
 		for _, h := range p.Healtchecks {
-			output += fmt.Sprintf("\tHealthCheck: %s\truns: %d, errors: %d\n", h.Name, h.RunCount, h.ErrorsCount)
+			output += fmt.Sprintf("\tHealthCheck: %s\truns: %d, errors: %d\n", h.Name, metrics.Metrics.Healthchecks[h.Name].RunCount, metrics.Metrics.Healthchecks[h.Name].ErrorsCount)
 			for _, c := range h.Checks {
-				output += fmt.Sprintf("\t\tCheck: %s\thost: %s, runs: %d, errors: %d\n", c.Type, c.Host, c.RunCount, c.ErrorsCount)
+				output += fmt.Sprintf("\t\tCheck: %s\thost: %s, runs: %d, errors: %d\n", c.Type, c.Host, metrics.Metrics.Checks[c.UUid].RunCount, metrics.Metrics.Checks[c.UUid].ErrorsCount)
 			}
 		}
 	}
@@ -76,10 +85,10 @@ func getMetrics() string {
 	)
 
 	for _, p := range config.Config.Projects {
-		projectRuns += projects.GetProjectRuns(&p)
+		projectRuns += metrics.Metrics.Projects[p.Name].RunCount
 	}
 
-	for _, c := range config.Config.Alerts {
+	for _, c := range metrics.Metrics.Alerts {
 		alertsSent += c.AlertCount
 		critSent += c.Critical
 		nonCritSent += c.NonCritical

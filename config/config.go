@@ -55,10 +55,6 @@ type AlertConfigs struct {
 	CriticalChannel int64 `mapstructure:"critical_channel"`
 	// Empty by default, alerts will not be sent unless critical
 	ProjectChannel int64 `mapstructure:"noncritical_channel"`
-
-	AlertCount  int
-	NonCritical int
-	Critical    int
 }
 
 type TimeoutsCollection struct {
@@ -71,9 +67,7 @@ type Project struct {
 	Parameters  Parameters    `mapstructure:"parameters"`
 
 	// Runtime data
-	ErrorsCount int
-	FailsCount  int
-	Timeouts    TimeoutsCollection
+	Timeouts TimeoutsCollection
 }
 
 type Healtchecks struct {
@@ -82,10 +76,6 @@ type Healtchecks struct {
 
 	// check level parameters
 	Parameters Parameters `mapstructure:"parameters"`
-
-	RunCount    int
-	ErrorsCount int
-	FailsCount  int
 }
 
 type Check struct {
@@ -130,10 +120,6 @@ type Check struct {
 	// Runtime data
 	UUid       string
 	LastResult bool
-
-	RunCount    int
-	ErrorsCount int
-	FailsCount  int
 }
 
 type TimeoutCollection struct {

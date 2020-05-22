@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"my/checker/config"
+	"my/checker/metrics"
 	"my/checker/scheduler"
 	"my/checker/web"
 	"os"
@@ -107,6 +108,11 @@ func initConfig() {
 	if err != nil {
 		panic(err)
 	}
+	err = metrics.InitMetrics()
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 var checkCommand = &cobra.Command{

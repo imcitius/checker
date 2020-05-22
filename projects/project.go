@@ -1,45 +1,13 @@
 package project
 
 import (
+	"errors"
 	"fmt"
 	alerts "my/checker/alerts"
 	checks "my/checker/checks"
 	config "my/checker/config"
-	"errors"
 	"my/checker/telegram"
 )
-
-func AddError(p *config.Project) error {
-	p.ErrorsCount++
-	return nil
-}
-
-func DecError(p *config.Project) error {
-	if p.ErrorsCount > 0 {
-		p.ErrorsCount--
-	}
-	return nil
-}
-
-func GetErrors(p *config.Project) int {
-	return p.ErrorsCount
-}
-
-func AddFail(p *config.Project) error {
-	p.FailsCount++
-	return nil
-}
-
-func DecFail(p *config.Project) error {
-	if p.FailsCount > 0 {
-		p.FailsCount--
-	}
-	return nil
-}
-
-func GetFails(p *config.Project) int {
-	return p.FailsCount
-}
 
 func GetName(p *config.Project) string {
 	return p.Name
@@ -71,19 +39,10 @@ func CritAlert(p *config.Project, alerttype string, e error) {
 		//config.Log.Printf("%+v", alert)
 		if alerts.GetAlertName(&alert) == p.Parameters.CritAlert {
 			//config.Log.Printf("Alert details: %+v\n\n", alert)
-			alerts.SendAlert(&alert,"crit", e)
+			alerts.SendAlert(&alert, "crit", e)
 		}
 	}
 }
-
-func getRuns(p *config.Project) int {
-	var counter int
-	for _, h := range p.Healtchecks {
-		counter += h.RunCount
-	}
-	return counter
-}
-
 
 func SendReport(p *config.Project) error {
 	var (
@@ -122,12 +81,4 @@ func SendReport(p *config.Project) error {
 		}
 	}
 	return nil
-}
-
-func GetProjectRuns(p *config.Project) int {
-	var counter int
-	for _, h := range p.Healtchecks {
-		counter += h.RunCount
-	}
-	return counter
 }

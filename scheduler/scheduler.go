@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	checks "my/checker/checks"
 	"my/checker/config"
+	"my/checker/metrics"
 	projects "my/checker/projects"
 	"sync"
 	"time"
@@ -37,12 +38,12 @@ func runAlerts(timeout string) {
 	config.Log.Debug("runAlerts")
 	for _, project := range config.Config.Projects {
 		if project.Parameters.RunEvery == timeout {
-			if project.ErrorsCount > project.Parameters.MinHealth {
-				projects.AddFail(&project)
+			if metrics.Metrics.Projects[project.Name].RunCount > project.Parameters.MinHealth {
+				metrics.Metrics.Projects[project.Name].FailsCount++
 			} else {
-				projects.DecFail(&project)
+				metrics.Metrics.Projects[project.Name].FailsCount--
 			}
-			if project.FailsCount > project.Parameters.AllowFails {
+			if metrics.Metrics.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
 				projects.CritAlert(&project, "crit", errors.New(errorMessage))
 			}
@@ -58,8 +59,8 @@ func runChecks(timeout string) {
 			for _, check := range healthcheck.Checks {
 				config.Log.Debug(check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
-					healthcheck.RunCount++
-					check.RunCount++
+					metrics.Metrics.Healthchecks[healthcheck.Name].RunCount++
+					metrics.Metrics.Checks[check.UUid].RunCount++
 					checkRandomId := getRandomId()
 					config.Log.Infof("(%s) Checking project '%s' check '%s' (type: %s) ... ", checkRandomId, project.Name, healthcheck.Name, check.Type)
 					startTime := time.Now()
@@ -72,12 +73,13 @@ func runChecks(timeout string) {
 						if check.Mode != "quiet" {
 							projects.Alert(&project, "noncrit", err)
 						}
-						projects.AddError(&project)
-						checks.HealtcheckAddError(&healthcheck)
-						checks.CheckAddError(&check)
+						metrics.Metrics.Projects[project.Name].SeqErrorsCount++
+						metrics.Metrics.Projects[project.Name].ErrorsCount++
+						metrics.Metrics.Healthchecks[healthcheck.Name].ErrorsCount++
+						metrics.Metrics.Checks[check.UUid].ErrorsCount++
 					} else {
 						config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
-						projects.DecError(&project)
+						metrics.Metrics.Projects[project.Name].SeqErrorsCount--
 					}
 				}
 			}
