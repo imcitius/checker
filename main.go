@@ -39,7 +39,6 @@ func main() {
 			panic(err)
 		}
 		fillTimeouts()
-
 	}
 
 	if *debugLevel == "Debug" {
