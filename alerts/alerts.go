@@ -5,6 +5,11 @@ import (
 	"fmt"
 	"my/checker/config"
 	"my/checker/telegram"
+	"sync"
+)
+
+var (
+	botsSignalCh chan bool
 )
 
 func SendAlert(a *config.AlertConfigs, alerttype string, e error) error {
@@ -31,17 +36,30 @@ func GetAlertCreds(a *config.AlertConfigs) string {
 	return a.BotToken
 }
 
-func InitBots() {
+func InitBots(botsSignalCh chan bool, wg *sync.WaitGroup) {
 
 	for _, alert := range config.Config.Alerts {
 		if GetAlertName(&alert) == config.Config.Defaults.Parameters.CommandChannel {
 			switch GetAlertType(&alert) {
 			case "telegram":
-				go telegram.RunListenTgBot(GetAlertCreds(&alert))
+				go telegram.RunListenTgBot(GetAlertCreds(&alert), wg)
 			default:
-				config.Log.Panic("Command channel type not supported")
+				config.Log.Infof("Command channel type not supported: %s", GetAlertType(&alert))
 			}
-
 		}
 	}
+
+	<-botsSignalCh
+
+	for _, alert := range config.Config.Alerts {
+		if GetAlertName(&alert) == config.Config.Defaults.Parameters.CommandChannel {
+			switch GetAlertType(&alert) {
+			case "telegram":
+				telegram.TgSignalCh <- true
+			default:
+				config.Log.Infof("Command channel type not supported: %s", GetAlertType(&alert))
+			}
+		}
+	}
+	config.Log.Infof("Exit listening bots")
 }

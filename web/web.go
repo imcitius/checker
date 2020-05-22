@@ -3,11 +3,11 @@ package web
 import (
 	"context"
 	"fmt"
+	"golang.org/x/sync/semaphore"
 	"io"
 	"my/checker/config"
 	"my/checker/metrics"
 	"net/http"
-	"sync"
 )
 
 var Metrics *metrics.MetricsCollection = metrics.Metrics
@@ -131,9 +131,10 @@ func runtimeStats(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, output)
 }
 
-func WebInterface(webSignalCh chan bool, wg *sync.WaitGroup) {
+func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
+	defer sem.Release(1)
+
 	var server *http.Server
-	defer wg.Done()
 
 	if Config.Defaults.HTTPEnabled != "" {
 		return
@@ -150,6 +151,7 @@ func WebInterface(webSignalCh chan bool, wg *sync.WaitGroup) {
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			config.Log.Fatalf("ListenAndServe: %s", err)
+		} else {
 		}
 	}()
 
