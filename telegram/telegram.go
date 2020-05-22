@@ -1,9 +1,12 @@
-package main
+package telegram
 
 import (
 	"encoding/json"
 	"fmt"
 	tb "gopkg.in/tucnak/telebot.v2"
+	checks "my/checker/checks"
+	"my/checker/config"
+	"my/checker/metrics"
 	"regexp"
 	"time"
 )
@@ -19,7 +22,7 @@ func (m TgMessage) GetProject() string {
 	)
 
 	conf, _ := json.Marshal(m)
-	log.Printf("Message: %+v\n\n", string(conf))
+	config.Log.Printf("Message: %+v\n\n", string(conf))
 
 	if m.IsReply() {
 		// try to get from reply
@@ -66,7 +69,7 @@ func (m TgMessage) GetUUID() string {
 	// WIP test and write error handling
 }
 
-func runListenTgBot(token string) {
+func RunListenTgBot(token string) {
 
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  token,
@@ -74,34 +77,34 @@ func runListenTgBot(token string) {
 	})
 
 	if err != nil {
-		log.Fatal(err)
+		config.Log.Fatal(err)
 	}
 
 	bot.Handle("/pa", func(m *tb.Message) {
-		Config.Defaults.Parameters.Mode = "quiet"
+		config.Config.Defaults.Parameters.Mode = "quiet"
 		answer := "All messages ceased"
 		bot.Send(m.Sender, answer)
 	})
 
 	bot.Handle("/ua", func(m *tb.Message) {
-		Config.Defaults.Parameters.Mode = "loud"
+		config.Config.Defaults.Parameters.Mode = "loud"
 		answer := "All messages enabled"
 		bot.Send(m.Sender, answer)
 	})
 
 	bot.Handle("/pu", func(m *tb.Message) {
-		var tgMessage IncomingChatMessage
+		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
-		log.Printf("/pu")
+		config.Log.Printf("/pu")
 
 		uuID := tgMessage.GetUUID()
-		log.Printf("Pause req for UUID: %+v\n", uuID)
-		for _, project := range Config.Projects {
+		config.Log.Printf("Pause req for UUID: %+v\n", uuID)
+		for _, project := range config.Config.Projects {
 			for _, healthcheck := range project.Healtchecks {
 				for _, check := range healthcheck.Checks {
-					if uuID == check.uuID {
-						_ = check.CeaseAlerts()
+					if uuID == check.UUid {
+						_ = checks.CeaseAlerts(&check)
 					}
 				}
 			}
@@ -113,18 +116,18 @@ func runListenTgBot(token string) {
 	})
 
 	bot.Handle("/uu", func(m *tb.Message) {
-		var tgMessage IncomingChatMessage
+		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
-		log.Printf("/uu")
+		config.Log.Printf("/uu")
 
 		uuID := tgMessage.GetUUID()
-		log.Printf("Resume req for UUID: %+v\n", uuID)
-		for _, project := range Config.Projects {
+		config.Log.Printf("Resume req for UUID: %+v\n", uuID)
+		for _, project := range config.Config.Projects {
 			for _, healthcheck := range project.Healtchecks {
 				for _, check := range healthcheck.Checks {
-					if uuID == check.uuID {
-						_ = check.EnableAlerts()
+					if uuID == check.UUid {
+						_ = checks.EnableAlerts(&check)
 					}
 				}
 			}
@@ -137,16 +140,16 @@ func runListenTgBot(token string) {
 	})
 
 	bot.Handle("/pp", func(m *tb.Message) {
-		var tgMessage IncomingChatMessage
+		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
-		log.Printf("/pp")
+		config.Log.Printf("/pp")
 
 		projectName := tgMessage.GetProject()
-		log.Printf("Pause req for project: %s\n", projectName)
-		for _, project := range Config.Projects {
+		config.Log.Printf("Pause req for project: %s\n", projectName)
+		for _, project := range config.Config.Projects {
 			if projectName == project.Name {
-				_ = project.CeaseAlerts()
+				_ = config.CeaseProjectAlerts(&project)
 			}
 		}
 		if err == nil {
@@ -157,16 +160,16 @@ func runListenTgBot(token string) {
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
-		var tgMessage IncomingChatMessage
+		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
-		log.Printf("/up")
+		config.Log.Printf("/up")
 
 		projectName := tgMessage.GetProject()
-		log.Printf("Resume req for project: %s\n", projectName)
-		for _, project := range Config.Projects {
+		config.Log.Printf("Resume req for project: %s\n", projectName)
+		for _, project := range config.Config.Projects {
 			if projectName == project.Name {
-				_ = project.EnableAlerts()
+				_ = config.EnableProjectAlerts(&project)
 			}
 		}
 		if err == nil {
@@ -179,40 +182,24 @@ func runListenTgBot(token string) {
 	bot.Start()
 }
 
-func initBots() {
-	var alert ChatAlert
-
-	for _, alert = range Config.Alerts {
-		if alert.GetName() == Config.Defaults.Parameters.CommandChannel {
-			switch alert.GetType() {
-			case "telegram":
-				go runListenTgBot(alert.GetCreds())
-			default:
-				log.Panic("Command channel type not supported")
-			}
-
-		}
-	}
-}
-
-func sendTgMessage(alerttype string, a *AlertConfigs, e error) error {
-	log.Debugf("Alert send: %s (alert details %+v)", e, a)
+func SendTgMessage(alerttype string, a *config.AlertConfigs, e error) error {
+	config.Log.Debugf("Alert send: %s (alert details %+v)", e, a)
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  a.BotToken,
 		Poller: &tb.LongPoller{Timeout: 5 * time.Second},
 	})
 	if err != nil {
-		log.Fatal(err)
+		config.Log.Fatal(err)
 	}
 	user := tb.Chat{ID: a.ProjectChannel}
-	log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
+	config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
 
 	_, err = bot.Send(&user, e.Error())
 	if err != nil {
-		log.Warnf("sendTgMessage error: %v", err)
+		config.Log.Warnf("sendTgMessage error: %v", err)
 	} else {
-		log.Debugf("sendTgMessage success")
-		addAlertCounter(alerttype, a)
+		config.Log.Debugf("sendTgMessage success")
+		metrics.AddAlertCounter(a, alerttype)
 	}
 	return err
 }

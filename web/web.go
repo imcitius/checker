@@ -1,9 +1,13 @@
-package main
+package web
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"my/checker/config"
+	projects "my/checker/projects"
 	"net/http"
+	"sync"
 )
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
@@ -33,8 +37,8 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 func getAllProjectsHealthchecks() string {
 	var output string
 
-	for _, p := range Config.Projects {
-		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, p.getRuns(), p.GetErrors(), p.GetFails())
+	for _, p := range config.Config.Projects {
+		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, projects.GetProjectRuns(&p), projects.GetErrors(&p), projects.GetFails(&p))
 
 		for _, h := range p.Healtchecks {
 			output += fmt.Sprintf("\tHealthCheck: %s\truns: %d, errors: %d\n", h.Name, h.RunCount, h.ErrorsCount)
@@ -49,7 +53,7 @@ func getAllProjectsHealthchecks() string {
 func getCeasedProjectsHealthchecks() string {
 	var output string
 
-	for _, p := range Config.Projects {
+	for _, p := range config.Config.Projects {
 		if p.Parameters.Mode == "quiet" {
 			output += fmt.Sprintf("Project: %s\n", p.Name)
 		}
@@ -71,18 +75,18 @@ func getMetrics() string {
 		projectRuns, alertsSent, critSent, nonCritSent int
 	)
 
-	for _, p := range Config.Projects {
-		projectRuns += p.getRuns()
+	for _, p := range config.Config.Projects {
+		projectRuns += projects.GetProjectRuns(&p)
 	}
 
-	for _, c := range Config.Alerts {
+	for _, c := range config.Config.Alerts {
 		alertsSent += c.AlertCount
 		critSent += c.Critical
 		nonCritSent += c.NonCritical
-		log.Debugf("Counter: %s", c.Name)
+		config.Log.Debugf("Counter: %s", c.Name)
 	}
 
-	output += fmt.Sprintf("Loop cycles (%s): %d\n", Config.Defaults.TimerStep, ScheduleLoop)
+	output += fmt.Sprintf("Loop cycles (%s): %d\n", config.Config.Defaults.TimerStep, config.ScheduleLoop)
 	output += fmt.Sprintf("Total checks runs: %d\n\n", projectRuns)
 	output += fmt.Sprintf("Total alerts/reports sent: %d\n", alertsSent)
 	output += fmt.Sprintf("\tNonCritical alerts sent: %d\n", nonCritSent)
@@ -117,19 +121,35 @@ func runtimeStats(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, output)
 }
 
-func webInterface() {
-	if Config.Defaults.HTTPEnabled != "" {
+func WebInterface(webSignalCh chan bool, wg *sync.WaitGroup) {
+	var server *http.Server
+	defer wg.Done()
+
+	if config.Config.Defaults.HTTPEnabled != "" {
 		return
 	}
-	var addr string = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
-	log.Infof("HTTP listen on: %s", addr)
+	var addr string = fmt.Sprintf(":%s", config.Config.Defaults.HTTPPort)
+	server = new(http.Server)
+	server.Addr = addr
+	config.Log.Infof("HTTP listen on: %s", addr)
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/healthcheck", healthCheck)
 	http.HandleFunc("/stats", runtimeStats)
 
-	err := http.ListenAndServe(addr, nil)
-	if err != nil {
-		log.Fatalf("ListenAndServe: %s", err)
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			config.Log.Fatalf("ListenAndServe: %s", err)
+		}
+	}()
+
+	select {
+	case <-webSignalCh:
+
+		config.Log.Infof("Exit web interface")
+		if err := server.Shutdown(context.Background()); err != nil {
+			config.Log.Infof("Web server shutdown failed: %s", err)
+		}
+		return
 	}
 }
