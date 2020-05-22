@@ -65,7 +65,9 @@ group "checkers" {
       template {
         source = "local/config.template/config"
         destination = "local/config.json"
-        change_mode   = "restart"
+        change_mode   = "signal"
+        // INT is better that HUP, because it will trigger download config template artifact
+        change_signal = "SIGINT"
       }
 
       config {
