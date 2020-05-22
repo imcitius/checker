@@ -5,6 +5,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/semaphore"
+	"my/checker/alerts"
 	"my/checker/config"
 	"my/checker/metrics"
 	"my/checker/scheduler"
@@ -24,10 +26,10 @@ var (
 		Short: "Checker runner",
 		Long:  `^_^`,
 	}
-	signalINT, signalHUP                   chan os.Signal
-	doneCh, schedulerSignalCh, webSignalCh chan bool
-	wg                                     sync.WaitGroup
-	interrupt                              bool
+	signalINT, signalHUP                                 chan os.Signal
+	doneCh, schedulerSignalCh, botsSignalCh, webSignalCh chan bool
+	wg                                                   sync.WaitGroup
+	interrupt                                            bool
 )
 
 // Execute executes the root command.
@@ -40,10 +42,11 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "config", "config file (default is ./config.json)")
 	rootCmd.PersistentFlags().StringP("debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
-	rootCmd.PersistentFlags().Bool("viper", true, "use Viper for configuration")
+	rootCmd.PersistentFlags().Bool("bots", true, "start listening messenger bots")
 	viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
-	viper.BindPFlag("useViper", rootCmd.PersistentFlags().Lookup("viper"))
-	viper.SetDefault("debugLevel", "INFO")
+	viper.BindPFlag("botsEnabled", rootCmd.PersistentFlags().Lookup("bots"))
+	//viper.SetDefault("botsEnabled", true)
+	//viper.SetDefault("debugLevel", "INFO")
 
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
@@ -53,6 +56,7 @@ func init() {
 	doneCh = make(chan bool)
 	schedulerSignalCh = make(chan bool)
 	webSignalCh = make(chan bool)
+	botsSignalCh = make(chan bool)
 	signal.Notify(signalINT, syscall.SIGINT)
 	signal.Notify(signalHUP, syscall.SIGHUP)
 }
@@ -118,20 +122,38 @@ func initConfig() {
 var checkCommand = &cobra.Command{
 	Use:   "check",
 	Short: "Run scheduler and execute checks",
-	Run:   mainChecker,
+	Run: func(cmd *cobra.Command, args []string) {
+		mainChecker()
+	},
 }
 
-func mainChecker(cmd *cobra.Command, args []string) {
+func mainChecker() {
+	// semaphore for web server port listening routine
+	var sem = semaphore.NewWeighted(int64(1))
+
 	for {
-		logrus.Info("Start main loop")
+		config.Log.Info("Start main loop")
 		interrupt = false
 		initConfig()
 
 		go signalWait()
 
-		wg.Add(2)
+		if sem.TryAcquire(1) {
+			config.Log.Debugf("Fire webserver")
+			go web.WebInterface(webSignalCh, sem)
+		} else {
+			config.Log.Debugf("Webserver already running")
+		}
+
+		wg.Add(1)
 		go scheduler.RunScheduler(schedulerSignalCh, &wg)
-		go web.WebInterface(webSignalCh, &wg)
+
+		if viper.GetBool("botsEnabled") {
+			config.Log.Debugf("botsEnabled is %v", viper.GetBool("botsEnabled"))
+			wg.Add(1)
+			alerts.InitBots(botsSignalCh, &wg)
+		}
+
 		wg.Wait()
 
 		if interrupt {
@@ -141,18 +163,21 @@ func mainChecker(cmd *cobra.Command, args []string) {
 }
 
 func signalWait() {
-	for {
-		select {
-		case <-signalINT:
-			config.Log.Infof("Got SIGINT")
-			interrupt = true
-			schedulerSignalCh <- true
-			webSignalCh <- true
-		case <-signalHUP:
-			config.Log.Infof("Got SIGHUP")
-			//schedulerSignalCh <- true
-			//webSignalCh <- true
-			initConfig()
+	select {
+	case <-signalINT:
+		config.Log.Infof("Got SIGINT")
+		interrupt = true
+		if viper.GetBool("botsEnabled") {
+			botsSignalCh <- true
+		}
+		schedulerSignalCh <- true
+		//webSignalCh <- true
+	case <-signalHUP:
+		config.Log.Infof("Got SIGHUP")
+		schedulerSignalCh <- true
+		//webSignalCh <- true
+		if viper.GetBool("botsEnabled") {
+			botsSignalCh <- true
 		}
 	}
 }

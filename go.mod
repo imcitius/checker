@@ -17,5 +17,6 @@ require (
 	github.com/teris-io/shortid v0.0.0-20171029131806-771a37caa5cf
 	github.com/valyala/fastjson v1.5.1
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	gopkg.in/tucnak/telebot.v2 v2.0.0-20200329125927-3458aeb2e7be
 )

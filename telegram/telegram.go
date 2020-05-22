@@ -8,8 +8,17 @@ import (
 	"my/checker/config"
 	"my/checker/metrics"
 	"regexp"
+	"sync"
 	"time"
 )
+
+var (
+	TgSignalCh chan bool
+)
+
+func init() {
+	TgSignalCh = make(chan bool)
+}
 
 type TgMessage struct {
 	*tb.Message
@@ -69,7 +78,8 @@ func (m TgMessage) GetUUID() string {
 	// WIP test and write error handling
 }
 
-func RunListenTgBot(token string) {
+func RunListenTgBot(token string, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  token,
@@ -179,7 +189,15 @@ func RunListenTgBot(token string) {
 
 	})
 
-	bot.Start()
+	go func() {
+		config.Log.Infof("Start listening telegram bots routine")
+		bot.Start()
+	}()
+
+	<-TgSignalCh
+	bot.Stop()
+	config.Log.Infof("Exit listening telegram bots")
+	return
 }
 
 func SendTgMessage(alerttype string, a *config.AlertConfigs, e error) error {

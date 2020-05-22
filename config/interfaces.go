@@ -1,6 +1,5 @@
 package config
 
-
 //type ChatAlert interface {
 //	SendAlert(alerttype string, e error) error
 //	GetAlertName() string

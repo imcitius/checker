@@ -1,13 +1,37 @@
 # Реализация чекалки на Go
 
-Загружает конфиг из файла config.json.
+Хранение конфигурации реализовано с помощью библиотеки `github.com/spf13/viper`.По умолчанию из файла config.json в текущем каталоге.
 
+Управление командами CLI и флагами на базе `github.com/spf13/cobra`.
+
+```
+# ./checker                           
+^_^
+
+Usage:
+  checker [command]
+
+Available Commands:
+  check       Run scheduler and execute checks
+  help        Help about any command
+  testcfg     unmarshal config file into config structure
+  version     Print the version number of Hugo
+
+Flags:
+      --config string       config file (default is ./config.json) (default "config")
+  -D, --debugLevel string   Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
+  -h, --help                help for checker
+      --viper               use Viper for configuration (default true)
+
+Use "checker [command] --help" for more information about a command.
+
+```
 
 Конфигурация состоит из блоков `defaults`, `alerts` и `projects`.
 
 В блоке `defaults` в подблоке `parameters` описаны параметры проверок по умолчанию, которые применяются к настройкам проектов, если не были переназначены в блоке `parameters` конкретного проекта.
 
-Отдельный параметр `timer_step` в блоке `defaults` содержит время, через которое внутренний таймер проверяет наличие проверок которые требуется провести в данный момент.
+Отдельные параметры `timer_step` и `http_port` в блоке `defaults` содержат время, через которое внутренний таймер проверяет наличие проверок которые требуется провести в данный момент, и порт для HTTP сервера по-умолчанию.
 
 ## В блоке `parameters` содержатся следующие настройки:
 
@@ -47,7 +71,7 @@ periodic_report_time: период отправки отчетов по откл
 
 ```
 name: Имя метода оповещения
-type: Тип метода оповещения (пока поддерживается только telegram)
+type: Тип метода оповещения (пока поддерживается только telegram = tg_alert)
 bot_token: токен для telegram бота 
 noncritical_channel: Канал для некритичных оповещений
 critical_channel: Канал для критичных оповещений
@@ -59,7 +83,19 @@ critical_channel: Канал для критичных оповещений
 Данные настройки перекрывают настройки уровня проекта и корневого уровня.
 Каждый набор проверок имеет имя в поле `name` и описание проверок в блоке `checks`.
 
-Поддерживаются проверки трех разных типов (обязательные параметры помечены *):
+Поддерживаются проверки разных типов (обязательные параметры помечены *).
+- http
+- icmp
+- tcp
+- mysql_query
+- mysql_query_unixtime
+- mysql_replication
+- pgsql_query
+- pgsql_query_unixtime
+- pgsql_replication
+- redis_pubsub
+- clickhouse_query
+- clickhouse_query_unixtime
 
 ### HTTP check
 ```
@@ -88,7 +124,6 @@ cookies: массив объектов http.Cookie (можно передава�
           "value": "12345"
         }
     ]
-
 ```
 
 
@@ -129,9 +164,9 @@ response: ответ, с которым сверяется вернувшеес�
       "port": 3306,
       "timeout": 1s,
       "sql_query_config": {
-        "dbname": "mgshare_test",
-        "username": "mgshare",
-        "password": "sdCNHHVbz5V",
+        "username": "username",
+        "dbname": "dbname",
+        "password": "R@ndmPSSW",
         "query": "select regdate from users order by id asc limit 1;",
         "response": "1278938100"
       }
@@ -158,9 +193,9 @@ difference: максимальная разность с текущим врем
       "host": "192.168.126.50",
       "port": 9000,
       "sql_query_config": {
-        "username": "iron",
-        "dbname": "iron",
-        "password": "Po4oG16fXV",
+        "username": "username",
+        "dbname": "dbname",
+        "password": "she1Haiphae5",
         "query": "select max(serverTime) from iron.quotes1sec",
         "difference": "15m"
       },
@@ -180,17 +215,17 @@ difference: максимальная разность с текущим врем
 Пример конфигурации:
     {
       "type": "pgsql_replication",
-      "host": "master.pgsql.service.iron-staging.consul",
+      "host": "master.pgsql.service.staging.consul",
       "port": 5432,
         "sql_repl_config": {
-        "dbname": "irontrade",
-        "username": "irontrade",
-        "password": "mDe6jkcpJtrF",
+        "username": "username",
+        "dbname": "dbname",
+        "password": "ieb6aj2Queet",
         "tablename": "repl_test",
         "serverlist": [
-          "pgsql-main-0.node.iron-staging.consul",
-          "pgsql-main-1.node.iron-staging.consul",
-          "pgsql-main-2.node.iron-staging.consul"
+          "pgsql-main-0.node.staging.consul",
+          "pgsql-main-1.node.staging.consul",
+          "pgsql-main-2.node.staging.consul"
         ]
       }
     }
@@ -219,11 +254,11 @@ password: пароль
 
     {
       "type": "redis_pubsub",
-      "host": "master.redis.service.iron-staging.consul",
+      "host": "master.redis.service.staging.consul",
       "pubsub_config": {
         "channels": [
-          "ticks_EURUSD_OTC",
-          "ticks_USBRUB_OTC"
+          "ticks_EURUSD",
+          "ticks_USBRUB"
         ]
       },
       "timeout": 5s
@@ -235,6 +270,7 @@ password: пароль
 ## Управление оповещениями
 
 С помощью сообщений боту можно управлять оповещениями и режимом проверки проектов.
+Ключом команданой строки 
 Поддерживаются следующие команды:
 
 */pa* обычным сообщением в чат - полностью отключает все оповещения (аналог quiet в блоке defaults)
