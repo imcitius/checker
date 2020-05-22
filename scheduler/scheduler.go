@@ -38,10 +38,10 @@ func runAlerts(timeout string) {
 	config.Log.Debug("runAlerts")
 	for _, project := range config.Config.Projects {
 		if project.Parameters.RunEvery == timeout {
-			if metrics.Metrics.Projects[project.Name].RunCount > project.Parameters.MinHealth {
-				metrics.Metrics.Projects[project.Name].FailsCount++
+			if metrics.Metrics.Projects[project.Name].Alive < project.Parameters.MinHealth {
+				metrics.Metrics.Projects[project.Name].SeqErrorsCount++
 			} else {
-				metrics.Metrics.Projects[project.Name].FailsCount--
+				metrics.Metrics.Projects[project.Name].SeqErrorsCount--
 			}
 			if metrics.Metrics.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
@@ -56,6 +56,9 @@ func runChecks(timeout string) {
 
 	for _, project := range config.Config.Projects {
 		for _, healthcheck := range project.Healtchecks {
+
+			metrics.Metrics.Projects[project.Name].Alive = 0
+
 			for _, check := range healthcheck.Checks {
 				config.Log.Debug(check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
@@ -80,6 +83,7 @@ func runChecks(timeout string) {
 					} else {
 						config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
 						metrics.Metrics.Projects[project.Name].SeqErrorsCount--
+						metrics.Metrics.Projects[project.Name].Alive++
 					}
 				}
 			}

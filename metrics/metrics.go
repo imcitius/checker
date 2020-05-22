@@ -10,6 +10,7 @@ type ProjectsMetrics struct {
 	ErrorsCount    int
 	FailsCount     int
 	RunCount       int
+	Alive          int
 }
 type AlertMetrics struct {
 	Name        string

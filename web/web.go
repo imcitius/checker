@@ -41,13 +41,13 @@ func getAllProjectsHealthchecks() string {
 
 	for _, p := range config.Config.Projects {
 
-		config.Log.Debug(p.Name)
-		config.Log.Debug(p.Parameters.RunEvery)
-		config.Log.Debug(m.Projects[p.Name].RunCount)
-		config.Log.Debug(m.Projects[p.Name].ErrorsCount)
-		config.Log.Debug(m.Projects[p.Name].FailsCount)
+		//config.Log.Debug(p.Name)
+		//config.Log.Debug(p.Parameters.RunEvery)
+		//config.Log.Debug(m.Projects[p.Name].RunCount)
+		//config.Log.Debug(m.Projects[p.Name].ErrorsCount)
+		//config.Log.Debug(m.Projects[p.Name].FailsCount)
 
-		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, metrics.Metrics.Projects[p.Name].RunCount, metrics.Metrics.Projects[p.Name].ErrorsCount, metrics.Metrics.Projects[p.Name].FailsCount)
+		output += fmt.Sprintf("Project: %s, each %s\tRuns: %d, errors: %d, current alive: %d, FAILS: %d \n", p.Name, p.Parameters.RunEvery, metrics.Metrics.Projects[p.Name].RunCount, metrics.Metrics.Projects[p.Name].ErrorsCount, metrics.Metrics.Projects[p.Name].Alive, metrics.Metrics.Projects[p.Name].FailsCount)
 
 		for _, h := range p.Healtchecks {
 			output += fmt.Sprintf("\tHealthCheck: %s\truns: %d, errors: %d\n", h.Name, metrics.Metrics.Healthchecks[h.Name].RunCount, metrics.Metrics.Healthchecks[h.Name].ErrorsCount)
