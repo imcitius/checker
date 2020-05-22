@@ -29,6 +29,7 @@ type CheckMetrics struct {
 	RunCount    int
 	ErrorsCount int
 	FailsCount  int
+	LastResult  bool
 }
 
 type MetricsCollection struct {

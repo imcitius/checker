@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+var Metrics *metrics.MetricsCollection = metrics.Metrics
+var Config *config.ConfigFile = &config.Config
+
 func getRandomId() string {
 	sid, _ := shortid.New(1, shortid.DefaultABC, rand.Uint64())
 	checkRuntimeId, _ := sid.Generate()
@@ -23,7 +26,7 @@ func getRandomId() string {
 
 func runReports(timeout string) {
 	config.Log.Debug("runReports")
-	for _, project := range config.Config.Projects {
+	for _, project := range Config.Projects {
 		if project.Parameters.PeriodicReport == timeout {
 			err := projects.SendReport(&project)
 			if err != nil {
@@ -36,14 +39,14 @@ func runReports(timeout string) {
 
 func runAlerts(timeout string) {
 	config.Log.Debug("runAlerts")
-	for _, project := range config.Config.Projects {
+	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery == timeout {
-			if metrics.Metrics.Projects[project.Name].Alive < project.Parameters.MinHealth {
-				metrics.Metrics.Projects[project.Name].SeqErrorsCount++
+			if Metrics.Projects[project.Name].Alive < project.Parameters.MinHealth {
+				Metrics.Projects[project.Name].SeqErrorsCount++
 			} else {
-				metrics.Metrics.Projects[project.Name].SeqErrorsCount--
+				Metrics.Projects[project.Name].SeqErrorsCount--
 			}
-			if metrics.Metrics.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
+			if Metrics.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
 				projects.CritAlert(&project, "crit", errors.New(errorMessage))
 			}
@@ -54,16 +57,16 @@ func runAlerts(timeout string) {
 func runChecks(timeout string) {
 	config.Log.Debug("runChecks")
 
-	for _, project := range config.Config.Projects {
+	for _, project := range Config.Projects {
 		for _, healthcheck := range project.Healtchecks {
 
-			metrics.Metrics.Projects[project.Name].Alive = 0
+			Metrics.Projects[project.Name].Alive = 0
 
 			for _, check := range healthcheck.Checks {
 				config.Log.Debug(check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
-					metrics.Metrics.Healthchecks[healthcheck.Name].RunCount++
-					metrics.Metrics.Checks[check.UUid].RunCount++
+					Metrics.Healthchecks[healthcheck.Name].RunCount++
+					Metrics.Checks[check.UUid].RunCount++
 					checkRandomId := getRandomId()
 					config.Log.Infof("(%s) Checking project '%s' check '%s' (type: %s) ... ", checkRandomId, project.Name, healthcheck.Name, check.Type)
 					startTime := time.Now()
@@ -76,14 +79,16 @@ func runChecks(timeout string) {
 						if check.Mode != "quiet" {
 							projects.Alert(&project, "noncrit", err)
 						}
-						metrics.Metrics.Projects[project.Name].SeqErrorsCount++
-						metrics.Metrics.Projects[project.Name].ErrorsCount++
-						metrics.Metrics.Healthchecks[healthcheck.Name].ErrorsCount++
-						metrics.Metrics.Checks[check.UUid].ErrorsCount++
+						Metrics.Projects[project.Name].SeqErrorsCount++
+						Metrics.Projects[project.Name].ErrorsCount++
+						Metrics.Healthchecks[healthcheck.Name].ErrorsCount++
+						Metrics.Checks[check.UUid].ErrorsCount++
+						Metrics.Checks[check.UUid].LastResult = false
 					} else {
 						config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
-						metrics.Metrics.Projects[project.Name].SeqErrorsCount--
-						metrics.Metrics.Projects[project.Name].Alive++
+						Metrics.Projects[project.Name].SeqErrorsCount--
+						Metrics.Projects[project.Name].Alive++
+						Metrics.Checks[check.UUid].LastResult = true
 					}
 				}
 			}
