@@ -8,6 +8,7 @@ import (
 	"my/checker/config"
 	"my/checker/metrics"
 	"net/http"
+	_ "net/http/pprof"
 	"runtime"
 )
 
@@ -157,13 +158,13 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 		}
 	}()
 
-	select {
-	case <-webSignalCh:
-
-		config.Log.Infof("Exit web interface")
-		if err := server.Shutdown(context.Background()); err != nil {
-			config.Log.Infof("Web server shutdown failed: %s", err)
-		}
-		return
-	}
+	//select {
+	//case <-webSignalCh:
+	//
+	//	config.Log.Infof("Exit web interface")
+	//	if err := server.Shutdown(context.Background()); err != nil {
+	//		config.Log.Infof("Web server shutdown failed: %s", err)
+	//	}
+	//	return
+	//}
 }
