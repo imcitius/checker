@@ -8,6 +8,7 @@ import (
 	"my/checker/config"
 	"my/checker/metrics"
 	"net/http"
+	"runtime"
 )
 
 var Metrics *metrics.MetricsCollection = metrics.Metrics
@@ -101,6 +102,7 @@ func getMetrics() string {
 	output += fmt.Sprintf("Total alerts/reports sent: %d\n", alertsSent)
 	output += fmt.Sprintf("\tNonCritical alerts sent: %d\n", nonCritSent)
 	output += fmt.Sprintf("\tCritical alerts sent: %d\n", critSent)
+	output += fmt.Sprintf("\tCurently running goroutines number: %d\n", runtime.NumGoroutine())
 
 	return output
 }
