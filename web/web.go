@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"fmt"
 	"golang.org/x/sync/semaphore"
 	"io"
