@@ -1,6 +1,6 @@
 # Реализация чекалки на Go
 
-Хранение конфигурации реализовано с помощью библиотеки `github.com/spf13/viper`.По умолчанию из файла config.json в текущем каталоге.
+Хранение конфигурации реализовано с помощью библиотеки `github.com/spf13/viper`.По умолчанию из файла config.yaml в текущем каталоге.
 
 Управление командами CLI и флагами на базе `github.com/spf13/cobra`.
 
@@ -18,7 +18,7 @@ Available Commands:
   version     Print the version number of Hugo
 
 Flags:
-      --config string       config file (default is ./config.json) (default "config")
+      --config string       config file (default is ./config.yaml) (default "config")
   -D, --debugLevel string   Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
   -h, --help                help for checker
       --viper               use Viper for configuration (default true)
