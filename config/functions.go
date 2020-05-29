@@ -1,9 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"strings"
 )
 
 func LoadConfig() error {
@@ -128,5 +130,23 @@ func FillTimeouts() error {
 	}
 	Log.Debugf("Total timeouts found: %+v\n\n", Timeouts)
 
+	return nil
+}
+
+func FillSecrets() error {
+
+	for i, alert := range Config.Alerts {
+		if strings.HasPrefix(alert.BotToken, "vault") {
+			vault := strings.Split(alert.BotToken, ":")
+			path := vault[1]
+			field := vault[2]
+			token, err := GetVaultSecret(path, field)
+			if err == nil {
+				Config.Alerts[i].BotToken = token
+			} else {
+				return fmt.Errorf("Error getting bot token from vault: %v", err)
+			}
+		}
+	}
 	return nil
 }

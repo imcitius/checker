@@ -96,8 +96,6 @@ func initConfig() {
 		viper.AddConfigPath(filepath.Dir(cfgFile)) // path to look for the config file in
 	}
 
-	viper.BindEnv("VAULT_TOKEN")
-	viper.BindEnv("VAULT_ADDR")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
@@ -115,10 +113,11 @@ func initConfig() {
 	if err != nil {
 		config.Log.Infof("Config load error: %s", err)
 	}
-	//err = config.FillSecrets()
-	//if err != nil {
-	//	panic(err)
-	//}
+
+	err = config.FillSecrets()
+	if err != nil {
+		panic(err)
+	}
 	err = config.FillDefaults()
 	if err != nil {
 		panic(err)
