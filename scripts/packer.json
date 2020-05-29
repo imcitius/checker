@@ -11,7 +11,7 @@
     {
       "name": "centos",
       "type": "docker",
-      "image": "centos",
+      "image": "harbor.jgit.me/library/centos:8",
       "commit": "true",
       "privileged": "false",
       "changes": [
