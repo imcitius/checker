@@ -89,7 +89,7 @@ type Check struct {
 	Count    int
 
 	// http checks optional parameters
-	Code          int
+	Code          []int
 	Answer        string
 	AnswerPresent string              `mapstructure:"answer_present"`
 	Headers       []map[string]string `mapstructure:"headers"`

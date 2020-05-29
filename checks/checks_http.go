@@ -13,13 +13,13 @@ import (
 )
 
 func init() {
-	config.Checks["http"] = func (c *config.Check, p *config.Project) error {
+	config.Checks["http"] = func(c *config.Check, p *config.Project) error {
 		var (
 			answerPresent bool = true
-			checkNum   int
-			checkErr   error
-			errorHeader  string
-			tlsConfig   tls.Config
+			checkNum      int
+			checkErr      error
+			errorHeader   string
+			tlsConfig     tls.Config
 		)
 
 		if c.AnswerPresent == "absent" {
@@ -53,7 +53,7 @@ func init() {
 		client := &http.Client{Transport: transport}
 		client.Timeout, _ = time.ParseDuration(c.Timeout)
 		if c.StopFollowRedirects {
-			client.CheckRedirect = func (req *http.Request, via []*http.Request) error {
+			client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 				return errors.New("Asked to stop redirects")
 			}
 		}
@@ -81,6 +81,7 @@ func init() {
 		response, err := client.Do(req)
 
 		if GetCheckScheme(c) == "https" {
+			config.Log.Infof("SSL: %v", response.TLS.PeerCertificates)
 			for i, cert := range response.TLS.PeerCertificates {
 				if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
 					config.Log.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
@@ -110,10 +111,21 @@ func init() {
 		//config.Log.Printf("Server: %s, http answer body: %s\n", c.Host, buf)
 		// check that response code is correct
 
-		if c.Code == 0 {
-			c.Code = 200
+		// init asnwer codes slice if empty
+		if len(c.Code) == 0 {
+			c.Code = []int{200}
 		}
-		code := c.Code == int(response.StatusCode)
+		// found actual return code in answer codes slice
+		code := func(codes []int, answercode int) bool {
+			found := false
+			for _, c := range codes {
+				if c == answercode {
+					found = true
+				}
+			}
+			return found
+		}(c.Code, int(response.StatusCode))
+
 		if !code {
 			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode, c.Code)
 			return errors.New(errorMessage)
