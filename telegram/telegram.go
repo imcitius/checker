@@ -3,6 +3,7 @@ package telegram
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	tb "gopkg.in/tucnak/telebot.v2"
 	checks "my/checker/checks"
 	"my/checker/config"
@@ -93,13 +94,13 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	bot.Handle("/pa", func(m *tb.Message) {
 		config.Config.Defaults.Parameters.Mode = "quiet"
 		answer := "All messages ceased"
-		bot.Send(m.Sender, answer)
+		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/ua", func(m *tb.Message) {
 		config.Config.Defaults.Parameters.Mode = "loud"
 		answer := "All messages enabled"
-		bot.Send(m.Sender, answer)
+		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/pu", func(m *tb.Message) {
@@ -121,7 +122,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 		}
 		if err == nil {
 			answer := fmt.Sprintf("Messages ceased for UUID %v", uuID)
-			bot.Send(m.Sender, answer)
+			bot.Send(m.Chat, answer)
 		}
 	})
 
@@ -144,7 +145,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 		}
 		if err == nil {
 			answer := fmt.Sprintf("Messages resumed for UUID %v", uuID)
-			bot.Send(m.Sender, answer)
+			bot.Send(m.Chat, answer)
 		}
 
 	})
@@ -164,7 +165,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 		}
 		if err == nil {
 			answer := fmt.Sprintf("Messages ceased for project %s", projectName)
-			bot.Send(m.Sender, answer)
+			bot.Send(m.Chat, answer)
 		}
 
 	})
@@ -184,13 +185,14 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 		}
 		if err == nil {
 			answer := fmt.Sprintf("Messages resumed for project %s", projectName)
-			bot.Send(m.Sender, answer)
+			bot.Send(m.Chat, answer)
 		}
 
 	})
 
 	go func() {
 		config.Log.Infof("Start listening telegram bots routine")
+		SendTgMessage("report", GetTgCommandChannel(), errors.New("Bot at your service"))
 		bot.Start()
 	}()
 
@@ -220,4 +222,13 @@ func SendTgMessage(alerttype string, a *config.AlertConfigs, e error) error {
 		metrics.AddAlertCounter(a, alerttype)
 	}
 	return err
+}
+
+func GetTgCommandChannel() *config.AlertConfigs {
+	for _, a := range config.Config.Alerts {
+		if a.Name == config.Config.Defaults.Parameters.CommandChannel {
+			return &a
+		}
+	}
+	return nil
 }

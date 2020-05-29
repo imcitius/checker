@@ -33,7 +33,7 @@ func runReports(timeout string) {
 				config.Log.Printf("Cannot send report for project %s: %+v", project.Name, err)
 			}
 		}
-		//project.SendReport()
+		projects.SendReport(&project)
 	}
 }
 

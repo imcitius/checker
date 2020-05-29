@@ -82,11 +82,15 @@ func init() {
 
 		if GetCheckScheme(c) == "https" {
 			//config.Log.Debugf("SSL: %v", response.TLS.PeerCertificates)
-			for i, cert := range response.TLS.PeerCertificates {
-				if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
-					config.Log.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
+			if len(response.TLS.PeerCertificates) > 0 {
+				for i, cert := range response.TLS.PeerCertificates {
+					if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
+						config.Log.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
+					}
+					config.Log.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
 				}
-				config.Log.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
+			} else {
+				return errors.New("No certificates present on https connection")
 			}
 
 		}
