@@ -41,7 +41,7 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./config.json)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./config.yaml)")
 	rootCmd.PersistentFlags().StringP("debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().Bool("bots", true, "start listening messenger bots")
 	viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
@@ -89,7 +89,7 @@ func initConfig() {
 
 		viper.SetConfigName(filepath.Base(cfgFile)) // name of config file (without extension)
 		if filepath.Ext(cfgFile) == "" {
-			viper.SetConfigType("json") // REQUIRED if the config file does not have the extension in the name
+			viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
 		} else {
 			viper.SetConfigType(filepath.Ext(cfgFile)[1:])
 		}
@@ -115,10 +115,10 @@ func initConfig() {
 	if err != nil {
 		config.Log.Infof("Config load error: %s", err)
 	}
-	err = config.FillSecrets()
-	if err != nil {
-		panic(err)
-	}
+	//err = config.FillSecrets()
+	//if err != nil {
+	//	panic(err)
+	//}
 	err = config.FillDefaults()
 	if err != nil {
 		panic(err)

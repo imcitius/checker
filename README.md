@@ -1,7 +1,6 @@
 # Реализация чекалки на Go
 
-Хранение конфигурации реализовано с помощью библиотеки `github.com/spf13/viper`.
-По умолчанию из файла config.yaml в текущем каталоге.
+Хранение конфигурации реализовано с помощью библиотеки `github.com/spf13/viper`.По умолчанию из файла config.yaml в текущем каталоге.
 
 Управление командами CLI и флагами на базе `github.com/spf13/cobra`.
 
@@ -19,7 +18,7 @@ Available Commands:
   version     Print the version number of Hugo
 
 Flags:
-      --config string       config file (default is ./config.json) (default "config")
+      --config string       config file (default is ./config.yaml) (default "config")
   -D, --debugLevel string   Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
   -h, --help                help for checker
       --viper               use Viper for configuration (default true)
@@ -29,6 +28,9 @@ Use "checker [command] --help" for more information about a command.
 ```
 
 Конфигурация состоит из блоков `defaults`, `alerts` и `projects`.
+
+Секретные параметры (пароли, токены) могут быть сохранены в Hashicorp Vault, в данный момент поддерживается загрузка токенов для телеграм ботов.
+Формат: `vault:secret/path/to/token:field`. Значение поля field из пути secret/path/to/token будет использовано в качестве токена.
 
 В блоке `defaults` в подблоке `parameters` описаны параметры проверок по умолчанию, которые применяются к настройкам проектов, если не были переназначены в блоке `parameters` конкретного проекта.
 
@@ -267,12 +269,6 @@ password: пароль
 
 ```
 
-## Web интерфейс
-
-### /stats
-Выдает рантайм статистику по проверкам и по алертам.
-Аналогично Chat команде /stats
-
 
 ## Управление оповещениями
 
@@ -292,4 +288,3 @@ password: пароль
 
 Команды */pu,/uu* отправленные ответом на сообщение от бота управляют оповещениями для конкретного проверки по UUID (берется из цитируемого сообщения).
 
-/stats - вывод текущей статистики, аналогичной веб интерфейсу /stats.
