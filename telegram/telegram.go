@@ -203,9 +203,9 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	bot.Handle("/stats", func(m *tb.Message) {
 		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
 
-		config.Log.Infof("Bot request /stats")
+		config.Log.Infof("Bot request /stats from %s", m.Sender.Username)
 
-		answer := fmt.Sprintf(metrics.GenRuntimeStats())
+		answer := fmt.Sprintf("@" + m.Sender.Username + "\n\n" + metrics.GenRuntimeStats())
 		bot.Send(m.Chat, answer)
 
 	})
