@@ -1,10 +1,12 @@
 package config
 
 import (
+	"emperror.dev/errors"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"net/http"
+	"strings"
 )
 
 var (
@@ -127,6 +129,7 @@ type TimeoutCollection struct {
 }
 
 func LoadConfig() error {
+	Log.Debug("Reading config...")
 
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
@@ -162,6 +165,7 @@ func (p *TimeoutsCollection) Add(period string) {
 }
 
 func FillDefaults() error {
+	Log.Debug("Filling defaults...")
 
 	//config.Log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, project := range Config.Projects {
@@ -199,6 +203,7 @@ func FillDefaults() error {
 }
 
 func FillUUIDs() error {
+	Log.Debug("Filling UUIDs...")
 	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
 	for i := range Config.Projects {
 		for j := range Config.Projects[i].Healtchecks {
@@ -228,6 +233,7 @@ func (p *TimeoutCollection) Add(period string) {
 }
 
 func FillTimeouts() error {
+	Log.Debug("Filling timeouts...")
 	Timeouts.Add(Config.Defaults.Parameters.RunEvery)
 
 	for _, project := range Config.Projects {
@@ -248,5 +254,24 @@ func FillTimeouts() error {
 	}
 	Log.Debugf("Total timeouts found: %+v\n\n", Timeouts)
 
+	return nil
+}
+
+func FillSecrets() error {
+	Log.Debug("Filling secrets...")
+	for i, a := range Config.Alerts {
+		if strings.HasPrefix(a.BotToken, "vault") {
+			secret := strings.Split(a.BotToken, ":")
+			path := secret[1]
+			field := secret[2]
+			token, err := GetVaultSecret(path, field)
+			if err == nil {
+				Config.Alerts[i].BotToken = token
+				Log.Debugf("Bot %s token %s", a.Name, Config.Alerts[i].BotToken)
+			} else {
+				return errors.Errorf("Cannot get vault secret %s:%s, err: %v", path, field, err)
+			}
+		}
+	}
 	return nil
 }

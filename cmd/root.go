@@ -79,7 +79,7 @@ func initConfig() {
 		viper.SetDefault("debugLevel", "Info")
 
 		viper.SetConfigName("config")         // name of config file (without extension)
-		viper.SetConfigType("json")           // REQUIRED if the config file does not have the extension in the name
+		viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
 		viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
 		viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
 		viper.AddConfigPath(".")              // optionally look for config in the working directory
@@ -96,6 +96,8 @@ func initConfig() {
 		viper.AddConfigPath(filepath.Dir(cfgFile)) // path to look for the config file in
 	}
 
+	viper.BindEnv("VAULT_TOKEN")
+	viper.BindEnv("VAULT_ADDR")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
@@ -113,7 +115,10 @@ func initConfig() {
 	if err != nil {
 		config.Log.Infof("Config load error: %s", err)
 	}
-
+	err = config.FillSecrets()
+	if err != nil {
+		panic(err)
+	}
 	err = config.FillDefaults()
 	if err != nil {
 		panic(err)

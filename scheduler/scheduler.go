@@ -133,8 +133,8 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					config.Log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
 
 					config.Log.Infof("Schedule: %s", timeout)
-					go runChecks(timeout)
-					go runReports(timeout)
+					//go runChecks(timeout)
+					//go runReports(timeout)
 					runAlerts(timeout)
 				}
 			}

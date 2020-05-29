@@ -80,6 +80,11 @@ func init() {
 		config.Log.Debugf("http request: %v", req)
 		response, err := client.Do(req)
 
+		if err != nil {
+			errorMessage := errorHeader + fmt.Sprintf("asnwer error: %+v", err)
+			return errors.New(errorMessage)
+		}
+
 		if GetCheckScheme(c) == "https" {
 			//config.Log.Debugf("SSL: %v", response.TLS.PeerCertificates)
 			if len(response.TLS.PeerCertificates) > 0 {
@@ -95,13 +100,6 @@ func init() {
 			}
 
 		}
-		//config.Log.Printf("2")
-
-		if err != nil {
-			errorMessage := errorHeader + fmt.Sprintf("asnwer error: %+v", err)
-			return errors.New(errorMessage)
-		}
-		//config.Log.Printf("3")
 
 		if response.Body != nil {
 			defer response.Body.Close()
