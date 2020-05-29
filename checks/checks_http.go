@@ -81,7 +81,7 @@ func init() {
 		response, err := client.Do(req)
 
 		if GetCheckScheme(c) == "https" {
-			config.Log.Infof("SSL: %v", response.TLS.PeerCertificates)
+			//config.Log.Debugf("SSL: %v", response.TLS.PeerCertificates)
 			for i, cert := range response.TLS.PeerCertificates {
 				if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
 					config.Log.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
