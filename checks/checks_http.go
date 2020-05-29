@@ -90,7 +90,8 @@ func init() {
 					config.Log.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
 				}
 			} else {
-				return errors.New("No certificates present on https connection")
+				errorMessage := errorHeader + fmt.Sprint("No certificates present on https connection")
+				return errors.New(errorMessage)
 			}
 
 		}
