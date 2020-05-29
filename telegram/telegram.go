@@ -92,25 +92,29 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	}
 
 	bot.Handle("/pa", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
+		config.Log.Infof("Bot request /pa")
+
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
 		config.Config.Defaults.Parameters.Mode = "quiet"
 		answer := "All messages ceased"
 		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/ua", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
+		config.Log.Infof("Bot request /ua")
+
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
 		config.Config.Defaults.Parameters.Mode = "loud"
 		answer := "All messages enabled"
 		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/pu", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
-		config.Log.Printf("/pu")
+		config.Log.Infof("Bot request /pu")
 
 		uuID := tgMessage.GetUUID()
 		config.Log.Printf("Pause req for UUID: %+v\n", uuID)
@@ -130,11 +134,11 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/uu", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
-		config.Log.Printf("/uu")
+		config.Log.Infof("Bot request /uu")
 
 		uuID := tgMessage.GetUUID()
 		config.Log.Printf("Resume req for UUID: %+v\n", uuID)
@@ -155,11 +159,11 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/pp", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
-		config.Log.Printf("/pp")
+		config.Log.Infof("Bot request /pp")
 
 		projectName := tgMessage.GetProject()
 		config.Log.Printf("Pause req for project: %s\n", projectName)
@@ -176,11 +180,11 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
-		config.Log.Printf("/up")
+		config.Log.Infof("Bot request /up")
 
 		projectName := tgMessage.GetProject()
 		config.Log.Printf("Resume req for project: %s\n", projectName)
@@ -196,9 +200,19 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 
 	})
 
+	bot.Handle("/stats", func(m *tb.Message) {
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
+
+		config.Log.Infof("Bot request /stats")
+
+		answer := fmt.Sprintf(metrics.GenRuntimeStats())
+		bot.Send(m.Chat, answer)
+
+	})
+
 	go func() {
 		config.Log.Infof("Start listening telegram bots routine")
-		SendTgMessage("report", GetTgCommandChannel(), errors.Errorf("Bot %s at your service", GetTgCommandChannel().Name))
+		SendChatOpsMessage("Bot %s at your service")
 		bot.Start()
 	}()
 
@@ -237,4 +251,9 @@ func GetTgCommandChannel() *config.AlertConfigs {
 		}
 	}
 	return nil
+}
+
+func SendChatOpsMessage(text string) {
+	metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandAns++
+	SendTgMessage("report", GetTgCommandChannel(), errors.Errorf(text, GetTgCommandChannel().Name))
 }

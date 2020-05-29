@@ -17,7 +17,7 @@ type AlertMetrics struct {
 	AlertCount  int
 	NonCritical int
 	Critical    int
-	Command     int
+	CommandAns  int
 	CommandReqs int
 }
 type HealtcheckMetrics struct {

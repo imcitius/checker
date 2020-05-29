@@ -18,7 +18,7 @@ func AddAlertCounter(a *config.AlertConfigs, alerttype string) {
 	case "noncrit":
 		Metrics.Alerts[a.Name].NonCritical++
 	case "report":
-		Metrics.Alerts[a.Name].Command++
+		Metrics.Alerts[a.Name].CommandAns++
 	default:
 		config.Log.Errorf("Undefined alert type")
 	}
