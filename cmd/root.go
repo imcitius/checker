@@ -13,6 +13,7 @@ import (
 	"my/checker/web"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 )
@@ -40,7 +41,7 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "config", "config file (default is ./config.json)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./config.json)")
 	rootCmd.PersistentFlags().StringP("debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().Bool("bots", true, "start listening messenger bots")
 	viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
@@ -70,7 +71,9 @@ func initConfig() {
 
 	config.Log.Debug("initConfig: load config file")
 
-	if cfgFile != "" {
+	config.Log.Debugf("Config flag: %s", cfgFile)
+
+	if cfgFile == "" {
 		// Use config file from the flag.
 		viper.SetDefault("HTTPPort", "80")
 		viper.SetDefault("debugLevel", "Info")
@@ -80,6 +83,17 @@ func initConfig() {
 		viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
 		viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
 		viper.AddConfigPath(".")              // optionally look for config in the working directory
+	} else {
+		viper.SetDefault("HTTPPort", "80")
+		viper.SetDefault("debugLevel", "Info")
+
+		viper.SetConfigName(filepath.Base(cfgFile)) // name of config file (without extension)
+		if filepath.Ext(cfgFile) == "" {
+			viper.SetConfigType("json") // REQUIRED if the config file does not have the extension in the name
+		} else {
+			viper.SetConfigType(filepath.Ext(cfgFile)[1:])
+		}
+		viper.AddConfigPath(filepath.Dir(cfgFile)) // path to look for the config file in
 	}
 
 	viper.AutomaticEnv()
