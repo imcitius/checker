@@ -82,8 +82,9 @@ func getCeasedProjectsHealthchecks() string {
 
 func getMetrics() string {
 	var (
-		output                                                      string
-		projectRuns, alertsSent, critSent, nonCritSent, commandSent int
+		output                                         string
+		projectRuns, alertsSent, critSent, nonCritSent int
+		commandReceived, commandSent                   int
 	)
 
 	for _, p := range Config.Projects {
@@ -94,7 +95,8 @@ func getMetrics() string {
 		alertsSent += c.AlertCount
 		critSent += c.Critical
 		nonCritSent += c.NonCritical
-		commandSent += c.NonCritical
+		commandSent += c.Command
+		commandReceived += c.CommandReqs
 		config.Log.Debugf("Counter: %s", c.Name)
 	}
 
@@ -103,7 +105,7 @@ func getMetrics() string {
 	output += fmt.Sprintf("Total alerts/reports sent: %d\n", alertsSent)
 	output += fmt.Sprintf("\tNonCritical alerts sent: %d\n", nonCritSent)
 	output += fmt.Sprintf("\tCritical alerts sent: %d\n", critSent)
-	output += fmt.Sprintf("\tCommand messages alerts sent: %d\n", commandSent)
+	output += fmt.Sprintf("\tCommand messages received: %d, sent: %d\n", commandReceived, commandSent)
 	output += fmt.Sprintf("\tCurently running goroutines number: %d\n", runtime.NumGoroutine())
 
 	return output

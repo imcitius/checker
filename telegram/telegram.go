@@ -92,18 +92,21 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	}
 
 	bot.Handle("/pa", func(m *tb.Message) {
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
 		config.Config.Defaults.Parameters.Mode = "quiet"
 		answer := "All messages ceased"
 		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/ua", func(m *tb.Message) {
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
 		config.Config.Defaults.Parameters.Mode = "loud"
 		answer := "All messages enabled"
 		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/pu", func(m *tb.Message) {
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -127,6 +130,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/uu", func(m *tb.Message) {
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -151,6 +155,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/pp", func(m *tb.Message) {
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -171,6 +176,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
+		metrics.Metrics.Alerts[GetTgCommandChannel().Name].Command++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -192,7 +198,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 
 	go func() {
 		config.Log.Infof("Start listening telegram bots routine")
-		SendTgMessage("report", GetTgCommandChannel(), errors.New("Bot at your service"))
+		SendTgMessage("report", GetTgCommandChannel(), errors.Errorf("Bot %s at your service", GetTgCommandChannel().Name))
 		bot.Start()
 	}()
 
