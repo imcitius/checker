@@ -24,12 +24,12 @@ EOH
   }*/
 
   reschedule {
-    attempts       = 5
-    interval       = "5m"
-    delay          = "5s"
+    attempts = 5
+    interval = "5m"
+    delay = "5s"
     delay_function = "exponential"
-    max_delay      = "30s"
-    unlimited      = false
+    max_delay = "30s"
+    unlimited = false
   }
 
   migrate {
@@ -39,10 +39,11 @@ EOH
   }
 
   vault {
-    policies = [ "read" ]
+    policies = [
+      "read"]
   }
 
-group "checkers" {
+  group "checkers" {
     count = 1
 
     restart {
@@ -57,22 +58,19 @@ group "checkers" {
         version = "{$ .P.version $}"
       }
 
-      artifact {
-        source      = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500/v1/kv/configs/{$ index .I.Datacenters 0 $}/checker/config?raw"
-        destination = "local/config.template"
-      }
 
       template {
-        source = "local/config.template/config"
-        destination = "local/config.json"
-        change_mode   = "signal"
-        // INT is better that HUP, because it will trigger download config template artifact
-        change_signal = "SIGINT"
+        data = <<EOH
+CONSUL_PATH = "configs/ks-1/checker/config"
+CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500 "
+EOH
+        env = true
+        destination = "secrets/.env"
       }
 
       config {
-        force_pull   = true
-        image        = "{$ .P.image $}:{$ .P.version $}"
+        force_pull = true
+        image = "{$ .P.image $}:{$ .P.version $}"
         network_mode = "weave"
         command = "/app/checker"
 
@@ -81,7 +79,9 @@ group "checkers" {
         ]
 
         args = [
-          "check", "--config", "/app/config.json",
+          "check",
+          "--config",
+          "/app/config.json",
         ]
 
         port_map = {
@@ -99,53 +99,53 @@ group "checkers" {
 
       service {
         address_mode = "driver"
-        {$ if eq .I.Name "master" -$}
-        name = "{$ .I.ProjectName $}"
-        {$- else -$}
-          {$- if eq .P.version .I.Name -$}
-        name = "{$ .I.ProjectName $}-{$ .I.Name $}"
-          {$- else -$}
-        name = "{$ .I.ProjectName $}"
-          {$- end -$}
-        {$- end $}
-        port = "80"
-        {$ if eq .I.Name "master" -$}
-        tags = ["{$ .I.Name $}"]
-        {$- else -$}
-          {$- if ne .P.version .I.Name -$}
-        tags = ["{$ .I.Name $}",
-          "{$ replace .P.version "." "-" $}",
-          "{$ .P.major_version $}"]
-          {$- end -$}
-        {$ end -$}
-        canary_tags = ["{$- if ne .P.version .I.Name -$}{$ replace .P.version "." "-" $}-{$- end -$}canary"]
+{$ if eq .I.Name "master" -$}
+name = "{$ .I.ProjectName $}"
+{$- else -$}
+{$- if eq .P.version .I.Name -$}
+name = "{$ .I.ProjectName $}-{$ .I.Name $}"
+{$- else -$}
+name = "{$ .I.ProjectName $}"
+{$- end -$}
+{$- end $}
+port = "80"
+{$ if eq .I.Name "master" -$}
+tags = ["{$ .I.Name $}"]
+{$- else -$}
+{$- if ne .P.version .I.Name -$}
+tags = ["{$ .I.Name $}",
+"{$ replace .P.version "." "-" $}",
+"{$ .P.major_version $}"]
+{$- end -$}
+{$ end -$}
+canary_tags = ["{$- if ne .P.version .I.Name -$}{$ replace .P.version "." "-" $}-{$- end -$}canary"]
 
-          check {
-            address_mode = "driver"
-            port = "80"
-            type = "http"
-            path = "/healthcheck"
-            method = "GET"
-            interval = "5s"
-            timeout = "1s"
-            initial_status = "passing"
-          }
+check {
+address_mode = "driver"
+port = "80"
+type = "http"
+path = "/healthcheck"
+method = "GET"
+interval = "5s"
+timeout = "1s"
+initial_status = "passing"
+}
 
-        check_restart {
-          limit = 5
-          grace = "15s"
-          ignore_warnings = true
-        }
-      }
+check_restart {
+limit = 5
+grace = "15s"
+ignore_warnings = true
+}
+}
 
-      resources {
-        cpu    = 50
-        memory = 64
+resources {
+cpu = 50
+memory = 64
 
-        network {
-          mbits = 1
-        }
-      }
-    }
-  }
+network {
+mbits = 1
+}
+}
+}
+}
 }
