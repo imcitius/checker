@@ -19,6 +19,9 @@ Available Commands:
 
 Flags:
       --config string       config file (default is ./config.yaml) (default "config")
+      --configformat string   config file format: (default is yaml)
+      --configsource string   config file source: file or consul (default is file)
+      --configwatchtimeout string   config watch period (default '5s') (default "5s")
   -D, --debugLevel string   Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
   -h, --help                help for checker
       --viper               use Viper for configuration (default true)
@@ -26,6 +29,17 @@ Flags:
 Use "checker [command] --help" for more information about a command.
 
 ```
+
+Хранение конфигурации доступно в файловой системе (по умолчанию), или в KV Consul.
+Ключ `--configsource=consul` позволяет переключить получение конфига на Consul. При этом считываются две ENV переменные CONSUL_ADDR и CONSUL_PATH. Из первой берется URL сервера Consul, из второй - путь к ключу KV с конфигом.
+KV ключ должен содержать полную конфигурацию, обязательно в форматах `yaml` или `json`, загрузка из древовидной KV структуры не поддерживается.
+Каждый период, заданный ключом `--configwatchtimeout=5s` Checker пытается перечитать конфиг из хранилища. Если конфиг загружен успешно, проверяется его валидность и соответствие текущей конфигурации.
+Если конфиг валиден и отличается от текущей конфигурации, он подменяет текущую конфигурацию, и происходит перезапуск скедулера и ботов.
+Конфиг загруженный из файловой системы также мониторится автоматически через fsnotify.
+
+
+
+
 
 Конфигурация состоит из блоков `defaults`, `alerts` и `projects`.
 

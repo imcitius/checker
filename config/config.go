@@ -14,6 +14,7 @@ var (
 	Timeouts                   TimeoutsCollection
 	DebugLevel                 string
 	CfgFile, CfgSrc, CfgFormat string
+	CfgWatchTimeout            string
 	Sem                        = semaphore.NewWeighted(int64(1))
 )
 

@@ -41,7 +41,7 @@ func TestConfig() (ConfigFile, error) {
 		}
 	}
 
-	dl, err := logrus.ParseLevel(DebugLevel)
+	dl, err := logrus.ParseLevel(viper.GetString("debugLevel")) // viper is not loaded config at this point
 	if err != nil {
 		//Log.Panicf("Cannot parse debug level: %v", err)
 		return tempConfig, err
@@ -49,7 +49,10 @@ func TestConfig() (ConfigFile, error) {
 		Log.SetLevel(dl)
 	}
 
-	viper.Unmarshal(&tempConfig)
+	err = viper.Unmarshal(&tempConfig)
+	if err != nil {
+		return tempConfig, err
+	}
 
 	err = tempConfig.FillSecrets()
 	if err != nil {

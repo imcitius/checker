@@ -44,18 +44,20 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "config", "config file (default is ./config.yaml)")
 	rootCmd.PersistentFlags().StringVar(&config.CfgSrc, "configsource", "", "config file source: file or consul (default is file)")
+	rootCmd.PersistentFlags().StringVar(&config.CfgWatchTimeout, "configwatchtimeout", "5s", "config watch period (default '5s')")
 	rootCmd.PersistentFlags().StringVar(&config.CfgFormat, "configformat", "", "config file format: (default is yaml)")
-	rootCmd.PersistentFlags().StringVarP(&config.DebugLevel, "Debug level", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+
+	rootCmd.PersistentFlags().StringP("debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+	viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
+
+	rootCmd.PersistentFlags().Bool("bots", true, "start listening messenger bots")
+	viper.BindPFlag("botsEnabled", rootCmd.PersistentFlags().Lookup("bots"))
 
 	//rootCmd.PersistentFlags().StringVar(&consulAddr, "consul_addr", "", "Consul server address")
 	//rootCmd.PersistentFlags().StringVar(&consulPath, "consul_path", "", "Consul KV path to get config from")
 	//rootCmd.PersistentFlags().StringVar(&vaultAddr, "vault_addr", "", "Vault server address")
 	//rootCmd.PersistentFlags().StringVar(&vaultToken, "vault_token", "", "Vault token")
 
-	//rootCmd.PersistentFlags().Bool("bots", true, "start listening messenger bots")
-
-	//viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
-	//viper.BindPFlag("botsEnabled", rootCmd.PersistentFlags().Lookup("bots"))
 	//viper.BindPFlag("vaultToken", rootCmd.PersistentFlags().Lookup("Vault_Token"))
 	//viper.BindPFlag("vaultAddr", rootCmd.PersistentFlags().Lookup("Vault_Address"))
 	//viper.BindPFlag("consulAddr", rootCmd.PersistentFlags().Lookup("Consul_Address"))
@@ -67,7 +69,6 @@ func init() {
 	viper.BindEnv("CONSUL_PATH")
 
 	viper.SetDefault("HTTPPort", "80")
-	viper.SetDefault("debugLevel", "Info")
 
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
@@ -138,7 +139,7 @@ func initConfig() {
 
 	viper.AutomaticEnv()
 
-	dl, err := logrus.ParseLevel(config.DebugLevel)
+	dl, err := logrus.ParseLevel(viper.GetString("debugLevel"))
 	if err != nil {
 		config.Log.Panicf("Cannot parse debug level: %v", err)
 	} else {
@@ -239,7 +240,12 @@ var testCfg = &cobra.Command{
 
 func watchConfig() {
 	for {
-		time.Sleep(time.Second * 5) // delay after each request
+		if period, err := time.ParseDuration(config.CfgWatchTimeout); err != nil {
+			config.Log.Infof("KV watch timeout parser error: %+v, use 5s", err)
+			time.Sleep(time.Second * 5) // default delay
+		} else {
+			time.Sleep(period)
+		}
 		tempConfig, err := config.TestConfig()
 		if err == nil {
 			if reflect.DeepEqual(config.Config, tempConfig) {
