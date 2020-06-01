@@ -2,15 +2,19 @@ package config
 
 import (
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/semaphore"
 	"net/http"
 )
 
 var (
-	ScheduleLoop int
-	Config       ConfigFile
-	Log          *logrus.Logger                              = logrus.New()
-	Checks       map[string]func(c *Check, p *Project) error = make(map[string]func(c *Check, p *Project) error)
-	Timeouts     TimeoutsCollection
+	ScheduleLoop               int
+	Config                     ConfigFile
+	Log                        *logrus.Logger                              = logrus.New()
+	Checks                     map[string]func(c *Check, p *Project) error = make(map[string]func(c *Check, p *Project) error)
+	Timeouts                   TimeoutsCollection
+	DebugLevel                 string
+	CfgFile, CfgSrc, CfgFormat string
+	Sem                        = semaphore.NewWeighted(int64(1))
 )
 
 type Parameters struct {

@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 	"strings"
 )
 
@@ -12,8 +13,7 @@ func LoadConfig() error {
 
 	tempConfig, err := TestConfig()
 	if err != nil {
-		Log.Infof("Using config file:", viper.ConfigFileUsed())
-		return err
+		Log.Infof("Using config file: %s", viper.ConfigFileUsed())
 	} else {
 		Config = tempConfig
 	}
@@ -25,13 +25,23 @@ func TestConfig() (ConfigFile, error) {
 
 	var tempConfig ConfigFile
 
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
-		//Log.Infof("Fatal error config file: %s \n", err)
-		return tempConfig, err
+	switch {
+	case CfgSrc == "" || CfgSrc == "file":
+		err := viper.ReadInConfig() // Find and read the config file
+		if err != nil {             // Handle errors reading the config file
+			//Log.Infof("Fatal error config file: %s \n", err)
+			return tempConfig, err
+		}
+
+	case CfgSrc == "consul":
+		err := viper.ReadRemoteConfig() // Find and read the config file
+		if err != nil {                 // Handle errors reading the config file
+			//Log.Infof("Fatal error config file: %s \n", err)
+			return tempConfig, err
+		}
 	}
 
-	dl, err := logrus.ParseLevel(viper.GetString("debugLevel"))
+	dl, err := logrus.ParseLevel(DebugLevel)
 	if err != nil {
 		//Log.Panicf("Cannot parse debug level: %v", err)
 		return tempConfig, err

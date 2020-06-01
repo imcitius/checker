@@ -68,12 +68,11 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 	http.HandleFunc("/healthcheck", healthCheck)
 	http.HandleFunc("/stats", RuntimeStats)
 
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			config.Log.Fatalf("ListenAndServe: %s", err)
-		} else {
-		}
-	}()
+	//go func() {
+	if err := server.ListenAndServe(); err != nil {
+		config.Log.Fatalf("ListenAndServe: %s", err)
+	}
+	//}()
 
 	//select {
 	//case <-webSignalCh:
