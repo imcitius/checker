@@ -212,7 +212,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 
 	go func() {
 		config.Log.Infof("Start listening telegram bots routine")
-		SendChatOpsMessage("Bot %s at your service (version)")
+		SendChatOpsMessage("Bot %s at your service" + fmt.Sprintf(" (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild))
 		bot.Start()
 	}()
 

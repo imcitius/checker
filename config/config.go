@@ -16,6 +16,9 @@ var (
 	CfgFile, CfgSrc, CfgFormat string
 	CfgWatchTimeout            string
 	Sem                        = semaphore.NewWeighted(int64(1))
+	Version                    string
+	VersionSHA                 string
+	VersionBuild               string
 )
 
 type Parameters struct {

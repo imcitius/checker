@@ -36,6 +36,12 @@ var (
 
 // Execute executes the root command.
 func Execute() error {
+	if config.Version != "" && config.VersionSHA != "" && config.VersionBuild != "" {
+		fmt.Printf("Start %s (commit: %s; build: %s)\n", config.Version, config.VersionSHA, config.VersionBuild)
+	} else {
+		fmt.Println("Start dev ")
+	}
+
 	return rootCmd.Execute()
 }
 

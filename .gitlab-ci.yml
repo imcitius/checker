@@ -18,3 +18,8 @@ include:
 dev instance:
   script:
     - /bin/true
+
+.build_inject_cmd: &build_inject_cmd |
+  go build -v -i -x --ldflags \
+  "-extldflags '-static' -X config.Version=${CI_COMMIT_REF_NAME} -X config.VersionSHA=${CI_COMMIT_SHORT_SHA} -X config.VersionBuild=${CI_JOB_ID}" \
+  -o build/${BINARY_NAME}
