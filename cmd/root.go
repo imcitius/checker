@@ -98,41 +98,15 @@ func initConfig() {
 
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	//if err := viper.ReadInConfig(); err == nil {
+	//	fmt.Println("Using config file:", viper.ConfigFileUsed())
+	//}
 
 	dl, err := logrus.ParseLevel(viper.GetString("debugLevel"))
 	if err != nil {
 		config.Log.Panicf("Cannot parse debug level: %v", err)
 	} else {
 		config.Log.SetLevel(dl)
-	}
-
-	err = config.LoadConfig()
-	if err != nil {
-		config.Log.Infof("Config load error: %s", err)
-	}
-
-	err = config.FillSecrets()
-	if err != nil {
-		panic(err)
-	}
-	err = config.FillDefaults()
-	if err != nil {
-		panic(err)
-	}
-	err = config.FillUUIDs()
-	if err != nil {
-		panic(err)
-	}
-	err = config.FillTimeouts()
-	if err != nil {
-		panic(err)
-	}
-	err = metrics.InitMetrics()
-	if err != nil {
-		panic(err)
 	}
 
 }
@@ -152,7 +126,18 @@ func mainChecker() {
 	for {
 		config.Log.Info("Start main loop")
 		interrupt = false
-		initConfig()
+
+		err := config.LoadConfig()
+		if err != nil {
+			config.Log.Infof("Config load error: %s", err)
+		} else {
+			config.Log.Debugf("Loaded config: %+v", config.Config)
+		}
+
+		err = metrics.InitMetrics()
+		if err != nil {
+			config.Log.Infof("Metrics init error: %s", err)
+		}
 
 		go signalWait()
 
@@ -205,7 +190,11 @@ var testCfg = &cobra.Command{
 	Short: "unmarshal config file into config structure",
 	Long:  `All software has versions. This is Hugo's`,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		config.Log.Infof("Config :\n%+v\n\n\n", config.Config)
+		_, err := config.TestConfig()
+		if err != nil {
+			config.Log.Infof("Config loading error: %+v", err)
+		} else {
+			config.Log.Infof("Config load ok (err: %+v)", err)
+		}
 	},
 }

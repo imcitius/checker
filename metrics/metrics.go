@@ -49,6 +49,7 @@ func init() {
 	Metrics.Alerts = make(map[string]*AlertMetrics)
 	Metrics.Checks = make(map[string]*CheckMetrics)
 	Metrics.Healthchecks = make(map[string]*HealtcheckMetrics)
+
 }
 
 func InitMetrics() error {

@@ -212,7 +212,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 
 	go func() {
 		config.Log.Infof("Start listening telegram bots routine")
-		SendChatOpsMessage("Bot %s at your service")
+		SendChatOpsMessage("Bot %s at your service (version)")
 		bot.Start()
 	}()
 
@@ -223,7 +223,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 }
 
 func SendTgMessage(alerttype string, a *config.AlertConfigs, e error) error {
-	config.Log.Debugf("Alert send: %s (alert details %+v)", e, a)
+	config.Log.Debugf("Sending alert, text: '%s' (alert channel %+v)", e, a.Name)
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  a.BotToken,
 		Poller: &tb.LongPoller{Timeout: 5 * time.Second},
@@ -232,11 +232,11 @@ func SendTgMessage(alerttype string, a *config.AlertConfigs, e error) error {
 		config.Log.Fatal(err)
 	}
 	user := tb.Chat{ID: a.ProjectChannel}
-	config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
+	//config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
 
 	_, err = bot.Send(&user, e.Error())
 	if err != nil {
-		config.Log.Warnf("sendTgMessage error: %v", err)
+		config.Log.Warnf("SendTgMessage error: %v", err)
 	} else {
 		config.Log.Debugf("sendTgMessage success")
 		metrics.AddAlertCounter(a, alerttype)
@@ -255,5 +255,8 @@ func GetTgCommandChannel() *config.AlertConfigs {
 
 func SendChatOpsMessage(text string) {
 	metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandAns++
-	SendTgMessage("report", GetTgCommandChannel(), errors.Errorf(text, GetTgCommandChannel().Name))
+	err := SendTgMessage("report", GetTgCommandChannel(), errors.Errorf(text, GetTgCommandChannel().Name))
+	if err != nil {
+		config.Log.Infof("SendTgMessage error: %s", err)
+	}
 }

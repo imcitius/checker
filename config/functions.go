@@ -10,21 +10,55 @@ import (
 
 func LoadConfig() error {
 
+	tempConfig, err := TestConfig()
+	if err != nil {
+		Log.Infof("Using config file:", viper.ConfigFileUsed())
+		return err
+	} else {
+		Config = tempConfig
+	}
+
+	return nil
+}
+
+func TestConfig() (ConfigFile, error) {
+
+	var tempConfig ConfigFile
+
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
-		Log.Panicf("Fatal error config file: %s \n", err)
+		//Log.Infof("Fatal error config file: %s \n", err)
+		return tempConfig, err
 	}
 
 	dl, err := logrus.ParseLevel(viper.GetString("debugLevel"))
 	if err != nil {
-		Log.Panicf("Cannot parse debug level: %v", err)
+		//Log.Panicf("Cannot parse debug level: %v", err)
+		return tempConfig, err
 	} else {
 		Log.SetLevel(dl)
 	}
 
-	viper.Unmarshal(&Config)
+	viper.Unmarshal(&tempConfig)
 
-	return nil
+	err = tempConfig.FillSecrets()
+	if err != nil {
+		return tempConfig, err
+	}
+	err = tempConfig.FillDefaults()
+	if err != nil {
+		return tempConfig, err
+	}
+	err = tempConfig.FillUUIDs()
+	if err != nil {
+		return tempConfig, err
+	}
+	err = tempConfig.FillTimeouts()
+	if err != nil {
+		return tempConfig, err
+	}
+
+	return tempConfig, nil
 }
 
 func (p *TimeoutsCollection) Add(period string) {
@@ -43,50 +77,50 @@ func (p *TimeoutsCollection) Add(period string) {
 	}
 }
 
-func FillDefaults() error {
+func (c *ConfigFile) FillDefaults() error {
 
 	//config.Log.Printf("Loaded config %+v\n\n", Config.Projects)
-	for i, project := range Config.Projects {
+	for i, project := range c.Projects {
 		if project.Parameters.RunEvery == "" {
-			project.Parameters.RunEvery = Config.Defaults.Parameters.RunEvery
+			project.Parameters.RunEvery = c.Defaults.Parameters.RunEvery
 		}
 		if project.Parameters.Mode == "" {
-			project.Parameters.Mode = Config.Defaults.Parameters.Mode
+			project.Parameters.Mode = c.Defaults.Parameters.Mode
 		}
 		if project.Parameters.AllowFails == 0 {
-			project.Parameters.AllowFails = Config.Defaults.Parameters.AllowFails
+			project.Parameters.AllowFails = c.Defaults.Parameters.AllowFails
 		}
 		if project.Parameters.MinHealth == 0 {
-			project.Parameters.MinHealth = Config.Defaults.Parameters.MinHealth
+			project.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
 		}
 		if project.Parameters.MinHealth == 0 {
-			project.Parameters.MinHealth = Config.Defaults.Parameters.MinHealth
+			project.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
 		}
 		if project.Parameters.Alert == "" {
-			project.Parameters.Alert = Config.Defaults.Parameters.Alert
+			project.Parameters.Alert = c.Defaults.Parameters.Alert
 		}
 		if project.Parameters.CritAlert == "" {
-			project.Parameters.CritAlert = Config.Defaults.Parameters.Alert
+			project.Parameters.CritAlert = c.Defaults.Parameters.Alert
 		}
 		if project.Parameters.PeriodicReport == "" {
-			project.Parameters.PeriodicReport = Config.Defaults.Parameters.PeriodicReport
+			project.Parameters.PeriodicReport = c.Defaults.Parameters.PeriodicReport
 		}
 		if project.Parameters.SSLExpirationPeriod == "" {
-			project.Parameters.SSLExpirationPeriod = Config.Defaults.Parameters.SSLExpirationPeriod
+			project.Parameters.SSLExpirationPeriod = c.Defaults.Parameters.SSLExpirationPeriod
 		}
-		Config.Projects[i] = project
+		c.Projects[i] = project
 	}
 
 	return nil
 }
 
-func FillUUIDs() error {
+func (c *ConfigFile) FillUUIDs() error {
 	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
-	for i := range Config.Projects {
-		for j := range Config.Projects[i].Healtchecks {
-			for k := range Config.Projects[i].Healtchecks[j].Checks {
-				u2 := uuid.NewSHA1(ns, []byte(Config.Projects[i].Healtchecks[j].Checks[k].Host))
-				Config.Projects[i].Healtchecks[j].Checks[k].UUid = u2.String()
+	for i := range c.Projects {
+		for j := range c.Projects[i].Healtchecks {
+			for k := range c.Projects[i].Healtchecks[j].Checks {
+				u2 := uuid.NewSHA1(ns, []byte(c.Projects[i].Healtchecks[j].Checks[k].Host))
+				c.Projects[i].Healtchecks[j].Checks[k].UUid = u2.String()
 			}
 		}
 	}
@@ -109,19 +143,16 @@ func (p *TimeoutCollection) Add(period string) {
 	}
 }
 
-func FillTimeouts() error {
+func (c *ConfigFile) FillTimeouts() error {
 	Timeouts.Add(Config.Defaults.Parameters.RunEvery)
 
-	for _, project := range Config.Projects {
+	for _, project := range c.Projects {
 
-		//config.Log.Debugf("Project name: %s", project.Name)
-		//config.Log.Debugf("Parameters: %+v", project.Parameters)
-
-		if project.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
+		if project.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
 			Timeouts.Add(project.Parameters.RunEvery)
 		}
 		for _, healthcheck := range project.Healtchecks {
-			if healthcheck.Parameters.RunEvery != Config.Defaults.Parameters.RunEvery {
+			if healthcheck.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
 				Timeouts.Add(healthcheck.Parameters.RunEvery)
 				project.Timeouts.Add(healthcheck.Parameters.RunEvery)
 			}
@@ -133,16 +164,16 @@ func FillTimeouts() error {
 	return nil
 }
 
-func FillSecrets() error {
+func (c *ConfigFile) FillSecrets() error {
 
-	for i, alert := range Config.Alerts {
+	for i, alert := range c.Alerts {
 		if strings.HasPrefix(alert.BotToken, "vault") {
 			vault := strings.Split(alert.BotToken, ":")
 			path := vault[1]
 			field := vault[2]
 			token, err := GetVaultSecret(path, field)
 			if err == nil {
-				Config.Alerts[i].BotToken = token
+				c.Alerts[i].BotToken = token
 			} else {
 				return fmt.Errorf("Error getting bot token from vault: %v", err)
 			}
