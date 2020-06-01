@@ -254,9 +254,7 @@ func watchConfig() {
 		}
 		tempConfig, err := config.TestConfig()
 		if err == nil {
-			if reflect.DeepEqual(config.Config, tempConfig) {
-				config.Log.Infof("KV config not changed: %s", err)
-			} else {
+			if !reflect.DeepEqual(config.Config, tempConfig) {
 				config.Log.Infof("KV config changed, reloading")
 				err := config.LoadConfig()
 				if err != nil {
