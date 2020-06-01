@@ -63,6 +63,7 @@ EOH
         data = <<EOH
 CONSUL_PATH = "configs/ks-1/checker/config"
 CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500"
+VAULT_ADDR = "https://vault.service.infra1.consul"
 EOH
         env = true
         destination = "secrets/.env"
@@ -73,10 +74,6 @@ EOH
         image = "{$ .P.image $}:{$ .P.version $}"
         network_mode = "weave"
         command = "/app/checker"
-
-        volumes = [
-          "local/config.json:/app/config.json"
-        ]
 
         args = [
           "check",
