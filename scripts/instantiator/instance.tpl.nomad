@@ -80,8 +80,10 @@ EOH
 
         args = [
           "check",
-          "--config",
-          "/app/config.json",
+          "--configsource",
+          "consul",
+          "--configformat",
+          "json"
         ]
 
         port_map = {
