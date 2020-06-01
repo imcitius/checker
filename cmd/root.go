@@ -119,7 +119,7 @@ func initConfig() {
 		}
 		viper.WatchConfig()
 		viper.OnConfigChange(func(e fsnotify.Event) {
-			config.Log.Infof("Config file changed: ", e.Name)
+			config.Log.Info("Config file changed: ", e.Name)
 			configChangeSig <- true
 
 		})
