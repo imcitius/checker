@@ -2,18 +2,21 @@ package config
 
 import (
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
+	"path/filepath"
+	"reflect"
 	"strings"
+	"time"
 )
 
 func LoadConfig() error {
 
 	tempConfig, err := TestConfig()
 	if err != nil {
-		Log.Infof("Using config file: %s", viper.ConfigFileUsed())
+		Log.Infof("Using config file: %s", Viper.ConfigFileUsed())
 	} else {
 		Config = tempConfig
 	}
@@ -27,21 +30,21 @@ func TestConfig() (ConfigFile, error) {
 
 	switch {
 	case CfgSrc == "" || CfgSrc == "file":
-		err := viper.ReadInConfig() // Find and read the config file
+		err := Viper.ReadInConfig() // Find and read the config file
 		if err != nil {             // Handle errors reading the config file
 			//Log.Infof("Fatal error config file: %s \n", err)
 			return tempConfig, err
 		}
 
 	case CfgSrc == "consul":
-		err := viper.ReadRemoteConfig() // Find and read the config file
+		err := Viper.ReadRemoteConfig() // Find and read the config file
 		if err != nil {                 // Handle errors reading the config file
 			//Log.Infof("Fatal error config file: %s \n", err)
 			return tempConfig, err
 		}
 	}
 
-	dl, err := logrus.ParseLevel(viper.GetString("debugLevel")) // viper is not loaded config at this point
+	dl, err := logrus.ParseLevel(Viper.GetString("debugLevel")) // viper is not loaded config at this point
 	if err != nil {
 		//Log.Panicf("Cannot parse debug level: %v", err)
 		return tempConfig, err
@@ -49,7 +52,7 @@ func TestConfig() (ConfigFile, error) {
 		Log.SetLevel(dl)
 	}
 
-	err = viper.Unmarshal(&tempConfig)
+	err = Viper.Unmarshal(&tempConfig)
 	if err != nil {
 		return tempConfig, err
 	}
@@ -92,7 +95,7 @@ func (p *TimeoutsCollection) Add(period string) {
 
 func (c *ConfigFile) FillDefaults() error {
 
-	//config.Log.Printf("Loaded config %+v\n\n", Config.Projects)
+	//Log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, project := range c.Projects {
 		if project.Parameters.RunEvery == "" {
 			project.Parameters.RunEvery = c.Defaults.Parameters.RunEvery
@@ -193,4 +196,90 @@ func (c *ConfigFile) FillSecrets() error {
 		}
 	}
 	return nil
+}
+
+func InitConfig() {
+
+	logrus.Info("initConfig: load config file")
+	logrus.Infof("Config flag: %s", CfgFile)
+
+	logrus.Infof("%s %s", Viper.GetString("CONSUL_ADDR"), Viper.GetString("CONSUL_PATH"))
+
+	switch {
+	case CfgSrc == "" || CfgSrc == "file":
+		if CfgFile == "" {
+			// Use config file from the flag.
+			Viper.SetConfigName("config")         // name of config file (without extension)
+			Viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
+			Viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
+			Viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
+			Viper.AddConfigPath(".")              // optionally look for config in the working directory
+
+		} else {
+			Viper.SetConfigName(filepath.Base(CfgFile)) // name of config file (without extension)
+			if filepath.Ext(CfgFile) == "" {
+				Viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
+			} else {
+				Viper.SetConfigType(filepath.Ext(CfgFile)[1:])
+			}
+			Viper.AddConfigPath(filepath.Dir(CfgFile)) // path to look for the config file in
+
+		}
+		Viper.WatchConfig()
+		Viper.OnConfigChange(func(e fsnotify.Event) {
+			Log.Info("Config file changed: ", e.Name)
+			ConfigChangeSig <- true
+
+		})
+
+	case CfgSrc == "consul":
+		if Viper.GetString("CONSUL_ADDR") != "" {
+			if Viper.GetString("CONSUL_PATH") != "" {
+				Viper.AddRemoteProvider("consul", Viper.GetString("CONSUL_ADDR"), Viper.GetString("CONSUL_PATH"))
+				Viper.SetConfigType("json")
+			} else {
+				panic("Consul path not specified")
+			}
+		} else {
+			panic("Consul URL not specified")
+		}
+	}
+
+	Viper.AutomaticEnv()
+
+	dl, err := logrus.ParseLevel(Viper.GetString("debugLevel"))
+	if err != nil {
+		Log.Panicf("Cannot parse debug level: %v", err)
+	} else {
+		Log.SetLevel(dl)
+	}
+
+}
+
+func WatchConfig() {
+	for {
+		if period, err := time.ParseDuration(CfgWatchTimeout); err != nil {
+			Log.Infof("KV watch timeout parser error: %+v, use 5s", err)
+			time.Sleep(time.Second * 5) // default delay
+		} else {
+			time.Sleep(period)
+		}
+		tempConfig, err := TestConfig()
+		if err == nil {
+			if !reflect.DeepEqual(Config, tempConfig) {
+				Log.Infof("KV config changed, reloading")
+				err := LoadConfig()
+				if err != nil {
+					Log.Infof("Config load error: %s", err)
+				} else {
+					Log.Debugf("Loaded config: %+v", Config)
+				}
+				ConfigChangeSig <- true
+			}
+		} else {
+			Log.Infof("KV config seems to be broken: %+v", err)
+		}
+
+		//configWatchSig <- true
+	}
 }

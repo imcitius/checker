@@ -2,8 +2,11 @@ package config
 
 import (
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"golang.org/x/sync/semaphore"
 	"net/http"
+	"os"
+	"sync"
 )
 
 var (
@@ -19,6 +22,12 @@ var (
 	Version                    string
 	VersionSHA                 string
 	VersionBuild               string
+
+	SignalINT, SignalHUP                                                                  chan os.Signal
+	ConfigChangeSig, ConfigWatchSig, DoneCh, SchedulerSignalCh, BotsSignalCh, WebSignalCh chan bool
+	Wg                                                                                    sync.WaitGroup
+
+	Viper *viper.Viper = viper.New()
 )
 
 type Parameters struct {
