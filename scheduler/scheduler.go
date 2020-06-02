@@ -3,7 +3,6 @@ package scheduler
 import (
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"github.com/teris-io/shortid"
 	"math"
 	"math/rand"
@@ -100,7 +99,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 	StartTime := time.Now()
 
-	timerStep, err := time.ParseDuration(viper.GetString("defaults.timer_step"))
+	timerStep, err := time.ParseDuration(config.Viper.GetString("defaults.timer_step"))
 	if err != nil {
 		config.Log.Fatal(err)
 	}
