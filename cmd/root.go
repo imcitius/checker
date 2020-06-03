@@ -10,6 +10,7 @@ import (
 	"my/checker/config"
 	"my/checker/metrics"
 	"my/checker/scheduler"
+	"my/checker/status"
 	"my/checker/web"
 	"os"
 	"os/signal"
@@ -181,6 +182,11 @@ func mainChecker() {
 			config.Log.Infof("Metrics init error: %s", err)
 		}
 
+		err = status.InitStatuses()
+		if err != nil {
+			config.Log.Infof("Metrics init error: %s", err)
+		}
+
 		go signalWait()
 
 		if config.Sem.TryAcquire(1) {
@@ -193,11 +199,12 @@ func mainChecker() {
 		wg.Add(1)
 		go scheduler.RunScheduler(schedulerSignalCh, &wg)
 
-		if viper.GetBool("botsEnabled") {
-			config.Log.Debugf("botsEnabled is %v", viper.GetBool("botsEnabled"))
-			wg.Add(1)
-			alerts.InitBots(botsSignalCh, &wg)
-		}
+			if viper.GetBool("botsEnabled") {
+			config.Log.Debugf("botsEnabled is %v", config.Viper.GetBool("botsEnabled"))
+			config.Wg.Add(1)
+			//alerts.InitBots(config.BotsSignalCh, &config.Wg)
+			alerts.GetAlertProto(alerts.GetCommandChannel()).InitBot(config.BotsSignalCh, &config.Wg)
+			}
 
 		wg.Wait()
 
