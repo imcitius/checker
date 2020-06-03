@@ -109,11 +109,11 @@ func (c *ConfigFile) FillDefaults() error {
 		if project.Parameters.MinHealth == 0 {
 			project.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
 		}
-		if project.Parameters.Alert == "" {
-			project.Parameters.Alert = c.Defaults.Parameters.Alert
+		if project.Parameters.AlertChannel == "" {
+			project.Parameters.AlertChannel = c.Defaults.Parameters.AlertChannel
 		}
-		if project.Parameters.CritAlert == "" {
-			project.Parameters.CritAlert = c.Defaults.Parameters.Alert
+		if project.Parameters.CritAlertChannel == "" {
+			project.Parameters.CritAlertChannel = c.Defaults.Parameters.AlertChannel
 		}
 		if project.Parameters.PeriodicReport == "" {
 			project.Parameters.PeriodicReport = c.Defaults.Parameters.PeriodicReport

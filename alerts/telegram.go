@@ -1,9 +1,8 @@
-package telegram
+package alerts
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	tb "gopkg.in/tucnak/telebot.v2"
 	checks "my/checker/checks"
 	"my/checker/config"
@@ -79,11 +78,44 @@ func (m TgMessage) GetUUID() string {
 	// WIP test and write error handling
 }
 
-func RunListenTgBot(token string, wg *sync.WaitGroup) {
+
+type Telegram struct {
+	Alerter
+}
+
+func (t Telegram) Send(a *config.AlertConfigs, message string) error {
+	config.Log.Debugf("Sending alert, text: '%s' (alert channel %+v)", message, a.Name)
+	bot, err := tb.NewBot(tb.Settings{
+		Token:  a.BotToken,
+		Poller: &tb.LongPoller{Timeout: 5 * time.Second},
+	})
+	if err != nil {
+		config.Log.Fatal(err)
+	}
+	user := tb.Chat{ID: a.ProjectChannel}
+	//config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
+
+	_, err = bot.Send(&user, message)
+	if err != nil {
+		config.Log.Warnf("SendTgMessage error: %v", err)
+	} else {
+		config.Log.Debugf("sendTgMessage success")
+		metrics.AddAlertCounter(a, "noncrit")
+	}
+
+	return err
+
+}
+
+
+func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
+
+	a := GetCommandChannel()
+
 	defer wg.Done()
 
 	bot, err := tb.NewBot(tb.Settings{
-		Token:  token,
+		Token:  a.BotToken,
 		Poller: &tb.LongPoller{Timeout: 5 * time.Second},
 	})
 
@@ -94,7 +126,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	bot.Handle("/pa", func(m *tb.Message) {
 		config.Log.Infof("Bot request /pa")
 
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
+		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		config.Config.Defaults.Parameters.Mode = "quiet"
 		answer := "All messages ceased"
 		bot.Send(m.Chat, answer)
@@ -103,14 +135,14 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	bot.Handle("/ua", func(m *tb.Message) {
 		config.Log.Infof("Bot request /ua")
 
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
+		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		config.Config.Defaults.Parameters.Mode = "loud"
 		answer := "All messages enabled"
 		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/pu", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
+		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -134,7 +166,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/uu", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
+		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -159,7 +191,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/pp", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
+		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -180,7 +212,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
+		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -201,7 +233,7 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/stats", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandReqs++
+		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 
 		config.Log.Infof("Bot request /stats from %s", m.Sender.Username)
 
@@ -212,51 +244,12 @@ func RunListenTgBot(token string, wg *sync.WaitGroup) {
 
 	go func() {
 		config.Log.Infof("Start listening telegram bots routine")
-		SendChatOpsMessage("Bot %s at your service" + fmt.Sprintf(" (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild))
+		SendChatOps("Bot %s at your service" + fmt.Sprintf(" (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild))
 		bot.Start()
 	}()
 
-	<-TgSignalCh
+	<-ch
 	bot.Stop()
 	config.Log.Infof("Exit listening telegram bots")
 	return
-}
-
-func SendTgMessage(alerttype string, a *config.AlertConfigs, e error) error {
-	config.Log.Debugf("Sending alert, text: '%s' (alert channel %+v)", e, a.Name)
-	bot, err := tb.NewBot(tb.Settings{
-		Token:  a.BotToken,
-		Poller: &tb.LongPoller{Timeout: 5 * time.Second},
-	})
-	if err != nil {
-		config.Log.Fatal(err)
-	}
-	user := tb.Chat{ID: a.ProjectChannel}
-	//config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
-
-	_, err = bot.Send(&user, e.Error())
-	if err != nil {
-		config.Log.Warnf("SendTgMessage error: %v", err)
-	} else {
-		config.Log.Debugf("sendTgMessage success")
-		metrics.AddAlertCounter(a, alerttype)
-	}
-	return err
-}
-
-func GetTgCommandChannel() *config.AlertConfigs {
-	for _, a := range config.Config.Alerts {
-		if a.Name == config.Config.Defaults.Parameters.CommandChannel {
-			return &a
-		}
-	}
-	return nil
-}
-
-func SendChatOpsMessage(text string) {
-	metrics.Metrics.Alerts[GetTgCommandChannel().Name].CommandAns++
-	err := SendTgMessage("report", GetTgCommandChannel(), errors.Errorf(text, GetTgCommandChannel().Name))
-	if err != nil {
-		config.Log.Infof("SendTgMessage error: %s", err)
-	}
 }

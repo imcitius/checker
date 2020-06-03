@@ -7,6 +7,7 @@ import (
 	"github.com/teris-io/shortid"
 	"math"
 	"math/rand"
+	"my/checker/alerts"
 	checks "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
@@ -133,6 +134,9 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					config.Log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
 
 					config.Log.Infof("Schedule: %s", timeout)
+
+					alerts.SendChatOps("test from scheduler")
+
 					go runChecks(timeout)
 					go runReports(timeout)
 					runAlerts(timeout)
