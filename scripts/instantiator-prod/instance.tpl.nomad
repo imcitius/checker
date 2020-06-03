@@ -61,7 +61,7 @@ EOH
 
       template {
         data = <<EOH
-CONSUL_PATH = "configs/ks-1/checker/testconfig"
+CONSUL_PATH = "configs/ks-1/checker/config"
 CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500"
 VAULT_ADDR = "https://vault.service.infra1.consul"
 EOH
