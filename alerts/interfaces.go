@@ -21,7 +21,7 @@ func GetAlertProto(a *config.AlertConfigs) Alerter {
 	return nil
 }
 
-func GetCommandChannel() *config.AlertConfigs{
+func GetCommandChannel() *config.AlertConfigs {
 	for _, a := range config.Config.Alerts {
 		if a.Name == config.Config.Defaults.Parameters.CommandChannel {
 			return &a
@@ -30,7 +30,7 @@ func GetCommandChannel() *config.AlertConfigs{
 	return nil
 }
 
-func GetProjectChannel(p *config.Project) *config.AlertConfigs{
+func GetProjectChannel(p *config.Project) *config.AlertConfigs {
 	for _, a := range config.Config.Alerts {
 		if a.Name == p.Parameters.AlertChannel {
 			return &a
@@ -39,7 +39,7 @@ func GetProjectChannel(p *config.Project) *config.AlertConfigs{
 	return nil
 }
 
-func GetCritChannel(p *config.Project) *config.AlertConfigs{
+func GetCritChannel(p *config.Project) *config.AlertConfigs {
 	for _, a := range config.Config.Alerts {
 		if a.Name == p.Parameters.CritAlertChannel {
 			return &a
@@ -72,11 +72,6 @@ func SendChatOps(text string) {
 	}
 }
 
-//func InitBots(ch chan bool, wg *sync.WaitGroup) {
-//
-//		GetAlertProto(GetCommandChannel()).InitBot(ch, wg)
-//}
-
 func Alert(a *config.AlertConfigs, text string) error {
 	err := GetAlertProto(a).Send(a, text)
 	if err != nil {
@@ -84,4 +79,3 @@ func Alert(a *config.AlertConfigs, text string) error {
 	}
 	return err
 }
-

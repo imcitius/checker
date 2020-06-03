@@ -1,9 +1,6 @@
 package project
 
 import (
-	"fmt"
-	alerts "my/checker/alerts"
-	checks "my/checker/checks"
 	config "my/checker/config"
 )
 
@@ -15,46 +12,11 @@ func GetMode(p *config.Project) string {
 	return p.Parameters.Mode
 }
 
-func Alert(p *config.Project, alerttype string, e error) {
-	config.Log.Debugf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
-	//config.Log.Printf("%+v", Config.Alerts)
-	if config.Config.Defaults.Parameters.Mode == "loud" && p.Parameters.Mode == "loud" {
-		if p.Parameters.Mode == "loud" {
-			alerts.Send(p, e.Error())
+func GetProjectByName(name string) *config.Project {
+	for _, project := range config.Config.Projects {
+		if project.Name == name {
+			return &project
 		}
-	}
-}
-
-func CritAlert(p *config.Project, alerttype string, e error) {
-	config.Log.Printf("Send critical alert for project: %+v with error %+v\n\n", p, e)
-	alerts.SendCrit(p, e.Error())
-}
-
-func SendReport(p *config.Project) error {
-	var (
-		ceasedChecks                []string
-		reportMessage, reportHeader string
-	)
-	for _, healthcheck := range p.Healtchecks {
-		for _, check := range healthcheck.Checks {
-			if check.Mode == "quiet" {
-				ceasedChecks = append(ceasedChecks, checks.UUID(&check))
-			}
-		}
-	}
-
-	if len(ceasedChecks) > 0 {
-		reportHeader = fmt.Sprintf("Project %s in %s state\n", GetName(p), GetMode(p))
-		reportMessage = reportHeader + fmt.Sprintf("Ceased checks: %v\n", ceasedChecks)
-	} else {
-		if p.Parameters.Mode == "quiet" {
-			reportMessage = fmt.Sprintf("Project %s in quiet state\n", GetName(p))
-		}
-	}
-
-	if reportMessage != "" || p.Parameters.Mode == "quiet" {
-
-		alerts.SendChatOps(reportMessage)
 	}
 	return nil
 }

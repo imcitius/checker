@@ -12,10 +12,9 @@ import (
 var (
 	ScheduleLoop               int
 	Config                     ConfigFile
-	Log                        *logrus.Logger                              = logrus.New()
-	Checks                     map[string]func(c *Check, p *Project) error = make(map[string]func(c *Check, p *Project) error)
+	Log                        = logrus.New()
+	Checks                     = make(map[string]func(c *Check, p *Project) error)
 	Timeouts                   TimeoutsCollection
-	DebugLevel                 string
 	CfgFile, CfgSrc, CfgFormat string
 	CfgWatchTimeout            string
 	Sem                        = semaphore.NewWeighted(int64(1))
@@ -23,11 +22,11 @@ var (
 	VersionSHA                 string
 	VersionBuild               string
 
-	SignalINT, SignalHUP                                                                  chan os.Signal
-	ConfigChangeSig, ConfigWatchSig, DoneCh, SchedulerSignalCh, BotsSignalCh, WebSignalCh chan bool
-	Wg                                                                                    sync.WaitGroup
+	SignalINT, SignalHUP                                          chan os.Signal
+	ConfigChangeSig, SchedulerSignalCh, BotsSignalCh, WebSignalCh chan bool
+	Wg                                                            sync.WaitGroup
 
-	Viper *viper.Viper = viper.New()
+	Viper = viper.New()
 )
 
 type Parameters struct {
@@ -41,8 +40,8 @@ type Parameters struct {
 	// how much consecutive critical checks may fail to consider not healthy
 	AllowFails int `mapstructure:"allow_fails"`
 	// alert name
-	Alert               string `mapstructure:"noncrit_alert"`
-	CritAlert           string `mapstructure:"crit_alert"`
+	AlertChannel        string `mapstructure:"noncrit_alert"`
+	CritAlertChannel    string `mapstructure:"crit_alert"`
 	CommandChannel      string `mapstructure:"command_channel"`
 	SSLExpirationPeriod string `mapstructure:"ssl_expiration_period"`
 }
@@ -70,6 +69,8 @@ type AlertConfigs struct {
 	CriticalChannel int64 `mapstructure:"critical_channel"`
 	// Empty by default, alerts will not be sent unless critical
 	ProjectChannel int64 `mapstructure:"noncritical_channel"`
+
+	MMWebHookURL string `mapstructure:"mattermost_webhook_url"`
 }
 
 type TimeoutsCollection struct {

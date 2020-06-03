@@ -1,21 +1,23 @@
 package status
 
 import (
-"my/checker/config"
+	"my/checker/config"
 )
 
 var (
 	MainStatus string
-    Statuses *StatusCollection
+	Statuses   *StatusCollection
 )
 
 type ProjectsStatuses struct {
 	Name   string
-	Status string
+	Mode   string // represent current alerting mode
+	Status string // represent current checks status
 }
 type CheckStatuses struct {
 	UUID   string
-	Status string
+	Mode   string // represent current alerting mode
+	Status string // represent current checks status
 }
 
 type StatusCollection struct {
@@ -34,7 +36,7 @@ func InitStatuses() error {
 	config.Log.Debug("Init status structures")
 
 	for _, p := range config.Config.Projects {
-		config.Log.Debugf("Init project %s metrics", p.Name)
+		config.Log.Debugf("Init project %s statuses", p.Name)
 
 		initProjectStatus(&p)
 

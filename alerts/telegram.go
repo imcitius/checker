@@ -7,6 +7,8 @@ import (
 	checks "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
+	projects "my/checker/projects"
+	"my/checker/status"
 	"regexp"
 	"sync"
 	"time"
@@ -78,7 +80,6 @@ func (m TgMessage) GetUUID() string {
 	// WIP test and write error handling
 }
 
-
 type Telegram struct {
 	Alerter
 }
@@ -107,7 +108,6 @@ func (t Telegram) Send(a *config.AlertConfigs, message string) error {
 
 }
 
-
 func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 	a := GetCommandChannel()
@@ -127,7 +127,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Infof("Bot request /pa")
 
 		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
-		config.Config.Defaults.Parameters.Mode = "quiet"
+		status.MainStatus = "quiet"
 		answer := "All messages ceased"
 		bot.Send(m.Chat, answer)
 	})
@@ -136,7 +136,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Infof("Bot request /ua")
 
 		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
-		config.Config.Defaults.Parameters.Mode = "loud"
+		status.MainStatus = "loud"
 		answer := "All messages enabled"
 		bot.Send(m.Chat, answer)
 	})
@@ -145,48 +145,27 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
+		uuID := tgMessage.GetUUID()
 
 		config.Log.Infof("Bot request /pu")
-
-		uuID := tgMessage.GetUUID()
 		config.Log.Printf("Pause req for UUID: %+v\n", uuID)
-		for _, project := range config.Config.Projects {
-			for _, healthcheck := range project.Healtchecks {
-				for _, check := range healthcheck.Checks {
-					if uuID == check.UUid {
-						_ = checks.CeaseAlerts(&check)
-					}
-				}
-			}
-		}
-		if err == nil {
-			answer := fmt.Sprintf("Messages ceased for UUID %v", uuID)
-			bot.Send(m.Chat, answer)
-		}
+		status.SetCheckMode(checks.GetCheckByUUID(uuID), "quiet")
+
+		answer := fmt.Sprintf("Messages ceased for UUID %v", uuID)
+		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/uu", func(m *tb.Message) {
 		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
-
-		config.Log.Infof("Bot request /uu")
-
 		uuID := tgMessage.GetUUID()
-		config.Log.Printf("Resume req for UUID: %+v\n", uuID)
-		for _, project := range config.Config.Projects {
-			for _, healthcheck := range project.Healtchecks {
-				for _, check := range healthcheck.Checks {
-					if uuID == check.UUid {
-						_ = checks.EnableAlerts(&check)
-					}
-				}
-			}
-		}
-		if err == nil {
-			answer := fmt.Sprintf("Messages resumed for UUID %v", uuID)
-			bot.Send(m.Chat, answer)
-		}
+		config.Log.Infof("Bot request /uu")
+		config.Log.Printf("Unpause req for UUID: %+v\n", uuID)
+		status.SetCheckMode(checks.GetCheckByUUID(uuID), "loud")
+
+		answer := fmt.Sprintf("Messages resumed for UUID %v", uuID)
+		bot.Send(m.Chat, answer)
 
 	})
 
@@ -196,18 +175,12 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		tgMessage = TgMessage{m}
 
 		config.Log.Infof("Bot request /pp")
-
-		projectName := tgMessage.GetProject()
+		projectName := projects.GetProjectByName(tgMessage.GetProject())
 		config.Log.Printf("Pause req for project: %s\n", projectName)
-		for _, project := range config.Config.Projects {
-			if projectName == project.Name {
-				_ = config.CeaseProjectAlerts(&project)
-			}
-		}
-		if err == nil {
-			answer := fmt.Sprintf("Messages ceased for project %s", projectName)
-			bot.Send(m.Chat, answer)
-		}
+		status.SetProjectMode(projectName, "loud")
+
+		answer := fmt.Sprintf("Messages ceased for project %s", projectName)
+		bot.Send(m.Chat, answer)
 
 	})
 
@@ -218,17 +191,12 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 		config.Log.Infof("Bot request /up")
 
-		projectName := tgMessage.GetProject()
+		projectName := projects.GetProjectByName(tgMessage.GetProject())
 		config.Log.Printf("Resume req for project: %s\n", projectName)
-		for _, project := range config.Config.Projects {
-			if projectName == project.Name {
-				_ = config.EnableProjectAlerts(&project)
-			}
-		}
-		if err == nil {
-			answer := fmt.Sprintf("Messages resumed for project %s", projectName)
-			bot.Send(m.Chat, answer)
-		}
+		status.SetProjectMode(projectName, "quiet")
+
+		answer := fmt.Sprintf("Messages resumed for project %s", projectName)
+		bot.Send(m.Chat, answer)
 
 	})
 

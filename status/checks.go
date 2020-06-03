@@ -8,3 +8,19 @@ func initCheckStatus(c *config.Check) {
 		Statuses.Checks[c.UUid].UUID = c.UUid
 	}
 }
+
+func GetCheckStatus(c *config.Check) string {
+	return Statuses.Checks[c.UUid].Status
+}
+
+func SetCheckStatus(c *config.Check, status string) {
+	Statuses.Checks[c.UUid].Status = status
+}
+
+func GetCheckMode(c *config.Check) string {
+	return Statuses.Checks[c.UUid].Mode
+}
+
+func SetCheckMode(c *config.Check, status string) {
+	Statuses.Checks[c.UUid].Mode = status
+}

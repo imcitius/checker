@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
 	"strings"
 )
@@ -13,7 +12,7 @@ func LoadConfig() error {
 
 	tempConfig, err := TestConfig()
 	if err != nil {
-		Log.Infof("Using config file: %s", viper.ConfigFileUsed())
+		Log.Infof("Using config file: %s", Viper.ConfigFileUsed())
 	} else {
 		Config = tempConfig
 	}
@@ -27,21 +26,21 @@ func TestConfig() (ConfigFile, error) {
 
 	switch {
 	case CfgSrc == "" || CfgSrc == "file":
-		err := viper.ReadInConfig() // Find and read the config file
+		err := Viper.ReadInConfig() // Find and read the config file
 		if err != nil {             // Handle errors reading the config file
 			//Log.Infof("Fatal error config file: %s \n", err)
 			return tempConfig, err
 		}
 
 	case CfgSrc == "consul":
-		err := viper.ReadRemoteConfig() // Find and read the config file
+		err := Viper.ReadRemoteConfig() // Find and read the config file
 		if err != nil {                 // Handle errors reading the config file
 			//Log.Infof("Fatal error config file: %s \n", err)
 			return tempConfig, err
 		}
 	}
 
-	dl, err := logrus.ParseLevel(viper.GetString("debugLevel")) // viper is not loaded config at this point
+	dl, err := logrus.ParseLevel(Viper.GetString("debugLevel"))
 	if err != nil {
 		//Log.Panicf("Cannot parse debug level: %v", err)
 		return tempConfig, err
@@ -49,7 +48,7 @@ func TestConfig() (ConfigFile, error) {
 		Log.SetLevel(dl)
 	}
 
-	err = viper.Unmarshal(&tempConfig)
+	err = Viper.Unmarshal(&tempConfig)
 	if err != nil {
 		return tempConfig, err
 	}
@@ -157,19 +156,21 @@ func (p *TimeoutCollection) Add(period string) {
 }
 
 func (c *ConfigFile) FillTimeouts() error {
-	Timeouts.Add(Config.Defaults.Parameters.RunEvery)
 
-	for _, project := range c.Projects {
+	defRunEvery := Viper.GetString("defaults.parameters.run_every")
+	Timeouts.Add(defRunEvery)
 
-		if project.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
-			Timeouts.Add(project.Parameters.RunEvery)
+	for _, p := range c.Projects {
+
+		if p.Parameters.RunEvery != defRunEvery {
+			Timeouts.Add(p.Parameters.RunEvery)
 		}
-		for _, healthcheck := range project.Healtchecks {
-			if healthcheck.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
-				Timeouts.Add(healthcheck.Parameters.RunEvery)
-				project.Timeouts.Add(healthcheck.Parameters.RunEvery)
+		for _, h := range p.Healtchecks {
+			if h.Parameters.RunEvery != defRunEvery {
+				Timeouts.Add(h.Parameters.RunEvery)
+				p.Timeouts.Add(h.Parameters.RunEvery)
 			}
-			Log.Debugf("Project %s timeouts found: %+v\n", project.Name, project.Timeouts)
+			Log.Debugf("Project %s timeouts found: %+v\n", p.Name, p.Timeouts)
 		}
 	}
 	Log.Debugf("Total timeouts found: %+v\n\n", Timeouts)

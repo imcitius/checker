@@ -5,7 +5,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"my/checker/alerts"
 	"my/checker/config"
 	"my/checker/metrics"
@@ -55,41 +54,41 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.CfgFormat, "configformat", "", "config file format: (default is yaml)")
 
 	rootCmd.PersistentFlags().StringP("debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
-	viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
+	config.Viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
 
 	rootCmd.PersistentFlags().Bool("bots", true, "start listening messenger bots")
-	viper.BindPFlag("botsEnabled", rootCmd.PersistentFlags().Lookup("bots"))
+	config.Viper.BindPFlag("botsEnabled", rootCmd.PersistentFlags().Lookup("bots"))
 
 	//rootCmd.PersistentFlags().StringVar(&consulAddr, "consul_addr", "", "Consul server address")
 	//rootCmd.PersistentFlags().StringVar(&consulPath, "consul_path", "", "Consul KV path to get config from")
 	//rootCmd.PersistentFlags().StringVar(&vaultAddr, "vault_addr", "", "Vault server address")
 	//rootCmd.PersistentFlags().StringVar(&vaultToken, "vault_token", "", "Vault token")
 
-	//viper.BindPFlag("vaultToken", rootCmd.PersistentFlags().Lookup("Vault_Token"))
-	//viper.BindPFlag("vaultAddr", rootCmd.PersistentFlags().Lookup("Vault_Address"))
-	//viper.BindPFlag("consulAddr", rootCmd.PersistentFlags().Lookup("Consul_Address"))
-	//viper.BindPFlag("consulPath", rootCmd.PersistentFlags().Lookup("Consul_Path"))
+	//config.Viper.BindPFlag("vaultToken", rootCmd.PersistentFlags().Lookup("Vault_Token"))
+	//config.Viper.BindPFlag("vaultAddr", rootCmd.PersistentFlags().Lookup("Vault_Address"))
+	//config.Viper.BindPFlag("consulAddr", rootCmd.PersistentFlags().Lookup("Consul_Address"))
+	//config.Viper.BindPFlag("consulPath", rootCmd.PersistentFlags().Lookup("Consul_Path"))
 
-	viper.BindEnv("VAULT_TOKEN")
-	viper.BindEnv("VAULT_ADDR")
-	viper.BindEnv("CONSUL_ADDR")
-	viper.BindEnv("CONSUL_PATH")
+	config.Viper.BindEnv("VAULT_TOKEN")
+	config.Viper.BindEnv("VAULT_ADDR")
+	config.Viper.BindEnv("CONSUL_ADDR")
+	config.Viper.BindEnv("CONSUL_PATH")
 
-	viper.SetDefault("HTTPPort", "80")
+	config.Viper.SetDefault("HTTPPort", "80")
 
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
 
-	signalINT = make(chan os.Signal)
-	signalHUP = make(chan os.Signal)
-	doneCh = make(chan bool)
-	schedulerSignalCh = make(chan bool)
-	webSignalCh = make(chan bool)
-	configChangeSig = make(chan bool)
-	configWatchSig = make(chan bool)
-	botsSignalCh = make(chan bool)
-	signal.Notify(signalINT, syscall.SIGINT)
-	signal.Notify(signalHUP, syscall.SIGHUP)
+	config.SignalINT = make(chan os.Signal)
+	config.SignalHUP = make(chan os.Signal)
+	//config.DoneCh = make(chan bool)
+	config.SchedulerSignalCh = make(chan bool)
+	config.WebSignalCh = make(chan bool)
+	config.ConfigChangeSig = make(chan bool)
+	//config.ConfigWatchSig = make(chan bool)
+	config.BotsSignalCh = make(chan bool)
+	signal.Notify(config.SignalINT, syscall.SIGINT)
+	signal.Notify(config.SignalHUP, syscall.SIGHUP)
 }
 
 func er(msg interface{}) {
@@ -102,40 +101,40 @@ func initConfig() {
 	logrus.Info("initConfig: load config file")
 	logrus.Infof("Config flag: %s", config.CfgFile)
 
-	logrus.Infof("%s %s", viper.GetString("CONSUL_ADDR"), viper.GetString("CONSUL_PATH"))
+	logrus.Infof("%s %s", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
 
 	switch {
 	case config.CfgSrc == "" || config.CfgSrc == "file":
 		if config.CfgFile == "" {
 			// Use config file from the flag.
-			viper.SetConfigName("config")         // name of config file (without extension)
-			viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
-			viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
-			viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
-			viper.AddConfigPath(".")              // optionally look for config in the working directory
+			config.Viper.SetConfigName("config")         // name of config file (without extension)
+			config.Viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
+			config.Viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
+			config.Viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
+			config.Viper.AddConfigPath(".")              // optionally look for config in the working directory
 
 		} else {
-			viper.SetConfigName(filepath.Base(config.CfgFile)) // name of config file (without extension)
+			config.Viper.SetConfigName(filepath.Base(config.CfgFile)) // name of config file (without extension)
 			if filepath.Ext(config.CfgFile) == "" {
-				viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
+				config.Viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
 			} else {
-				viper.SetConfigType(filepath.Ext(config.CfgFile)[1:])
+				config.Viper.SetConfigType(filepath.Ext(config.CfgFile)[1:])
 			}
-			viper.AddConfigPath(filepath.Dir(config.CfgFile)) // path to look for the config file in
+			config.Viper.AddConfigPath(filepath.Dir(config.CfgFile)) // path to look for the config file in
 
 		}
-		viper.WatchConfig()
-		viper.OnConfigChange(func(e fsnotify.Event) {
+		config.Viper.WatchConfig()
+		config.Viper.OnConfigChange(func(e fsnotify.Event) {
 			config.Log.Info("Config file changed: ", e.Name)
 			configChangeSig <- true
 
 		})
 
 	case config.CfgSrc == "consul":
-		if viper.GetString("CONSUL_ADDR") != "" {
-			if viper.GetString("CONSUL_PATH") != "" {
-				viper.AddRemoteProvider("consul", viper.GetString("CONSUL_ADDR"), viper.GetString("CONSUL_PATH"))
-				viper.SetConfigType("json")
+		if config.Viper.GetString("CONSUL_ADDR") != "" {
+			if config.Viper.GetString("CONSUL_PATH") != "" {
+				config.Viper.AddRemoteProvider("consul", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
+				config.Viper.SetConfigType("json")
 			} else {
 				panic("Consul path not specified")
 			}
@@ -144,9 +143,9 @@ func initConfig() {
 		}
 	}
 
-	viper.AutomaticEnv()
+	config.Viper.AutomaticEnv()
 
-	dl, err := logrus.ParseLevel(viper.GetString("debugLevel"))
+	dl, err := logrus.ParseLevel(config.Viper.GetString("debugLevel"))
 	if err != nil {
 		config.Log.Panicf("Cannot parse debug level: %v", err)
 	} else {
@@ -174,7 +173,7 @@ func mainChecker() {
 		if err != nil {
 			config.Log.Infof("Config load error: %s", err)
 		} else {
-			config.Log.Debugf("Loaded config: %+v", config.Config)
+			config.Log.Debugf("(mainChecker) Loaded config: %+v", config.Config)
 		}
 
 		err = metrics.InitMetrics()
@@ -184,28 +183,30 @@ func mainChecker() {
 
 		err = status.InitStatuses()
 		if err != nil {
-			config.Log.Infof("Metrics init error: %s", err)
+			config.Log.Infof("Status init error: %s", err)
 		}
 
 		go signalWait()
 
 		if config.Sem.TryAcquire(1) {
 			config.Log.Debugf("Fire webserver")
-			go web.WebInterface(webSignalCh, config.Sem)
+			go web.WebInterface(config.WebSignalCh, config.Sem)
 		} else {
 			config.Log.Debugf("Webserver already running")
 		}
 
 		wg.Add(1)
-		go scheduler.RunScheduler(schedulerSignalCh, &wg)
+		config.Log.Debugf("Fire scheduler")
+		go scheduler.RunScheduler(config.SchedulerSignalCh, &wg)
 
-			if viper.GetBool("botsEnabled") {
-			config.Log.Debugf("botsEnabled is %v", config.Viper.GetBool("botsEnabled"))
+		config.Log.Debugf("botsEnabled is %v", config.Viper.GetBool("botsEnabled"))
+		if config.Viper.GetBool("botsEnabled") {
+			config.Log.Debugf("Fire bots")
 			config.Wg.Add(1)
 			//alerts.InitBots(config.BotsSignalCh, &config.Wg)
 			alerts.GetAlertProto(alerts.GetCommandChannel()).InitBot(config.BotsSignalCh, &config.Wg)
-			}
-
+		}
+		config.Log.Debug("Checker init complete")
 		wg.Wait()
 
 		if interrupt {
@@ -215,24 +216,25 @@ func mainChecker() {
 }
 
 func signalWait() {
+	config.Log.Debug("Start waiting signals")
 	select {
-	case <-signalINT:
+	case <-config.SignalINT:
 		config.Log.Infof("Got SIGINT")
 		interrupt = true
-		if viper.GetBool("botsEnabled") {
-			botsSignalCh <- true
+		if config.Viper.GetBool("botsEnabled") {
+			config.BotsSignalCh <- true
 		}
-		schedulerSignalCh <- true
-		webSignalCh <- true
-	case <-signalHUP:
+		config.SchedulerSignalCh <- true
+		config.WebSignalCh <- true
+	case <-config.SignalHUP:
 		config.Log.Infof("Got SIGHUP")
-		configChangeSig <- true
-	case <-configChangeSig:
+		config.ConfigChangeSig <- true
+	case <-config.ConfigChangeSig:
 		config.Log.Infof("Config file reload")
-		schedulerSignalCh <- true
-		//webSignalCh <- true
-		if viper.GetBool("botsEnabled") {
-			botsSignalCh <- true
+		config.SchedulerSignalCh <- true
+		//config.WebSignalCh <- true
+		if config.Viper.GetBool("botsEnabled") {
+			config.BotsSignalCh <- true
 		}
 	}
 }
@@ -267,9 +269,9 @@ func watchConfig() {
 				if err != nil {
 					config.Log.Infof("Config load error: %s", err)
 				} else {
-					config.Log.Debugf("Loaded config: %+v", config.Config)
+					config.Log.Debugf("(watchConfig) Loaded config: %+v", config.Config)
 				}
-				configChangeSig <- true
+				config.ConfigChangeSig <- true
 			}
 		} else {
 			config.Log.Infof("KV config seems to be broken: %+v", err)
