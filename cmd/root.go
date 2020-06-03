@@ -41,7 +41,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "config", "config file (default is ./config.yaml)")
 	rootCmd.PersistentFlags().StringVar(&config.CfgSrc, "configsource", "", "config file source: file or consul (default is file)")
 	rootCmd.PersistentFlags().StringVar(&config.CfgWatchTimeout, "configwatchtimeout", "5s", "config watch period (default '5s')")
-	rootCmd.PersistentFlags().StringVar(&config.CfgFormat, "configformat", "", "config file format: (default is yaml)")
+	rootCmd.PersistentFlags().StringVar(&config.CfgFormat, "configformat", "yaml", "config file format: (default is yaml)")
 
 	rootCmd.PersistentFlags().StringP("debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	config.Viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
