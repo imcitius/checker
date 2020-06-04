@@ -2,15 +2,21 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fsnotify/fsnotify"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"my/checker/alerts"
 	"my/checker/config"
 	"my/checker/metrics"
 	"my/checker/scheduler"
+	"my/checker/status"
 	"my/checker/web"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"reflect"
 	"syscall"
+	"time"
 )
 
 var (
@@ -71,11 +77,11 @@ func init() {
 
 	config.SignalINT = make(chan os.Signal)
 	config.SignalHUP = make(chan os.Signal)
-	config.DoneCh = make(chan bool)
+	//config.DoneCh = make(chan bool)
 	config.SchedulerSignalCh = make(chan bool)
 	config.WebSignalCh = make(chan bool)
 	config.ConfigChangeSig = make(chan bool)
-	config.ConfigWatchSig = make(chan bool)
+	//config.ConfigWatchSig = make(chan bool)
 	config.BotsSignalCh = make(chan bool)
 	signal.Notify(config.SignalINT, syscall.SIGINT)
 	signal.Notify(config.SignalHUP, syscall.SIGHUP)
@@ -84,6 +90,64 @@ func init() {
 func er(msg interface{}) {
 	fmt.Println("Error:", msg)
 	os.Exit(1)
+}
+
+func initConfig() {
+
+	logrus.Info("initConfig: load config file")
+	logrus.Infof("Config flag: %s", config.CfgFile)
+
+	logrus.Infof("%s %s", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
+
+	switch {
+	case config.CfgSrc == "" || config.CfgSrc == "file":
+		if config.CfgFile == "" {
+			// Use config file from the flag.
+			config.Viper.SetConfigName("config")         // name of config file (without extension)
+			config.Viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
+			config.Viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
+			config.Viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
+			config.Viper.AddConfigPath(".")              // optionally look for config in the working directory
+
+		} else {
+			config.Viper.SetConfigName(filepath.Base(config.CfgFile)) // name of config file (without extension)
+			if filepath.Ext(config.CfgFile) == "" {
+				config.Viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
+			} else {
+				config.Viper.SetConfigType(filepath.Ext(config.CfgFile)[1:])
+			}
+			config.Viper.AddConfigPath(filepath.Dir(config.CfgFile)) // path to look for the config file in
+
+		}
+		config.Viper.WatchConfig()
+		config.Viper.OnConfigChange(func(e fsnotify.Event) {
+			config.Log.Info("Config file changed: ", e.Name)
+			config.ConfigChangeSig <- true
+
+		})
+
+	case config.CfgSrc == "consul":
+		if config.Viper.GetString("CONSUL_ADDR") != "" {
+			if config.Viper.GetString("CONSUL_PATH") != "" {
+				config.Viper.AddRemoteProvider("consul", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
+				config.Viper.SetConfigType("json")
+			} else {
+				panic("Consul path not specified")
+			}
+		} else {
+			panic("Consul URL not specified")
+		}
+	}
+
+	config.Viper.AutomaticEnv()
+
+	dl, err := logrus.ParseLevel(config.Viper.GetString("debugLevel"))
+	if err != nil {
+		config.Log.Panicf("Cannot parse debug level: %v", err)
+	} else {
+		config.Log.SetLevel(dl)
+	}
+
 }
 
 var checkCommand = &cobra.Command{
@@ -114,12 +178,17 @@ func mainChecker() {
 		if err != nil {
 			config.Log.Infof("Config load error: %s", err)
 		} else {
-			config.Log.Debugf("Loaded config: %+v", config.Config)
+			config.Log.Debugf("(mainChecker) Loaded config: %+v", config.Config)
 		}
 
 		err = metrics.InitMetrics()
 		if err != nil {
 			config.Log.Infof("Metrics init error: %s", err)
+		}
+
+		err = status.InitStatuses()
+		if err != nil {
+			config.Log.Infof("Status init error: %s", err)
 		}
 
 		go signalWait()
@@ -132,14 +201,17 @@ func mainChecker() {
 		}
 
 		config.Wg.Add(1)
+		config.Log.Debugf("Fire scheduler")
 		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
+		config.Log.Debugf("botsEnabled is %v", config.Viper.GetBool("botsEnabled"))
 		if config.Viper.GetBool("botsEnabled") {
-			config.Log.Debugf("botsEnabled is %v", config.Viper.GetBool("botsEnabled"))
+			config.Log.Debugf("Fire bots")
 			config.Wg.Add(1)
-			alerts.InitBots(config.BotsSignalCh, &config.Wg)
+			//alerts.InitBots(config.BotsSignalCh, &config.Wg)
+			alerts.GetAlertProto(alerts.GetCommandChannel()).InitBot(config.BotsSignalCh, &config.Wg)
 		}
-
+		config.Log.Debug("Checker init complete")
 		config.Wg.Wait()
 
 		if interrupt {
@@ -158,6 +230,7 @@ func testConfig() {
 }
 
 func signalWait() {
+	config.Log.Debug("Start waiting signals")
 	select {
 	case <-config.SignalINT:
 		config.Log.Infof("Got SIGINT")
@@ -173,9 +246,37 @@ func signalWait() {
 	case <-config.ConfigChangeSig:
 		config.Log.Infof("Config file reload")
 		config.SchedulerSignalCh <- true
-		//webSignalCh <- true
+		//config.WebSignalCh <- true
 		if config.Viper.GetBool("botsEnabled") {
 			config.BotsSignalCh <- true
 		}
+	}
+}
+
+func watchConfig() {
+	for {
+		if period, err := time.ParseDuration(config.CfgWatchTimeout); err != nil {
+			config.Log.Infof("KV watch timeout parser error: %+v, use 5s", err)
+			time.Sleep(time.Second * 5) // default delay
+		} else {
+			time.Sleep(period)
+		}
+		tempConfig, err := config.TestConfig()
+		if err == nil {
+			if !reflect.DeepEqual(config.Config, tempConfig) {
+				config.Log.Infof("KV config changed, reloading")
+				err := config.LoadConfig()
+				if err != nil {
+					config.Log.Infof("Config load error: %s", err)
+				} else {
+					config.Log.Debugf("(watchConfig) Loaded config: %+v", config.Config)
+				}
+				config.ConfigChangeSig <- true
+			}
+		} else {
+			config.Log.Infof("KV config seems to be broken: %+v", err)
+		}
+
+		//configWatchSig <- true
 	}
 }

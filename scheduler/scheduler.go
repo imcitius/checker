@@ -6,16 +6,17 @@ import (
 	"github.com/teris-io/shortid"
 	"math"
 	"math/rand"
+	"my/checker/alerts"
 	checks "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
-	projects "my/checker/projects"
+	"my/checker/status"
 	"sync"
 	"time"
 )
 
-var Metrics *metrics.MetricsCollection = metrics.Metrics
-var Config *config.ConfigFile = &config.Config
+var Metrics = metrics.Metrics
+var Config = &config.Config
 
 func getRandomId() string {
 	sid, _ := shortid.New(1, shortid.DefaultABC, rand.Uint64())
@@ -27,12 +28,11 @@ func runReports(timeout string) {
 	config.Log.Debug("runReports")
 	for _, project := range Config.Projects {
 		if project.Parameters.PeriodicReport == timeout {
-			err := projects.SendReport(&project)
+			err := alerts.ProjectSendReport(&project)
 			if err != nil {
 				config.Log.Printf("Cannot send report for project %s: %+v", project.Name, err)
 			}
 		}
-		projects.SendReport(&project)
 	}
 }
 
@@ -47,7 +47,7 @@ func runAlerts(timeout string) {
 			}
 			if Metrics.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
-				projects.CritAlert(&project, "crit", errors.New(errorMessage))
+				alerts.ProjectCritAlert(&project, errors.New(errorMessage))
 			}
 		}
 	}
@@ -75,8 +75,9 @@ func runChecks(timeout string) {
 					if tempErr != nil {
 						err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
 						config.Log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
-						if check.Mode != "quiet" {
-							projects.Alert(&project, "noncrit", err)
+						//config.Log.Infof("Check mode: %s", status.GetCheckMode(&check))
+						if status.GetCheckMode(&check) != "quiet" {
+							alerts.ProjectAlert(&project, err)
 						}
 						Metrics.Projects[project.Name].SeqErrorsCount++
 						Metrics.Projects[project.Name].ErrorsCount++
@@ -132,6 +133,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					config.Log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
 
 					config.Log.Infof("Schedule: %s", timeout)
+
 					go runChecks(timeout)
 					go runReports(timeout)
 					runAlerts(timeout)

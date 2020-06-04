@@ -44,7 +44,7 @@ func TestConfig() (ConfigFile, error) {
 		}
 	}
 
-	dl, err := logrus.ParseLevel(Viper.GetString("debugLevel")) // viper is not loaded config at this point
+	dl, err := logrus.ParseLevel(Viper.GetString("debugLevel"))
 	if err != nil {
 		//Log.Panicf("Cannot parse debug level: %v", err)
 		return tempConfig, err
@@ -112,11 +112,11 @@ func (c *ConfigFile) FillDefaults() error {
 		if project.Parameters.MinHealth == 0 {
 			project.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
 		}
-		if project.Parameters.Alert == "" {
-			project.Parameters.Alert = c.Defaults.Parameters.Alert
+		if project.Parameters.AlertChannel == "" {
+			project.Parameters.AlertChannel = c.Defaults.Parameters.AlertChannel
 		}
-		if project.Parameters.CritAlert == "" {
-			project.Parameters.CritAlert = c.Defaults.Parameters.Alert
+		if project.Parameters.CritAlertChannel == "" {
+			project.Parameters.CritAlertChannel = c.Defaults.Parameters.AlertChannel
 		}
 		if project.Parameters.PeriodicReport == "" {
 			project.Parameters.PeriodicReport = c.Defaults.Parameters.PeriodicReport
@@ -160,19 +160,21 @@ func (p *TimeoutCollection) Add(period string) {
 }
 
 func (c *ConfigFile) FillTimeouts() error {
-	Timeouts.Add(Config.Defaults.Parameters.RunEvery)
 
-	for _, project := range c.Projects {
+	defRunEvery := Viper.GetString("defaults.parameters.run_every")
+	Timeouts.Add(defRunEvery)
 
-		if project.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
-			Timeouts.Add(project.Parameters.RunEvery)
+	for _, p := range c.Projects {
+
+		if p.Parameters.RunEvery != defRunEvery {
+			Timeouts.Add(p.Parameters.RunEvery)
 		}
-		for _, healthcheck := range project.Healtchecks {
-			if healthcheck.Parameters.RunEvery != c.Defaults.Parameters.RunEvery {
-				Timeouts.Add(healthcheck.Parameters.RunEvery)
-				project.Timeouts.Add(healthcheck.Parameters.RunEvery)
+		for _, h := range p.Healtchecks {
+			if h.Parameters.RunEvery != defRunEvery {
+				Timeouts.Add(h.Parameters.RunEvery)
+				p.Timeouts.Add(h.Parameters.RunEvery)
 			}
-			Log.Debugf("Project %s timeouts found: %+v\n", project.Name, project.Timeouts)
+			Log.Debugf("Project %s timeouts found: %+v\n", p.Name, p.Timeouts)
 		}
 	}
 	Log.Debugf("Total timeouts found: %+v\n\n", Timeouts)

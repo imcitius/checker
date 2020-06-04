@@ -3,6 +3,7 @@ package check
 import (
 	"fmt"
 	"my/checker/config"
+	"my/checker/status"
 	"regexp"
 )
 
@@ -26,6 +27,18 @@ func UUID(c *config.Check) string {
 	return c.UUid
 }
 
+func GetCheckByUUID(uuid string) *config.Check {
+	for _, project := range config.Config.Projects {
+		for _, healthcheck := range project.Healtchecks {
+			for _, check := range healthcheck.Checks {
+				if uuid == check.UUid {
+					return &check
+				}
+			}
+		}
+	}
+	return nil
+}
 func GetCheckScheme(c *config.Check) string {
 	pattern := regexp.MustCompile("(.*)://")
 	result := pattern.FindStringSubmatch(c.Host)
@@ -38,14 +51,14 @@ func HostName(c *config.Check) string {
 
 func CeaseAlerts(c *config.Check) error {
 	config.Log.Printf("Old mode: %s", c.Mode)
-	c.Mode = "quiet"
+	status.SetCheckMode(c, "quiet")
 	config.Log.Printf("New mode: %s", c.Mode)
 	return nil
 }
 
 func EnableAlerts(c *config.Check) error {
 	config.Log.Printf("Old mode: %s", c.Mode)
-	c.Mode = "loud"
+	status.SetCheckMode(c, "loud")
 	config.Log.Printf("New mode: %s", c.Mode)
 	return nil
 }

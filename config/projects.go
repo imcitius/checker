@@ -1,6 +1,5 @@
 package config
 
-
 func CeaseProjectAlerts(p *Project) error {
 	Log.Printf("Old mode: %s", p.Parameters.Mode)
 	p.Parameters.Mode = "quiet"
@@ -11,6 +10,6 @@ func CeaseProjectAlerts(p *Project) error {
 func EnableProjectAlerts(p *Project) error {
 	Log.Printf("Old mode: %s", p.Parameters.Mode)
 	p.Parameters.Mode = "loud"
-	Log.Printf("New mode: %s", p.Parameters.Mode)
+	Log.Printf("New GetCommandChannel: %s", p.Parameters.Mode)
 	return nil
 }
