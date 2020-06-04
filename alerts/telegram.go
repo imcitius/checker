@@ -175,11 +175,11 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		tgMessage = TgMessage{m}
 
 		config.Log.Infof("Bot request /pp")
-		projectName := projects.GetProjectByName(tgMessage.GetProject())
-		config.Log.Printf("Pause req for project: %s\n", projectName)
-		status.SetProjectMode(projectName, "loud")
+		project := projects.GetProjectByName(tgMessage.GetProject())
+		config.Log.Printf("Pause req for project: %s\n", tgMessage.GetProject())
+		status.SetProjectMode(project, "loud")
 
-		answer := fmt.Sprintf("Messages ceased for project %s", projectName)
+		answer := fmt.Sprintf("Messages ceased for project %s", tgMessage.GetProject())
 		bot.Send(m.Chat, answer)
 
 	})
@@ -192,10 +192,10 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Infof("Bot request /up")
 
 		projectName := projects.GetProjectByName(tgMessage.GetProject())
-		config.Log.Printf("Resume req for project: %s\n", projectName)
+		config.Log.Printf("Resume req for project: %s\n", tgMessage.GetProject())
 		status.SetProjectMode(projectName, "quiet")
 
-		answer := fmt.Sprintf("Messages resumed for project %s", projectName)
+		answer := fmt.Sprintf("Messages resumed for project %s", tgMessage.GetProject())
 		bot.Send(m.Chat, answer)
 
 	})

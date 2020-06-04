@@ -2,7 +2,6 @@ package check
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	_ "github.com/ClickHouse/clickhouse-go"
 	"my/checker/config"
@@ -10,11 +9,11 @@ import (
 )
 
 func init() {
-	config.Checks["clickhouse_query"] = func (c *config.Check, p *config.Project) error {
+	config.Checks["clickhouse_query"] = func(c *config.Check, p *config.Project) error {
 
 		var (
 			query, id string
-			dbPort  int
+			dbPort    int
 		)
 		//var items interface{}
 
@@ -63,7 +62,7 @@ func init() {
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
-				err = errors.New(fmt.Sprintf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response))
+				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
 				return err
 			}
 		}
@@ -71,11 +70,11 @@ func init() {
 		return nil
 	}
 
-	config.Checks["clickhouse_query_unixtime"] = func (c *config.Check, p *config.Project) error {
+	config.Checks["clickhouse_query_unixtime"] = func(c *config.Check, p *config.Project) error {
 
 		var (
-			query string
-			id   int64
+			query  string
+			id     int64
 			dbPort int
 		)
 

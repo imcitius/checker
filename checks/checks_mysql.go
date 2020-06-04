@@ -2,7 +2,6 @@ package check
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"math/rand"
@@ -11,11 +10,11 @@ import (
 )
 
 func init() {
-	config.Checks["mysql_query"] = func (c *config.Check, p *config.Project) error {
+	config.Checks["mysql_query"] = func(c *config.Check, p *config.Project) error {
 
 		var (
 			id, query string
-			dbport  int
+			dbport    int
 		)
 
 		dbuser := c.SqlQueryConfig.UserName
@@ -63,7 +62,7 @@ func init() {
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
-				err = errors.New(fmt.Sprintf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response))
+				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
 				return err
 			}
 		}
@@ -71,11 +70,11 @@ func init() {
 		return nil
 	}
 
-	config.Checks["mysql_query_unixtime"] = func (c *config.Check, p *config.Project) error {
+	config.Checks["mysql_query_unixtime"] = func(c *config.Check, p *config.Project) error {
 
 		var (
-			id   int64
-			query string
+			id     int64
+			query  string
 			dbport int
 		)
 
@@ -139,7 +138,7 @@ func init() {
 		return nil
 	}
 
-	config.Checks["mysql_replication"] = func (c *config.Check, p *config.Project) error {
+	config.Checks["mysql_replication"] = func(c *config.Check, p *config.Project) error {
 
 		var dbPort, recordId, recordValue, id int
 
@@ -225,7 +224,7 @@ func init() {
 
 			if c.SqlQueryConfig.Response != "" {
 				if id != recordValue {
-					err = errors.New(fmt.Sprintf("Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server))
+					err = fmt.Errorf("Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
 					return err
 				}
 			}
