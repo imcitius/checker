@@ -17,6 +17,8 @@ func init() {
 			dbPort    int
 		)
 
+		errorHeader := fmt.Sprintf("PGSQL query error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+
 		dbUser := c.SqlQueryConfig.UserName
 		dbPassword := c.SqlQueryConfig.Password
 		dbHost := c.Host
@@ -45,25 +47,25 @@ func init() {
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
 			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.Ping()
 		if err != nil {
 			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
 			config.Log.Printf("Error: Could not query database: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
 				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
-				return err
+				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}
 
@@ -77,6 +79,8 @@ func init() {
 			query  string
 			dbPort int
 		)
+
+		errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
 		dbUser := c.SqlQueryConfig.UserName
 		dbPassword := c.SqlQueryConfig.Password
@@ -111,19 +115,19 @@ func init() {
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
 			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.Ping()
 		if err != nil {
 			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
 			config.Log.Printf("Error: Could not query database: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		if dif > 0 {
@@ -131,7 +135,7 @@ func init() {
 			curDif := time.Now().Sub(lastRecord)
 			if curDif > dif {
 				err := fmt.Errorf("Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
-				return err
+				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}
 
@@ -145,6 +149,8 @@ func init() {
 			dbTable                           string = "repl_test"
 		)
 
+		errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+
 		recordId = rand.Intn(5 - 1)
 		recordValue = rand.Intn(9999 - 1)
 
@@ -152,6 +158,7 @@ func init() {
 		dbPassword := c.SqlReplicationConfig.Password
 		dbHost := c.Host
 		dbName := c.SqlReplicationConfig.DBName
+		sslMode := c.SqlReplicationConfig.SSLMode
 		if c.SqlReplicationConfig.TableName != "repl_test" {
 			dbTable = c.SqlReplicationConfig.TableName
 		}
@@ -164,24 +171,24 @@ func init() {
 
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
-		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
+		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
 
 		if dbConnectTimeout > 0 {
 			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
 		}
 
-		//config.Log.Printf("Replication Connect string: %s", connStr)
+		config.Log.Debugf("Replication Connect string: %s", connStr)
 
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
-			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
-			return err
+			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.Ping()
 		if err != nil {
-			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
-			return err
+			config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		insertSql := "INSERT INTO %s (id,test_value) VALUES (%d,%d) ON CONFLICT (id) DO UPDATE set test_value=%d where %s.id=%d;"
@@ -190,7 +197,7 @@ func init() {
 		//config.Log.Printf("sqlStatement string: %s", sqlStatement)
 		_, err = db.Exec(sqlStatement)
 		if err != nil {
-			return fmt.Errorf("pgsql insert error: %+v\n", err)
+			return fmt.Errorf(errorHeader+"pgsql insert error: %+v\n", err.Error())
 		}
 
 		// allow replication to pass
@@ -211,25 +218,25 @@ func init() {
 			db, err := sql.Open("postgres", connStr)
 			if err != nil {
 				config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
-				return err
+				return fmt.Errorf(errorHeader + err.Error())
 			}
 
 			err = db.Ping()
 			if err != nil {
 				config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
-				return err
+				return fmt.Errorf(errorHeader + err.Error())
 			}
 
 			err = db.QueryRow(sqlStatement).Scan(&id)
 			if err != nil {
 				config.Log.Printf("Error: Could not query database: %+v", err)
-				return err
+				return fmt.Errorf(errorHeader + err.Error())
 			}
 
 			if c.SqlQueryConfig.Response != "" {
 				if id != recordValue {
 					err = fmt.Errorf("Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
-					return err
+					return fmt.Errorf(errorHeader + err.Error())
 				}
 			}
 

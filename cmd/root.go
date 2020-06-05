@@ -97,7 +97,7 @@ func initConfig() {
 	logrus.Info("initConfig: load config file")
 	logrus.Infof("Config flag: %s", config.CfgFile)
 
-	logrus.Infof("%s %s", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
+	logrus.Debugf("%s %s", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
 
 	switch {
 	case config.CfgSrc == "" || config.CfgSrc == "file":

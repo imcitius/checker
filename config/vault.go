@@ -10,7 +10,7 @@ func GetVaultSecret(path, field string) (string, error) {
 
 	client, err := api.NewClient(&api.Config{
 		Address: Viper.GetString("VAULT_ADDR"),
-		Timeout: time.Duration(2 * time.Second),
+		Timeout: time.Duration(3 * time.Second),
 	})
 	if err != nil {
 		Log.Infof("Failed to create Vault client: %v", err)

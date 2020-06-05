@@ -30,3 +30,15 @@ prod instance:
     - .docker_europe_tags
   variables:
     DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator-prod"
+
+
+wl-staging instance:
+  extends:
+    - .prod_instance
+    - .docker_europe_tags
+  variables:
+    DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator-prod"
+    INST_API_URL: "https://inst-api.service.${INSTANCE_DC}.consul"
+    INST_UI_URL: "https://inst-ui.service.${INSTANCE_DC}.consul"
+    INSTANCE_DC: wl-staging
+    CONSUL_PATH: configs/checker

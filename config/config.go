@@ -119,18 +119,19 @@ type Check struct {
 
 	// Check SQL query parameters
 	SqlQueryConfig struct {
-		DBName, UserName, Password, Query, Response, Difference string
+		DBName, UserName, Password, Query, Response, Difference, SSLMode string
 	} `mapstructure:"sql_query_config"`
 
 	// Check SQL replication parameters
 	SqlReplicationConfig struct {
-		DBName, UserName, Password, TableName string
-		ServerList                            []string
+		DBName, UserName, Password, TableName, SSLMode string
+		ServerList                                     []string
 	} `mapstructure:"sql_repl_config"`
 
 	PubSub struct {
 		Password string
 		Channels []string
+		SSLMode  bool
 	} `mapstructure:"pubsub_config"`
 
 	// Runtime data

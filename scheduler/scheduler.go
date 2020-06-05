@@ -61,8 +61,9 @@ func runChecks(timeout string) {
 
 			Metrics.Projects[project.Name].Alive = 0
 
+			config.Log.Debugf("Total checks %+v", healthcheck.Checks)
 			for _, check := range healthcheck.Checks {
-				config.Log.Debug(check.Host)
+				config.Log.Debugf("Now checking %s", check.Host)
 				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
 					Metrics.Healthchecks[healthcheck.Name].RunCount++
 					Metrics.Checks[check.UUid].RunCount++
@@ -75,7 +76,7 @@ func runChecks(timeout string) {
 					if tempErr != nil {
 						err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
 						config.Log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
-						//config.Log.Infof("Check mode: %s", status.GetCheckMode(&check))
+						config.Log.Debugf("Check mode: %s", status.GetCheckMode(&check))
 						if status.GetCheckMode(&check) != "quiet" {
 							alerts.ProjectAlert(&project, err)
 						}

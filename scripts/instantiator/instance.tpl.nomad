@@ -64,7 +64,6 @@ EOH
 CONSUL_PATH = "configs/ks-1/checker/testconfig"
 CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500"
 VAULT_ADDR = "https://vault.service.infra1.consul"
-TEST = ${NOMAD_IP_checker}
 EOH
         env = true
         destination = "secrets/.env"
@@ -132,7 +131,7 @@ address_mode = "driver"
 port = "80"
 type = "http"
 path = "/healthcheck"
-method = "GET"
+method = "GET"w
 interval = "5s"
 timeout = "1s"
 initial_status = "passing"
