@@ -32,7 +32,7 @@ prod instance:
   variables:
     DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator-prod"
     INSTANCE_DC: ks-1
-    CONSUL_PATH: configs/ks-1/checker/zconfig
+    CONSUL_PATH: configs/ks-1/checker/config
 
 stage instance:
   extends:
