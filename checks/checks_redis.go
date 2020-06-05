@@ -9,9 +9,11 @@ import (
 )
 
 func init() {
-	config.Checks["redis_pubsub"] = func (c *config.Check, p *config.Project) error {
+	config.Checks["redis_pubsub"] = func(c *config.Check, p *config.Project) error {
 
 		var dbPort int
+
+		errorHeader := fmt.Sprintf("Redis PubSub error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
 		dbHost := c.Host
 		if c.Port == 0 {
@@ -26,16 +28,16 @@ func init() {
 		connStr := fmt.Sprintf("%s:%d", dbHost, dbPort)
 
 		client := redis.NewClient(&redis.Options{
-			Addr:    connStr,
-			Password:  dbPassword, // no password set
-			DB:     0,     // use default DB
+			Addr:        connStr,
+			Password:    dbPassword, // no password set
+			DB:          0,          // use default DB
 			DialTimeout: dbConnectTimeout,
 			ReadTimeout: dbConnectTimeout,
 		})
 
 		_, err = client.Ping().Result()
 		if err != nil {
-			msg := fmt.Errorf("redis connect error %+v", err)
+			msg := fmt.Errorf(errorHeader+"redis connect error %+v", err)
 			return msg
 		}
 
@@ -62,7 +64,7 @@ func init() {
 						break loop
 					default:
 						err := fmt.Errorf("redis: unknown message: %T on channel %s", msg, channel)
-						return err
+						return fmt.Errorf(errorHeader + err.Error())
 					}
 				}
 			}

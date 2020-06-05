@@ -17,6 +17,8 @@ func init() {
 		)
 		//var items interface{}
 
+		errorHeader := fmt.Sprintf("Clickhouse query at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+
 		dbUser := c.SqlQueryConfig.UserName
 		dbPassword := c.SqlQueryConfig.Password
 		dbName := c.SqlQueryConfig.DBName
@@ -45,25 +47,26 @@ func init() {
 
 		db, err := sql.Open("clickhouse", connStr)
 		if err != nil {
-			config.Log.Fatal(err)
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.Ping()
 		if err != nil {
 			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
 			config.Log.Printf("Error: Could not query database: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
 				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
-				return err
+				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}
 
@@ -77,6 +80,8 @@ func init() {
 			id     int64
 			dbPort int
 		)
+
+		errorHeader := fmt.Sprintf("Clickhouse query unixtime at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
 		dbUser := c.SqlQueryConfig.UserName
 		dbPassword := c.SqlQueryConfig.Password
@@ -111,19 +116,19 @@ func init() {
 
 		db, err := sql.Open("clickhouse", connStr)
 		if err != nil {
-			config.Log.Fatal(err)
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.Ping()
 		if err != nil {
 			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
 			config.Log.Printf("Error: Could not query database: %+v", err)
-			return err
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		if dif > 0 {
@@ -131,7 +136,7 @@ func init() {
 			curDif := time.Now().Sub(lastRecord)
 			if curDif > dif {
 				err := fmt.Errorf("Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
-				return err
+				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}
 

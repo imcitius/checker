@@ -17,6 +17,8 @@ func init() {
 			dbport    int
 		)
 
+		errorHeader := fmt.Sprintf("MYSQL query error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+
 		dbuser := c.SqlQueryConfig.UserName
 		dbpassword := c.SqlQueryConfig.Password
 		dbhost := c.Host
@@ -44,25 +46,25 @@ func init() {
 
 		db, err := sql.Open("mysql", connStr)
 		if err != nil {
-			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf(errorHeader+"Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf(errorHeader+"Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			config.Log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Printf(errorHeader+"Error: Could not query database: %+v", err)
 			return err
 		}
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
-				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
+				err = fmt.Errorf(errorHeader+"Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
 				return err
 			}
 		}
@@ -78,6 +80,8 @@ func init() {
 			dbport int
 		)
 
+		errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+
 		dbuser := c.SqlQueryConfig.UserName
 		dbpassword := c.SqlQueryConfig.Password
 		dbhost := c.Host
@@ -92,7 +96,7 @@ func init() {
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		if err != nil {
-			config.Log.Printf("Cannot parse differenct value: %v", dif)
+			config.Log.Printf(errorHeader+"Cannot parse differenct value: %v", dif)
 		}
 
 		if c.SqlQueryConfig.Query == "" {
@@ -110,19 +114,19 @@ func init() {
 
 		db, err := sql.Open("mysql", connStr)
 		if err != nil {
-			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf(errorHeader+"Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf(errorHeader+"Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			config.Log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Printf(errorHeader+"Error: Could not query database: %+v", err)
 			return err
 		}
 
@@ -130,7 +134,7 @@ func init() {
 			lastRecord := time.Unix(id, 0)
 			curDif := time.Now().Sub(lastRecord)
 			if curDif > dif {
-				err := fmt.Errorf("Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
+				err := fmt.Errorf(errorHeader+"Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
 				return err
 			}
 		}
@@ -141,6 +145,8 @@ func init() {
 	config.Checks["mysql_replication"] = func(c *config.Check, p *config.Project) error {
 
 		var dbPort, recordId, recordValue, id int
+
+		errorHeader := fmt.Sprintf("MYSQL replication error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
 		recordId = rand.Intn(5-1) + 1
 		recordValue = rand.Intn(9999-1) + 1
@@ -171,13 +177,13 @@ func init() {
 
 		db, err := sql.Open("mysql", connStr)
 		if err != nil {
-			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Printf(errorHeader+"Error: The data source arguments are not valid: %+v", err)
 			return err
 		}
 
 		err = db.Ping()
 		if err != nil {
-			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Printf(errorHeader+"Error: Could not establish a connection with the database: %+v", err)
 			return err
 		}
 
@@ -187,7 +193,7 @@ func init() {
 		//config.Log.Printf( "Insert statement string: %s", sqlStatement)
 		_, err = db.Exec(sqlStatement)
 		if err != nil {
-			return fmt.Errorf("Mysql insert error: %+v\n", err)
+			return fmt.Errorf(errorHeader+"Mysql insert error: %+v\n", err)
 		}
 
 		// allow replication to pass
@@ -206,25 +212,25 @@ func init() {
 			}
 			db, err := sql.Open("mysql", connStr)
 			if err != nil {
-				config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
+				config.Log.Printf(errorHeader+"Error: The data source arguments are not valid: %+v", err)
 				return err
 			}
 
 			err = db.Ping()
 			if err != nil {
-				config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
+				config.Log.Printf(errorHeader+"Error: Could not establish a connection with the database: %+v", err)
 				return err
 			}
 
 			err = db.QueryRow(sqlStatement).Scan(&id)
 			if err != nil {
-				config.Log.Printf("Error: Could not query database: %+v (server %s)", err, server)
+				config.Log.Printf(errorHeader+"Error: Could not query database: %+v (server %s)", err, server)
 				return err
 			}
 
 			if c.SqlQueryConfig.Response != "" {
 				if id != recordValue {
-					err = fmt.Errorf("Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
+					err = fmt.Errorf(errorHeader+"Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
 					return err
 				}
 			}
