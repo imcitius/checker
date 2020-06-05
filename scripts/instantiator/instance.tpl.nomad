@@ -64,6 +64,7 @@ EOH
 CONSUL_PATH = "configs/ks-1/checker/testconfig"
 CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500"
 VAULT_ADDR = "https://vault.service.infra1.consul"
+TEST = ${NOMAD_IP_checker}
 EOH
         env = true
         destination = "secrets/.env"
@@ -74,6 +75,11 @@ EOH
         image = "{$ .P.image $}:{$ .P.version $}"
         network_mode = "weave"
         command = "/app/checker"
+
+        port_map {
+          checker = 80
+        }
+
 
         args = [
           "check",
@@ -98,6 +104,8 @@ EOH
 
       service {
         address_mode = "driver"
+        port = "checker"
+
 {$ if eq .I.Name "master" -$}
 name = "{$ .I.ProjectName $}"
 {$- else -$}
@@ -143,6 +151,7 @@ memory = 64
 
 network {
 mbits = 1
+port "checker" {}
 }
 }
 }
