@@ -10,6 +10,7 @@ variables:
   INSTANCE_DC: ks-1
   VERSION: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
   REGISTRY_TAG: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
+  CONSUL_PATH: ""
 
 include:
   - project: "ci-library/ci-collections"
@@ -30,7 +31,6 @@ prod instance:
     - .docker_europe_tags
   variables:
     DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator-prod"
-
 
 wl-staging instance:
   extends:
