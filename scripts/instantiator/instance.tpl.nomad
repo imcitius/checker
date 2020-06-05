@@ -123,7 +123,8 @@ tags = ["{$ .I.Name $}",
 "{$ replace .P.version "." "-" $}",
 "{$ .P.major_version $}"]
 {$- end -$}
-{$ end -$}
+{$ end $}
+
 canary_tags = ["{$- if ne .P.version .I.Name -$}{$ replace .P.version "." "-" $}-{$- end -$}canary"]
 
 check {
