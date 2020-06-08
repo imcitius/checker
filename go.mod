@@ -13,6 +13,7 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.3.0
 	github.com/pkg/errors v0.8.1
+	github.com/prometheus/client_golang v0.9.3
 	github.com/sagikazarmark/viperx v0.4.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/sparrc/go-ping v0.0.0-20190613174326-4e5b6552494c

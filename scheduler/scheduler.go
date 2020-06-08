@@ -141,6 +141,8 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 				}
 			}
 		}
-		config.ScheduleLoop++
+		//config.ScheduleLoop++
+
+		metrics.SchedulerLoops.Inc()
 	}
 }

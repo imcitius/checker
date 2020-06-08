@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/sync/semaphore"
 	"io"
 	"my/checker/config"
@@ -82,6 +83,7 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 	http.HandleFunc("/healthcheck", healthCheck)
 	http.HandleFunc("/stats", RuntimeStats)
 	http.HandleFunc("/stats/json", RuntimeStatsJson)
+	http.Handle("/metrics", promhttp.Handler())
 
 	if err := server.ListenAndServe(); err != nil {
 		config.Log.Fatalf("ListenAndServe: %s", err)
