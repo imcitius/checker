@@ -214,7 +214,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		var message string
 		switch config.InternalStatus {
 		case "start":
-			message = fmt.Sprintf("Bot %s at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
+			message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
 		case "reload":
 			message = "Config reloaded"
 		}
