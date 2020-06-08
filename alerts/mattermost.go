@@ -9,7 +9,6 @@ import (
 	"sync"
 )
 
-
 type Mattermost struct {
 	Alerter
 }
@@ -51,5 +50,5 @@ func (m *Mattermost) Send(a *config.AlertConfigs, message string) error {
 }
 
 func (t Mattermost) InitBot(ch chan bool, wg *sync.WaitGroup) {
-	config.Log.Panic("Mattermost bot not implemeted yet")
+	config.Log.Panic("Mattermost bot not implemented yet")
 }
