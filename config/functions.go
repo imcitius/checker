@@ -124,6 +124,9 @@ func (c *ConfigFile) FillDefaults() error {
 		if project.Parameters.SSLExpirationPeriod == "" {
 			project.Parameters.SSLExpirationPeriod = c.Defaults.Parameters.SSLExpirationPeriod
 		}
+		if len(project.Parameters.Mentions) == 0 {
+			project.Parameters.Mentions = c.Defaults.Parameters.Mentions
+		}
 		c.Projects[i] = project
 	}
 
