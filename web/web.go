@@ -48,7 +48,21 @@ func RuntimeStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	io.WriteString(w, metrics.GenRuntimeStats())
+	io.WriteString(w, metrics.GenTextRuntimeStats())
+}
+
+func RuntimeStatsJson(w http.ResponseWriter, r *http.Request) {
+
+	if r.URL.Path != "/stats/json" {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	io.WriteString(w, metrics.GenJsonRuntimeStats())
 }
 
 func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
@@ -67,20 +81,9 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/healthcheck", healthCheck)
 	http.HandleFunc("/stats", RuntimeStats)
+	http.HandleFunc("/stats/json", RuntimeStatsJson)
 
-	//go func() {
 	if err := server.ListenAndServe(); err != nil {
 		config.Log.Fatalf("ListenAndServe: %s", err)
 	}
-	//}()
-
-	//select {
-	//case <-webSignalCh:
-	//
-	//	config.Log.Infof("Exit web interface")
-	//	if err := server.Shutdown(context.Background()); err != nil {
-	//		config.Log.Infof("Web server shutdown failed: %s", err)
-	//	}
-	//	return
-	//}
 }

@@ -205,7 +205,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 		config.Log.Infof("Bot request /stats from %s", m.Sender.Username)
 
-		answer := fmt.Sprintf("@" + m.Sender.Username + "\n\n" + metrics.GenRuntimeStats())
+		answer := fmt.Sprintf("@" + m.Sender.Username + "\n\n" + metrics.GenTextRuntimeStats())
 		bot.Send(m.Chat, answer)
 
 	})

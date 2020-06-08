@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"encoding/json"
 	"fmt"
 	"my/checker/config"
 	"runtime"
@@ -79,7 +80,7 @@ func getMetrics() string {
 	return output
 }
 
-func GenRuntimeStats() string {
+func GenTextRuntimeStats() string {
 	var output string
 
 	output += "Total projects\n"
@@ -93,4 +94,15 @@ func GenRuntimeStats() string {
 	output += getMetrics()
 
 	return output
+}
+
+func GenJsonRuntimeStats() string {
+	var output []byte
+
+	output, err := json.Marshal(Metrics)
+	if err != nil {
+		config.Log.Errorf("Cannot marshal metrics: %s", err.Error())
+	}
+
+	return string(output)
 }

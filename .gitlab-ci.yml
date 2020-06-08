@@ -15,15 +15,7 @@ variables:
 include:
   - project: "ci-library/ci-collections"
     file: "go-app.base.yml"
-
-.build_inject_cmd: &build_inject_cmd |
-  go build -v -i -x -ldflags \
-  "-X my/checker/config.Version=${CI_COMMIT_REF_NAME} -X my/checker/config.VersionSHA=${CI_COMMIT_SHORT_SHA} -X my/checker/config.VersionBuild=${CI_JOB_ID}" \
-  -o build/${BINARY_NAME}
-
-dev instance:
-  script:
-    - /bin/true
+  - .gitlab-ci.build.yml
 
 prod instance:
   extends:
