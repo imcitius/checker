@@ -9,17 +9,37 @@ import (
 )
 
 func ProjectAlert(p *config.Project, e error) {
+	var message string
+
 	config.Log.Debugf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
 	//config.Log.Printf("%+v", Config.Alerts)
 
+	if len(p.Parameters.Mentions) > 0 {
+		for _, mention := range p.Parameters.Mentions {
+			message = mention + e.Error()
+		}
+	} else {
+		message = e.Error()
+	}
+
 	if projects.GetMode(p) != "quiet" && status.MainStatus != "quiet" {
-		Send(p, e.Error())
+		Send(p, message)
 	}
 }
 
 func ProjectCritAlert(p *config.Project, e error) {
+	var message string
+
+	if len(p.Parameters.Mentions) > 0 {
+		for _, mention := range p.Parameters.Mentions {
+			message = mention + e.Error()
+		}
+	} else {
+		message = e.Error()
+	}
+
 	config.Log.Printf("Send critical alert for project: %+v with error %+v\n\n", p, e)
-	SendCrit(p, e.Error())
+	SendCrit(p, message)
 }
 
 func ProjectSendReport(p *config.Project) error {

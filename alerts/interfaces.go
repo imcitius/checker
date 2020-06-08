@@ -73,6 +73,7 @@ func SendChatOps(text string) {
 }
 
 func Alert(a *config.AlertConfigs, text string) error {
+
 	err := GetAlertProto(a).Send(a, text)
 	if err != nil {
 		config.Log.Infof("Send error")

@@ -44,6 +44,8 @@ type Parameters struct {
 	CritAlertChannel    string `mapstructure:"crit_alert"`
 	CommandChannel      string `mapstructure:"command_channel"`
 	SSLExpirationPeriod string `mapstructure:"ssl_expiration_period"`
+
+	Mentions []string
 }
 
 type ConfigFile struct {
