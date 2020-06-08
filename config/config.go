@@ -10,6 +10,10 @@ import (
 )
 
 var (
+	Version      string
+	VersionSHA   string
+	VersionBuild string
+
 	ScheduleLoop               int
 	Config                     ConfigFile
 	Log                        = logrus.New()
@@ -18,9 +22,8 @@ var (
 	CfgFile, CfgSrc, CfgFormat string
 	CfgWatchTimeout            string
 	Sem                        = semaphore.NewWeighted(int64(1))
-	Version                    string
-	VersionSHA                 string
-	VersionBuild               string
+
+	InternalStatus = "start"
 
 	SignalINT, SignalHUP                                          chan os.Signal
 	ConfigChangeSig, SchedulerSignalCh, BotsSignalCh, WebSignalCh chan bool

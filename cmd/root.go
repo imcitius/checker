@@ -234,6 +234,7 @@ func signalWait() {
 	select {
 	case <-config.SignalINT:
 		config.Log.Infof("Got SIGINT")
+		config.InternalStatus = "stop"
 		interrupt = true
 		if config.Viper.GetBool("botsEnabled") {
 			config.BotsSignalCh <- true
@@ -245,6 +246,7 @@ func signalWait() {
 		config.ConfigChangeSig <- true
 	case <-config.ConfigChangeSig:
 		config.Log.Infof("Config file reload")
+		config.InternalStatus = "reload"
 		config.SchedulerSignalCh <- true
 		//config.WebSignalCh <- true
 		if config.Viper.GetBool("botsEnabled") {
