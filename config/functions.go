@@ -96,38 +96,38 @@ func (p *TimeoutsCollection) Add(period string) {
 func (c *ConfigFile) FillDefaults() error {
 
 	//Log.Printf("Loaded config %+v\n\n", Config.Projects)
-	for i, project := range c.Projects {
-		if project.Parameters.RunEvery == "" {
-			project.Parameters.RunEvery = c.Defaults.Parameters.RunEvery
+	for i, p := range c.Projects {
+		if p.Parameters.RunEvery == "" {
+			p.Parameters.RunEvery = c.Defaults.Parameters.RunEvery
 		}
-		if project.Parameters.Mode == "" {
-			project.Parameters.Mode = c.Defaults.Parameters.Mode
+		if p.Parameters.Mode == "" {
+			p.Parameters.Mode = c.Defaults.Parameters.Mode
 		}
-		if project.Parameters.AllowFails == 0 {
-			project.Parameters.AllowFails = c.Defaults.Parameters.AllowFails
+		if p.Parameters.AllowFails == 0 {
+			p.Parameters.AllowFails = c.Defaults.Parameters.AllowFails
 		}
-		if project.Parameters.MinHealth == 0 {
-			project.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
+		if p.Parameters.MinHealth == 0 {
+			p.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
 		}
-		if project.Parameters.MinHealth == 0 {
-			project.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
+		if p.Parameters.MinHealth == 0 {
+			p.Parameters.MinHealth = c.Defaults.Parameters.MinHealth
 		}
-		if project.Parameters.AlertChannel == "" {
-			project.Parameters.AlertChannel = c.Defaults.Parameters.AlertChannel
+		if p.Parameters.AlertChannel == "" {
+			p.Parameters.AlertChannel = c.Defaults.Parameters.AlertChannel
 		}
-		if project.Parameters.CritAlertChannel == "" {
-			project.Parameters.CritAlertChannel = c.Defaults.Parameters.AlertChannel
+		if p.Parameters.CritAlertChannel == "" {
+			p.Parameters.CritAlertChannel = c.Defaults.Parameters.AlertChannel
 		}
-		if project.Parameters.PeriodicReport == "" {
-			project.Parameters.PeriodicReport = c.Defaults.Parameters.PeriodicReport
+		if p.Parameters.PeriodicReport == "" {
+			p.Parameters.PeriodicReport = c.Defaults.Parameters.PeriodicReport
 		}
-		if project.Parameters.SSLExpirationPeriod == "" {
-			project.Parameters.SSLExpirationPeriod = c.Defaults.Parameters.SSLExpirationPeriod
+		if p.Parameters.SSLExpirationPeriod == "" {
+			p.Parameters.SSLExpirationPeriod = c.Defaults.Parameters.SSLExpirationPeriod
 		}
-		if len(project.Parameters.Mentions) == 0 {
-			project.Parameters.Mentions = c.Defaults.Parameters.Mentions
+		if len(p.Parameters.Mentions) == 0 {
+			p.Parameters.Mentions = c.Defaults.Parameters.Mentions
 		}
-		c.Projects[i] = project
+		c.Projects[i] = p
 	}
 
 	return nil
