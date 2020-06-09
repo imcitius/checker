@@ -3,12 +3,18 @@ package check
 import (
 	"fmt"
 	"my/checker/config"
+	"my/checker/metrics"
 	"my/checker/status"
 	"regexp"
 )
 
-func Execute(c *config.Check, p *config.Project) error {
+func Execute(p *config.Project, h *config.Healtchecks, c *config.Check) error {
 	var err error
+
+	err = metrics.AddCheckRunCount(p, h, c)
+	if err != nil {
+		config.Log.Errorf("Metric count error: %v", err)
+	}
 
 	if _, ok := config.Checks[c.Type]; ok {
 		err = config.Checks[c.Type](c, p)
