@@ -1,26 +1,31 @@
 package metrics
 
-import "my/checker/config"
+import (
+	"my/checker/config"
+)
 
-func initAlertMetrics(a *config.AlertConfigs) {
-	if _, ok := Metrics.Alerts[a.Name]; !ok {
-		Metrics.Alerts[a.Name] = new(AlertMetrics)
-		Metrics.Alerts[a.Name].Name = a.Name
-	}
+func AddAlertMetricChatOpsRequest(a *config.AlertConfigs) {
+	AlertsCount.WithLabelValues(a.Name, "ChatOps_Request").Inc()
 }
 
-func AddAlertCounter(a *config.AlertConfigs, alerttype string) {
-	config.Log.Debugf("increase alert counter")
-
-	switch alerttype {
-	case "crit":
-		Metrics.Alerts[a.Name].Critical++
-	case "noncrit":
-		Metrics.Alerts[a.Name].NonCritical++
-	case "report":
-		Metrics.Alerts[a.Name].CommandAns++
-	default:
-		config.Log.Errorf("Undefined alert type")
-	}
-	Metrics.Alerts[a.Name].AlertCount++
+func AddAlertMetricNonCritical(a *config.AlertConfigs) {
+	AlertsCount.WithLabelValues(a.Name, "NonCritical").Inc()
 }
+
+//func AddAlertMetricCritical(a *config.AlertConfigs) {
+//	AlertsCount.WithLabelValues(a.Name, "Critical").Inc()
+//}
+//
+
+//func AddAlertMetricReport(a *config.AlertConfigs) {
+//	AlertsCount.WithLabelValues(a.Name, "Report").Inc()
+//}
+//
+//func AddAlertMetricOther(a *config.AlertConfigs) {
+//	AlertsCount.WithLabelValues(a.Name, "Other").Inc()
+//}
+//
+//
+//func AddAlertMetricChatOpsAnswer(a *config.AlertConfigs) {
+//	AlertsCount.WithLabelValues(a.Name, "ChatOps_Answer").Inc()
+//}

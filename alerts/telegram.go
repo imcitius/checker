@@ -101,7 +101,7 @@ func (t Telegram) Send(a *config.AlertConfigs, message string) error {
 		config.Log.Warnf("SendTgMessage error: %v", err)
 	} else {
 		config.Log.Debugf("sendTgMessage success")
-		metrics.AddAlertCounter(a, "noncrit")
+		metrics.AddAlertMetricNonCritical(a)
 	}
 
 	return err
@@ -126,7 +126,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	bot.Handle("/pa", func(m *tb.Message) {
 		config.Log.Infof("Bot request /pa")
 
-		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
+		metrics.AddAlertMetricChatOpsRequest(a)
 		status.MainStatus = "quiet"
 		answer := "All messages ceased"
 		bot.Send(m.Chat, answer)
@@ -135,14 +135,14 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	bot.Handle("/ua", func(m *tb.Message) {
 		config.Log.Infof("Bot request /ua")
 
-		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
 		status.MainStatus = "loud"
 		answer := "All messages enabled"
 		bot.Send(m.Chat, answer)
 	})
 
 	bot.Handle("/pu", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
+		metrics.AddAlertMetricChatOpsRequest(a)
+
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 		uuID := tgMessage.GetUUID()
@@ -156,7 +156,8 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/uu", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
+		metrics.AddAlertMetricChatOpsRequest(a)
+
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 		uuID := tgMessage.GetUUID()
@@ -170,7 +171,8 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/pp", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
+		metrics.AddAlertMetricChatOpsRequest(a)
+
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -185,7 +187,8 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
+		metrics.AddAlertMetricChatOpsRequest(a)
+
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
 
@@ -201,7 +204,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 
 	bot.Handle("/stats", func(m *tb.Message) {
-		metrics.Metrics.Alerts[GetCommandChannel().Name].CommandReqs++
+		metrics.AddAlertMetricChatOpsRequest(a)
 
 		config.Log.Infof("Bot request /stats from %s", m.Sender.Username)
 

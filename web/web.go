@@ -6,12 +6,10 @@ import (
 	"golang.org/x/sync/semaphore"
 	"io"
 	"my/checker/config"
-	"my/checker/metrics"
 	"net/http"
 	_ "net/http/pprof"
 )
 
-var Metrics *metrics.MetricsCollection = metrics.Metrics
 var Config *config.ConfigFile = &config.Config
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
@@ -38,34 +36,6 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Ok!\n")
 }
 
-func RuntimeStats(w http.ResponseWriter, r *http.Request) {
-
-	if r.URL.Path != "/stats" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	io.WriteString(w, metrics.GenTextRuntimeStats())
-}
-
-func RuntimeStatsJson(w http.ResponseWriter, r *http.Request) {
-
-	if r.URL.Path != "/stats/json" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	io.WriteString(w, metrics.GenJsonRuntimeStats())
-}
-
 func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 	defer sem.Release(1)
 
@@ -81,8 +51,6 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/healthcheck", healthCheck)
-	http.HandleFunc("/stats", RuntimeStats)
-	http.HandleFunc("/stats/json", RuntimeStatsJson)
 	http.Handle("/metrics", promhttp.Handler())
 
 	if err := server.ListenAndServe(); err != nil {

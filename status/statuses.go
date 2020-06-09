@@ -10,14 +10,18 @@ var (
 )
 
 type ProjectsStatuses struct {
-	Name   string
-	Mode   string // represent current alerting mode
-	Status string // represent current checks status
+	Name           string
+	Mode           string // represent current alerting mode
+	Status         string // represent current checks status
+	Alive          int
+	SeqErrorsCount int
+	FailsCount     int
 }
 type CheckStatuses struct {
-	UUID   string
-	Mode   string // represent current alerting mode
-	Status string // represent current checks status
+	UUID       string
+	Mode       string // represent current alerting mode
+	Status     string // represent current checks status
+	LastResult bool
 }
 
 type StatusCollection struct {

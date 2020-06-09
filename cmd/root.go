@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 	"my/checker/alerts"
 	"my/checker/config"
-	"my/checker/metrics"
 	"my/checker/scheduler"
 	"my/checker/status"
 	"my/checker/web"
@@ -179,11 +178,6 @@ func mainChecker() {
 			config.Log.Infof("Config load error: %s", err)
 		} else {
 			config.Log.Debugf("(mainChecker) Loaded config: %+v", config.Config)
-		}
-
-		err = metrics.InitMetrics()
-		if err != nil {
-			config.Log.Infof("Metrics init error: %s", err)
 		}
 
 		err = status.InitStatuses()

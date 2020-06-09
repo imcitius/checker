@@ -49,7 +49,8 @@ func GetCritChannel(p *config.Project) *config.AlertConfigs {
 }
 
 func Send(p *config.Project, text string) {
-	metrics.Metrics.Alerts[GetProjectChannel(p).Name].CommandAns++
+	metrics.AddProjectMetricChatOpsAnswer(p)
+
 	err := Alert(GetProjectChannel(p), text)
 	if err != nil {
 		config.Log.Infof("SendTgMessage error: %s", err)
@@ -57,7 +58,8 @@ func Send(p *config.Project, text string) {
 }
 
 func SendCrit(p *config.Project, text string) {
-	metrics.Metrics.Alerts[GetCritChannel(p).Name].CommandAns++
+	metrics.AddProjectMetricCriticalAlert(p)
+
 	err := Alert(GetCritChannel(p), text)
 	if err != nil {
 		config.Log.Infof("SendTgMessage error: %s", err)
@@ -65,14 +67,13 @@ func SendCrit(p *config.Project, text string) {
 }
 
 func SendChatOps(text string) {
-	metrics.Metrics.Alerts[GetCommandChannel().Name].CommandAns++
-	err := Alert(GetCommandChannel(), text)
-	if err != nil {
-		config.Log.Infof("SendTgMessage error: %s", err)
-	}
+	metrics.AddProjectMetricChatOpsAnswer(&config.Project{
+		Name: "ChatOps"})
+
 }
 
 func Alert(a *config.AlertConfigs, text string) error {
+	metrics.AddAlertMetricNonCritical(a)
 
 	err := GetAlertProto(a).Send(a, text)
 	if err != nil {
