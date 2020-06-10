@@ -147,12 +147,12 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					endTime := time.Now()
 					duration := endTime.Sub(startTime)
 
-					metrics.SchedulerLoopDuration.Set(float64(duration))
+					metrics.SchedulerLoopDuration.Set(duration.Seconds())
 				}
 			}
 		}
 
-		metrics.SchedulerLoopConfig.Set(float64(timerStep))
+		metrics.SchedulerLoopConfig.Set(timerStep.Seconds()) // in seconds
 		metrics.SchedulerLoops.Inc()
 	}
 }
