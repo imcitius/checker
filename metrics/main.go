@@ -14,6 +14,18 @@ var (
 			Help: "Scheduler loops count",
 		})
 
+	SchedulerLoopDuration = prometheus.NewGauge(
+		prometheus.GaugeOpts(prometheus.CounterOpts{
+			Name: "sched_loop_duration",
+			Help: "Scheduler loop duration",
+		}))
+
+	SchedulerLoopConfig = prometheus.NewGauge(
+		prometheus.GaugeOpts(prometheus.CounterOpts{
+			Name: "sched_loop_config",
+			Help: "Scheduler loop duration configured",
+		}))
+
 	AlertsCount = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "alerts_by_event_type",
@@ -68,6 +80,8 @@ func init() {
 	ProjectErrorStatus = make(map[string]map[string]int)
 
 	prometheus.MustRegister(SchedulerLoops)
+	prometheus.MustRegister(SchedulerLoopDuration)
+	prometheus.MustRegister(SchedulerLoopConfig)
 	prometheus.MustRegister(AlertsCount)
 	prometheus.MustRegister(AlertsHistory)
 	prometheus.MustRegister(ProjectAlerts)

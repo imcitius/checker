@@ -92,7 +92,6 @@ func runChecks(timeout string) {
 					} else {
 						config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
 						status.Statuses.Projects[project.Name].SeqErrorsCount--
-						metrics.AddCheckNoError(&project, &healthcheck, &check)
 
 						status.Statuses.Projects[project.Name].Alive++
 						status.Statuses.Checks[check.UUid].LastResult = true
@@ -141,13 +140,19 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 					config.Log.Infof("Schedule: %s", timeout)
 
+					startTime := time.Now()
 					go runChecks(timeout)
 					go runReports(timeout)
 					runAlerts(timeout)
+					endTime := time.Now()
+					duration := endTime.Sub(startTime)
+
+					metrics.SchedulerLoopDuration.Set(float64(duration))
 				}
 			}
 		}
 
+		metrics.SchedulerLoopConfig.Set(float64(timerStep))
 		metrics.SchedulerLoops.Inc()
 	}
 }
