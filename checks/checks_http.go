@@ -114,13 +114,13 @@ func init() {
 		//config.Log.Printf("Server: %s, http answer body: %s\n", c.Host, buf)
 		// check that response code is correct
 
-		// init asnwer codes slice if empty
-		if len(c.Code) == 0 {
-			c.Code = []int{200}
-		}
 		// found actual return code in answer codes slice
-		code := func(codes []int, answercode int) bool {
+		checkCode := func(codes []int, answercode int) bool {
 			found := false
+			// init asnwer codes slice if empty
+			if len(codes) == 0 {
+				codes = []int{200}
+			}
 			for _, c := range codes {
 				if c == answercode {
 					found = true
@@ -129,14 +129,14 @@ func init() {
 			return found
 		}(c.Code, int(response.StatusCode))
 
-		if !code {
+		if !checkCode {
 			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode, c.Code)
 			return errors.New(errorMessage)
 		}
 
 		answer, _ := regexp.Match(c.Answer, buf.Bytes())
 		// check answer_present condition
-		answerGood := (answer == answerPresent) && code
+		answerGood := (answer == answerPresent) && checkCode
 		//config.Log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, c.AnswerPresent, answerGood)
 
 		if !answerGood {
