@@ -40,6 +40,7 @@ func init() {
 			msg := fmt.Errorf(errorHeader+"redis connect error %+v", err)
 			return msg
 		}
+		defer client.Close()
 
 		for _, channel := range c.PubSub.Channels {
 

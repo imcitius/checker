@@ -9,11 +9,11 @@ import (
 )
 
 func init() {
-	config.Checks["tcp"] = func (c *config.Check, p *config.Project) error {
+	config.Checks["tcp"] = func(c *config.Check, p *config.Project) error {
 		var (
-			errorMessage string
+			errorMessage  string
 			checkAttempts int = 3
-			checkAttempt int
+			checkAttempt  int
 		)
 
 		if c.Attempts != 0 {
@@ -31,14 +31,10 @@ func init() {
 		//config.Log.Panic(timeout)
 
 		for checkAttempt < checkAttempts {
-			//startTime := time.Now()
 			conn, err := net.DialTimeout("tcp", address, timeout)
-			//endTime := time.Now()
 
 			if err == nil {
 				defer conn.Close()
-				//t := float64(endTime.Sub(startTime)) / float64(time.Millisecond)
-				//config.Log.Printf("Connection to host %v succeed, took %v millisec", conn.RemoteAddr().String(), t)
 				return nil
 			}
 

@@ -49,6 +49,7 @@ func init() {
 			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
+		defer db.Close()
 
 		err = db.Ping()
 		if err != nil {
@@ -117,6 +118,7 @@ func init() {
 			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
+		defer db.Close()
 
 		err = db.Ping()
 		if err != nil {
@@ -184,6 +186,7 @@ func init() {
 			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
+		defer db.Close()
 
 		err = db.Ping()
 		if err != nil {
@@ -220,6 +223,7 @@ func init() {
 				config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
+			defer db.Close()
 
 			err = db.Ping()
 			if err != nil {
