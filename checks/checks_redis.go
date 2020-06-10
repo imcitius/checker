@@ -37,8 +37,7 @@ func init() {
 
 		_, err = client.Ping().Result()
 		if err != nil {
-			msg := fmt.Errorf(errorHeader+"redis connect error %+v", err)
-			return msg
+			return fmt.Errorf(errorHeader+"redis connect error %+v", err)
 		}
 		defer client.Close()
 
@@ -50,7 +49,7 @@ func init() {
 			for {
 				msgi, err := pubsub.ReceiveTimeout(dbConnectTimeout)
 				if err != nil {
-					return err
+					return fmt.Errorf(errorHeader+"redis pub/sub receive timeout error %+v on channel %s", err, channel)
 				} else {
 					switch msg := msgi.(type) {
 					case *redis.Subscription:
