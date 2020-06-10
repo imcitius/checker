@@ -34,14 +34,6 @@ var (
 		[]string{"alert_name", "event_type"},
 	)
 
-	AlertsHistory = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name: "alerts_by_event_type_hist",
-			Help: "How many messages of different type sent for alert channel.",
-		},
-		[]string{"alert_name", "event_type"},
-	)
-
 	ProjectAlerts = prometheus.NewCounterVec(
 		prometheus.CounterOpts(prometheus.GaugeOpts(prometheus.CounterOpts{
 			Name: "events_by_project",
@@ -50,27 +42,11 @@ var (
 		[]string{"project_name", "event_type"},
 	)
 
-	ProjectAlertsHistory = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name: "events_by_project_hist",
-			Help: "How many messages of different type sent for alert channel.",
-		},
-		[]string{"alert_name", "event_type"},
-	)
-
 	CheckMetrics = prometheus.NewCounterVec(
 		prometheus.CounterOpts(prometheus.GaugeOpts(prometheus.CounterOpts{
 			Name: "events_by_check",
 			Help: "How many events of different type occured sent for specific check.",
 		})),
-		[]string{"project_name", "healthcheck_name", "check_uuid", "event_type"},
-	)
-
-	CheckAlertsHistory = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name: "events_by_check_hist",
-			Help: "How many messages of different type sent for alert channel.",
-		},
 		[]string{"project_name", "healthcheck_name", "check_uuid", "event_type"},
 	)
 )
@@ -83,9 +59,6 @@ func init() {
 	prometheus.MustRegister(SchedulerLoopDuration)
 	prometheus.MustRegister(SchedulerLoopConfig)
 	prometheus.MustRegister(AlertsCount)
-	prometheus.MustRegister(AlertsHistory)
 	prometheus.MustRegister(ProjectAlerts)
-	prometheus.MustRegister(ProjectAlertsHistory)
 	prometheus.MustRegister(CheckMetrics)
-	prometheus.MustRegister(CheckAlertsHistory)
 }
