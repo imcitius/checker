@@ -17,6 +17,10 @@ type MmMessage struct {
 	Text string `json:"text"`
 }
 
+func init() {
+	AlerterCollection["mattermost"] = new(Mattermost)
+}
+
 func (m *Mattermost) Send(a *config.AlertConfigs, message string) error {
 	config.Log.Debugf("Alert send: %s (alert details %+v)", message, a)
 

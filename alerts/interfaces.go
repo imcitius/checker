@@ -11,14 +11,10 @@ type Alerter interface {
 	InitBot(botsSignalCh chan bool, wg *sync.WaitGroup)
 }
 
+var AlerterCollection map[string]Alerter
+
 func GetAlertProto(a *config.AlertConfigs) Alerter {
-	switch a.Type {
-	case "mattermost":
-		return new(Mattermost)
-	case "telegram":
-		return new(Telegram)
-	}
-	return nil
+	return AlerterCollection[a.Type]
 }
 
 func GetCommandChannel() *config.AlertConfigs {
@@ -59,6 +55,7 @@ func Send(p *config.Project, text string) {
 
 func SendCrit(p *config.Project, text string) {
 	metrics.AddProjectMetricCriticalAlert(p)
+	metrics.AddAlertMetricCritical(GetCritChannel(p))
 
 	err := Alert(GetCritChannel(p), text)
 	if err != nil {

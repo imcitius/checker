@@ -26,6 +26,10 @@ type TgMessage struct {
 	*tb.Message
 }
 
+func init() {
+	AlerterCollection["telegram"] = new(Telegram)
+}
+
 func (m TgMessage) GetProject() string {
 	var (
 		result      []string
