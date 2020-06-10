@@ -18,6 +18,7 @@ type MmMessage struct {
 }
 
 func init() {
+	AlerterCollection = make(map[string]Alerter)
 	AlerterCollection["mattermost"] = new(Mattermost)
 }
 
