@@ -119,8 +119,9 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	bot, err := tb.NewBot(tb.Settings{
-		Token:  a.BotToken,
-		Poller: &tb.LongPoller{Timeout: 5 * time.Second},
+		Token:   a.BotToken,
+		Poller:  &tb.LongPoller{Timeout: 5 * time.Second},
+		Verbose: true,
 	})
 
 	if err != nil {
@@ -233,6 +234,8 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 	<-ch
 	bot.Stop()
+	// let bot to actually stop
 	config.Log.Infof("Exit listening telegram bots")
+	time.Sleep(5 * time.Second)
 	return
 }
