@@ -15,6 +15,7 @@ func init() {
 		var (
 			id, query string
 			dbPort    int
+			sslMode   string
 		)
 
 		errorHeader := fmt.Sprintf("PGSQL query error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
@@ -29,6 +30,11 @@ func init() {
 			dbPort = c.Port
 		}
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if c.SqlQueryConfig.SSLMode == "" {
+			sslMode = "disable"
+		} else {
+			sslMode = c.SqlReplicationConfig.SSLMode
+		}
 
 		if c.SqlQueryConfig.Query == "" {
 			query = "select 1;"
@@ -36,7 +42,7 @@ func init() {
 			query = c.SqlQueryConfig.Query
 		}
 
-		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
+		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
 
 		if dbConnectTimeout > 0 {
 			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
@@ -76,9 +82,10 @@ func init() {
 	config.Checks["pgsql_query_unixtime"] = func(c *config.Check, p *config.Project) error {
 
 		var (
-			id     int64
-			query  string
-			dbPort int
+			id      int64
+			query   string
+			dbPort  int
+			sslMode string
 		)
 
 		errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
@@ -93,6 +100,11 @@ func init() {
 			dbPort = c.Port
 		}
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if c.SqlQueryConfig.SSLMode == "" {
+			sslMode = "disable"
+		} else {
+			sslMode = c.SqlReplicationConfig.SSLMode
+		}
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		if err != nil {
@@ -105,7 +117,7 @@ func init() {
 			query = c.SqlQueryConfig.Query
 		}
 
-		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
+		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslModeç)
 
 		if dbConnectTimeout > 0 {
 			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
@@ -149,6 +161,7 @@ func init() {
 		var (
 			dbPort, recordId, recordValue, id int
 			dbTable                           string = "repl_test"
+			sslMode                           string
 		)
 
 		errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
@@ -160,7 +173,11 @@ func init() {
 		dbPassword := c.SqlReplicationConfig.Password
 		dbHost := c.Host
 		dbName := c.SqlReplicationConfig.DBName
-		sslMode := c.SqlReplicationConfig.SSLMode
+		if c.SqlReplicationConfig.SSLMode == "" {
+			sslMode = "disable"
+		} else {
+			sslMode = c.SqlReplicationConfig.SSLMode
+		}
 		if c.SqlReplicationConfig.TableName != "repl_test" {
 			dbTable = c.SqlReplicationConfig.TableName
 		}
