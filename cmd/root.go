@@ -206,10 +206,13 @@ func mainChecker() {
 			alerts.GetAlertProto(alerts.GetCommandChannel()).InitBot(config.BotsSignalCh, &config.Wg)
 		}
 		config.InternalStatus = "started"
-		config.Log.Debug("Checker init complete")
+		if !interrupt {
+			config.Log.Debug("Checker init complete")
+		}
 		config.Wg.Wait()
 
 		if interrupt {
+			config.Log.Debug("Checker stopped")
 			os.Exit(1)
 		}
 	}
