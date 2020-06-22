@@ -139,16 +139,14 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 		metrics.AddAlertMetricChatOpsRequest(a)
 		status.MainStatus = "quiet"
-		answer := "All messages ceased"
-		bot.Send(m.Chat, answer)
+		SendChatOps("All messages ceased")
 	})
 
 	bot.Handle("/ua", func(m *tb.Message) {
 		config.Log.Infof("Bot request /ua")
 
 		status.MainStatus = "loud"
-		answer := "All messages enabled"
-		bot.Send(m.Chat, answer)
+		SendChatOps("All messages enabled")
 	})
 
 	bot.Handle("/pu", func(m *tb.Message) {
@@ -162,8 +160,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Printf("Pause req for UUID: %+v\n", uuID)
 		status.SetCheckMode(checks.GetCheckByUUID(uuID), "quiet")
 
-		answer := fmt.Sprintf("Messages ceased for UUID %v", uuID)
-		bot.Send(m.Chat, answer)
+		SendChatOps(fmt.Sprintf("Messages ceased for UUID %v", uuID))
 	})
 
 	bot.Handle("/uu", func(m *tb.Message) {
@@ -176,9 +173,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Printf("Unpause req for UUID: %+v\n", uuID)
 		status.SetCheckMode(checks.GetCheckByUUID(uuID), "loud")
 
-		answer := fmt.Sprintf("Messages resumed for UUID %v", uuID)
-		bot.Send(m.Chat, answer)
-
+		SendChatOps(fmt.Sprintf("Messages resumed for UUID %v", uuID))
 	})
 
 	bot.Handle("/pp", func(m *tb.Message) {
@@ -192,9 +187,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Printf("Pause req for project: %s\n", tgMessage.GetProject())
 		status.SetProjectMode(project, "loud")
 
-		answer := fmt.Sprintf("Messages ceased for project %s", tgMessage.GetProject())
-		bot.Send(m.Chat, answer)
-
+		SendChatOps(fmt.Sprintf("Messages ceased for project %s", tgMessage.GetProject()))
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
@@ -209,9 +202,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Printf("Resume req for project: %s\n", tgMessage.GetProject())
 		status.SetProjectMode(projectName, "quiet")
 
-		answer := fmt.Sprintf("Messages resumed for project %s", tgMessage.GetProject())
-		bot.Send(m.Chat, answer)
-
+		SendChatOps(fmt.Sprintf("Messages resumed for project %s", tgMessage.GetProject()))
 	})
 
 	bot.Handle("/stats", func(m *tb.Message) {
@@ -219,9 +210,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 		config.Log.Infof("Bot request /stats from %s", m.Sender.Username)
 
-		answer := fmt.Sprintf("@" + m.Sender.Username + "\n\n" + metrics.GenTextRuntimeStats())
-		bot.Send(m.Chat, answer)
-
+		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + metrics.GenTextRuntimeStats()))
 	})
 
 	go func() {
