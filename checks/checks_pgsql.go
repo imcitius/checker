@@ -211,6 +211,7 @@ func init() {
 			return fmt.Errorf(errorHeader + err.Error())
 		}
 
+		config.Log.Debugf("Set info on master, id: %d, value: %d", recordId, recordValue)
 		insertSql := "INSERT INTO %s (id,test_value) VALUES (%d,%d) ON CONFLICT (id) DO UPDATE set test_value=%d where %s.id=%d;"
 
 		sqlStatement := fmt.Sprintf(insertSql, dbTable, recordId, recordValue, recordValue, dbTable, recordId)
@@ -227,7 +228,7 @@ func init() {
 			selectSql := "SELECT test_value FROM %s where %s.id=%d;"
 			sqlStatement := fmt.Sprintf(selectSql, dbTable, dbTable, recordId)
 
-			//config.Log.Printf("Read from %s", server)
+			config.Log.Debugf("Read from slave %s", server)
 			//config.Log.Printf(" query: %s\n", sqlStatement)
 			connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, server, dbPort, dbName)
 
