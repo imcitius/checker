@@ -15,16 +15,16 @@ var (
 		})
 
 	SchedulerLoopDuration = prometheus.NewGauge(
-		prometheus.GaugeOpts(prometheus.CounterOpts{
+		prometheus.GaugeOpts{
 			Name: "sched_loop_duration",
 			Help: "Scheduler loop duration",
-		}))
+		})
 
 	SchedulerLoopConfig = prometheus.NewGauge(
-		prometheus.GaugeOpts(prometheus.CounterOpts{
+		prometheus.GaugeOpts{
 			Name: "sched_loop_config",
 			Help: "Scheduler loop duration configured",
-		}))
+		})
 
 	AlertsCount = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -35,19 +35,27 @@ var (
 	)
 
 	ProjectAlerts = prometheus.NewCounterVec(
-		prometheus.CounterOpts(prometheus.GaugeOpts(prometheus.CounterOpts{
+		prometheus.CounterOpts{
 			Name: "events_by_project",
 			Help: "How many events of different type occured for specific project.",
-		})),
+		},
 		[]string{"project_name", "event_type"},
 	)
 
 	CheckMetrics = prometheus.NewCounterVec(
-		prometheus.CounterOpts(prometheus.GaugeOpts(prometheus.CounterOpts{
+		prometheus.CounterOpts{
 			Name: "events_by_check",
 			Help: "How many events of different type occured sent for specific check.",
-		})),
+		},
 		[]string{"project_name", "healthcheck_name", "check_uuid", "event_type"},
+	)
+
+	CheckDuration = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "check_duration",
+			Help: "How much time specific check executes",
+		},
+		[]string{"project_name", "healthcheck_name", "check_uuid", "check_type"},
 	)
 )
 
@@ -61,4 +69,5 @@ func init() {
 	prometheus.MustRegister(AlertsCount)
 	prometheus.MustRegister(ProjectAlerts)
 	prometheus.MustRegister(CheckMetrics)
+	prometheus.MustRegister(CheckDuration)
 }

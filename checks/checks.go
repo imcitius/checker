@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"my/checker/config"
 	"my/checker/metrics"
-	"my/checker/status"
 	"regexp"
 )
 
@@ -49,22 +48,4 @@ func GetCheckScheme(c *config.Check) string {
 	pattern := regexp.MustCompile("(.*)://")
 	result := pattern.FindStringSubmatch(c.Host)
 	return result[1]
-}
-
-func HostName(c *config.Check) string {
-	return c.Host
-}
-
-func CeaseAlerts(c *config.Check) error {
-	config.Log.Printf("Old mode: %s", c.Mode)
-	status.SetCheckMode(c, "quiet")
-	config.Log.Printf("New mode: %s", c.Mode)
-	return nil
-}
-
-func EnableAlerts(c *config.Check) error {
-	config.Log.Printf("Old mode: %s", c.Mode)
-	status.SetCheckMode(c, "loud")
-	config.Log.Printf("New mode: %s", c.Mode)
-	return nil
 }

@@ -91,6 +91,8 @@ func runChecks(timeout string) {
 
 					} else {
 						config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
+						metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
+
 						status.Statuses.Projects[project.Name].SeqErrorsCount--
 
 						status.Statuses.Projects[project.Name].Alive++
