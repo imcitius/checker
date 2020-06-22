@@ -205,6 +205,7 @@ func mainChecker() {
 			//alerts.InitBots(config.BotsSignalCh, &config.Wg)
 			alerts.GetAlertProto(alerts.GetCommandChannel()).InitBot(config.BotsSignalCh, &config.Wg)
 		}
+		config.InternalStatus = "started"
 		config.Log.Debug("Checker init complete")
 		config.Wg.Wait()
 

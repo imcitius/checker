@@ -66,7 +66,10 @@ func SendCrit(p *config.Project, text string) {
 func SendChatOps(text string) {
 	metrics.AddProjectMetricChatOpsAnswer(&config.Project{
 		Name: "ChatOps"})
-
+	err := Alert(GetCommandChannel(), text)
+	if err != nil {
+		config.Log.Infof("SendTgChatOpsMessage error: %s", err)
+	}
 }
 
 func Alert(a *config.AlertConfigs, text string) error {

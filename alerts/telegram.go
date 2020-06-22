@@ -226,11 +226,12 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 	go func() {
 		var message string
+		config.Log.Debugf("Internal status is: %s", config.InternalStatus)
 		switch config.InternalStatus {
-		case "start":
-			message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
 		case "reload":
 			message = "Config reloaded"
+		default:
+			message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
 		}
 		config.Log.Infof("Start listening telegram bots routine")
 		SendChatOps(message)
