@@ -208,10 +208,8 @@ func mainChecker() {
 		config.InternalStatus = "started"
 		if !interrupt {
 			config.Log.Debug("Checker init complete")
-		}
-		config.Wg.Wait()
-
-		if interrupt {
+			config.Wg.Wait()
+		} else {
 			config.Log.Debug("Checker stopped")
 			os.Exit(1)
 		}
