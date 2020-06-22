@@ -4,6 +4,7 @@ import (
 	"fmt"
 	checks "my/checker/checks"
 	"my/checker/config"
+	"my/checker/metrics"
 	projects "my/checker/projects"
 	"my/checker/status"
 )
@@ -66,4 +67,79 @@ func ProjectSendReport(p *config.Project) error {
 		SendChatOps(reportMessage)
 	}
 	return nil
+}
+
+func GetAlertProto(a *config.AlertConfigs) Alerter {
+	return AlerterCollection[a.Type]
+}
+
+func GetCommandChannel() (*config.AlertConfigs, error) {
+	for _, a := range config.Config.Alerts {
+		if a.Name == config.Config.Defaults.Parameters.CommandChannel {
+			config.Log.Debugf("Found command channel: %v", a.ProjectChannel)
+			return &a, nil
+		}
+	}
+	return nil, fmt.Errorf("ChatOpsChannel not found: %s", config.Config.Defaults.Parameters.CommandChannel)
+}
+
+func GetProjectChannel(p *config.Project) *config.AlertConfigs {
+	for _, a := range config.Config.Alerts {
+		if a.Name == p.Parameters.AlertChannel {
+			return &a
+		}
+	}
+	return nil
+}
+
+func GetCritChannel(p *config.Project) *config.AlertConfigs {
+	for _, a := range config.Config.Alerts {
+		if a.Name == p.Parameters.CritAlertChannel {
+			return &a
+		}
+	}
+	return nil
+}
+
+func Send(p *config.Project, text string) {
+	metrics.AddProjectMetricChatOpsAnswer(p)
+
+	err := Alert(GetProjectChannel(p), text)
+	if err != nil {
+		config.Log.Infof("Send alert error for project %s: %s", p.Name, err)
+	}
+}
+
+func SendCrit(p *config.Project, text string) {
+	metrics.AddProjectMetricCriticalAlert(p)
+	metrics.AddAlertMetricCritical(GetCritChannel(p))
+
+	err := Alert(GetCritChannel(p), text)
+	if err != nil {
+		config.Log.Infof("Send critical alert error for project %s: %s", p.Name, err)
+	}
+}
+
+func SendChatOps(text string) {
+	metrics.AddProjectMetricChatOpsAnswer(&config.Project{
+		Name: "ChatOps"})
+	commandChannel, err := GetCommandChannel()
+	if err != nil {
+		config.Log.Infof("GetCommandChannel error: %s", err)
+	}
+
+	err = Alert(commandChannel, text)
+	if err != nil {
+		config.Log.Infof("SendTgChatOpsMessage error: %s", err)
+	}
+}
+
+func Alert(a *config.AlertConfigs, text string) error {
+	metrics.AddAlertMetricNonCritical(a)
+
+	err := GetAlertProto(a).Send(a, text)
+	if err != nil {
+		config.Log.Infof("Send error")
+	}
+	return err
 }

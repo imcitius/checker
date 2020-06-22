@@ -203,7 +203,12 @@ func mainChecker() {
 			config.Log.Debugf("Fire bots")
 			config.Wg.Add(1)
 			//alerts.InitBots(config.BotsSignalCh, &config.Wg)
-			alerts.GetAlertProto(alerts.GetCommandChannel()).InitBot(config.BotsSignalCh, &config.Wg)
+			commandChannel, err := alerts.GetCommandChannel()
+			if err != nil {
+				config.Log.Infof("GetCommandChannel error: %s", err)
+			}
+
+			alerts.GetAlertProto(commandChannel).InitBot(config.BotsSignalCh, &config.Wg)
 		}
 		config.InternalStatus = "started"
 		if !interrupt {
@@ -232,10 +237,10 @@ func signalWait() {
 		config.Log.Infof("Got SIGINT")
 		config.InternalStatus = "stop"
 		interrupt = true
+		config.SchedulerSignalCh <- true
 		if config.Viper.GetBool("botsEnabled") {
 			config.BotsSignalCh <- true
 		}
-		config.SchedulerSignalCh <- true
 		config.WebSignalCh <- true
 	case <-config.SignalHUP:
 		config.Log.Infof("Got SIGHUP")

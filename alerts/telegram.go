@@ -116,7 +116,10 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 	var verbosity bool
 
-	a := GetCommandChannel()
+	a, err := GetCommandChannel()
+	if err != nil {
+		config.Log.Infof("GetCommandChannel error: %s", err)
+	}
 
 	defer wg.Done()
 
