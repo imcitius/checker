@@ -157,7 +157,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 			config.ClearSecrets()
 		}
 
-		metrics.SchedulerLoopConfig.Set(timerStep.Seconds()) // in seconds
+		metrics.SchedulerLoopConfig.Set(float64(timerStep.Milliseconds())) // in seconds
 		metrics.SchedulerLoops.Inc()
 	}
 }
