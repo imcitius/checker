@@ -189,10 +189,7 @@ func (c *ConfigFile) FillSecrets() error {
 
 	for i, alert := range c.Alerts {
 		if strings.HasPrefix(alert.BotToken, "vault") {
-			vault := strings.Split(alert.BotToken, ":")
-			path := vault[1]
-			field := vault[2]
-			token, err := GetVaultSecret(path, field)
+			token, err := GetVaultSecret(alert.BotToken)
 			if err == nil {
 				c.Alerts[i].BotToken = token
 			} else {
@@ -200,6 +197,30 @@ func (c *ConfigFile) FillSecrets() error {
 			}
 		}
 	}
+
+	for i, project := range c.Projects {
+		for j, hc := range project.Healtchecks {
+			for k, check := range hc.Checks {
+				if strings.HasPrefix(check.SqlQueryConfig.Password, "vault") {
+					token, err := GetVaultSecret(check.SqlQueryConfig.Password)
+					if err == nil {
+						c.Projects[i].Healtchecks[j].Checks[k].SqlQueryConfig.Password = token
+					} else {
+						return fmt.Errorf("Error getting bot token from vault: %v", err)
+					}
+				}
+				if strings.HasPrefix(check.SqlReplicationConfig.Password, "vault") {
+					token, err := GetVaultSecret(check.SqlReplicationConfig.Password)
+					if err == nil {
+						c.Projects[i].Healtchecks[j].Checks[k].SqlReplicationConfig.Password = token
+					} else {
+						return fmt.Errorf("Error getting bot token from vault: %v", err)
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -3,10 +3,16 @@ package config
 import (
 	"fmt"
 	"github.com/hashicorp/vault/api"
+	"strings"
 	"time"
 )
 
-func GetVaultSecret(path, field string) (string, error) {
+func GetVaultSecret(vaultPath string) (string, error) {
+
+	Log.Debugf("GetVaultSecret: vaultPath=%s", vaultPath)
+	vault := strings.Split(vaultPath, ":")
+	path := vault[1]
+	field := vault[2]
 
 	client, err := api.NewClient(&api.Config{
 		Address: Viper.GetString("VAULT_ADDR"),
