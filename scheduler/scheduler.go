@@ -150,7 +150,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					endTime := time.Now()
 					duration := endTime.Sub(startTime)
 
-					metrics.SchedulerLoopDuration.Set(duration.Seconds())
+					metrics.SchedulerLoopDuration.Set(float64(duration.Milliseconds()))
 				}
 			}
 		case <-MaintTicker.C:
