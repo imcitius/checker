@@ -49,7 +49,7 @@ func init() {
 			for {
 				msgi, err := pubsub.ReceiveTimeout(dbConnectTimeout)
 				if err != nil {
-					return fmt.Errorf(errorHeader+"redis pub/sub receive timeout error %+v on channel %s", err, channel)
+					return fmt.Errorf(errorHeader+"redis pub/sub receive timeout error:\n %+v\n on channel %s", err, channel)
 				} else {
 					switch msg := msgi.(type) {
 					case *redis.Subscription:

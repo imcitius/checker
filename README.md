@@ -252,7 +252,7 @@ difference: максимальная разность с текущим врем
 
 Таблица для проверки должна соответствовать схеме:
     CREATE TABLE repl_test (
-       id int ,
+       id int primary key,
        test_value int
     )
 ```
@@ -283,7 +283,6 @@ password: пароль
       },
       "timeout": 5s
     }
-
 ```
 
 
