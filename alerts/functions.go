@@ -44,10 +44,10 @@ func ProjectSendReport(p *config.Project) error {
 		ceasedChecks                []string
 		reportMessage, reportHeader string
 	)
-	for _, healthcheck := range p.Healtchecks {
-		for _, check := range healthcheck.Checks {
-			if check.Mode == "quiet" {
-				ceasedChecks = append(ceasedChecks, check.UUid)
+	for _, hc := range p.Healtchecks {
+		for _, c := range hc.Checks {
+			if status.Statuses.Checks[c.UUid].Mode == "quiet" {
+				ceasedChecks = append(ceasedChecks, c.UUid)
 			}
 		}
 	}
@@ -56,12 +56,12 @@ func ProjectSendReport(p *config.Project) error {
 		reportHeader = fmt.Sprintf("Project %s in %s state\n", p.Name, projects.GetMode(p))
 		reportMessage = reportHeader + fmt.Sprintf("Ceased checks: %v\n", ceasedChecks)
 	} else {
-		if p.Parameters.Mode == "quiet" {
+		if projects.GetMode(p) == "quiet" {
 			reportMessage = fmt.Sprintf("Project %s in quiet state\n", p.Name)
 		}
 	}
 
-	if reportMessage != "" || p.Parameters.Mode == "quiet" {
+	if reportMessage != "" {
 		SendChatOps(reportMessage)
 	}
 	return nil

@@ -2,6 +2,7 @@ package project
 
 import (
 	config "my/checker/config"
+	"my/checker/status"
 )
 
 func GetName(p *config.Project) string {
@@ -9,7 +10,7 @@ func GetName(p *config.Project) string {
 }
 
 func GetMode(p *config.Project) string {
-	return p.Parameters.Mode
+	return status.Statuses.Projects[p.Name].Mode
 }
 
 func GetProjectByName(name string) *config.Project {

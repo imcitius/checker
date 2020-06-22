@@ -29,9 +29,14 @@ func runReports(timeout string) {
 		if project.Parameters.PeriodicReport == timeout {
 			err := alerts.ProjectSendReport(&project)
 			if err != nil {
-				config.Log.Printf("Cannot send report for project %s: %+v", project.Name, err)
+				config.Log.Infof("Cannot send report for project %s: %+v", project.Name, err)
 			}
 		}
+	}
+
+	if status.MainStatus == "quiet" {
+		reportMessage := fmt.Sprintf("All messages ceased")
+		alerts.SendChatOps(reportMessage)
 	}
 }
 
@@ -149,15 +154,18 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					checksStartTime := time.Now()
 					runChecks(timeout)
 					checksDuration := time.Now().Sub(checksStartTime)
+
 					reportsStartTime := time.Now()
 					runReports(timeout)
 					reportsDuration := time.Now().Sub(reportsStartTime)
+
 					alertsStartTime := time.Now()
 					runAlerts(timeout)
 					alertsDuration := time.Now().Sub(alertsStartTime)
-					config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
-					config.Log.Infof("Reports duration: %v msec", reportsDuration.Milliseconds())
-					config.Log.Infof("Alerts duration: %v msec", alertsDuration.Milliseconds())
+
+					config.Log.Warnf("Checks duration: %v msec", checksDuration.Milliseconds())
+					config.Log.Warnf("Reports duration: %v msec", reportsDuration.Milliseconds())
+					config.Log.Warnf("Alerts duration: %v msec", alertsDuration.Milliseconds())
 					metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
 					metrics.SchedulerReportsDuration.Set(float64(reportsDuration.Milliseconds()))
 					metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))
