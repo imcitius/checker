@@ -106,58 +106,71 @@ func runChecks(timeout string) {
 
 func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
-	StartTime := time.Now()
-
 	timerStep, err := time.ParseDuration(config.Viper.GetString("defaults.timer_step"))
 	if err != nil {
 		config.Log.Fatal(err)
 	}
 
 	Ticker := time.NewTicker(timerStep)
-	MaintTicker := time.NewTicker(5 * time.Minute)
+	MaintPeriod := 5 * time.Minute
+	timerStepSeconds := timerStep.Seconds()
 
 	config.Log.Debug("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
 
 	for {
 		config.Log.Debugf("Scheduler loop #: %d", config.ScheduleLoop)
+
 		select {
 		case <-signalCh:
 			config.Log.Infof("Exit scheduler")
 			wg.Done()
 			return
 		case t := <-Ticker.C:
-			dif := float64(t.Sub(StartTime) / time.Second)
+			go config.WatchConfig()
+			uptime := float64(t.Sub(config.StartTime) / time.Second)
 
-			for i, timeout := range config.Timeouts.Periods {
-				config.Log.Debugf("Got timeout #%d: %s", i, timeout)
+			for _, timeout := range config.Timeouts.Periods {
+				config.Log.Debugf("Looking for projects with timeout: %s", timeout)
 
 				tf, err := time.ParseDuration(timeout)
 				if err != nil {
 					config.Log.Errorf("Cannot parse timeout: %s", err)
 				}
-				config.Log.Debugf("Parsed timeout #%d: %+v", i, tf)
 
-				if math.Remainder(dif, tf.Seconds()) == 0 {
-					config.Log.Debugf("Time: %v\nTimeout: %v\n===\n\n", t, timeout)
+				config.Log.Debugf("===\nUptime: %v", uptime)
 
-					config.Log.Infof("Schedule: %s", timeout)
+				roundUptime := math.Round(uptime/timerStepSeconds) * timerStepSeconds
+				if math.Remainder(roundUptime, tf.Seconds()) == 0 {
+					config.Log.Debugf("===\nTime: %v\n---\n\n", t)
 
-					startTime := time.Now()
-					go runChecks(timeout)
-					go runReports(timeout)
+					config.Log.Infof("Timeout: %s", timeout)
+
+					checksStartTime := time.Now()
+					runChecks(timeout)
+					checksDuration := time.Now().Sub(checksStartTime)
+					reportsStartTime := time.Now()
+					runReports(timeout)
+					reportsDuration := time.Now().Sub(reportsStartTime)
+					alertsStartTime := time.Now()
 					runAlerts(timeout)
-					endTime := time.Now()
-					duration := endTime.Sub(startTime)
-
-					metrics.SchedulerLoopDuration.Set(float64(duration.Milliseconds()))
+					alertsDuration := time.Now().Sub(alertsStartTime)
+					config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
+					config.Log.Infof("Reports duration: %v msec", reportsDuration.Milliseconds())
+					config.Log.Infof("Alerts duration: %v msec", alertsDuration.Milliseconds())
+					metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
+					metrics.SchedulerReportsDuration.Set(float64(reportsDuration.Milliseconds()))
+					metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))
 				}
 			}
-		case <-MaintTicker.C:
-			config.ClearSecrets()
+
+			if math.Remainder(uptime, MaintPeriod.Seconds()) == 0 {
+				config.ClearSecrets()
+			}
 		}
 
-		metrics.SchedulerLoopConfig.Set(float64(timerStep.Milliseconds())) // in seconds
+		metrics.SchedulerLoopConfig.Set(float64(timerStep.Milliseconds()))
 		metrics.SchedulerLoops.Inc()
+		config.ScheduleLoop++
 	}
 }

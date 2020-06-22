@@ -88,8 +88,6 @@ func (p *TimeoutsCollection) Add(period string) {
 		if !found {
 			p.Periods = append(p.Periods, period)
 		}
-	} else {
-		Log.Debug("Empty timeout not adding")
 	}
 }
 
@@ -157,8 +155,6 @@ func (p *TimeoutCollection) Add(period string) {
 		if !found {
 			p.periods = append(p.periods, period)
 		}
-	} else {
-		Log.Debug("Empty timeout not adding")
 	}
 }
 
@@ -177,7 +173,7 @@ func (c *ConfigFile) FillTimeouts() error {
 				Timeouts.Add(h.Parameters.RunEvery)
 				p.Timeouts.Add(h.Parameters.RunEvery)
 			}
-			Log.Debugf("Project %s timeouts found: %+v\n", p.Name, p.Timeouts)
+			//Log.Debugf("Project %s timeouts found: %+v\n", p.Name, p.Timeouts)
 		}
 	}
 	Log.Debugf("Total timeouts found: %+v\n\n", Timeouts)
@@ -283,29 +279,28 @@ func InitConfig() {
 }
 
 func WatchConfig() {
-	for {
-		if period, err := time.ParseDuration(CfgWatchTimeout); err != nil {
-			Log.Infof("KV watch timeout parser error: %+v, use 5s", err)
-			time.Sleep(time.Second * 5) // default delay
-		} else {
-			time.Sleep(period)
-		}
-		tempConfig, err := TestConfig()
-		if err == nil {
-			if !reflect.DeepEqual(Config, tempConfig) {
-				Log.Infof("KV config changed, reloading")
-				err := LoadConfig()
-				if err != nil {
-					Log.Infof("Config load error: %s", err)
-				} else {
-					Log.Debugf("Loaded config: %+v", Config)
-				}
-				ConfigChangeSig <- true
-			}
-		} else {
-			Log.Infof("KV config seems to be broken: %+v", err)
-		}
-
-		//configWatchSig <- true
+	if period, err := time.ParseDuration(CfgWatchTimeout); err != nil {
+		Log.Infof("KV watch timeout parser error: %+v, use 5s", err)
+		time.Sleep(time.Second * 5) // default delay
+	} else {
+		time.Sleep(period)
 	}
+	tempConfig, err := TestConfig()
+	if err == nil {
+		if !reflect.DeepEqual(Config, tempConfig) {
+			Log.Infof("KV config changed, reloading")
+			err := LoadConfig()
+			if err != nil {
+				Log.Infof("Config load error: %s", err)
+			}
+			//else {
+			//	Log.Debugf("Loaded config: %+v", Config)
+			//}
+			ConfigChangeSig <- true
+		}
+	} else {
+		Log.Infof("KV config seems to be broken: %+v", err)
+	}
+
+	//configWatchSig <- true
 }

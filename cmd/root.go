@@ -13,9 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"reflect"
 	"syscall"
-	"time"
 )
 
 var (
@@ -167,7 +165,6 @@ var testCfg = &cobra.Command{
 }
 
 func mainChecker() {
-	go config.WatchConfig()
 
 	for {
 		config.Log.Info("Start main loop")
@@ -176,16 +173,15 @@ func mainChecker() {
 		err := config.LoadConfig()
 		if err != nil {
 			config.Log.Infof("Config load error: %s", err)
-		} else {
-			config.Log.Debugf("(mainChecker) Loaded config: %+v", config.Config)
 		}
+		//else {
+		//	config.Log.Debugf("(mainChecker) Loaded config: %+v", config.Config)
+		//}
 
 		err = status.InitStatuses()
 		if err != nil {
 			config.Log.Infof("Status init error: %s", err)
 		}
-
-		go signalWait()
 
 		if config.Sem.TryAcquire(1) {
 			config.Log.Debugf("Fire webserver")
@@ -210,10 +206,14 @@ func mainChecker() {
 
 			alerts.GetAlertProto(commandChannel).InitBot(config.BotsSignalCh, &config.Wg)
 		}
+
 		config.InternalStatus = "started"
+
+		go signalWait()
+		config.Wg.Wait()
+
 		if !interrupt {
 			config.Log.Debug("Checker init complete")
-			config.Wg.Wait()
 		} else {
 			config.Log.Debug("Checker stopped")
 			os.Exit(1)
@@ -242,9 +242,11 @@ func signalWait() {
 			config.BotsSignalCh <- true
 		}
 		config.WebSignalCh <- true
+		return
 	case <-config.SignalHUP:
 		config.Log.Infof("Got SIGHUP")
 		config.ConfigChangeSig <- true
+		return
 	case <-config.ConfigChangeSig:
 		config.Log.Infof("Config file reload")
 		config.InternalStatus = "reload"
@@ -253,33 +255,6 @@ func signalWait() {
 		if config.Viper.GetBool("botsEnabled") {
 			config.BotsSignalCh <- true
 		}
-	}
-}
-
-func watchConfig() {
-	for {
-		if period, err := time.ParseDuration(config.CfgWatchTimeout); err != nil {
-			config.Log.Infof("KV watch timeout parser error: %+v, use 5s", err)
-			time.Sleep(time.Second * 5) // default delay
-		} else {
-			time.Sleep(period)
-		}
-		tempConfig, err := config.TestConfig()
-		if err == nil {
-			if !reflect.DeepEqual(config.Config, tempConfig) {
-				config.Log.Infof("KV config changed, reloading")
-				err := config.LoadConfig()
-				if err != nil {
-					config.Log.Infof("Config load error: %s", err)
-				} else {
-					config.Log.Debugf("(watchConfig) Loaded config: %+v", config.Config)
-				}
-				config.ConfigChangeSig <- true
-			}
-		} else {
-			config.Log.Infof("KV config seems to be broken: %+v", err)
-		}
-
-		//configWatchSig <- true
+		return
 	}
 }

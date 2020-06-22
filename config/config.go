@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 )
 
 var (
@@ -14,6 +15,7 @@ var (
 	VersionSHA   string
 	VersionBuild string
 
+	StartTime      = time.Now()
 	InternalStatus = "starting"
 
 	ScheduleLoop               int

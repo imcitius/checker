@@ -18,7 +18,7 @@ func ClearSecrets() {
 
 func GetVaultSecret(vaultPath string) (string, error) {
 
-	Log.Debugf("GetVaultSecret: vaultPath=%s", vaultPath)
+	//Log.Debugf("GetVaultSecret: vaultPath=%s", vaultPath)
 	vault := strings.Split(vaultPath, ":")
 	path := vault[1]
 	field := vault[2]
