@@ -117,7 +117,7 @@ func init() {
 			query = c.SqlQueryConfig.Query
 		}
 
-		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslModeç)
+		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
 
 		if dbConnectTimeout > 0 {
 			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
