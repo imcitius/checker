@@ -51,7 +51,7 @@ EOH
       delay = "5s"
     }
 
-    task "checker" {
+    task "checker-{$ .P.version $}" {
       driver = "docker"
 
       meta {
