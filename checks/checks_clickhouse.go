@@ -66,7 +66,7 @@ func init() {
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
-				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
+				err = fmt.Errorf("Error: db response does not match expected: %s \\(expected %s\\)", id, c.SqlQueryConfig.Response)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}

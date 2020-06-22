@@ -30,37 +30,41 @@ func init() {
 	AlerterCollection["telegram"] = new(Telegram)
 }
 
-func (m TgMessage) GetProject() string {
+func (m TgMessage) GetProject() (string, error) {
 	var (
 		result      []string
 		projectName string
+		err         error
 	)
 
 	conf, _ := json.Marshal(m)
-	config.Log.Printf("Message: %+v\n\n", string(conf))
+	config.Log.Debugf("Message: %+v\n\n", string(conf))
 
 	if m.IsReply() {
 		// try to get from reply
-		pattern := regexp.MustCompile("roject: (.*)\n")
+		pattern := regexp.MustCompile("Project: (.*)\n")
 		result = pattern.FindStringSubmatch(m.ReplyTo.Text)
 		projectName = result[1]
 	} else {
-		projectName = m.Payload
+		if m.Payload != "" {
+			projectName = m.Payload
+		}
 	}
 
-	if result == nil {
-		fmt.Printf("Project extraction error.")
+	if projectName == "" {
+		err = fmt.Errorf("Project name extraction error\\.\nShould be reply to an alert message, or speficied as `/<command> project_name`\\.")
 	} else {
-		fmt.Printf("Project extracted: %v\n", projectName)
+		config.Log.Debugf("Project extracted: %v\n", projectName)
 	}
 
-	return projectName
+	return projectName, err
 }
 
-func (m TgMessage) GetUUID() string {
+func (m TgMessage) GetUUID() (string, error) {
 	var (
 		result []string
 		uuid   string
+		err    error
 	)
 	fmt.Printf("message: %v\n", m.Text)
 
@@ -70,16 +74,18 @@ func (m TgMessage) GetUUID() string {
 		result = pattern.FindStringSubmatch(m.ReplyTo.Text)
 		uuid = result[1]
 	} else {
-		uuid = m.Payload
+		if m.Payload != "" {
+			uuid = m.Payload
+		}
 	}
 
-	if result == nil {
-		fmt.Printf("UUID extraction error.")
+	if uuid == "" {
+		err = fmt.Errorf("UUID extraction error\\.\nShould be reply to an alert message, or speficied as `/<command> UUID`\\.")
 	} else {
-		fmt.Printf("UUID extracted: %v\n", uuid)
+		config.Log.Debugf("UUID extracted: %v\n", uuid)
 	}
 
-	return uuid
+	return uuid, err
 
 	// WIP test and write error handling
 }
@@ -100,7 +106,9 @@ func (t Telegram) Send(a *config.AlertConfigs, message string) error {
 	user := tb.Chat{ID: a.ProjectChannel}
 	//config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
 
-	_, err = bot.Send(&user, message)
+	options := new(tb.SendOptions)
+	options.ParseMode = "MarkDownV2"
+	_, err = bot.Send(&user, message, options)
 	if err != nil {
 		config.Log.Warnf("SendTgMessage error: %v", err)
 	} else {
@@ -157,7 +165,11 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
-		uuID := tgMessage.GetUUID()
+		uuID, err := tgMessage.GetUUID()
+		if err != nil {
+			SendChatOps(fmt.Sprintf("%s", err))
+			return
+		}
 
 		config.Log.Infof("Bot request /pu")
 		config.Log.Printf("Pause req for UUID: %+v\n", uuID)
@@ -171,7 +183,11 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 		var tgMessage config.IncomingChatMessage
 		tgMessage = TgMessage{m}
-		uuID := tgMessage.GetUUID()
+		uuID, err := tgMessage.GetUUID()
+		if err != nil {
+			SendChatOps(fmt.Sprintf("%s", err))
+			return
+		}
 		config.Log.Infof("Bot request /uu")
 		config.Log.Printf("Unpause req for UUID: %+v\n", uuID)
 		status.SetCheckMode(checks.GetCheckByUUID(uuID), "loud")
@@ -186,11 +202,17 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		tgMessage = TgMessage{m}
 
 		config.Log.Infof("Bot request /pp")
-		project := projects.GetProjectByName(tgMessage.GetProject())
-		config.Log.Printf("Pause req for project: %s\n", tgMessage.GetProject())
+		projectName, err := tgMessage.GetProject()
+		if err != nil {
+			SendChatOps(fmt.Sprintf("%s", err))
+			return
+		}
+
+		project := projects.GetProjectByName(projectName)
+		config.Log.Printf("Pause req for project: %s\n", project)
 		status.SetProjectMode(project, "loud")
 
-		SendChatOps(fmt.Sprintf("Messages ceased for project %s", tgMessage.GetProject()))
+		SendChatOps(fmt.Sprintf("Messages ceased for project %s", project))
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
@@ -201,11 +223,17 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 		config.Log.Infof("Bot request /up")
 
-		projectName := projects.GetProjectByName(tgMessage.GetProject())
-		config.Log.Printf("Resume req for project: %s\n", tgMessage.GetProject())
-		status.SetProjectMode(projectName, "quiet")
+		projectName, err := tgMessage.GetProject()
+		if err != nil {
+			SendChatOps(fmt.Sprintf("%s", err))
+			return
+		}
 
-		SendChatOps(fmt.Sprintf("Messages resumed for project %s", tgMessage.GetProject()))
+		project := projects.GetProjectByName(projectName)
+		config.Log.Printf("Resume req for project: %s\n", project)
+		status.SetProjectMode(project, "quiet")
+
+		SendChatOps(fmt.Sprintf("Messages resumed for project %s", project))
 	})
 
 	bot.Handle("/stats", func(m *tb.Message) {
@@ -223,7 +251,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		case "reload":
 			message = "Config reloaded"
 		default:
-			message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
+			message = fmt.Sprintf("Bot at your service \\(%s, %s, %s\\)", config.Version, config.VersionSHA, config.VersionBuild)
 		}
 		config.Log.Infof("Start listening telegram bots routine")
 		SendChatOps(message)

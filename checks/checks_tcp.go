@@ -38,7 +38,7 @@ func init() {
 				return nil
 			}
 
-			errorMessage = errorHeader + fmt.Sprintf("connection to host %s failed: %v (attempt %d)\n", c.Host+":"+string(c.Port), err, checkAttempts)
+			errorMessage = errorHeader + fmt.Sprintf("connection to host %s failed: %v \\(attempt %d\\ww)\n", c.Host+":"+string(c.Port), err, checkAttempts)
 			config.Log.Printf(errorMessage)
 			checkAttempt++
 		}

@@ -8,8 +8,8 @@ package config
 //}
 
 type IncomingChatMessage interface {
-	GetUUID() string
-	GetProject() string
+	GetUUID() (string, error)
+	GetProject() (string, error)
 }
 
 type CommonProject interface {

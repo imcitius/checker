@@ -168,6 +168,7 @@ func mainChecker() {
 
 	for {
 		config.Log.Info("Start main loop")
+		go signalWait()
 		interrupt = false
 
 		err := config.LoadConfig()
@@ -209,7 +210,6 @@ func mainChecker() {
 
 		config.InternalStatus = "started"
 
-		go signalWait()
 		config.Wg.Wait()
 
 		if !interrupt {
@@ -231,7 +231,7 @@ func testConfig() {
 }
 
 func signalWait() {
-	config.Log.Debug("Start waiting signals")
+	config.Log.Info("Start waiting signals")
 	select {
 	case <-config.SignalINT:
 		config.Log.Infof("Got SIGINT")
