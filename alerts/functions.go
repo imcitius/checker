@@ -2,7 +2,6 @@ package alerts
 
 import (
 	"fmt"
-	checks "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
 	projects "my/checker/projects"
@@ -48,7 +47,7 @@ func ProjectSendReport(p *config.Project) error {
 	for _, healthcheck := range p.Healtchecks {
 		for _, check := range healthcheck.Checks {
 			if check.Mode == "quiet" {
-				ceasedChecks = append(ceasedChecks, checks.UUID(&check))
+				ceasedChecks = append(ceasedChecks, check.UUid)
 			}
 		}
 	}
@@ -63,7 +62,6 @@ func ProjectSendReport(p *config.Project) error {
 	}
 
 	if reportMessage != "" || p.Parameters.Mode == "quiet" {
-
 		SendChatOps(reportMessage)
 	}
 	return nil

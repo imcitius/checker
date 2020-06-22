@@ -209,10 +209,10 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		}
 
 		project := projects.GetProjectByName(projectName)
-		config.Log.Printf("Pause req for project: %s\n", project)
+		config.Log.Printf("Pause req for project: %s\n", projectName)
 		status.SetProjectMode(project, "loud")
 
-		SendChatOps(fmt.Sprintf("Messages ceased for project %s", project))
+		SendChatOps(fmt.Sprintf("Messages ceased for project %s", projectName))
 	})
 
 	bot.Handle("/up", func(m *tb.Message) {
@@ -230,10 +230,10 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		}
 
 		project := projects.GetProjectByName(projectName)
-		config.Log.Printf("Resume req for project: %s\n", project)
+		config.Log.Printf("Resume req for project: %s\n", projectName)
 		status.SetProjectMode(project, "quiet")
 
-		SendChatOps(fmt.Sprintf("Messages resumed for project %s", project))
+		SendChatOps(fmt.Sprintf("Messages resumed for project %s", projectName))
 	})
 
 	bot.Handle("/stats", func(m *tb.Message) {
