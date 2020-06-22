@@ -7,12 +7,26 @@ import (
 	"time"
 )
 
+func init() {
+	ClearSecrets()
+}
+
+func ClearSecrets() {
+	// Secret cache, to reduce Vault requests number
+	Secrets = make(map[string]string)
+}
+
 func GetVaultSecret(vaultPath string) (string, error) {
 
 	Log.Debugf("GetVaultSecret: vaultPath=%s", vaultPath)
 	vault := strings.Split(vaultPath, ":")
 	path := vault[1]
 	field := vault[2]
+
+	if token, ok := Secrets[path]; ok {
+		//Log.Debugf("Secret return from cache")
+		return token, nil
+	}
 
 	client, err := api.NewClient(&api.Config{
 		Address: Viper.GetString("VAULT_ADDR"),
@@ -32,5 +46,6 @@ func GetVaultSecret(vaultPath string) (string, error) {
 	if sec == nil || sec.Data == nil {
 		return "", fmt.Errorf("No data for key %s\n", field)
 	}
+	Secrets[path] = fmt.Sprint(sec.Data[field])
 	return fmt.Sprint(sec.Data[field]), nil
 }

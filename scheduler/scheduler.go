@@ -112,6 +112,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 	}
 
 	Ticker := time.NewTicker(timerStep)
+	MaintTicker := time.NewTicker(5 * time.Minute)
 
 	config.Log.Debug("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
@@ -150,6 +151,8 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					metrics.SchedulerLoopDuration.Set(duration.Seconds())
 				}
 			}
+		case <-MaintTicker.C:
+			config.ClearSecrets()
 		}
 
 		metrics.SchedulerLoopConfig.Set(timerStep.Seconds()) // in seconds

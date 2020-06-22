@@ -30,6 +30,8 @@ var (
 	Wg                                                            sync.WaitGroup
 
 	Viper = viper.New()
+
+	Secrets map[string]string
 )
 
 type Parameters struct {
