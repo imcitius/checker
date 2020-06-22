@@ -114,14 +114,20 @@ func (t Telegram) Send(a *config.AlertConfigs, message string) error {
 
 func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
+	var verbosity bool
+
 	a := GetCommandChannel()
 
 	defer wg.Done()
 
+	if config.Log.GetLevel().String() == "debug" {
+		verbosity = true
+	}
+
 	bot, err := tb.NewBot(tb.Settings{
 		Token:   a.BotToken,
 		Poller:  &tb.LongPoller{Timeout: 5 * time.Second},
-		Verbose: true,
+		Verbose: verbosity,
 	})
 
 	if err != nil {
