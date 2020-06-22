@@ -52,7 +52,7 @@ func (m TgMessage) GetProject() (string, error) {
 	}
 
 	if projectName == "" {
-		err = fmt.Errorf("Project name extraction error\\.\nShould be reply to an alert message, or speficied as `/<command> project_name`\\.")
+		err = fmt.Errorf("Project name extraction error.\nShould be reply to an alert message, or speficied as `/<command> project_name`.")
 	} else {
 		config.Log.Debugf("Project extracted: %v\n", projectName)
 	}
@@ -80,7 +80,7 @@ func (m TgMessage) GetUUID() (string, error) {
 	}
 
 	if uuid == "" {
-		err = fmt.Errorf("UUID extraction error\\.\nShould be reply to an alert message, or speficied as `/<command> UUID`\\.")
+		err = fmt.Errorf("UUID extraction error.\nShould be reply to an alert message, or speficied as `/<command> UUID`.")
 	} else {
 		config.Log.Debugf("UUID extracted: %v\n", uuid)
 	}
@@ -94,6 +94,44 @@ type Telegram struct {
 	Alerter
 }
 
+func special(b byte) bool {
+
+	specials := []byte{'_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'}
+
+	for _, s := range specials {
+		if s == b {
+			return true
+		}
+	}
+	return false
+}
+
+func QuoteMeta(s string) string {
+	// A byte loop is correct because all metacharacters are ASCII.
+	var i int
+	for i = 0; i < len(s); i++ {
+		if special(s[i]) {
+			break
+		}
+	}
+	// No meta characters found, so return original string.
+	if i >= len(s) {
+		return s
+	}
+
+	b := make([]byte, 2*len(s)-i)
+	copy(b, s[:i])
+	j := i
+	for ; i < len(s); i++ {
+		if special(s[i]) {
+			b[j] = '\\'
+			j++
+		}
+		b[j] = s[i]
+		j++
+	}
+	return string(b[:j])
+}
 func (t Telegram) Send(a *config.AlertConfigs, message string) error {
 	config.Log.Debugf("Sending alert, text: '%s' (alert channel %+v)", message, a.Name)
 	bot, err := tb.NewBot(tb.Settings{
@@ -108,7 +146,10 @@ func (t Telegram) Send(a *config.AlertConfigs, message string) error {
 
 	options := new(tb.SendOptions)
 	options.ParseMode = "MarkDownV2"
-	_, err = bot.Send(&user, message, options)
+
+	config.Log.Infof("quoted message: %s", QuoteMeta(message))
+
+	_, err = bot.Send(&user, QuoteMeta(message), options)
 	if err != nil {
 		config.Log.Warnf("SendTgMessage error: %v", err)
 	} else {
@@ -251,7 +292,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		case "reload":
 			message = "Config reloaded"
 		default:
-			message = fmt.Sprintf("Bot at your service \\(%s, %s, %s\\)", config.Version, config.VersionSHA, config.VersionBuild)
+			message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
 		}
 		config.Log.Infof("Start listening telegram bots routine")
 		SendChatOps(message)

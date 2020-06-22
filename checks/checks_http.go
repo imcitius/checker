@@ -130,7 +130,7 @@ func init() {
 		}(c.Code, int(response.StatusCode))
 
 		if !checkCode {
-			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d \\(want %d\\)", response.StatusCode, c.Code)
+			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode, c.Code)
 			return errors.New(errorMessage)
 		}
 
@@ -140,7 +140,7 @@ func init() {
 		//config.Log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, c.AnswerPresent, answerGood)
 
 		if !answerGood {
-			errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' \\('%s' should be %s\\)", string(buf.Bytes()), c.Answer, c.AnswerPresent)
+			errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' ('%s' should be %s)", string(buf.Bytes()), c.Answer, c.AnswerPresent)
 			return errors.New(errorMessage)
 		}
 

@@ -71,7 +71,7 @@ func init() {
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
-				err = fmt.Errorf("Error: db response does not match expected: %s \\(expected %s\\)", id, c.SqlQueryConfig.Response)
+				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}
@@ -257,7 +257,7 @@ func init() {
 
 			if c.SqlQueryConfig.Response != "" {
 				if id != recordValue {
-					err = fmt.Errorf("Replication error: db response does not match expected: %d \\(expected %d\\) on server %s", id, recordValue, server)
+					err = fmt.Errorf("Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
 					return fmt.Errorf(errorHeader + err.Error())
 				}
 			}

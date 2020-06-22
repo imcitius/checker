@@ -65,7 +65,7 @@ func init() {
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
-				err = fmt.Errorf(errorHeader+"Error: db response does not match expected: %s \\(expected %s\\)", id, c.SqlQueryConfig.Response)
+				err = fmt.Errorf(errorHeader+"Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
 				return err
 			}
 		}
@@ -228,13 +228,13 @@ func init() {
 
 			err = db.QueryRow(sqlStatement).Scan(&id)
 			if err != nil {
-				config.Log.Printf(errorHeader+"Error: Could not query database: %+v \\(server %s\\)", err, server)
+				config.Log.Printf(errorHeader+"Error: Could not query database: %+v (server %s)", err, server)
 				return err
 			}
 
 			if c.SqlQueryConfig.Response != "" {
 				if id != recordValue {
-					err = fmt.Errorf(errorHeader+"Replication error: db response does not match expected: %d \\(expected %d\\) on server %s", id, recordValue, server)
+					err = fmt.Errorf(errorHeader+"Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
 					return err
 				}
 			}
