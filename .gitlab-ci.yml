@@ -17,7 +17,7 @@ include:
     file: "go-app.base.yml"
   - .gitlab-ci.build.yml
 
-prod:
+prod instance:
   extends:
     - .prod_instance
     - .docker_europe_tags
@@ -26,7 +26,7 @@ prod:
     INSTANCE_DC: ks-1
     CONSUL_PATH: configs/ks-1/checker/config
 
-stage:
+stage instance:
   extends:
     - .stage_instance
     - .docker_europe_tags
