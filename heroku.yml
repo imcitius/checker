@@ -1,0 +1,8 @@
+build:
+  languages:
+    - go
+  docker:
+    dockerfile: Dockerfile
+
+run:
+  web: checker --config /google.yaml check
