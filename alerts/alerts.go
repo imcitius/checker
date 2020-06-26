@@ -14,4 +14,4 @@ type Alerter interface {
 	InitBot(botsSignalCh chan bool, wg *sync.WaitGroup)
 }
 
-var AlerterCollection map[string]Alerter
+var AlerterCollections map[string]Alerter

@@ -18,8 +18,8 @@ type MmMessage struct {
 }
 
 func init() {
-	AlerterCollection = make(map[string]Alerter)
-	AlerterCollection["mattermost"] = new(Mattermost)
+	AlerterCollections = make(map[string]Alerter)
+	AlerterCollections["mattermost"] = new(Mattermost)
 }
 
 func (m *Mattermost) Send(a *config.AlertConfigs, message string) error {

@@ -27,7 +27,8 @@ type TgMessage struct {
 }
 
 func init() {
-	AlerterCollection["telegram"] = new(Telegram)
+	AlerterCollections = make(map[string]Alerter)
+	AlerterCollections["telegram"] = new(Telegram)
 }
 
 func (m TgMessage) GetProject() (string, error) {
@@ -147,7 +148,7 @@ func (t Telegram) Send(a *config.AlertConfigs, message string) error {
 	options := new(tb.SendOptions)
 	options.ParseMode = "MarkDownV2"
 
-	config.Log.Infof("quoted message: %s", QuoteMeta(message))
+	config.Log.Debugf("Bot quoted answer: %s", QuoteMeta(message))
 
 	_, err = bot.Send(&user, QuoteMeta(message), options)
 	if err != nil {

@@ -68,7 +68,10 @@ func ProjectSendReport(p *config.Project) error {
 }
 
 func GetAlertProto(a *config.AlertConfigs) Alerter {
-	return AlerterCollection[a.Type]
+	if value, ok := AlerterCollections[a.Type]; ok {
+		return value
+	}
+	return nil
 }
 
 func GetCommandChannel() (*config.AlertConfigs, error) {

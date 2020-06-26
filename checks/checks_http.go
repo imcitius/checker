@@ -81,7 +81,7 @@ func init() {
 		response, err := client.Do(req)
 
 		if err != nil {
-			errorMessage := errorHeader + fmt.Sprintf("asnwer error: %+v", err)
+			errorMessage := errorHeader + fmt.Sprintf("answer error: %+v", err)
 			return errors.New(errorMessage)
 		}
 

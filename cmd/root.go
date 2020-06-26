@@ -203,9 +203,9 @@ func mainChecker() {
 			commandChannel, err := alerts.GetCommandChannel()
 			if err != nil {
 				config.Log.Infof("GetCommandChannel error: %s", err)
+			} else {
+				alerts.GetAlertProto(commandChannel).InitBot(config.BotsSignalCh, &config.Wg)
 			}
-
-			alerts.GetAlertProto(commandChannel).InitBot(config.BotsSignalCh, &config.Wg)
 		}
 
 		config.InternalStatus = "started"
