@@ -39,12 +39,19 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 	defer sem.Release(1)
 
-	var server *http.Server
+	var (
+		server *http.Server
+		addr   string
+	)
 
 	if Config.Defaults.HTTPEnabled != "" {
 		return
 	}
-	var addr string = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
+	if config.Viper.GetString("PORT") != "" {
+		addr = fmt.Sprintf(":%s", config.Viper.GetString("PORT"))
+	} else {
+		addr = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
+	}
 	server = new(http.Server)
 	server.Addr = addr
 	config.Log.Infof("HTTP listen on: %s", addr)

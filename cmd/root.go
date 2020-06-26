@@ -66,6 +66,7 @@ func init() {
 	config.Viper.BindEnv("VAULT_ADDR")
 	config.Viper.BindEnv("CONSUL_ADDR")
 	config.Viper.BindEnv("CONSUL_PATH")
+	config.Viper.BindEnv("PORT")
 
 	config.Viper.SetDefault("HTTPPort", "80")
 
