@@ -1,6 +1,6 @@
 build:
   languages:
-    - go
+    - go1.14
   docker:
     dockerfile: Dockerfile
 
