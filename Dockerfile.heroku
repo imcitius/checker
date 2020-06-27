@@ -5,7 +5,8 @@ RUN go get -v -d ./... \
     && CGO_ENABLED=0 GOOS=linux go build -v -i -ldflags "-X my/checker/config.Version=${SOURCE_VERSION}" -o build/checker
 
 FROM centos
+RUN ls -al
 COPY --from=build /app/build/checker /bin/checker
-COPY testconfigs/google.yaml /config.yaml
+COPY --from=build /app/testconfigs/google.yaml /config.yaml
 
 ENTRYPOINT ["/bin/checker"]
