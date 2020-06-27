@@ -1,5 +1,10 @@
+setup:
+  config:
+    GO_LINKER_SYMBOL: my/checker/config.VersionSHA
+
 build:
   docker:
     web: Dockerfile
 
-web: /bin/checker --config /config.yaml check
+run:
+  web: /bin/checker --config /config.yaml check
