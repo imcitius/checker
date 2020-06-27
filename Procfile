@@ -1,1 +1,1 @@
-web: bin/checker --config docs/examples/config.yaml check
+web: bin/checker --config docs/examples/google.yaml check

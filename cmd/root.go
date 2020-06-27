@@ -88,8 +88,6 @@ func initConfig() {
 	logrus.Info("initConfig: load config file")
 	logrus.Infof("Config flag: %s", config.CfgFile)
 
-	logrus.Debugf("%s %s", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
-
 	switch {
 	case config.CfgSrc == "" || config.CfgSrc == "file":
 		if config.CfgFile == "" {
@@ -123,10 +121,10 @@ func initConfig() {
 				config.Viper.AddRemoteProvider("consul", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
 				config.Viper.SetConfigType("json")
 			} else {
-				panic("Consul path not specified")
+				logrus.Fatal("Consul path not specified")
 			}
 		} else {
-			panic("Consul URL not specified")
+			logrus.Fatal("Consul URL not specified")
 		}
 	}
 
