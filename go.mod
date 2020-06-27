@@ -1,6 +1,7 @@
 module my/checker
 
 go 1.14
+// +heroku goVersion go1.14
 
 require (
 	emperror.dev/errors v0.6.0
