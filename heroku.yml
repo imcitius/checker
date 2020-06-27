@@ -1,12 +1,6 @@
-setup:
-  config:
-    GO_LINKER_SYMBOL: my/checker/config.VersionSHA
-
 build:
-  languages:
-    - go
   docker:
-    web: Dockerfile
+    web: Dockerfile.heroku
 
 run:
   web: /bin/checker --config /config.yaml check
