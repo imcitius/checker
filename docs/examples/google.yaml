@@ -22,21 +22,6 @@ projects:
     parameters:
       run_every: 60s
     healthchecks:
-      - name: icmp checks
-        checks:
-          - type: icmp
-            host: 8.8.8.8
-            timeout: 0.5s
-            count: 5
-          - type: icmp
-            host: 1.1.1.1
-            timeout: 0.5s
-            count: 1
-        parameters:
-          run_every: 60s
-          min_health: 1
-          noncrit_alert: tg_main
-          crit_alert: tg_main
       - name: tcp_test
         checks:
           - type: tcp
@@ -49,4 +34,4 @@ projects:
       - name: http checks
         checks:
           - type: http
-            host: google.com
+            host: https://google.com
