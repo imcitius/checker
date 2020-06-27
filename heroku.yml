@@ -2,7 +2,7 @@ build:
   languages:
     - go
   docker:
-    dockerfile: Dockerfile
+    web: Dockerfile
 
 run:
   web: /bin/checker --config /config.yaml check
