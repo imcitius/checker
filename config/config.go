@@ -72,11 +72,11 @@ type ConfigFile struct {
 type AlertConfigs struct {
 	Name string
 	Type string
-	// Tg token for bot
+	// token for bot
 	BotToken string `mapstructure:"bot_token"`
-	// Messages mode quiet/loud
+	// critical channel name
 	CriticalChannel int64 `mapstructure:"critical_channel"`
-	// Empty by default, alerts will not be sent unless critical
+	// non critical and chatops channel name
 	ProjectChannel int64 `mapstructure:"noncritical_channel"`
 
 	MMWebHookURL string `mapstructure:"mattermost_webhook_url"`

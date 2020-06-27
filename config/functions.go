@@ -128,6 +128,10 @@ func (c *ConfigFile) FillDefaults() error {
 		c.Projects[i] = p
 	}
 
+	if c.Defaults.HTTPPort != Viper.GetString("HTTPPort") {
+		c.Defaults.HTTPPort = Viper.GetString("HTTPPort")
+	}
+
 	return nil
 }
 

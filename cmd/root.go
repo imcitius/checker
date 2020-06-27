@@ -52,16 +52,6 @@ func init() {
 	rootCmd.PersistentFlags().Bool("bots", true, "start listening messenger bots")
 	config.Viper.BindPFlag("botsEnabled", rootCmd.PersistentFlags().Lookup("bots"))
 
-	//rootCmd.PersistentFlags().StringVar(&consulAddr, "consul_addr", "", "Consul server address")
-	//rootCmd.PersistentFlags().StringVar(&consulPath, "consul_path", "", "Consul KV path to get config from")
-	//rootCmd.PersistentFlags().StringVar(&vaultAddr, "vault_addr", "", "Vault server address")
-	//rootCmd.PersistentFlags().StringVar(&vaultToken, "vault_token", "", "Vault token")
-
-	//config.Viper.BindPFlag("vaultToken", rootCmd.PersistentFlags().Lookup("Vault_Token"))
-	//config.Viper.BindPFlag("vaultAddr", rootCmd.PersistentFlags().Lookup("Vault_Address"))
-	//config.Viper.BindPFlag("consulAddr", rootCmd.PersistentFlags().Lookup("Consul_Address"))
-	//config.Viper.BindPFlag("consulPath", rootCmd.PersistentFlags().Lookup("Consul_Path"))
-
 	config.Viper.BindEnv("VAULT_TOKEN")
 	config.Viper.BindEnv("VAULT_ADDR")
 	config.Viper.BindEnv("CONSUL_ADDR")
@@ -69,6 +59,9 @@ func init() {
 	config.Viper.BindEnv("PORT")
 
 	config.Viper.SetDefault("HTTPPort", "80")
+	if config.Viper.GetString("PORT") != "" {
+		config.Viper.SetDefault("HTTPPort", config.Viper.GetString("PORT"))
+	}
 
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
@@ -200,12 +193,16 @@ func mainChecker() {
 		if config.Viper.GetBool("botsEnabled") {
 			config.Log.Debugf("Fire bots")
 			config.Wg.Add(1)
-			//alerts.InitBots(config.BotsSignalCh, &config.Wg)
 			commandChannel, err := alerts.GetCommandChannel()
 			if err != nil {
-				config.Log.Infof("GetCommandChannel error: %s", err)
+				config.Log.Infof("root GetCommandChannel error: %s", err)
 			} else {
-				alerts.GetAlertProto(commandChannel).InitBot(config.BotsSignalCh, &config.Wg)
+				a := alerts.GetAlertProto(commandChannel)
+				if a == nil {
+					config.Log.Fatal("root commandChannel not found, bot not init")
+				} else {
+					a.InitBot(config.BotsSignalCh, &config.Wg)
+				}
 			}
 		}
 

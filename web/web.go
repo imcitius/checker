@@ -47,11 +47,9 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 	if Config.Defaults.HTTPEnabled != "" {
 		return
 	}
-	if config.Viper.GetString("PORT") != "" {
-		addr = fmt.Sprintf(":%s", config.Viper.GetString("PORT"))
-	} else {
-		addr = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
-	}
+
+	addr = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
+
 	server = new(http.Server)
 	server.Addr = addr
 	config.Log.Infof("HTTP listen on: %s", addr)

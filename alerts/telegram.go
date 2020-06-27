@@ -26,11 +26,6 @@ type TgMessage struct {
 	*tb.Message
 }
 
-func init() {
-	AlerterCollections = make(map[string]Alerter)
-	AlerterCollections["telegram"] = new(Telegram)
-}
-
 func (m TgMessage) GetProject() (string, error) {
 	var (
 		result      []string

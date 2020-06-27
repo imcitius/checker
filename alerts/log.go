@@ -5,16 +5,11 @@ import (
 	"sync"
 )
 
-type Log struct {
+type LogAlert struct {
 	Alerter
 }
 
-func init() {
-	AlerterCollections = make(map[string]Alerter)
-	AlerterCollections["log"] = new(Log)
-}
-
-func (m *Log) Send(a *config.AlertConfigs, message string) error {
+func (l *LogAlert) Send(a *config.AlertConfigs, message string) error {
 	config.Log.Debugf("Alert send: %s (alert details %+v)", message, a)
 
 	config.Log.Infof("Log alert: %s", message)
@@ -22,6 +17,10 @@ func (m *Log) Send(a *config.AlertConfigs, message string) error {
 	return nil
 }
 
-func (t Log) InitBot(ch chan bool, wg *sync.WaitGroup) {
+func (l *LogAlert) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	config.Log.Info("Log bot not implemented yet")
+	defer wg.Done()
+
+	<-ch
+	return
 }

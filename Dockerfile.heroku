@@ -7,6 +7,6 @@ RUN ls -al
 
 FROM centos
 COPY --from=build /app/build/checker /bin/checker
-COPY --from=build /app/testconfigs/google.yaml /config.yaml
+COPY --from=build /app/docs/examples/google.yaml /config.yaml
 
 ENTRYPOINT ["/bin/checker"]
