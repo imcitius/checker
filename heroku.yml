@@ -5,4 +5,4 @@ build:
     dockerfile: Dockerfile
 
 run:
-  web: checker --config /google.yaml check
+  web: /bin/checker --config /config.yaml check
