@@ -9,4 +9,4 @@ COPY testconfigs/google.yaml /config.yaml
 
 CMD ["/bin/checker", "--config", "/config.yaml", "check"]
 
-ENTRYPOINT ["/bin/checker"]
+#ENTRYPOINT ["/bin/checker"]
