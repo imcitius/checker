@@ -3,6 +3,8 @@ setup:
     GO_LINKER_SYMBOL: my/checker/config.VersionSHA
 
 build:
+  languages:
+    - go
   docker:
     web: Dockerfile
 
