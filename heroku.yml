@@ -3,6 +3,3 @@ build:
     - go
   docker:
     web: Dockerfile
-
-run:
-  web: /bin/checker --config /config.yaml check
