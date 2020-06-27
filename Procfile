@@ -1,0 +1,1 @@
+web: bin/checker --config docs/examples/config.yaml check

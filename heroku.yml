@@ -1,6 +1,3 @@
 build:
-  docker:
-    web: Dockerfile.heroku
-
-run:
-  web: /bin/checker --config /config.yaml check
+  languages:
+    - go
