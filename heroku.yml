@@ -1,5 +1,5 @@
 build:
-  languages:
-    - go
   docker:
     web: Dockerfile
+
+web: /bin/checker --config /config.yaml check
