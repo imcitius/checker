@@ -1,6 +1,6 @@
 FROM golang:1.14
 
-RUN go get \
+RUN go get -v -d ./... \
     && CGO_ENABLED=0 GOOS=linux go build -v -i -x -ldflags "-X my/checker/config.Version=${SOURCE_VERSION}" -o build/checker
 
 FROM centos
