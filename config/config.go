@@ -2,12 +2,13 @@ package config
 
 import (
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"golang.org/x/sync/semaphore"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/knadh/koanf"
 )
 
 var (
@@ -18,20 +19,18 @@ var (
 	StartTime      = time.Now()
 	InternalStatus = "starting"
 
-	ScheduleLoop               int
-	Config                     ConfigFile
-	Log                        = logrus.New()
-	Checks                     = make(map[string]func(c *Check, p *Project) error)
-	Timeouts                   TimeoutsCollection
-	CfgFile, CfgSrc, CfgFormat string
-	CfgWatchTimeout            string
-	Sem                        = semaphore.NewWeighted(int64(1))
+	ScheduleLoop int
+	Config       ConfigFile
+	Log          = logrus.New()
+	Checks       = make(map[string]func(c *Check, p *Project) error)
+	Timeouts     TimeoutsCollection
+	Sem          = semaphore.NewWeighted(int64(1))
 
 	SignalINT, SignalHUP                                          chan os.Signal
 	ConfigChangeSig, SchedulerSignalCh, BotsSignalCh, WebSignalCh chan bool
 	Wg                                                            sync.WaitGroup
 
-	Viper = viper.New()
+	Koanf = koanf.New(".")
 
 	Secrets map[string]string
 )
@@ -40,17 +39,17 @@ type Parameters struct {
 	// Messages mode quiet/loud
 	Mode string
 	// Checks should be run every RunEvery seconds
-	RunEvery       string `mapstructure:"run_every"`
-	PeriodicReport string `mapstructure:"periodic_report_time"`
+	RunEvery       string `koanf:"run_every"`
+	PeriodicReport string `koanf:"periodic_report_time"`
 	// minimum passed checks to consider project healthy
-	MinHealth int `mapstructure:"min_health"`
+	MinHealth int `koanf:"min_health"`
 	// how much consecutive critical checks may fail to consider not healthy
-	AllowFails int `mapstructure:"allow_fails"`
+	AllowFails int `koanf:"allow_fails"`
 	// alert name
-	AlertChannel        string `mapstructure:"noncrit_alert"`
-	CritAlertChannel    string `mapstructure:"crit_alert"`
-	CommandChannel      string `mapstructure:"command_channel"`
-	SSLExpirationPeriod string `mapstructure:"ssl_expiration_period"`
+	AlertChannel        string `koanf:"noncrit_alert"`
+	CritAlertChannel    string `koanf:"crit_alert"`
+	CommandChannel      string `koanf:"command_channel"`
+	SSLExpirationPeriod string `koanf:"ssl_expiration_period"`
 
 	Mentions []string
 }
@@ -58,12 +57,12 @@ type Parameters struct {
 type ConfigFile struct {
 	Defaults struct {
 		// Main timer evaluates every TimerStep seconds
-		TimerStep  string     `mapstructure:"timer_step"`
-		Parameters Parameters `mapstructure:"parameters"`
+		TimerStep  string     `koanf:"timer_step"`
+		Parameters Parameters `koanf:"parameters"`
 		// HTTP port web interface listen
-		HTTPPort string `mapstructure:"http_port"`
+		HTTPPort string `koanf:"http_port"`
 		// If not empty HTPP server not enabled
-		HTTPEnabled string `mapstructure:"http_enabled"`
+		HTTPEnabled string `koanf:"http_enabled"`
 	}
 	Alerts   []AlertConfigs
 	Projects []Project
@@ -73,13 +72,13 @@ type AlertConfigs struct {
 	Name string
 	Type string
 	// token for bot
-	BotToken string `mapstructure:"bot_token"`
+	BotToken string `koanf:"bot_token"`
 	// critical channel name
-	CriticalChannel int64 `mapstructure:"critical_channel"`
+	CriticalChannel int64 `koanf:"critical_channel"`
 	// non critical and chatops channel name
-	ProjectChannel int64 `mapstructure:"noncritical_channel"`
+	ProjectChannel int64 `koanf:"noncritical_channel"`
 
-	MMWebHookURL string `mapstructure:"mattermost_webhook_url"`
+	MMWebHookURL string `koanf:"mattermost_webhook_url"`
 }
 
 type TimeoutsCollection struct {
@@ -88,8 +87,8 @@ type TimeoutsCollection struct {
 
 type Project struct {
 	Name        string
-	Healtchecks []Healtchecks `mapstructure:"healthchecks"`
-	Parameters  Parameters    `mapstructure:"parameters"`
+	Healtchecks []Healtchecks `koanf:"healthchecks"`
+	Parameters  Parameters    `koanf:"parameters"`
 
 	// Runtime data
 	Timeouts TimeoutsCollection
@@ -97,10 +96,10 @@ type Project struct {
 
 type Healtchecks struct {
 	Name   string
-	Checks []Check `mapstructure:"checks"`
+	Checks []Check `koanf:"checks"`
 
 	// check level parameters
-	Parameters Parameters `mapstructure:"parameters"`
+	Parameters Parameters `koanf:"parameters"`
 }
 
 type Check struct {
@@ -116,32 +115,32 @@ type Check struct {
 	// http checks optional parameters
 	Code          []int
 	Answer        string
-	AnswerPresent string              `mapstructure:"answer_present"`
-	Headers       []map[string]string `mapstructure:"headers"`
+	AnswerPresent string              `koanf:"answer_present"`
+	Headers       []map[string]string `koanf:"headers"`
 	Auth          struct {
 		User     string
 		Password string
-	} `mapstructure:"auth"`
-	SkipCheckSSL        bool `mapstructure:"skip_check_ssl"`
-	StopFollowRedirects bool `mapstructure:"stop_follow_redirects"`
+	} `koanf:"auth"`
+	SkipCheckSSL        bool `koanf:"skip_check_ssl"`
+	StopFollowRedirects bool `koanf:"stop_follow_redirects"`
 	Cookies             []http.Cookie
 
 	// Check SQL query parameters
 	SqlQueryConfig struct {
 		DBName, UserName, Password, Query, Response, Difference, SSLMode string
-	} `mapstructure:"sql_query_config"`
+	} `koanf:"sql_query_config"`
 
 	// Check SQL replication parameters
 	SqlReplicationConfig struct {
 		DBName, UserName, Password, TableName, SSLMode string
 		ServerList                                     []string
-	} `mapstructure:"sql_repl_config"`
+	} `koanf:"sql_repl_config"`
 
 	PubSub struct {
 		Password string
 		Channels []string
 		SSLMode  bool
-	} `mapstructure:"pubsub_config"`
+	} `koanf:"pubsub_config"`
 
 	// Runtime data
 	UUid       string

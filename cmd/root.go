@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/fsnotify/fsnotify"
+	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/providers/env"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"my/checker/alerts"
@@ -12,7 +13,7 @@ import (
 	"my/checker/web"
 	"os"
 	"os/signal"
-	"path/filepath"
+	"strings"
 	"syscall"
 )
 
@@ -25,6 +26,9 @@ var (
 		Long:  `^_^`,
 	}
 	interrupt bool
+
+	debugLevel, configFile, configSource, configWatchTimeout, configFormat string
+	botsEnabled                                                            bool
 )
 
 // Execute executes the root command.
@@ -39,29 +43,15 @@ func Execute() error {
 }
 
 func init() {
-	cobra.OnInitialize(config.InitConfig)
 
-	rootCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "config", "config file")
-	rootCmd.PersistentFlags().StringVar(&config.CfgSrc, "configsource", "file", "config file source: file or consul")
-	rootCmd.PersistentFlags().StringVar(&config.CfgWatchTimeout, "configwatchtimeout", "5s", "config watch period")
-	rootCmd.PersistentFlags().StringVar(&config.CfgFormat, "configformat", "yaml", "config file format")
+	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringP("debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
-	config.Viper.BindPFlag("debugLevel", rootCmd.PersistentFlags().Lookup("debugLevel"))
-
-	rootCmd.PersistentFlags().Bool("bots", true, "start listening messenger bots")
-	config.Viper.BindPFlag("botsEnabled", rootCmd.PersistentFlags().Lookup("bots"))
-
-	config.Viper.BindEnv("VAULT_TOKEN")
-	config.Viper.BindEnv("VAULT_ADDR")
-	config.Viper.BindEnv("CONSUL_ADDR")
-	config.Viper.BindEnv("CONSUL_PATH")
-	config.Viper.BindEnv("PORT")
-
-	config.Viper.SetDefault("HTTPPort", "80")
-	if config.Viper.GetString("PORT") != "" {
-		config.Viper.SetDefault("HTTPPort", config.Viper.GetString("PORT"))
-	}
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "config file")
+	rootCmd.PersistentFlags().StringVarP(&configSource, "configsource", "s", "", "config file source: file or consul")
+	rootCmd.PersistentFlags().StringVarP(&configWatchTimeout, "configwatchtimeout", "w", "5s", "config watch period")
+	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
+	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "bots", "b", true, "start listening messenger bots")
 
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
@@ -76,66 +66,35 @@ func init() {
 	config.BotsSignalCh = make(chan bool)
 	signal.Notify(config.SignalINT, syscall.SIGINT)
 	signal.Notify(config.SignalHUP, syscall.SIGHUP)
-}
 
-func er(msg interface{}) {
-	fmt.Println("Error:", msg)
-	os.Exit(1)
+	logrus.Info("initConfig: load config file")
+	logrus.Infof("Config file: %s", config.Koanf.String("config.file"))
+	logrus.Infof("Config type: %s", config.Koanf.String("config.source"))
+
 }
 
 func initConfig() {
 
-	logrus.Info("initConfig: load config file")
-	logrus.Infof("Config flag: %s", config.CfgFile)
+	config.Koanf.Load(confmap.Provider(map[string]interface{}{
+		"defaults.http.port":    "80",
+		"defaults.http.enabled": true,
+		"debug.level":           debugLevel,
+		"bots.enabled":          botsEnabled,
+		"config.file":           configFile,
+		"config.source":         configSource,
+		"config.watchtimeout":   configWatchTimeout,
+		"config.format":         configFormat,
+	}, "."), nil)
 
-	switch {
-	case config.CfgSrc == "" || config.CfgSrc == "file":
-		if config.CfgFile == "" {
-			// Use config file from the flag.
-			config.Viper.SetConfigName("config")         // name of config file (without extension)
-			config.Viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
-			config.Viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
-			config.Viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
-			config.Viper.AddConfigPath(".")              // optionally look for config in the working directory
-
-		} else {
-			config.Viper.SetConfigName(filepath.Base(config.CfgFile)) // name of config file (without extension)
-			if filepath.Ext(config.CfgFile) == "" {
-				config.Viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
-			} else {
-				config.Viper.SetConfigType(filepath.Ext(config.CfgFile)[1:])
-			}
-			config.Viper.AddConfigPath(filepath.Dir(config.CfgFile)) // path to look for the config file in
-
-		}
-		config.Viper.WatchConfig()
-		config.Viper.OnConfigChange(func(e fsnotify.Event) {
-			config.Log.Info("Config file changed: ", e.Name)
-			config.ConfigChangeSig <- true
-
-		})
-	// TODO проверить работу consul ACL, добавить возможность хранить зашифрованный конфиг через AddSecureRemoteProvider
-	case config.CfgSrc == "consul":
-		if config.Viper.GetString("CONSUL_ADDR") != "" {
-			if config.Viper.GetString("CONSUL_PATH") != "" {
-				config.Viper.AddRemoteProvider("consul", config.Viper.GetString("CONSUL_ADDR"), config.Viper.GetString("CONSUL_PATH"))
-				config.Viper.SetConfigType("json")
-			} else {
-				logrus.Fatal("Consul path not specified")
-			}
-		} else {
-			logrus.Fatal("Consul URL not specified")
-		}
-	}
-
-	config.Viper.AutomaticEnv()
-
-	dl, err := logrus.ParseLevel(config.Viper.GetString("debugLevel"))
-	if err != nil {
-		config.Log.Panicf("Cannot parse debug level: %v", err)
-	} else {
-		config.Log.SetLevel(dl)
-	}
+	config.Koanf.Load(env.Provider("PORT", ".", func(s string) string { return "defaults.http.port" }), nil)
+	config.Koanf.Load(env.Provider("CONSUL_", ".", func(s string) string {
+		return strings.Replace(strings.ToLower(
+			s), "_", ".", -1)
+	}), nil)
+	config.Koanf.Load(env.Provider("VAULT_", ".", func(s string) string {
+		return strings.Replace(strings.ToLower(
+			s), "_", ".", -1)
+	}), nil)
 
 }
 
@@ -187,8 +146,8 @@ func mainChecker() {
 		config.Log.Debugf("Fire scheduler")
 		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
-		config.Log.Debugf("botsEnabled is %v", config.Viper.GetBool("botsEnabled"))
-		if config.Viper.GetBool("botsEnabled") {
+		config.Log.Debugf("botsEnabled is %v", config.Koanf.Bool("botsEnabled"))
+		if config.Koanf.Bool("botsEnabled") {
 			config.Log.Debugf("Fire bots")
 			config.Wg.Add(1)
 			commandChannel, err := alerts.GetCommandChannel()
@@ -234,7 +193,7 @@ func signalWait() {
 		config.InternalStatus = "stop"
 		interrupt = true
 		config.SchedulerSignalCh <- true
-		if config.Viper.GetBool("botsEnabled") {
+		if config.Koanf.Bool("botsEnabled") {
 			config.BotsSignalCh <- true
 		}
 		config.WebSignalCh <- true
@@ -248,7 +207,7 @@ func signalWait() {
 		config.InternalStatus = "reload"
 		config.SchedulerSignalCh <- true
 		//config.WebSignalCh <- true
-		if config.Viper.GetBool("botsEnabled") {
+		if config.Koanf.Bool("botsEnabled") {
 			config.BotsSignalCh <- true
 		}
 		return

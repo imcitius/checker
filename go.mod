@@ -1,17 +1,20 @@
 module my/checker
 
 go 1.14
+
 // +heroku goVersion go1.14
 
 require (
 	emperror.dev/errors v0.6.0
 	github.com/ClickHouse/clickhouse-go v1.3.14
-	github.com/fsnotify/fsnotify v1.4.7
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-redis/redis/v7 v7.2.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/uuid v1.1.1
+	github.com/hashicorp/consul/api v1.1.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/jmoiron/sqlx v1.2.0
+	github.com/knadh/koanf v0.10.0
 	github.com/lib/pq v1.3.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3

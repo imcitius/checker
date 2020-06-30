@@ -111,7 +111,7 @@ func runChecks(timeout string) {
 
 func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
-	timerStep, err := time.ParseDuration(config.Viper.GetString("defaults.timer_step"))
+	timerStep, err := time.ParseDuration(config.Koanf.String("defaults.timer_step"))
 	if err != nil {
 		config.Log.Fatal(err)
 	}

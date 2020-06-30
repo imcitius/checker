@@ -29,7 +29,7 @@ func GetVaultSecret(vaultPath string) (string, error) {
 	}
 
 	client, err := api.NewClient(&api.Config{
-		Address: Viper.GetString("VAULT_ADDR"),
+		Address: Koanf.String("vault.addr"),
 		Timeout: time.Duration(3 * time.Second),
 	})
 	if err != nil {
@@ -37,7 +37,7 @@ func GetVaultSecret(vaultPath string) (string, error) {
 		return "", fmt.Errorf("Failed to create Vault client: %v", err)
 	}
 
-	client.SetToken(Viper.GetString("VAULT_TOKEN"))
+	client.SetToken(Koanf.String("vault.token"))
 
 	sec, err := client.Logical().Read(path)
 	if err != nil {

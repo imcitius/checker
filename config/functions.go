@@ -2,11 +2,16 @@ package config
 
 import (
 	"fmt"
-	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
+	"github.com/hashicorp/consul/api"
+	"github.com/knadh/koanf/parsers/hcl"
+	"github.com/knadh/koanf/parsers/json"
+	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/s3"
 	"github.com/sirupsen/logrus"
-	_ "github.com/spf13/viper/remote"
-	"path/filepath"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -16,7 +21,7 @@ func LoadConfig() error {
 
 	tempConfig, err := TestConfig()
 	if err != nil {
-		Log.Infof("Using config file: %s", Viper.ConfigFileUsed())
+		Log.Infof("Using config file: %s", Koanf.All())
 	} else {
 		Config = tempConfig
 	}
@@ -29,22 +34,87 @@ func TestConfig() (ConfigFile, error) {
 	var tempConfig ConfigFile
 
 	switch {
-	case CfgSrc == "" || CfgSrc == "file":
-		err := Viper.ReadInConfig() // Find and read the config file
-		if err != nil {             // Handle errors reading the config file
-			//Log.Infof("Fatal error config file: %s \n", err)
-			return tempConfig, err
+	case Koanf.String("config.source") == "" || Koanf.String("config.source") == "file":
+
+		switch {
+		case Koanf.String("config.format") == "json":
+			f := file.Provider(Koanf.String("config.file"))
+			if err := Koanf.Load(f, json.Parser()); err != nil {
+				return tempConfig, err
+			}
+
+		case Koanf.String("config.format") == "yaml":
+			f := file.Provider(Koanf.String("config.file"))
+			if err := Koanf.Load(f, yaml.Parser()); err != nil {
+				return tempConfig, err
+			}
+
+		case Koanf.String("config.format") == "toml":
+			f := file.Provider(Koanf.String("config.file"))
+			if err := Koanf.Load(f, toml.Parser()); err != nil {
+				return tempConfig, err
+			}
+
+		case Koanf.String("config.format") == "hcl":
+			f := file.Provider(Koanf.String("config.file"))
+			if err := Koanf.Load(f, hcl.Parser(true)); err != nil {
+				return tempConfig, err
+			}
 		}
 
-	case CfgSrc == "consul":
-		err := Viper.ReadRemoteConfig() // Find and read the config file
-		if err != nil {                 // Handle errors reading the config file
-			//Log.Infof("Fatal error config file: %s \n", err)
-			return tempConfig, err
+	case Koanf.String("config.source") == "s3" || Koanf.String("config.source") == "S3":
+		switch {
+
+		case Koanf.String("config.format") == "yaml":
+
+			// Load yaml config from s3.
+			if err := Koanf.Load(s3.Provider(s3.Config{
+				AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"),
+				SecretKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+				Region:    "eu-west-1",
+				Bucket:    os.Getenv("AWS_BUCKET"),
+				ObjectKey: os.Getenv("AWS_OBJECT_KEY"),
+			}), yaml.Parser()); err != nil {
+				logrus.Fatalf("error loading config: %v", err)
+			}
+
+		case Koanf.String("config.format") == "json":
+
+			// Load json config from s3.
+			if err := Koanf.Load(s3.Provider(s3.Config{
+				AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"),
+				SecretKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+				Region:    "eu-west-1",
+				Bucket:    os.Getenv("AWS_BUCKET"),
+				ObjectKey: os.Getenv("AWS_OBJECT_KEY"),
+			}), json.Parser()); err != nil {
+				logrus.Fatalf("error loading config: %v", err)
+			}
+		}
+
+	case Koanf.String("config.source") == "consul":
+		switch {
+
+		case Koanf.String("config.format") == "json":
+
+			config := ConsulConfig{
+				&ConsulParam{
+					Addr:   Koanf.String("consul.addr"),
+					KVPath: Koanf.String("consul.path"),
+				},
+				&api.Config{
+					Address: Koanf.String("consul.addr"),
+				}}
+
+			// Load yaml config from s3.
+			if err := Koanf.Load(ConsulProvider(&config), json.Parser()); err != nil {
+				logrus.Fatalf("error loading config: %v", err)
+			}
+
 		}
 	}
 
-	dl, err := logrus.ParseLevel(Viper.GetString("debugLevel"))
+	dl, err := logrus.ParseLevel(Koanf.String("debug.level"))
 	if err != nil {
 		//Log.Panicf("Cannot parse debug level: %v", err)
 		return tempConfig, err
@@ -52,8 +122,7 @@ func TestConfig() (ConfigFile, error) {
 		Log.SetLevel(dl)
 	}
 
-	err = Viper.Unmarshal(&tempConfig)
-	if err != nil {
+	if err := Koanf.Unmarshal("", &tempConfig); err != nil {
 		return tempConfig, err
 	}
 
@@ -128,10 +197,6 @@ func (c *ConfigFile) FillDefaults() error {
 		c.Projects[i] = p
 	}
 
-	if c.Defaults.HTTPPort != Viper.GetString("HTTPPort") {
-		c.Defaults.HTTPPort = Viper.GetString("HTTPPort")
-	}
-
 	if len(c.Alerts) == 0 {
 		var alert AlertConfigs
 		alert.Name = "log"
@@ -173,7 +238,7 @@ func (p *TimeoutCollection) Add(period string) {
 
 func (c *ConfigFile) FillTimeouts() error {
 
-	defRunEvery := Viper.GetString("defaults.parameters.run_every")
+	defRunEvery := Koanf.String("defaults.parameters.run_every")
 	Timeouts.Add(defRunEvery)
 
 	for _, p := range c.Projects {
@@ -233,66 +298,8 @@ func (c *ConfigFile) FillSecrets() error {
 	return nil
 }
 
-func InitConfig() {
-
-	logrus.Info("initConfig: load config file")
-	logrus.Infof("Config flag: %s", CfgFile)
-
-	logrus.Infof("%s %s", Viper.GetString("CONSUL_ADDR"), Viper.GetString("CONSUL_PATH"))
-
-	switch {
-	case CfgSrc == "" || CfgSrc == "file":
-		if CfgFile == "" {
-			// Use config file from the flag.
-			Viper.SetConfigName("config")         // name of config file (without extension)
-			Viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
-			Viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
-			Viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
-			Viper.AddConfigPath(".")              // optionally look for config in the working directory
-
-		} else {
-			Viper.SetConfigName(filepath.Base(CfgFile)) // name of config file (without extension)
-			if filepath.Ext(CfgFile) == "" {
-				Viper.SetConfigType("yaml") // REQUIRED if the config file does not have the extension in the name
-			} else {
-				Viper.SetConfigType(filepath.Ext(CfgFile)[1:])
-			}
-			Viper.AddConfigPath(filepath.Dir(CfgFile)) // path to look for the config file in
-
-		}
-		Viper.WatchConfig()
-		Viper.OnConfigChange(func(e fsnotify.Event) {
-			Log.Info("Config file changed: ", e.Name)
-			ConfigChangeSig <- true
-
-		})
-
-	case CfgSrc == "consul":
-		if Viper.GetString("CONSUL_ADDR") != "" {
-			if Viper.GetString("CONSUL_PATH") != "" {
-				Viper.AddRemoteProvider("consul", Viper.GetString("CONSUL_ADDR"), Viper.GetString("CONSUL_PATH"))
-				Viper.SetConfigType("json")
-			} else {
-				panic("Consul path not specified")
-			}
-		} else {
-			panic("Consul URL not specified")
-		}
-	}
-
-	Viper.AutomaticEnv()
-
-	dl, err := logrus.ParseLevel(Viper.GetString("debugLevel"))
-	if err != nil {
-		Log.Panicf("Cannot parse debug level: %v", err)
-	} else {
-		Log.SetLevel(dl)
-	}
-
-}
-
 func WatchConfig() {
-	if period, err := time.ParseDuration(CfgWatchTimeout); err != nil {
+	if period, err := time.ParseDuration(Koanf.String("config.watchtimeout")); err != nil {
 		Log.Infof("KV watch timeout parser error: %+v, use 5s", err)
 		time.Sleep(time.Second * 5) // default delay
 	} else {
