@@ -47,7 +47,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "config file")
-	rootCmd.PersistentFlags().StringVarP(&configSource, "configsource", "s", "", "config file source: file or consul")
+	rootCmd.PersistentFlags().StringVarP(&configSource, "configsource", "s", "", "config file source: file, consul, s3")
 	rootCmd.PersistentFlags().StringVarP(&configWatchTimeout, "configwatchtimeout", "w", "5s", "config watch period")
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
@@ -95,7 +95,10 @@ func initConfig() {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)
 	}), nil)
-
+	config.Koanf.Load(env.Provider("AWS_", ".", func(s string) string {
+		return strings.Replace(strings.ToLower(
+			s), "_", ".", -1)
+	}), nil)
 }
 
 var checkCommand = &cobra.Command{

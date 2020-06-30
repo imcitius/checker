@@ -11,7 +11,6 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/s3"
 	"github.com/sirupsen/logrus"
-	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -65,11 +64,11 @@ func TestConfig() (ConfigFile, error) {
 	case Koanf.String("config.source") == "s3" || Koanf.String("config.source") == "S3":
 
 		s3config := s3.Config{
-			AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"),
-			SecretKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
-			Region:    "eu-west-1",
-			Bucket:    os.Getenv("AWS_BUCKET"),
-			ObjectKey: os.Getenv("AWS_OBJECT_KEY"),
+			AccessKey: Koanf.String("aws.access.key.id"),
+			SecretKey: Koanf.String("aws.secret.access.key"),
+			Region:    Koanf.String("aws.region"),
+			Bucket:    Koanf.String("aws.bucket"),
+			ObjectKey: Koanf.String("aws.object.key"),
 		}
 
 		switch {

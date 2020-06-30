@@ -5,7 +5,9 @@
 Управление командами CLI и флагами на базе `github.com/spf13/cobra`.
 
 ```
-# ./checker                           
+$ ./checker
+
+Start dev 
 ^_^
 
 Usage:
@@ -18,21 +20,31 @@ Available Commands:
   version     Print the version number of Hugo
 
 Flags:
-      --config string       config file (default is ./config.yaml) (default "config")
-      --configformat string   config file format: (default is yaml)
-      --configsource string   config file source: file or consul (default is file)
-      --configwatchtimeout string   config watch period (default '5s') (default "5s")
-  -D, --debugLevel string   Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
-  -h, --help                help for checker
-      --viper               use Viper for configuration (default true)
+  -b, --bots                        start listening messenger bots (default true)
+  -c, --config string               config file
+  -f, --configformat string         config file format (default "yaml")
+  -s, --configsource string         config file source: file or consul
+  -w, --configwatchtimeout string   config watch period (default "5s")
+  -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
+  -h, --help                        help for checker
 
-Use "checker [command] --help" for more information about a command.
-
+Use "checker [command] --help" for 
 ```
 
-Хранение конфигурации доступно в файловой системе (по умолчанию), или в KV Consul.
-Ключ `--configsource=consul` позволяет переключить получение конфига на Consul. При этом считываются две ENV переменные CONSUL_ADDR и CONSUL_PATH. Из первой берется URL сервера Consul, из второй - путь к ключу KV с конфигом.
-KV ключ должен содержать полную конфигурацию, обязательно в форматах `yaml` или `json`, загрузка из древовидной KV структуры не поддерживается.
+Хранение конфигурации доступно во всех хранилищах, поддерживаемых библиотекой https://github.com/knadh/koanf.
+Ключ `-s` позволяет переключить получение конфига на Consul или S3. При этом для Consul считываются две ENV переменные CONSUL_ADDR и CONSUL_PATH. Из первой берется URL сервера Consul, из второй - путь к ключу KV с конфигом.
+Для S3 настройки берутся из переменных: 
+
+AWS_ACCESS_KEY_ID - ID ключа
+AWS_SECRET_ACCESS_KEY - секретный ключ
+AWS_REGION - регион
+AWS_BUCKET - имя бакета
+AWS_OBJECT_KEY - путь до объекта от корня бакета
+
+
+
+
+KV ключ должен содержать полную конфигурацию, форматах `yaml`, `json`, `toml`, `hcl` (задается ключом -f), загрузка из древовидной KV структуры не поддерживается.
 Каждый период, заданный ключом `--configwatchtimeout=5s` Checker пытается перечитать конфиг из хранилища. Если конфиг загружен успешно, проверяется его валидность и соответствие текущей конфигурации.
 Если конфиг валиден и отличается от текущей конфигурации, он подменяет текущую конфигурацию, и происходит перезапуск скедулера и ботов.
 Конфиг, загруженный из файловой системы, также автоматически мониторится на обновления.
