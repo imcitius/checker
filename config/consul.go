@@ -54,5 +54,5 @@ func (r *ConsulClient) Read() (map[string]interface{}, error) {
 
 // Watch is not supported.
 func (r *ConsulClient) Watch(cb func(event interface{}, err error)) error {
-	return errors.New("S3 provider does not support this method")
+	return errors.New("Consul provider does not support this method")
 }
