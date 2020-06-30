@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"github.com/hashicorp/consul/api"
-	"log"
 )
 
 type ConsulConfig struct {
@@ -12,7 +11,6 @@ type ConsulConfig struct {
 }
 
 type ConsulParam struct {
-	Addr   string
 	KVPath string
 }
 
@@ -45,7 +43,6 @@ func (r *ConsulClient) ReadBytes() ([]byte, error) {
 	}
 
 	data := pair.Value
-	log.Println(string(data))
 	return data, err
 
 }

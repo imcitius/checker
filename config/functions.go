@@ -63,54 +63,57 @@ func TestConfig() (ConfigFile, error) {
 		}
 
 	case Koanf.String("config.source") == "s3" || Koanf.String("config.source") == "S3":
+
+		s3config := s3.Config{
+			AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"),
+			SecretKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+			Region:    "eu-west-1",
+			Bucket:    os.Getenv("AWS_BUCKET"),
+			ObjectKey: os.Getenv("AWS_OBJECT_KEY"),
+		}
+
 		switch {
 
 		case Koanf.String("config.format") == "yaml":
 
 			// Load yaml config from s3.
-			if err := Koanf.Load(s3.Provider(s3.Config{
-				AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"),
-				SecretKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
-				Region:    "eu-west-1",
-				Bucket:    os.Getenv("AWS_BUCKET"),
-				ObjectKey: os.Getenv("AWS_OBJECT_KEY"),
-			}), yaml.Parser()); err != nil {
+			if err := Koanf.Load(s3.Provider(s3config), yaml.Parser()); err != nil {
 				logrus.Fatalf("error loading config: %v", err)
 			}
 
 		case Koanf.String("config.format") == "json":
 
 			// Load json config from s3.
-			if err := Koanf.Load(s3.Provider(s3.Config{
-				AccessKey: os.Getenv("AWS_ACCESS_KEY_ID"),
-				SecretKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
-				Region:    "eu-west-1",
-				Bucket:    os.Getenv("AWS_BUCKET"),
-				ObjectKey: os.Getenv("AWS_OBJECT_KEY"),
-			}), json.Parser()); err != nil {
+			if err := Koanf.Load(s3.Provider(s3config), json.Parser()); err != nil {
 				logrus.Fatalf("error loading config: %v", err)
 			}
 		}
 
 	case Koanf.String("config.source") == "consul":
+
+		consulconfig := ConsulConfig{
+			&ConsulParam{
+				KVPath: Koanf.String("consul.path"),
+			},
+			&api.Config{
+				Address: Koanf.String("consul.addr"),
+			}}
+
 		switch {
 
 		case Koanf.String("config.format") == "json":
 
-			config := ConsulConfig{
-				&ConsulParam{
-					Addr:   Koanf.String("consul.addr"),
-					KVPath: Koanf.String("consul.path"),
-				},
-				&api.Config{
-					Address: Koanf.String("consul.addr"),
-				}}
-
-			// Load yaml config from s3.
-			if err := Koanf.Load(ConsulProvider(&config), json.Parser()); err != nil {
+			// Load json config from consul.
+			if err := Koanf.Load(ConsulProvider(&consulconfig), json.Parser()); err != nil {
 				logrus.Fatalf("error loading config: %v", err)
 			}
 
+		case Koanf.String("config.format") == "yaml":
+
+			// Load yaml config from consul.
+			if err := Koanf.Load(ConsulProvider(&consulconfig), yaml.Parser()); err != nil {
+				logrus.Fatalf("error loading config: %v", err)
+			}
 		}
 	}
 

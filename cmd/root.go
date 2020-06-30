@@ -68,8 +68,8 @@ func init() {
 	signal.Notify(config.SignalHUP, syscall.SIGHUP)
 
 	logrus.Info("initConfig: load config file")
-	logrus.Infof("Config file: %s", config.Koanf.String("config.file"))
-	logrus.Infof("Config type: %s", config.Koanf.String("config.source"))
+	//logrus.Infof("Config file: %s", config.Koanf.String("config.file"))
+	//logrus.Infof("Config type: %s", config.Koanf.String("config.source"))
 
 }
 
