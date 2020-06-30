@@ -114,7 +114,7 @@ func initConfig() {
 			config.ConfigChangeSig <- true
 
 		})
-
+	// TODO проверить работу consul ACL, добавить возможность хранить зашифрованный конфиг через AddSecureRemoteProvider
 	case config.CfgSrc == "consul":
 		if config.Viper.GetString("CONSUL_ADDR") != "" {
 			if config.Viper.GetString("CONSUL_PATH") != "" {
