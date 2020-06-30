@@ -132,6 +132,15 @@ func (c *ConfigFile) FillDefaults() error {
 		c.Defaults.HTTPPort = Viper.GetString("HTTPPort")
 	}
 
+	if len(c.Alerts) == 0 {
+		var alert AlertConfigs
+		alert.Name = "log"
+		alert.Type = "log"
+		c.Alerts = append(c.Alerts, alert)
+		c.Defaults.Parameters.CommandChannel = "log"
+		c.Defaults.Parameters.AlertChannel = "log"
+		c.Defaults.Parameters.CritAlertChannel = "log"
+	}
 	return nil
 }
 
