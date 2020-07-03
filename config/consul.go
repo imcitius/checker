@@ -14,7 +14,6 @@ type ConsulParam struct {
 	KVPath string
 }
 
-// S3 implements a s3 provider.
 type ConsulClient struct {
 	*api.Client
 	*ConsulParam
@@ -33,7 +32,6 @@ var (
 	ProjectsCatalog = make(map[string]Project)
 )
 
-// Provider returns a provider that takes a simples3 config.
 func ConsulProvider(cfg *ConsulConfig) *ConsulClient {
 
 	client, err := api.NewClient(cfg.cfg)
@@ -45,7 +43,6 @@ func ConsulProvider(cfg *ConsulConfig) *ConsulClient {
 
 }
 
-// ReadBytes reads the contents of a file on s3 and returns the bytes.
 func (r *ConsulClient) ReadBytes() ([]byte, error) {
 
 	kv := r.KV()

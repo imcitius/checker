@@ -47,6 +47,8 @@ type ConfigFile struct {
 	}
 	Alerts   []AlertConfigs
 	Projects []Project
+
+	ConsulCatalog `koanf:"consul_catalog"`
 }
 
 type Parameters struct {
@@ -66,6 +68,11 @@ type Parameters struct {
 	SSLExpirationPeriod string `koanf:"ssl_expiration_period"`
 
 	Mentions []string
+}
+
+type ConsulCatalog struct {
+	Address string
+	ACL     string
 }
 
 type AlertConfigs struct {

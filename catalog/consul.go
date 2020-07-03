@@ -105,11 +105,12 @@ func WatchServices() {
 
 		const (
 			DefaultWatchWaitTime = 15 * time.Second
-			addr                 = "consul.service.iron-staging.consul:8500"
 			passingOnly          = true
+			watchPeriod          = 30 * time.Second
 		)
 
 		var (
+			addr      = config.Config.ConsulCatalog.Address
 			conf      = consul.DefaultConfig()
 			options   = &consul.QueryOptions{WaitTime: DefaultWatchWaitTime, AllowStale: false}
 			flashback map[string]config.ConsulService
@@ -180,6 +181,9 @@ func WatchServices() {
 				}
 				//config.Log.Infof("services: %+v\n\n\n", current)
 			}
+
+			// we do not want to DoS consul's api
+			time.Sleep(watchPeriod)
 		}
 	}()
 }

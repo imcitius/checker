@@ -27,3 +27,5 @@ projects:
         checks:
           - type: http
             host: https://google.com
+consul_catalog:
+  address: consul.service.iron-staging.consul:8500

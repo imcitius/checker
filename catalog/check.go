@@ -21,7 +21,7 @@ func CheckCatalog(timeout string) {
 				if timeout == h.Parameters.RunEvery || timeout == p.Parameters.RunEvery {
 
 					startTime := time.Now()
-					config.Log.Debugf("check: %+v", c)
+					//config.Log.Debugf("check: %+v", c)
 					tempErr := checks.Execute(&p, &c)
 					endTime := time.Now()
 					t := endTime.Sub(startTime)
