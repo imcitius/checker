@@ -14,7 +14,7 @@ func getCeasedProjectsHealthchecks() string {
 			output += fmt.Sprintf("Project: %s\n", p.Name)
 		}
 
-		for _, h := range p.Healtchecks {
+		for _, h := range p.Healthchecks {
 			for _, c := range h.Checks {
 				if c.Mode == "quiet" {
 					output += fmt.Sprintf("\t\tCheck: %s\t host: %s\n", c.Type, c.Host)

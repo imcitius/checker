@@ -20,6 +20,19 @@ type ConsulClient struct {
 	*ConsulParam
 }
 
+// Service represent a Consul service.
+type ConsulService struct {
+	Name      string
+	Tags      []string
+	Nodes     []string
+	Addresses []string
+	Ports     []int
+}
+
+var (
+	ProjectsCatalog = make(map[string]Project)
+)
+
 // Provider returns a provider that takes a simples3 config.
 func ConsulProvider(cfg *ConsulConfig) *ConsulClient {
 

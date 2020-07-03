@@ -35,6 +35,20 @@ var (
 	Secrets map[string]string
 )
 
+type ConfigFile struct {
+	Defaults struct {
+		// Main timer evaluates every TimerStep seconds
+		TimerStep  string     `koanf:"timer_step"`
+		Parameters Parameters `koanf:"parameters"`
+		// HTTP port web interface listen
+		HTTPPort string `koanf:"http_port"`
+		// If not empty HTPP server not enabled
+		HTTPEnabled string `koanf:"http_enabled"`
+	}
+	Alerts   []AlertConfigs
+	Projects []Project
+}
+
 type Parameters struct {
 	// Messages mode quiet/loud
 	Mode string
@@ -52,20 +66,6 @@ type Parameters struct {
 	SSLExpirationPeriod string `koanf:"ssl_expiration_period"`
 
 	Mentions []string
-}
-
-type ConfigFile struct {
-	Defaults struct {
-		// Main timer evaluates every TimerStep seconds
-		TimerStep  string     `koanf:"timer_step"`
-		Parameters Parameters `koanf:"parameters"`
-		// HTTP port web interface listen
-		HTTPPort string `koanf:"http_port"`
-		// If not empty HTPP server not enabled
-		HTTPEnabled string `koanf:"http_enabled"`
-	}
-	Alerts   []AlertConfigs
-	Projects []Project
 }
 
 type AlertConfigs struct {
@@ -86,15 +86,15 @@ type TimeoutsCollection struct {
 }
 
 type Project struct {
-	Name        string
-	Healtchecks []Healtchecks `koanf:"healthchecks"`
-	Parameters  Parameters    `koanf:"parameters"`
+	Name         string
+	Healthchecks []Healthcheck `koanf:"healthchecks"`
+	Parameters   Parameters    `koanf:"parameters"`
 
 	// Runtime data
 	Timeouts TimeoutsCollection
 }
 
-type Healtchecks struct {
+type Healthcheck struct {
 	Name   string
 	Checks []Check `koanf:"checks"`
 

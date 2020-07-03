@@ -2,12 +2,12 @@ package metrics
 
 import "my/checker/config"
 
-func AddCheckError(p *config.Project, h *config.Healtchecks, c *config.Check) error {
+func AddCheckError(p *config.Project, h *config.Healthcheck, c *config.Check) error {
 	CheckMetrics.WithLabelValues(p.Name, h.Name, c.UUid, "Error").Inc()
 	return nil
 }
 
-func AddCheckRunCount(p *config.Project, h *config.Healtchecks, c *config.Check) error {
+func AddCheckRunCount(p *config.Project, h *config.Healthcheck, c *config.Check) error {
 	CheckMetrics.WithLabelValues(p.Name, h.Name, c.UUid, "Run").Inc()
 	return nil
 }

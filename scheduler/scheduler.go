@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"my/checker/alerts"
+	"my/checker/catalog"
 	checks "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
@@ -17,7 +18,7 @@ import (
 
 var Config = &config.Config
 
-func getRandomId() string {
+func GetRandomId() string {
 	sid, _ := shortid.New(1, shortid.DefaultABC, rand.Uint64())
 	checkRuntimeId, _ := sid.Generate()
 	return checkRuntimeId
@@ -40,7 +41,7 @@ func runReports(timeout string) {
 	}
 }
 
-func runAlerts(timeout string) {
+func runCritAlerts(timeout string) {
 	config.Log.Debug("runAlerts")
 	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery == timeout {
@@ -60,52 +61,70 @@ func runAlerts(timeout string) {
 func runChecks(timeout string) {
 	config.Log.Debug("runChecks")
 
+	checkProjects(timeout)
+	catalog.CheckCatalog(timeout)
+}
+
+func checkProjects(timeout string) {
 	for _, project := range Config.Projects {
-		for _, healthcheck := range project.Healtchecks {
+		for _, healthcheck := range project.Healthchecks {
 
 			status.Statuses.Projects[project.Name].Alive = 0
 
-			config.Log.Debugf("Total checks %+v", healthcheck.Checks)
-			for _, check := range healthcheck.Checks {
-				config.Log.Debugf("Now checking %s", check.Host)
-				if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
-
-					checkRandomId := getRandomId()
-					config.Log.Infof("(%s) Checking project '%s' check '%s' (type: %s) ... ", checkRandomId, project.Name, healthcheck.Name, check.Type)
-
-					startTime := time.Now()
-					tempErr := checks.Execute(&project, &healthcheck, &check)
-					endTime := time.Now()
-
-					t := endTime.Sub(startTime)
-					if tempErr != nil {
-						err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
-						config.Log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
-						config.Log.Debugf("Check mode: %s", status.GetCheckMode(&check))
-						if status.GetCheckMode(&check) != "quiet" {
-							alerts.ProjectAlert(&project, err)
-						}
-
-						status.Statuses.Projects[project.Name].SeqErrorsCount++
-						status.Statuses.Checks[check.UUid].LastResult = false
-
-						err = metrics.AddCheckError(&project, &healthcheck, &check)
-						if err != nil {
-							config.Log.Errorf("Metric count error: %v", err)
-						}
-
-					} else {
-						config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
-						metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
-
-						status.Statuses.Projects[project.Name].SeqErrorsCount--
-
-						status.Statuses.Projects[project.Name].Alive++
-						status.Statuses.Checks[check.UUid].LastResult = true
-					}
-				}
-			}
+			executeHealthcheck(&project, &healthcheck, timeout)
 		}
+	}
+}
+
+func executeHealthcheck(project *config.Project, healthcheck *config.Healthcheck, timeout string) {
+	config.Log.Debugf("Total checks %+v", healthcheck.Checks)
+	for _, check := range healthcheck.Checks {
+		config.Log.Debugf("Now checking %s", check.Host)
+		if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
+
+			checkRandomId := GetRandomId()
+			config.Log.Infof("(%s) Checking project '%s' check '%s' (type: %s) ... ", checkRandomId, project.Name, healthcheck.Name, check.Type)
+
+			startTime := time.Now()
+
+			err := metrics.AddCheckRunCount(project, healthcheck, &check)
+			if err != nil {
+				config.Log.Errorf("Metric count error: %v", err)
+			}
+
+			tempErr := checks.Execute(project, &check)
+			endTime := time.Now()
+			t := endTime.Sub(startTime)
+			evaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, t)
+		}
+	}
+}
+
+func evaluateCheckResult(project *config.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration) {
+	if tempErr != nil {
+		err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
+		config.Log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
+		config.Log.Debugf("Check mode: %s", status.GetCheckMode(check))
+		if status.GetCheckMode(check) != "quiet" {
+			alerts.ProjectAlert(project, err)
+		}
+
+		status.Statuses.Projects[project.Name].SeqErrorsCount++
+		status.Statuses.Checks[check.UUid].LastResult = false
+
+		err = metrics.AddCheckError(project, healthcheck, check)
+		if err != nil {
+			config.Log.Errorf("Metric count error: %v", err)
+		}
+
+	} else {
+		config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
+		metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
+
+		status.Statuses.Projects[project.Name].SeqErrorsCount--
+
+		status.Statuses.Projects[project.Name].Alive++
+		status.Statuses.Checks[check.UUid].LastResult = true
 	}
 }
 
@@ -160,7 +179,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					reportsDuration := time.Now().Sub(reportsStartTime)
 
 					alertsStartTime := time.Now()
-					runAlerts(timeout)
+					runCritAlerts(timeout)
 					alertsDuration := time.Now().Sub(alertsStartTime)
 
 					config.Log.Warnf("Checks duration: %v msec", checksDuration.Milliseconds())

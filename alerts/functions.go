@@ -44,7 +44,7 @@ func ProjectSendReport(p *config.Project) error {
 		ceasedChecks                []string
 		reportMessage, reportHeader string
 	)
-	for _, hc := range p.Healtchecks {
+	for _, hc := range p.Healthchecks {
 		for _, c := range hc.Checks {
 			if status.Statuses.Checks[c.UUid].Mode == "quiet" {
 				ceasedChecks = append(ceasedChecks, c.UUid)

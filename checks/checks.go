@@ -3,17 +3,11 @@ package check
 import (
 	"fmt"
 	"my/checker/config"
-	"my/checker/metrics"
 	"regexp"
 )
 
-func Execute(p *config.Project, h *config.Healtchecks, c *config.Check) error {
+func Execute(p *config.Project, c *config.Check) error {
 	var err error
-
-	err = metrics.AddCheckRunCount(p, h, c)
-	if err != nil {
-		config.Log.Errorf("Metric count error: %v", err)
-	}
 
 	if _, ok := config.Checks[c.Type]; ok {
 		err = config.Checks[c.Type](c, p)
@@ -34,7 +28,7 @@ func UUID(c *config.Check) string {
 
 func GetCheckByUUID(uuid string) *config.Check {
 	for _, project := range config.Config.Projects {
-		for _, healthcheck := range project.Healtchecks {
+		for _, healthcheck := range project.Healthchecks {
 			for _, check := range healthcheck.Checks {
 				if uuid == check.UUid {
 					return &check

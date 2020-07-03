@@ -20,6 +20,8 @@ func init() {
 			checkErr      error
 			errorHeader   string
 			tlsConfig     tls.Config
+			SslExpTimeout time.Duration
+			err           error
 		)
 
 		if c.AnswerPresent == "absent" {
@@ -28,9 +30,11 @@ func init() {
 			answerPresent = true
 		}
 
-		sslExpTimeout, err := time.ParseDuration(p.Parameters.SSLExpirationPeriod)
-		if err != nil {
-			config.Log.Fatal(err)
+		if p != nil && p.Parameters.SSLExpirationPeriod != "" {
+			SslExpTimeout, err = time.ParseDuration(p.Parameters.SSLExpirationPeriod)
+			if err != nil {
+				config.Log.Infof("cannot parse ssl expiration timeout: %s in project %s", err, p.Name)
+			}
 		}
 
 		errorHeader = fmt.Sprintf("HTTP error at project: %s\nCheck URL: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
@@ -85,11 +89,12 @@ func init() {
 			return errors.New(errorMessage)
 		}
 
-		if GetCheckScheme(c) == "https" {
+		switch GetCheckScheme(c) {
+		case "https":
 			//config.Log.Debugf("SSL: %v", response.TLS.PeerCertificates)
 			if len(response.TLS.PeerCertificates) > 0 {
 				for i, cert := range response.TLS.PeerCertificates {
-					if cert.NotAfter.Sub(time.Now()) < sslExpTimeout {
+					if cert.NotAfter.Sub(time.Now()) < SslExpTimeout {
 						config.Log.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
 					}
 					config.Log.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
@@ -98,7 +103,6 @@ func init() {
 				errorMessage := errorHeader + fmt.Sprint("No certificates present on https connection")
 				return errors.New(errorMessage)
 			}
-
 		}
 
 		if response.Body != nil {

@@ -3,7 +3,7 @@ defaults:
   timer_step: 5s
   http_port: '80'
   parameters:
-    run_every: 60s
+    run_every: 10s
     min_health: 1
     allow_fails: 0
     mode: loud

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
 	"github.com/knadh/koanf/parsers/hcl"
 	"github.com/knadh/koanf/parsers/json"
@@ -11,6 +10,7 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/s3"
 	"github.com/sirupsen/logrus"
+	"my/checker/common"
 	"reflect"
 	"strings"
 	"time"
@@ -212,16 +212,18 @@ func (c *ConfigFile) FillDefaults() error {
 }
 
 func (c *ConfigFile) FillUUIDs() error {
-	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
+	var err error
 	for i := range c.Projects {
-		for j := range c.Projects[i].Healtchecks {
-			for k := range c.Projects[i].Healtchecks[j].Checks {
-				u2 := uuid.NewSHA1(ns, []byte(c.Projects[i].Healtchecks[j].Checks[k].Host))
-				c.Projects[i].Healtchecks[j].Checks[k].UUid = u2.String()
+		for j := range c.Projects[i].Healthchecks {
+			for k := range c.Projects[i].Healthchecks[j].Checks {
+				c.Projects[i].Healthchecks[j].Checks[k].UUid = common.GenUUID(c.Projects[i].Healthchecks[j].Checks[k].Host)
+				if c.Projects[i].Healthchecks[j].Checks[k].UUid == "" {
+					return err
+				}
 			}
 		}
 	}
-	return err
+	return nil
 }
 
 func (p *TimeoutCollection) Add(period string) {
@@ -248,7 +250,7 @@ func (c *ConfigFile) FillTimeouts() error {
 		if p.Parameters.RunEvery != defRunEvery {
 			Timeouts.Add(p.Parameters.RunEvery)
 		}
-		for _, h := range p.Healtchecks {
+		for _, h := range p.Healthchecks {
 			if h.Parameters.RunEvery != defRunEvery {
 				Timeouts.Add(h.Parameters.RunEvery)
 				p.Timeouts.Add(h.Parameters.RunEvery)
@@ -275,12 +277,12 @@ func (c *ConfigFile) FillSecrets() error {
 	}
 
 	for i, project := range c.Projects {
-		for j, hc := range project.Healtchecks {
+		for j, hc := range project.Healthchecks {
 			for k, check := range hc.Checks {
 				if strings.HasPrefix(check.SqlQueryConfig.Password, "vault") {
 					token, err := GetVaultSecret(check.SqlQueryConfig.Password)
 					if err == nil {
-						c.Projects[i].Healtchecks[j].Checks[k].SqlQueryConfig.Password = token
+						c.Projects[i].Healthchecks[j].Checks[k].SqlQueryConfig.Password = token
 					} else {
 						return fmt.Errorf("Error getting bot token from vault: %v", err)
 					}
@@ -288,7 +290,7 @@ func (c *ConfigFile) FillSecrets() error {
 				if strings.HasPrefix(check.SqlReplicationConfig.Password, "vault") {
 					token, err := GetVaultSecret(check.SqlReplicationConfig.Password)
 					if err == nil {
-						c.Projects[i].Healtchecks[j].Checks[k].SqlReplicationConfig.Password = token
+						c.Projects[i].Healthchecks[j].Checks[k].SqlReplicationConfig.Password = token
 					} else {
 						return fmt.Errorf("Error getting bot token from vault: %v", err)
 					}

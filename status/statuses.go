@@ -44,7 +44,7 @@ func InitStatuses() error {
 
 		initProjectStatus(&p)
 
-		for _, h := range p.Healtchecks {
+		for _, h := range p.Healthchecks {
 			for _, c := range h.Checks {
 				initCheckStatus(&c)
 			}
@@ -55,4 +55,17 @@ func InitStatuses() error {
 	//config.Log.Debugf("Metrics: %+v", string(j))
 
 	return nil
+}
+
+func InitProject(p *config.Project) {
+
+	config.Log.Debug("Init project status structure")
+
+	initProjectStatus(p)
+
+	for _, h := range p.Healthchecks {
+		for _, c := range h.Checks {
+			initCheckStatus(&c)
+		}
+	}
 }

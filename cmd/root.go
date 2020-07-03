@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"my/checker/alerts"
+	"my/checker/catalog"
 	"my/checker/config"
 	"my/checker/scheduler"
 	"my/checker/status"
@@ -129,9 +130,8 @@ func mainChecker() {
 		if err != nil {
 			config.Log.Infof("Config load error: %s", err)
 		}
-		//else {
-		//	config.Log.Debugf("(mainChecker) Loaded config: %+v", config.Config)
-		//}
+
+		catalog.WatchServices()
 
 		err = status.InitStatuses()
 		if err != nil {
