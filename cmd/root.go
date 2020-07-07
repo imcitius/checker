@@ -54,8 +54,10 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "bots", "b", true, "start listening messenger bots")
 
+	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
+	rootCmd.AddCommand(listUUID)
 
 	config.SignalINT = make(chan os.Signal)
 	config.SignalHUP = make(chan os.Signal)
@@ -113,9 +115,27 @@ var checkCommand = &cobra.Command{
 var testCfg = &cobra.Command{
 	Use:   "testcfg",
 	Short: "unmarshal config file into config structure",
-	Long:  `All software has versions. This is Hugo's`,
+	Long:  `Try to load and parse config from defined source`,
 	Run: func(cmd *cobra.Command, args []string) {
 		testConfig()
+	},
+}
+
+var genToken = &cobra.Command{
+	Use:   "gentoken",
+	Short: "Generate auth token",
+	Long:  `Generate new jwt token for web auth`,
+	Run: func(cmd *cobra.Command, args []string) {
+		web.GenerateToken()
+	},
+}
+
+var listUUID = &cobra.Command{
+	Use:   "listuuid",
+	Short: "List UUIDs",
+	Long:  `Load config and list all projects and checks uuids`,
+	Run: func(cmd *cobra.Command, args []string) {
+		config.ListUUID()
 	},
 }
 
@@ -131,7 +151,9 @@ func mainChecker() {
 			config.Log.Infof("Config load error: %s", err)
 		}
 
-		catalog.WatchServices()
+		if config.Config.ConsulCatalog.Enabled {
+			catalog.WatchServices()
+		}
 
 		err = status.InitStatuses()
 		if err != nil {
