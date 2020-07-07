@@ -14,6 +14,7 @@ require (
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/knadh/koanf v0.10.0
 	github.com/lib/pq v1.3.0
+	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/common v0.4.0
 	github.com/sirupsen/logrus v1.6.0
