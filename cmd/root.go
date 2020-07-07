@@ -141,7 +141,9 @@ func mainChecker() {
 			config.Log.Infof("Config load error: %s", err)
 		}
 
-		catalog.WatchServices()
+		if config.Config.ConsulCatalog.Enabled {
+			catalog.WatchServices()
+		}
 
 		err = status.InitStatuses()
 		if err != nil {

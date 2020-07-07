@@ -73,6 +73,7 @@ type Parameters struct {
 type ConsulCatalog struct {
 	Address string
 	ACL     string
+	Enabled bool
 }
 
 type AlertConfigs struct {

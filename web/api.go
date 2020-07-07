@@ -70,8 +70,6 @@ func checkPing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	io.WriteString(w, "Pong\n")
-
 	uuid := strings.Split(r.URL.Path, "/")[3]
 	if uuid == "" {
 		http.Error(w, "Pinged check's UUID not defined", http.StatusMethodNotAllowed)
@@ -84,11 +82,12 @@ func checkPing(w http.ResponseWriter, r *http.Request) {
 		status.InitCheckStatus(&check)
 	}
 
-	s := *status.Statuses.Checks[uuid]
-	s.LastResult = true
-	s.When = time.Now()
+	status.Statuses.Checks[uuid].LastResult = true
+	status.Statuses.Checks[uuid].When = time.Now()
 
-	config.Log.Infof("Result: %+v", s)
+	config.Log.Debugf("Passive check %s ping received: %s", uuid, status.Statuses.Checks[uuid].When)
+
+	io.WriteString(w, "Pong\n")
 
 }
 
