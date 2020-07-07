@@ -57,6 +57,7 @@ func init() {
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
+	rootCmd.AddCommand(listUUID)
 
 	config.SignalINT = make(chan os.Signal)
 	config.SignalHUP = make(chan os.Signal)
@@ -126,6 +127,15 @@ var genToken = &cobra.Command{
 	Long:  `Generate new jwt token for web auth`,
 	Run: func(cmd *cobra.Command, args []string) {
 		web.GenerateToken()
+	},
+}
+
+var listUUID = &cobra.Command{
+	Use:   "listuuid",
+	Short: "LIst UUIDs",
+	Long:  `Load config and list all projects and checks uuids`,
+	Run: func(cmd *cobra.Command, args []string) {
+		config.ListUUID()
 	},
 }
 
