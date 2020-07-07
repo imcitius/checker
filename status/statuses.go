@@ -2,6 +2,7 @@ package status
 
 import (
 	"my/checker/config"
+	"time"
 )
 
 var (
@@ -17,11 +18,13 @@ type ProjectsStatuses struct {
 	SeqErrorsCount int
 	FailsCount     int
 }
+
 type CheckStatuses struct {
 	UUID       string
 	Mode       string // represent current alerting mode
 	Status     string // represent current checks status
 	LastResult bool
+	When       time.Time
 }
 
 type StatusCollection struct {
@@ -46,7 +49,7 @@ func InitStatuses() error {
 
 		for _, h := range p.Healthchecks {
 			for _, c := range h.Checks {
-				initCheckStatus(&c)
+				InitCheckStatus(&c)
 			}
 		}
 	}
@@ -65,7 +68,7 @@ func InitProject(p *config.Project) {
 
 	for _, h := range p.Healthchecks {
 		for _, c := range h.Checks {
-			initCheckStatus(&c)
+			InitCheckStatus(&c)
 		}
 	}
 }

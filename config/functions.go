@@ -214,9 +214,9 @@ func (c *ConfigFile) FillDefaults() error {
 func (c *ConfigFile) FillUUIDs() error {
 	var err error
 	for i := range c.Projects {
-		for j := range c.Projects[i].Healthchecks {
-			for k := range c.Projects[i].Healthchecks[j].Checks {
-				c.Projects[i].Healthchecks[j].Checks[k].UUid = common.GenUUID(c.Projects[i].Healthchecks[j].Checks[k].Host)
+		for j, h := range c.Projects[i].Healthchecks {
+			for k, check := range c.Projects[i].Healthchecks[j].Checks {
+				c.Projects[i].Healthchecks[j].Checks[k].UUid = common.GenUUID(h.Name + check.Name + check.Host)
 				if c.Projects[i].Healthchecks[j].Checks[k].UUid == "" {
 					return err
 				}
@@ -327,4 +327,25 @@ func WatchConfig() {
 	}
 
 	//configWatchSig <- true
+}
+
+func ListUUID() {
+
+	err := LoadConfig()
+	if err != nil {
+		Log.Infof("Config load error: %s", err)
+	}
+
+	list := ""
+	for _, p := range Config.Projects {
+		list = list + fmt.Sprintf("Project: %s\n", p.Name)
+		for _, h := range p.Healthchecks {
+			list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)
+			for _, c := range h.Checks {
+				list = list + fmt.Sprintf("\t\tUUID: %s\n", c.UUid)
+			}
+		}
+	}
+
+	Log.Info(list)
 }
