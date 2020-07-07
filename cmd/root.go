@@ -54,6 +54,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "bots", "b", true, "start listening messenger bots")
 
+	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
 
@@ -113,9 +114,18 @@ var checkCommand = &cobra.Command{
 var testCfg = &cobra.Command{
 	Use:   "testcfg",
 	Short: "unmarshal config file into config structure",
-	Long:  `All software has versions. This is Hugo's`,
+	Long:  `Try to load and parse config from defined source`,
 	Run: func(cmd *cobra.Command, args []string) {
 		testConfig()
+	},
+}
+
+var genToken = &cobra.Command{
+	Use:   "gentoken",
+	Short: "Generate auth token",
+	Long:  `Generate new jwt token for web auth`,
+	Run: func(cmd *cobra.Command, args []string) {
+		web.GenerateToken()
 	},
 }
 

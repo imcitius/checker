@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/cristalhq/jwt/v3"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
 	"io"
@@ -103,15 +104,43 @@ func list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	list := ""
-	for _, p := range config.Config.Projects {
-		list = list + fmt.Sprintf("Project: %s\n", p.Name)
-		for _, h := range p.Healthchecks {
-			list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)
-			for _, c := range h.Checks {
-				list = list + fmt.Sprintf("\t\tUUID: %s\n", c.UUid)
-			}
+	if r.Header.Get("Authorization") == "" {
+		config.Log.Info("Web: need auth")
+		io.WriteString(w, "Web: need auth	")
+		return
+	} else {
+		verifier, err := jwt.NewVerifierHS(jwt.HS256, key)
+		newToken, err := jwt.ParseAndVerifyString(r.Header.Get("Authorization"), verifier)
+		if err != nil {
+			io.WriteString(w, "Web: token invalid")
+			config.Log.Info("Web: token invalid")
+			return
 		}
+
+		var newClaims jwt.StandardClaims
+		errClaims := json.Unmarshal(newToken.RawClaims(), &newClaims)
+		checkErr(errClaims)
+
+		var claimed = newClaims.IsForAudience("admin")
+		var valid = newClaims.IsValidAt(time.Now())
+
+		if claimed && valid {
+			list := ""
+			for _, p := range config.Config.Projects {
+				list = list + fmt.Sprintf("Project: %s\n", p.Name)
+				for _, h := range p.Healthchecks {
+					list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)
+					for _, c := range h.Checks {
+						list = list + fmt.Sprintf("\t\tUUID: %s\n", c.UUid)
+					}
+				}
+			}
+			io.WriteString(w, list)
+		} else {
+			io.WriteString(w, "Web: token invalid")
+			config.Log.Info("Web: token invalid")
+		}
+
 	}
-	io.WriteString(w, list)
+
 }
