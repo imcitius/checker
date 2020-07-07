@@ -132,7 +132,7 @@ var genToken = &cobra.Command{
 
 var listUUID = &cobra.Command{
 	Use:   "listuuid",
-	Short: "LIst UUIDs",
+	Short: "List UUIDs",
 	Long:  `Load config and list all projects and checks uuids`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config.ListUUID()
