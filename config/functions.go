@@ -216,7 +216,7 @@ func (c *ConfigFile) FillUUIDs() error {
 	for i := range c.Projects {
 		for j := range c.Projects[i].Healthchecks {
 			for k := range c.Projects[i].Healthchecks[j].Checks {
-				c.Projects[i].Healthchecks[j].Checks[k].UUid = common.GenUUID(c.Projects[i].Healthchecks[j].Checks[k].Host)
+				c.Projects[i].Healthchecks[j].Checks[k].UUid = common.GenUUID(c.Projects[i].Healthchecks[j].Checks[k].Name + c.Projects[i].Healthchecks[j].Checks[k].Host)
 				if c.Projects[i].Healthchecks[j].Checks[k].UUid == "" {
 					return err
 				}

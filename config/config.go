@@ -111,6 +111,8 @@ type Healthcheck struct {
 }
 
 type Check struct {
+	Name string
+
 	// Parameters related to healthcheck execution
 	Type     string
 	Host     string
