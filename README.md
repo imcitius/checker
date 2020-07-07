@@ -15,6 +15,7 @@ Usage:
 
 Available Commands:
   check       Run scheduler and execute checks
+  gentoken    Generate auth token
   help        Help about any command
   testcfg     unmarshal config file into config structure
   version     Print the version number of Hugo
@@ -331,7 +332,24 @@ password: пароль
     }
 ```
 
-### импорт серевисов из Consul
+### Пассивные проверки
+```
+В случае, если активная проверка по каким-то причинам нежелательна или невозможна, пассивная проверка позволит отслееживать статус сеервиса.
+
+    {
+      "name": "passive check of service A",
+      "type": "passive",
+      "timeout": 5m
+    }
+
+Отстуки принимаются GET запросом на эндпоинт http://checker/check/ping/<check uuid>.
+Список всех UUID можно получить GET запросом на  эндпоинт http://checker/list. Требуется JWT авторизация, токен генерируется CLI командой gentotkne (см).
+
+  curl -H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJPaTNvb3hpZTRhaWtlaW1vb3pvOEVnYWk2YWl6OXBvaCIsImF1ZCI6ImFkbWluIn0.wjCl69SvEbHFiMSK-iRXOIvcd5wkO-MCF0oQsNrqVL8" http://checker/list
+
+```
+
+## импорт серевисов из Consul
 // TODO описать
 consul_catalog
 
