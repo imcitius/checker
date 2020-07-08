@@ -103,6 +103,11 @@ func initConfig() {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)
 	}), nil)
+	config.Koanf.Load(env.Provider("CHECKER_", ".", func(s string) string {
+		return strings.Replace(strings.ToLower(
+			s), "_", ".", -1)
+	}), nil)
+
 }
 
 var checkCommand = &cobra.Command{

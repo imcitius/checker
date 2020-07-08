@@ -6,9 +6,7 @@ import (
 	"my/checker/config"
 )
 
-var (
-	key = &config.Config.Defaults.TokenEncryptionKey
-)
+var key []byte
 
 func GenerateToken() {
 
@@ -17,7 +15,13 @@ func GenerateToken() {
 		config.Log.Infof("Config load error: %s", err)
 	}
 
-	signer, err := jwt.NewSignerHS(jwt.HS256, *key)
+	if config.Koanf.String("checker.token.encryption.key") != "" {
+		key = config.Koanf.Bytes("checker.token.encryption.key")
+	} else {
+		key = config.Config.Defaults.TokenEncryptionKey
+	}
+
+	signer, err := jwt.NewSignerHS(jwt.HS256, key)
 	if err != nil {
 		config.Log.Infof("Cannot generate token signer: %s", err.Error())
 		return
@@ -28,7 +32,6 @@ func GenerateToken() {
 		ID:       "Oi3ooxie4aikeimoozo8Egai6aiz9poh",
 	}
 
-	// 3. create a builder
 	builder := jwt.NewBuilder(signer)
 
 	token, err := builder.Build(claims)
