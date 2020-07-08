@@ -113,14 +113,23 @@ type Healthcheck struct {
 type Check struct {
 	Name string
 
-	// Parameters related to healthcheck execution
-	Type     string
-	Host     string
-	Timeout  string
-	Port     int
+	// Parameters related to check execution
+	Type    string
+	Host    string
+	Timeout string
+	Port    int
+
+	// retries
 	Attempts int
-	Mode     string
-	Count    int
+
+	// alert mode
+	Mode string
+
+	// for ping check - pings count
+	Count int
+
+	// allowed seq fails number
+	AllowFails int
 
 	// http checks optional parameters
 	Code          []int

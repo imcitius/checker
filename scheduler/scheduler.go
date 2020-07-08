@@ -46,13 +46,18 @@ func runReports(timeout string) {
 
 func runCritAlerts(timeout string) {
 	config.Log.Debug("runAlerts")
+
 	for _, project := range Config.Projects {
 		if project.Parameters.RunEvery == timeout {
-			if status.Statuses.Projects[project.Name].Alive < project.Parameters.MinHealth {
-				status.Statuses.Projects[project.Name].SeqErrorsCount++
-			} else {
-				status.Statuses.Projects[project.Name].SeqErrorsCount--
-			}
+			//if status.Statuses.Projects[project.Name].Alive < project.Parameters.MinHealth {
+			//	status.Statuses.Projects[project.Name].SeqErrorsCount++
+			//} else {
+			//	if status.Statuses.Projects[project.Name].SeqErrorsCount > 0 {
+			//		status.Statuses.Projects[project.Name].SeqErrorsCount--
+			//	} else {
+			//		status.Statuses.Projects[project.Name].SeqErrorsCount = 0
+			//	}
+			//}
 			if status.Statuses.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
 				alerts.ProjectCritAlert(&projects.Project{project}, errors.New(errorMessage))
@@ -98,36 +103,8 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 			tempErr := checks.Execute(project, &check)
 			endTime := time.Now()
 			t := endTime.Sub(startTime)
-			evaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, t)
+			checks.EvaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, t)
 		}
-	}
-}
-
-func evaluateCheckResult(project *projects.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration) {
-	if tempErr != nil {
-		err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
-		config.Log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
-		config.Log.Debugf("Check mode: %s", status.GetCheckMode(check))
-		if status.GetCheckMode(check) != "quiet" {
-			alerts.ProjectAlert(project, err)
-		}
-
-		status.Statuses.Projects[project.Name].SeqErrorsCount++
-		status.Statuses.Checks[check.UUid].LastResult = false
-
-		err = metrics.AddCheckError(project, healthcheck, check)
-		if err != nil {
-			config.Log.Errorf("Metric count error: %v", err)
-		}
-
-	} else {
-		config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
-		metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
-
-		status.Statuses.Projects[project.Name].SeqErrorsCount--
-
-		status.Statuses.Projects[project.Name].Alive++
-		status.Statuses.Checks[check.UUid].LastResult = true
 	}
 }
 

@@ -20,11 +20,13 @@ type ProjectsStatuses struct {
 }
 
 type CheckStatuses struct {
-	UUID       string
-	Mode       string // represent current alerting mode
-	Status     string // represent current checks status
-	LastResult bool
-	When       time.Time
+	UUID           string
+	Mode           string // represent current alerting mode
+	Status         string // represent current checks status
+	LastResult     bool
+	When           time.Time
+	SeqErrorsCount int
+	FailsCount     int
 }
 
 type StatusCollection struct {

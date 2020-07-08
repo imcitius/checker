@@ -10,6 +10,7 @@ import (
 	"my/checker/auth"
 	"my/checker/catalog"
 	"my/checker/config"
+	"my/checker/reports"
 	"my/checker/scheduler"
 	"my/checker/status"
 	"my/checker/web"
@@ -141,7 +142,7 @@ var list = &cobra.Command{
 	Short: "List config elements",
 	Long:  `List Projects, Healthchecks, Check UUIDs`,
 	Run: func(cmd *cobra.Command, args []string) {
-		config.List()
+		reports.List()
 	},
 }
 

@@ -6,6 +6,7 @@ import (
 	tb "gopkg.in/tucnak/telebot.v2"
 	"my/checker/config"
 	"my/checker/metrics"
+	"my/checker/reports"
 	"regexp"
 	"sync"
 	"time"
@@ -227,7 +228,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 	bot.Handle(&btnList, func(m *tb.Message) {
 		config.Log.Infof("List pressed")
-		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + config.ListElements()))
+		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + reports.ListElements()))
 	})
 	bot.Handle(&btnStats, func(m *tb.Message) {
 		config.Log.Infof("Stats pressed")

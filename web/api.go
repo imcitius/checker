@@ -10,6 +10,7 @@ import (
 	"my/checker/alerts"
 	"my/checker/config"
 	projects "my/checker/projects"
+	"my/checker/reports"
 	"my/checker/status"
 	"net/http"
 	"strings"
@@ -127,7 +128,7 @@ func list(w http.ResponseWriter, r *http.Request) {
 		var valid = newClaims.IsValidAt(time.Now())
 
 		if claimed && valid {
-			io.WriteString(w, config.ListElements())
+			io.WriteString(w, reports.ListElements())
 		} else {
 			io.WriteString(w, "Web: unauthorized")
 			config.Log.Info("Web: unauthorized")

@@ -3,7 +3,6 @@ package alerts
 import (
 	"fmt"
 	tb "gopkg.in/tucnak/telebot.v2"
-	checks "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
 	projects "my/checker/projects"
@@ -23,7 +22,7 @@ func puHandler(m *tb.Message, a *config.AlertConfigs) {
 
 	config.Log.Infof("Bot request /pu")
 	config.Log.Printf("Pause req for UUID: %+v\n", uuID)
-	status.SetCheckMode(checks.GetCheckByUUID(uuID), "quiet")
+	status.SetCheckMode(getCheckByUUID(uuID), "quiet")
 
 	SendChatOps(fmt.Sprintf("Messages ceased for UUID %v", uuID))
 }
@@ -76,9 +75,23 @@ func uuHandler(m *tb.Message, a *config.AlertConfigs) {
 	}
 	config.Log.Infof("Bot request /uu")
 	config.Log.Printf("Unpause req for UUID: %+v\n", uuID)
-	status.SetCheckMode(checks.GetCheckByUUID(uuID), "loud")
+	status.SetCheckMode(getCheckByUUID(uuID), "loud")
 
 	SendChatOps(fmt.Sprintf("Messages resumed for UUID %v", uuID))
+}
+
+func getCheckByUUID(uuID string) *config.Check {
+	for _, project := range config.Config.Projects {
+		for _, healthcheck := range project.Healthchecks {
+			for _, check := range healthcheck.Checks {
+				if uuID == check.UUid {
+					return &check
+				}
+			}
+		}
+	}
+	return nil
+
 }
 
 func upHandler(m *tb.Message, a *config.AlertConfigs) {

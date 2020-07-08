@@ -338,29 +338,3 @@ func WatchConfig() {
 
 	//configWatchSig <- true
 }
-
-func ListElements() string {
-
-	list := ""
-	for _, p := range Config.Projects {
-		list = list + fmt.Sprintf("Project: %s\n", p.Name)
-		for _, h := range p.Healthchecks {
-			list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)
-			for _, c := range h.Checks {
-				list = list + fmt.Sprintf("\t\tUUID: %s\n", c.UUid)
-			}
-		}
-	}
-
-	return list
-}
-
-func List() {
-
-	err := LoadConfig()
-	if err != nil {
-		Log.Infof("Config load error: %s", err)
-	}
-
-	fmt.Print(ListElements())
-}

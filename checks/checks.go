@@ -17,6 +17,7 @@ func Execute(p *projects.Project, c *config.Check) error {
 	if _, ok := Checks[c.Type]; ok {
 		err = Checks[c.Type](c, p)
 		if err == nil {
+			c.LastResult = true
 			return nil
 		} else {
 			c.LastResult = false
