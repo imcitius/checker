@@ -4,11 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	tb "gopkg.in/tucnak/telebot.v2"
-	checks "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
-	projects "my/checker/projects"
-	"my/checker/status"
 	"regexp"
 	"sync"
 	"time"
@@ -16,6 +13,17 @@ import (
 
 var (
 	TgSignalCh chan bool
+
+	selectorAlert = &tb.ReplyMarkup{}
+	selPU         = selectorAlert.Data("pu", "pu")
+	selPP         = selectorAlert.Data("pp", "pp")
+
+	menu     = &tb.ReplyMarkup{ResizeReplyKeyboard: true}
+	btnHelp  = menu.Text("ℹ️ Help")
+	btnPA    = menu.Text("⏸️ Pause All")
+	btnUA    = menu.Text("▶️ Unpause All")
+	btnList  = menu.Text("🔭 List")
+	btnStats = menu.Text("📊 Stats")
 )
 
 func init() {
@@ -36,15 +44,17 @@ func (m TgMessage) GetProject() (string, error) {
 	conf, _ := json.Marshal(m)
 	config.Log.Debugf("Message: %+v\n\n", string(conf))
 
-	if m.IsReply() {
-		// try to get from reply
-		pattern := regexp.MustCompile("Project: (.*)\n")
-		result = pattern.FindStringSubmatch(m.ReplyTo.Text)
-		projectName = result[1]
+	if m.Payload != "" {
+		projectName = m.Payload
 	} else {
-		if m.Payload != "" {
-			projectName = m.Payload
+		// try to get project from message text
+		pattern := regexp.MustCompile(".*project: (.*)\n")
+		if m.IsReply() {
+			result = pattern.FindStringSubmatch(m.ReplyTo.Text)
+		} else {
+			result = pattern.FindStringSubmatch(m.Message.Text)
 		}
+		projectName = result[1]
 	}
 
 	if projectName == "" {
@@ -62,17 +72,19 @@ func (m TgMessage) GetUUID() (string, error) {
 		uuid   string
 		err    error
 	)
-	fmt.Printf("message: %v\n", m.Text)
+	config.Log.Infof("message: %v\n", m.Text)
 
-	if m.IsReply() {
+	if m.Payload != "" {
+		uuid = m.Payload
+	} else {
 		// try to get uuid from reply
 		pattern := regexp.MustCompile("UUID: (.*)")
-		result = pattern.FindStringSubmatch(m.ReplyTo.Text)
-		uuid = result[1]
-	} else {
-		if m.Payload != "" {
-			uuid = m.Payload
+		if m.IsReply() {
+			result = pattern.FindStringSubmatch(m.ReplyTo.Text)
+		} else {
+			result = pattern.FindStringSubmatch(m.Message.Text)
 		}
+		uuid = result[1]
 	}
 
 	if uuid == "" {
@@ -128,7 +140,8 @@ func QuoteMeta(s string) string {
 	}
 	return string(b[:j])
 }
-func (t Telegram) Send(a *config.AlertConfigs, message string) error {
+func (t Telegram) Send(a *config.AlertConfigs, message, messageType string) error {
+
 	config.Log.Debugf("Sending alert, text: '%s' (alert channel %+v)", message, a.Name)
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  a.BotToken,
@@ -140,12 +153,23 @@ func (t Telegram) Send(a *config.AlertConfigs, message string) error {
 	user := tb.Chat{ID: a.ProjectChannel}
 	//config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
 
-	options := new(tb.SendOptions)
-	options.ParseMode = "MarkDownV2"
+	options := &tb.SendOptions{ParseMode: "MarkDownV2"}
 
-	config.Log.Debugf("Bot quoted answer: %s", QuoteMeta(message))
+	menu.Reply(
+		menu.Row(btnHelp, btnList),
+		menu.Row(btnPA, btnUA),
+	)
 
-	_, err = bot.Send(&user, QuoteMeta(message), options)
+	//config.Log.Debugf("Bot quoted answer: %s", QuoteMeta(message))
+
+	switch messageType {
+	case "alert":
+		selectorAlert.Inline(selectorAlert.Row(selPP, selPU))
+		_, err = bot.Send(&user, QuoteMeta(message), options, menu, selectorAlert)
+	default:
+		_, err = bot.Send(&user, QuoteMeta(message), options, menu)
+	}
+
 	if err != nil {
 		config.Log.Warnf("SendTgMessage error: %v", err)
 	} else {
@@ -182,103 +206,49 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Fatal(err)
 	}
 
-	bot.Handle("/pa", func(m *tb.Message) {
-		config.Log.Infof("Bot request /pa")
+	bot.Handle("/pa", func(m *tb.Message) { paHandler() })
+	bot.Handle("/ua", func(m *tb.Message) { uaHandler() })
+	bot.Handle("/uu", func(m *tb.Message) { uuHandler(m, a) })
+	bot.Handle("/pp", func(m *tb.Message) { ppHandler(m, a) })
+	bot.Handle("/pu", func(m *tb.Message) { puHandler(m, a) })
+	bot.Handle("/up", func(m *tb.Message) { upHandler(m, a) })
+	bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
 
-		metrics.AddAlertMetricChatOpsRequest(a)
-		status.MainStatus = "quiet"
-		SendChatOps("All messages ceased")
+	bot.Handle(&btnHelp, func(m *tb.Message) {
+		config.Log.Infof("Help pressed")
+		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + "that should be help"))
+	})
+	bot.Handle(&btnList, func(m *tb.Message) {
+		config.Log.Infof("List pressed")
+		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + config.ListElements()))
+	})
+	bot.Handle(&btnList, func(m *tb.Message) {
+		config.Log.Infof("Stats pressed")
+		statsHandler(m)
+	})
+	bot.Handle(&btnPA, func(m *tb.Message) {
+		config.Log.Infof("PA pressed")
+		paHandler()
+	})
+	bot.Handle(&btnUA, func(m *tb.Message) {
+		config.Log.Infof("UA pressed")
+		uaHandler()
 	})
 
-	bot.Handle("/ua", func(m *tb.Message) {
-		config.Log.Infof("Bot request /ua")
-
-		status.MainStatus = "loud"
-		SendChatOps("All messages enabled")
+	// On inline button pressed (callback)
+	bot.Handle(&selPU, func(c *tb.Callback) {
+		puHandler(c.Message, a)
+		// ...
+		// Always respond!
+		bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
 	})
 
-	bot.Handle("/pu", func(m *tb.Message) {
-		metrics.AddAlertMetricChatOpsRequest(a)
-
-		var tgMessage config.IncomingChatMessage
-		tgMessage = TgMessage{m}
-		uuID, err := tgMessage.GetUUID()
-		if err != nil {
-			SendChatOps(fmt.Sprintf("%s", err))
-			return
-		}
-
-		config.Log.Infof("Bot request /pu")
-		config.Log.Printf("Pause req for UUID: %+v\n", uuID)
-		status.SetCheckMode(checks.GetCheckByUUID(uuID), "quiet")
-
-		SendChatOps(fmt.Sprintf("Messages ceased for UUID %v", uuID))
-	})
-
-	bot.Handle("/uu", func(m *tb.Message) {
-		metrics.AddAlertMetricChatOpsRequest(a)
-
-		var tgMessage config.IncomingChatMessage
-		tgMessage = TgMessage{m}
-		uuID, err := tgMessage.GetUUID()
-		if err != nil {
-			SendChatOps(fmt.Sprintf("%s", err))
-			return
-		}
-		config.Log.Infof("Bot request /uu")
-		config.Log.Printf("Unpause req for UUID: %+v\n", uuID)
-		status.SetCheckMode(checks.GetCheckByUUID(uuID), "loud")
-
-		SendChatOps(fmt.Sprintf("Messages resumed for UUID %v", uuID))
-	})
-
-	bot.Handle("/pp", func(m *tb.Message) {
-		metrics.AddAlertMetricChatOpsRequest(a)
-
-		var tgMessage config.IncomingChatMessage
-		tgMessage = TgMessage{m}
-
-		config.Log.Infof("Bot request /pp")
-		projectName, err := tgMessage.GetProject()
-		if err != nil {
-			SendChatOps(fmt.Sprintf("%s", err))
-			return
-		}
-
-		project := projects.GetProjectByName(projectName)
-		config.Log.Printf("Pause req for project: %s\n", projectName)
-		status.SetProjectMode(project, "loud")
-
-		SendChatOps(fmt.Sprintf("Messages ceased for project %s", projectName))
-	})
-
-	bot.Handle("/up", func(m *tb.Message) {
-		metrics.AddAlertMetricChatOpsRequest(a)
-
-		var tgMessage config.IncomingChatMessage
-		tgMessage = TgMessage{m}
-
-		config.Log.Infof("Bot request /up")
-
-		projectName, err := tgMessage.GetProject()
-		if err != nil {
-			SendChatOps(fmt.Sprintf("%s", err))
-			return
-		}
-
-		project := projects.GetProjectByName(projectName)
-		config.Log.Printf("Resume req for project: %s\n", projectName)
-		status.SetProjectMode(project, "quiet")
-
-		SendChatOps(fmt.Sprintf("Messages resumed for project %s", projectName))
-	})
-
-	bot.Handle("/stats", func(m *tb.Message) {
-		metrics.AddAlertMetricChatOpsRequest(a)
-
-		config.Log.Infof("Bot request /stats from %s", m.Sender.Username)
-
-		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + metrics.GenTextRuntimeStats()))
+	// On inline button pressed (callback)
+	bot.Handle(&selPP, func(c *tb.Callback) {
+		ppHandler(c.Message, a)
+		// ...
+		// Always respond!
+		bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
 	})
 
 	go func() {

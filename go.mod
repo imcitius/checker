@@ -26,5 +26,5 @@ require (
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5 // indirect
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	gopkg.in/tucnak/telebot.v2 v2.3.2
+	gopkg.in/tucnak/telebot.v2 v2.3.3
 )

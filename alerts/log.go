@@ -9,7 +9,7 @@ type LogAlert struct {
 	Alerter
 }
 
-func (l *LogAlert) Send(a *config.AlertConfigs, message string) error {
+func (l *LogAlert) Send(a *config.AlertConfigs, message, messageType string) error {
 	config.Log.Debugf("Alert send: %s (alert details %+v)", message, a)
 
 	config.Log.Infof("Log alert: %s", message)

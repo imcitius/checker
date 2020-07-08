@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"net"
 	"time"
 )
 
 func init() {
-	config.Checks["tcp"] = func(c *config.Check, p *config.Project) error {
+	Checks["tcp"] = func(c *config.Check, p *projects.Project) error {
 		var (
 			errorMessage  string
 			checkAttempts int = 3

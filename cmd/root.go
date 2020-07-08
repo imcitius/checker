@@ -177,8 +177,8 @@ func mainChecker() {
 		config.Log.Debugf("Fire scheduler")
 		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
-		config.Log.Debugf("botsEnabled is %v", config.Koanf.Bool("botsEnabled"))
-		if config.Koanf.Bool("botsEnabled") {
+		config.Log.Debugf("botsEnabled is %v", config.Koanf.Bool("bots.enabled"))
+		if config.Koanf.Bool("bots.enabled") {
 			config.Log.Debugf("Fire bots")
 			config.Wg.Add(1)
 			commandChannel, err := alerts.GetCommandChannel()
@@ -224,7 +224,7 @@ func signalWait() {
 		config.InternalStatus = "stop"
 		interrupt = true
 		config.SchedulerSignalCh <- true
-		if config.Koanf.Bool("botsEnabled") {
+		if config.Koanf.Bool("bots.enabled") {
 			config.BotsSignalCh <- true
 		}
 		config.WebSignalCh <- true
@@ -238,7 +238,7 @@ func signalWait() {
 		config.InternalStatus = "reload"
 		config.SchedulerSignalCh <- true
 		//config.WebSignalCh <- true
-		if config.Koanf.Bool("botsEnabled") {
+		if config.Koanf.Bool("bots.enabled") {
 			config.BotsSignalCh <- true
 		}
 		return

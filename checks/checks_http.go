@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -13,7 +14,7 @@ import (
 )
 
 func init() {
-	config.Checks["http"] = func(c *config.Check, p *config.Project) error {
+	Checks["http"] = func(c *config.Check, p *projects.Project) error {
 		var (
 			answerPresent bool = true
 			checkNum      int

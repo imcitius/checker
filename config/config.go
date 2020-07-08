@@ -22,7 +22,6 @@ var (
 	ScheduleLoop int
 	Config       ConfigFile
 	Log          = logrus.New()
-	Checks       = make(map[string]func(c *Check, p *Project) error)
 	Timeouts     TimeoutsCollection
 	Sem          = semaphore.NewWeighted(int64(1))
 

@@ -11,6 +11,7 @@ import (
 	checks "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
+	projects "my/checker/projects"
 	"my/checker/status"
 	"sync"
 	"time"
@@ -28,16 +29,18 @@ func runReports(timeout string) {
 	config.Log.Debug("runReports")
 	for _, project := range Config.Projects {
 		if project.Parameters.PeriodicReport == timeout {
-			err := alerts.ProjectSendReport(&project)
+			err := alerts.ProjectSendReport(&projects.Project{project})
 			if err != nil {
 				config.Log.Infof("Cannot send report for project %s: %+v", project.Name, err)
 			}
 		}
 	}
 
-	if status.MainStatus == "quiet" {
-		reportMessage := fmt.Sprintf("All messages ceased")
-		alerts.SendChatOps(reportMessage)
+	if config.Config.Defaults.Parameters.PeriodicReport == timeout {
+		if status.MainStatus == "quiet" {
+			reportMessage := fmt.Sprintf("All messages ceased")
+			alerts.SendChatOps(reportMessage)
+		}
 	}
 }
 
@@ -52,7 +55,7 @@ func runCritAlerts(timeout string) {
 			}
 			if status.Statuses.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
-				alerts.ProjectCritAlert(&project, errors.New(errorMessage))
+				alerts.ProjectCritAlert(&projects.Project{project}, errors.New(errorMessage))
 			}
 		}
 	}
@@ -71,12 +74,12 @@ func checkProjects(timeout string) {
 
 			status.Statuses.Projects[project.Name].Alive = 0
 
-			executeHealthcheck(&project, &healthcheck, timeout)
+			executeHealthcheck(&projects.Project{project}, &healthcheck, timeout)
 		}
 	}
 }
 
-func executeHealthcheck(project *config.Project, healthcheck *config.Healthcheck, timeout string) {
+func executeHealthcheck(project *projects.Project, healthcheck *config.Healthcheck, timeout string) {
 	config.Log.Debugf("Total checks %+v", healthcheck.Checks)
 	for _, check := range healthcheck.Checks {
 		config.Log.Debugf("Now checking %s", check.Host)
@@ -100,7 +103,7 @@ func executeHealthcheck(project *config.Project, healthcheck *config.Healthcheck
 	}
 }
 
-func evaluateCheckResult(project *config.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration) {
+func evaluateCheckResult(project *projects.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration) {
 	if tempErr != nil {
 		err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
 		config.Log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())

@@ -3,12 +3,13 @@ package check
 import (
 	"fmt"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"my/checker/status"
 	"time"
 )
 
 func init() {
-	config.Checks["passive"] = func(c *config.Check, p *config.Project) error {
+	Checks["passive"] = func(c *config.Check, p *projects.Project) error {
 
 		errorHeader := fmt.Sprintf("Passive error at project: %s\nCheck UUID: %s\n", p.Name, c.UUid)
 

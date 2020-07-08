@@ -8,7 +8,7 @@ import (
 	"my/checker/status"
 )
 
-func ProjectAlert(p *config.Project, e error) {
+func ProjectAlert(p *projects.Project, e error) {
 	message := e.Error()
 
 	config.Log.Debugf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
@@ -20,12 +20,12 @@ func ProjectAlert(p *config.Project, e error) {
 			message = mention + " " + message
 		}
 	}
-	if projects.GetMode(p) != "quiet" && status.MainStatus != "quiet" {
+	if p.IsLoud() && status.MainStatus != "quiet" {
 		Send(p, message)
 	}
 }
 
-func ProjectCritAlert(p *config.Project, e error) {
+func ProjectCritAlert(p *projects.Project, e error) {
 	message := e.Error()
 
 	if len(p.Parameters.Mentions) > 0 {
@@ -39,25 +39,26 @@ func ProjectCritAlert(p *config.Project, e error) {
 	SendCrit(p, message)
 }
 
-func ProjectSendReport(p *config.Project) error {
+func ProjectSendReport(p *projects.Project) error {
 	var (
 		ceasedChecks                []string
 		reportMessage, reportHeader string
 	)
+
 	for _, hc := range p.Healthchecks {
 		for _, c := range hc.Checks {
-			if status.Statuses.Checks[c.UUid].Mode == "quiet" {
+			if status.GetCheckMode(&c) == "quiet" {
 				ceasedChecks = append(ceasedChecks, c.UUid)
 			}
 		}
 	}
 
-	if len(ceasedChecks) > 0 {
-		reportHeader = fmt.Sprintf("Project %s in %s state\n", p.Name, projects.GetMode(p))
-		reportMessage = reportHeader + fmt.Sprintf("Ceased checks: %v\n", ceasedChecks)
+	if p.IsQuiet() {
+		reportMessage = fmt.Sprintf("Project %s in quiet state\n", p.Name)
 	} else {
-		if projects.GetMode(p) == "quiet" {
-			reportMessage = fmt.Sprintf("Project %s in quiet state\n", p.Name)
+		if len(ceasedChecks) > 0 {
+			reportHeader = fmt.Sprintf("Project %s in %s state\n", p.Name, p.GetMode())
+			reportMessage = reportHeader + fmt.Sprintf("Ceased checks: %v\n", ceasedChecks)
 		}
 	}
 
@@ -84,7 +85,7 @@ func GetCommandChannel() (*config.AlertConfigs, error) {
 	return nil, fmt.Errorf("ChatOpsChannel not found: %s", config.Config.Defaults.Parameters.CommandChannel)
 }
 
-func GetProjectChannel(p *config.Project) *config.AlertConfigs {
+func GetProjectChannel(p *projects.Project) *config.AlertConfigs {
 	for _, a := range config.Config.Alerts {
 		if a.Name == p.Parameters.AlertChannel {
 			return &a
@@ -93,7 +94,7 @@ func GetProjectChannel(p *config.Project) *config.AlertConfigs {
 	return nil
 }
 
-func GetCritChannel(p *config.Project) *config.AlertConfigs {
+func GetCritChannel(p *projects.Project) *config.AlertConfigs {
 	for _, a := range config.Config.Alerts {
 		if a.Name == p.Parameters.CritAlertChannel {
 			return &a
@@ -102,43 +103,43 @@ func GetCritChannel(p *config.Project) *config.AlertConfigs {
 	return nil
 }
 
-func Send(p *config.Project, text string) {
+func Send(p *projects.Project, text string) {
 	metrics.AddProjectMetricChatOpsAnswer(p)
 
-	err := Alert(GetProjectChannel(p), text)
+	err := Alert(GetProjectChannel(p), text, "alert")
 	if err != nil {
 		config.Log.Infof("Send alert error for project %s: %s", p.Name, err)
 	}
 }
 
-func SendCrit(p *config.Project, text string) {
+func SendCrit(p *projects.Project, text string) {
 	metrics.AddProjectMetricCriticalAlert(p)
 	metrics.AddAlertMetricCritical(GetCritChannel(p))
 
-	err := Alert(GetCritChannel(p), text)
+	err := Alert(GetCritChannel(p), text, "alert")
 	if err != nil {
 		config.Log.Infof("Send critical alert error for project %s: %s", p.Name, err)
 	}
 }
 
 func SendChatOps(text string) {
-	metrics.AddProjectMetricChatOpsAnswer(&config.Project{
-		Name: "ChatOps"})
+	//metrics.AddProjectMetricChatOpsAnswer(&projects.Project{
+	//	Name: "ChatOps"})
 	commandChannel, err := GetCommandChannel()
 	if err != nil {
 		config.Log.Infof("GetCommandChannel error: %s", err)
 	}
 
-	err = Alert(commandChannel, text)
+	err = Alert(commandChannel, text, "chatops")
 	if err != nil {
 		config.Log.Infof("SendTgChatOpsMessage error: %s", err)
 	}
 }
 
-func Alert(a *config.AlertConfigs, text string) error {
+func Alert(a *config.AlertConfigs, text, messageType string) error {
 	metrics.AddAlertMetricNonCritical(a)
 
-	err := GetAlertProto(a).Send(a, text)
+	err := GetAlertProto(a).Send(a, text, messageType)
 	if err != nil {
 		config.Log.Infof("Send error")
 	}

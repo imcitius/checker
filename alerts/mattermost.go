@@ -17,7 +17,7 @@ type MmMessage struct {
 	Text string `json:"text"`
 }
 
-func (m *Mattermost) Send(a *config.AlertConfigs, message string) error {
+func (m *Mattermost) Send(a *config.AlertConfigs, message, messageType string) error {
 	config.Log.Debugf("Alert send: %s (alert details %+v)", message, a)
 
 	mmMessage := &MmMessage{

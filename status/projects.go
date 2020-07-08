@@ -22,7 +22,3 @@ func SetProjectStatus(p *config.Project, status string) {
 func GetProjectMode(p *config.Project) string {
 	return Statuses.Checks[p.Name].Mode
 }
-
-func SetProjectMode(p *config.Project, status string) {
-	Statuses.Checks[p.Name].Mode = status
-}

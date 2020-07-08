@@ -16,4 +16,6 @@ type CommonProject interface {
 	SendReport() error
 	GetName() string
 	GetMode() string
+	Loud()
+	Quiet()
 }

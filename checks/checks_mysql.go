@@ -6,11 +6,12 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"math/rand"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"time"
 )
 
 func init() {
-	config.Checks["mysql_query"] = func(c *config.Check, p *config.Project) error {
+	Checks["mysql_query"] = func(c *config.Check, p *projects.Project) error {
 
 		var (
 			id, query string
@@ -73,7 +74,7 @@ func init() {
 		return nil
 	}
 
-	config.Checks["mysql_query_unixtime"] = func(c *config.Check, p *config.Project) error {
+	Checks["mysql_query_unixtime"] = func(c *config.Check, p *projects.Project) error {
 
 		var (
 			id     int64
@@ -144,7 +145,7 @@ func init() {
 		return nil
 	}
 
-	config.Checks["mysql_replication"] = func(c *config.Check, p *config.Project) error {
+	Checks["mysql_replication"] = func(c *config.Check, p *projects.Project) error {
 
 		var dbPort, recordId, recordValue, id int
 

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	redis "github.com/go-redis/redis/v7"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"time"
 )
 
 func init() {
-	config.Checks["redis_pubsub"] = func(c *config.Check, p *config.Project) error {
+	Checks["redis_pubsub"] = func(c *config.Check, p *projects.Project) error {
 
 		var dbPort int
 

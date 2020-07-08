@@ -7,6 +7,7 @@ import (
 	"my/checker/common"
 	"my/checker/config"
 	"my/checker/metrics"
+	projects "my/checker/projects"
 	"my/checker/status"
 	"time"
 )
@@ -22,17 +23,17 @@ func CheckCatalog(timeout string) {
 
 					startTime := time.Now()
 					//config.Log.Debugf("check: %+v", c)
-					tempErr := checks.Execute(&p, &c)
+					tempErr := checks.Execute(&projects.Project{p}, &c)
 					endTime := time.Now()
 					t := endTime.Sub(startTime)
-					evaluateCheckResult(&p, &h, &c, tempErr, common.GetRandomId(), t)
+					evaluateCheckResult(&projects.Project{p}, &h, &c, tempErr, common.GetRandomId(), t)
 				}
 			}
 		}
 	}
 }
 
-func evaluateCheckResult(p *config.Project, h *config.Healthcheck, c *config.Check, tempErr error, checkRandomId string, t time.Duration) {
+func evaluateCheckResult(p *projects.Project, h *config.Healthcheck, c *config.Check, tempErr error, checkRandomId string, t time.Duration) {
 	if tempErr != nil {
 		err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
 		config.Log.Infof("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())

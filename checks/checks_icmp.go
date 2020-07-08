@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"github.com/sparrc/go-ping"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"time"
 )
 
 func init() {
-	config.Checks["icmp"] = func (c *config.Check, p *config.Project) error {
+	Checks["icmp"] = func(c *config.Check, p *projects.Project) error {
 		var (
 			errorHeader, errorMessage string
 		)

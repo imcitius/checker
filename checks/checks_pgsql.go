@@ -6,11 +6,12 @@ import (
 	_ "github.com/lib/pq"
 	"math/rand"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"time"
 )
 
 func init() {
-	config.Checks["pgsql_query"] = func(c *config.Check, p *config.Project) error {
+	Checks["pgsql_query"] = func(c *config.Check, p *projects.Project) error {
 
 		var (
 			id, query string
@@ -79,7 +80,7 @@ func init() {
 		return nil
 	}
 
-	config.Checks["pgsql_query_unixtime"] = func(c *config.Check, p *config.Project) error {
+	Checks["pgsql_query_unixtime"] = func(c *config.Check, p *projects.Project) error {
 
 		var (
 			id      int64
@@ -156,7 +157,7 @@ func init() {
 		return nil
 	}
 
-	config.Checks["pgsql_replication"] = func(c *config.Check, p *config.Project) error {
+	Checks["pgsql_replication"] = func(c *config.Check, p *projects.Project) error {
 
 		var (
 			dbPort, recordId, recordValue, id int

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	_ "github.com/ClickHouse/clickhouse-go"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"time"
 )
 
 func init() {
-	config.Checks["clickhouse_query"] = func(c *config.Check, p *config.Project) error {
+	Checks["clickhouse_query"] = func(c *config.Check, p *projects.Project) error {
 
 		var (
 			query, id string
@@ -74,7 +75,7 @@ func init() {
 		return nil
 	}
 
-	config.Checks["clickhouse_query_unixtime"] = func(c *config.Check, p *config.Project) error {
+	Checks["clickhouse_query_unixtime"] = func(c *config.Check, p *projects.Project) error {
 
 		var (
 			query  string

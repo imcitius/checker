@@ -1,13 +1,15 @@
 package metrics
 
-import "my/checker/config"
+import (
+	project "my/checker/projects"
+)
 
-func AddProjectMetricCriticalAlert(p *config.Project) {
+func AddProjectMetricCriticalAlert(p *project.Project) {
 	AlertsCount.WithLabelValues(p.Name, "Critical").Inc()
 	ProjectAlerts.WithLabelValues(p.Name, "Critical").Inc()
 }
 
-func AddProjectMetricChatOpsAnswer(p *config.Project) {
+func AddProjectMetricChatOpsAnswer(p *project.Project) {
 	AlertsCount.WithLabelValues(p.Name, "ChatOps_Message").Inc()
 	ProjectAlerts.WithLabelValues(p.Name, "ChatOps_Message").Inc()
 }

@@ -3,14 +3,19 @@ package check
 import (
 	"fmt"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"regexp"
 )
 
-func Execute(p *config.Project, c *config.Check) error {
+var (
+	Checks = make(map[string]func(c *config.Check, p *projects.Project) error)
+)
+
+func Execute(p *projects.Project, c *config.Check) error {
 	var err error
 
-	if _, ok := config.Checks[c.Type]; ok {
-		err = config.Checks[c.Type](c, p)
+	if _, ok := Checks[c.Type]; ok {
+		err = Checks[c.Type](c, p)
 		if err == nil {
 			return nil
 		} else {
