@@ -13,6 +13,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/consul/api v1.1.0
 	github.com/hashicorp/vault/api v1.0.4
+	github.com/kisielk/errcheck v1.3.0 // indirect
 	github.com/knadh/koanf v0.10.0
 	github.com/lib/pq v1.3.0
 	github.com/pkg/errors v0.8.1
@@ -22,8 +23,8 @@ require (
 	github.com/sparrc/go-ping v0.0.0-20190613174326-4e5b6552494c
 	github.com/spf13/cobra v1.0.0
 	github.com/teris-io/shortid v0.0.0-20171029131806-771a37caa5cf
-	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5 // indirect
-	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+	golang.org/x/tools v0.0.0-20200708183856-df98bc6d456c // indirect
 	gopkg.in/tucnak/telebot.v2 v2.3.3
+	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )

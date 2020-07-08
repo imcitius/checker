@@ -5,10 +5,6 @@ import (
 	"sync"
 )
 
-var (
-	botsSignalCh chan bool
-)
-
 type Alerter interface {
 	Send(a *config.AlertConfigs, message, messageType string) error
 	InitBot(botsSignalCh chan bool, wg *sync.WaitGroup)

@@ -271,7 +271,7 @@ func (c *ConfigFile) FillSecrets() error {
 			if err == nil {
 				c.Alerts[i].BotToken = token
 			} else {
-				return fmt.Errorf("Error getting bot token from vault: %v", err)
+				return fmt.Errorf("error getting bot token from vault: %v", err)
 			}
 		}
 	}
@@ -284,7 +284,7 @@ func (c *ConfigFile) FillSecrets() error {
 					if err == nil {
 						c.Projects[i].Healthchecks[j].Checks[k].SqlQueryConfig.Password = token
 					} else {
-						return fmt.Errorf("Error getting SQL password from vault: %v", err)
+						return fmt.Errorf("error getting SQL password from vault: %v", err)
 					}
 				}
 				if strings.HasPrefix(check.SqlReplicationConfig.Password, "vault") {
@@ -292,7 +292,7 @@ func (c *ConfigFile) FillSecrets() error {
 					if err == nil {
 						c.Projects[i].Healthchecks[j].Checks[k].SqlReplicationConfig.Password = token
 					} else {
-						return fmt.Errorf("Error getting SQL password from vault: %v", err)
+						return fmt.Errorf("error getting SQL password from vault: %v", err)
 					}
 				}
 			}
@@ -304,7 +304,7 @@ func (c *ConfigFile) FillSecrets() error {
 		if err == nil {
 			Config.Defaults.TokenEncryptionKey = []byte(token)
 		} else {
-			return fmt.Errorf("Error getting jwt encryption token from vault: %v", err)
+			return fmt.Errorf("error getting jwt encryption token from vault: %v", err)
 		}
 
 	}

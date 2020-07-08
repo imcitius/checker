@@ -39,15 +39,15 @@ func incomingAlert(w http.ResponseWriter, r *http.Request) {
 	buf := new(bytes.Buffer)
 	_, err := buf.ReadFrom(r.Body)
 	if err == nil {
-		log.Debugf("Alert body is: %s", string(buf.Bytes()))
+		log.Debugf("Alert body is: %s", buf.String())
 
 		err = json.Unmarshal(buf.Bytes(), &alert)
 		if err != nil {
-			log.Infof("Cannot parse alert body: %s", string(buf.Bytes()))
+			log.Infof("Cannot parse alert body: %s", buf.String())
 		}
 
 	} else {
-		log.Infof("Cannot parse http request: %s", string(buf.Bytes()))
+		log.Infof("Cannot parse http request: %s", buf.String())
 	}
 
 	if alert.Severity == "critical" {
@@ -107,6 +107,12 @@ func list(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		verifier, err := jwt.NewVerifierHS(jwt.HS256, config.Config.Defaults.TokenEncryptionKey)
+		if err != nil {
+			io.WriteString(w, "cannot construct jwt verifier")
+			config.Log.Info("cannot construct jwt verifier")
+			return
+		}
+
 		newToken, err := jwt.ParseAndVerifyString(r.Header.Get("Authorization"), verifier)
 		if err != nil {
 			io.WriteString(w, "Web: token invalid")

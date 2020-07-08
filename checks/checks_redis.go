@@ -22,7 +22,11 @@ func init() {
 		} else {
 			dbPort = c.Port
 		}
+
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("Cannot parse timeout duration: %v", c.Timeout)
+		}
 
 		dbPassword := c.PubSub.Password
 

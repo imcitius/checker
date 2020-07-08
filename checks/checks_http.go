@@ -59,11 +59,14 @@ func init() {
 		client.Timeout, _ = time.ParseDuration(c.Timeout)
 		if c.StopFollowRedirects {
 			client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-				return errors.New("Asked to stop redirects")
+				return errors.New("asked to stop redirects")
 			}
 		}
 
 		req, err := http.NewRequest("GET", c.Host, nil)
+		if err != nil {
+			return fmt.Errorf("cannot construct http request: %s", err)
+		}
 		if c.Auth.User != "" {
 			req.SetBasicAuth(c.Auth.User, c.Auth.Password)
 		}
@@ -95,13 +98,13 @@ func init() {
 			//config.Log.Debugf("SSL: %v", response.TLS.PeerCertificates)
 			if len(response.TLS.PeerCertificates) > 0 {
 				for i, cert := range response.TLS.PeerCertificates {
-					if cert.NotAfter.Sub(time.Now()) < SslExpTimeout {
+					if time.Until(cert.NotAfter) < SslExpTimeout {
 						config.Log.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
 					}
 					config.Log.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
 				}
 			} else {
-				errorMessage := errorHeader + fmt.Sprint("No certificates present on https connection")
+				errorMessage := errorHeader + "No certificates present on https connection"
 				return errors.New(errorMessage)
 			}
 		}
@@ -145,7 +148,7 @@ func init() {
 		//config.Log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, c.AnswerPresent, answerGood)
 
 		if !answerGood {
-			errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' ('%s' should be %s)", string(buf.Bytes()), c.Answer, c.AnswerPresent)
+			errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' ('%s' should be %s)", buf.String(), c.Answer, c.AnswerPresent)
 			return errors.New(errorMessage)
 		}
 

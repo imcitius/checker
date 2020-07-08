@@ -109,9 +109,9 @@ func (m TgMessage) GetProject() (string, error) {
 	}
 
 	if projectName == "" {
-		err = fmt.Errorf("Project name extraction error.\nShould be reply to an alert message, or speficied as `/<command> project_name`.")
+		err = fmt.Errorf("project name extraction error.\nShould be reply to an alert message, or speficied as `/<command> project_name`")
 	} else {
-		config.Log.Debugf("Project extracted: %v\n", projectName)
+		config.Log.Debugf("project extracted: %v\n", projectName)
 	}
 
 	return projectName, err
@@ -139,7 +139,7 @@ func (m TgMessage) GetUUID() (string, error) {
 	}
 
 	if uuid == "" {
-		err = fmt.Errorf("UUID extraction error.\nShould be reply to an alert message, or speficied as `/<command> UUID`.")
+		err = fmt.Errorf("UUID extraction error.\nShould be reply to an alert message, or speficied as `/<command> UUID`")
 	} else {
 		config.Log.Debugf("UUID extracted: %v\n", uuid)
 	}
@@ -280,5 +280,4 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	// let bot to actually stop
 	config.Log.Infof("Exit listening telegram bots")
 	time.Sleep(5 * time.Second)
-	return
 }

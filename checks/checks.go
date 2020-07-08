@@ -23,7 +23,7 @@ func Execute(p *projects.Project, c *config.Check) error {
 			c.LastResult = false
 		}
 	} else {
-		err = fmt.Errorf("Check %s not implemented", c.Type)
+		err = fmt.Errorf("check %s not implemented", c.Type)
 	}
 	return err
 }

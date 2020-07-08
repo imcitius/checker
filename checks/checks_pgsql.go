@@ -30,7 +30,12 @@ func init() {
 		} else {
 			dbPort = c.Port
 		}
+
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("Cannot parse timeout duration: %v", c.Timeout)
+		}
+
 		if c.SqlQueryConfig.SSLMode == "" {
 			sslMode = "disable"
 		} else {
@@ -72,7 +77,7 @@ func init() {
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
-				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
+				err = fmt.Errorf("error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}
@@ -100,7 +105,12 @@ func init() {
 		} else {
 			dbPort = c.Port
 		}
+
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("Cannot parse timeout duration: %v", c.Timeout)
+		}
+
 		if c.SqlQueryConfig.SSLMode == "" {
 			sslMode = "disable"
 		} else {
@@ -147,9 +157,9 @@ func init() {
 
 		if dif > 0 {
 			lastRecord := time.Unix(id, 0)
-			curDif := time.Now().Sub(lastRecord)
+			curDif := time.Since(lastRecord)
 			if curDif > dif {
-				err := fmt.Errorf("Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
+				err := fmt.Errorf("unixtime differenct error: got %v, difference %v", lastRecord, curDif)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}
@@ -190,6 +200,9 @@ func init() {
 		}
 
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("Cannot parse timeout duration: %v", c.Timeout)
+		}
 
 		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
 
@@ -258,7 +271,7 @@ func init() {
 
 			if c.SqlQueryConfig.Response != "" {
 				if id != recordValue {
-					err = fmt.Errorf("Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
+					err = fmt.Errorf("replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
 					return fmt.Errorf(errorHeader + err.Error())
 				}
 			}

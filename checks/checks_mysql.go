@@ -31,6 +31,9 @@ func init() {
 		}
 
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("Cannot parse timeout duration: %v", c.Timeout)
+		}
 
 		if c.SqlQueryConfig.Query == "" {
 			query = "select 1;"
@@ -95,6 +98,9 @@ func init() {
 		}
 
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("Cannot parse timeout duration: %v", c.Timeout)
+		}
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		if err != nil {
@@ -135,7 +141,7 @@ func init() {
 
 		if dif > 0 {
 			lastRecord := time.Unix(id, 0)
-			curDif := time.Now().Sub(lastRecord)
+			curDif := time.Since(lastRecord)
 			if curDif > dif {
 				err := fmt.Errorf(errorHeader+"Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
 				return err
@@ -166,6 +172,9 @@ func init() {
 		}
 
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("Cannot parse timeout duration: %v", c.Timeout)
+		}
 
 		connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbUser, dbPassword, dbHost, dbPort, dbName)
 		if dbConnectTimeout > 0 {

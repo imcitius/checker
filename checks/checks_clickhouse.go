@@ -31,6 +31,9 @@ func init() {
 		}
 
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("cannot parse timeout duration: %s", err)
+		}
 
 		if c.SqlQueryConfig.Query == "" {
 			query = "select 1;"
@@ -67,7 +70,7 @@ func init() {
 
 		if c.SqlQueryConfig.Response != "" {
 			if id != c.SqlQueryConfig.Response {
-				err = fmt.Errorf("Error: db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
+				err = fmt.Errorf("db response does not match expected: %s (expected %s)", id, c.SqlQueryConfig.Response)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}
@@ -96,10 +99,13 @@ func init() {
 		}
 
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Warnf("Cannot parse timeout duration: %v", c.Timeout)
+		}
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		if err != nil {
-			config.Log.Printf("Cannot parse differenct value: %v", dif)
+			config.Log.Warnf("cannot parse difference value: %v", dif)
 		}
 
 		if c.SqlQueryConfig.Query == "" {
@@ -136,9 +142,9 @@ func init() {
 
 		if dif > 0 {
 			lastRecord := time.Unix(id, 0)
-			curDif := time.Now().Sub(lastRecord)
+			curDif := time.Since(lastRecord)
 			if curDif > dif {
-				err := fmt.Errorf("Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
+				err := fmt.Errorf("unixtime difference error: got %v, difference %v", lastRecord, curDif)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
 		}

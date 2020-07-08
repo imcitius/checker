@@ -40,7 +40,7 @@ func runReports(timeout string) {
 
 	if config.Config.Defaults.Parameters.PeriodicReport == timeout {
 		if status.MainStatus == "quiet" {
-			reportMessage := fmt.Sprintf("All messages ceased")
+			reportMessage := "All messages ceased"
 			alerts.SendChatOps(reportMessage)
 		}
 	}
@@ -155,15 +155,15 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 					checksStartTime := time.Now()
 					runChecks(timeout)
-					checksDuration := time.Now().Sub(checksStartTime)
+					checksDuration := time.Since(checksStartTime)
 
 					reportsStartTime := time.Now()
 					runReports(timeout)
-					reportsDuration := time.Now().Sub(reportsStartTime)
+					reportsDuration := time.Since(reportsStartTime)
 
 					alertsStartTime := time.Now()
 					runCritAlerts(timeout)
-					alertsDuration := time.Now().Sub(alertsStartTime)
+					alertsDuration := time.Since(alertsStartTime)
 
 					config.Log.Warnf("Checks duration: %v msec", checksDuration.Milliseconds())
 					config.Log.Warnf("Reports duration: %v msec", reportsDuration.Milliseconds())

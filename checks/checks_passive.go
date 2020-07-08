@@ -20,12 +20,12 @@ func init() {
 		}
 
 		// do not check too early
-		if time.Now().Sub(config.StartTime) < timeout {
+		if time.Since(config.StartTime) < timeout {
 			return nil
 		}
 
-		if status.Statuses.Checks[c.UUid].LastResult == true {
-			if time.Now().Sub(status.Statuses.Checks[c.UUid].When) < timeout {
+		if status.Statuses.Checks[c.UUid].LastResult {
+			if time.Since(status.Statuses.Checks[c.UUid].When) < timeout {
 				return nil
 			} else {
 				return fmt.Errorf(errorHeader + "Ping timeout")

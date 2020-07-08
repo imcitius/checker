@@ -42,9 +42,3 @@ func GenerateToken() {
 
 	fmt.Printf("Jwt token: %s\n", token)
 }
-
-func checkErr(err error) {
-	if err != nil {
-		return
-	}
-}

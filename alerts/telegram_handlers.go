@@ -11,8 +11,7 @@ import (
 func puHandler(m *tb.Message, a *config.AlertConfigs) {
 	metrics.AddAlertMetricChatOpsRequest(a)
 
-	var tgMessage config.IncomingChatMessage
-	tgMessage = TgMessage{m}
+	tgMessage := TgMessage{m}
 	uuID, err := tgMessage.GetUUID()
 	if err != nil {
 		SendChatOps(fmt.Sprintf("%s", err))
@@ -29,8 +28,7 @@ func puHandler(m *tb.Message, a *config.AlertConfigs) {
 func ppHandler(m *tb.Message, a *config.AlertConfigs) {
 	metrics.AddAlertMetricChatOpsRequest(a)
 
-	var tgMessage config.IncomingChatMessage
-	tgMessage = TgMessage{m}
+	tgMessage := TgMessage{m}
 
 	config.Log.Infof("Bot request /pp")
 	projectName, err := tgMessage.GetProject()
@@ -65,8 +63,7 @@ func uuHandler(m *tb.Message, a *config.AlertConfigs) {
 
 	metrics.AddAlertMetricChatOpsRequest(a)
 
-	var tgMessage config.IncomingChatMessage
-	tgMessage = TgMessage{m}
+	tgMessage := TgMessage{m}
 	uuID, err := tgMessage.GetUUID()
 	if err != nil {
 		SendChatOps(fmt.Sprintf("%s", err))
@@ -97,8 +94,7 @@ func upHandler(m *tb.Message, a *config.AlertConfigs) {
 
 	metrics.AddAlertMetricChatOpsRequest(a)
 
-	var tgMessage config.IncomingChatMessage
-	tgMessage = TgMessage{m}
+	tgMessage := TgMessage{m}
 
 	config.Log.Infof("Bot request /up")
 

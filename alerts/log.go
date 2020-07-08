@@ -22,5 +22,4 @@ func (l *LogAlert) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	<-ch
-	return
 }
