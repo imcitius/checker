@@ -29,8 +29,8 @@ var (
 	help = "This is checker version " + config.Version + "\n" +
 		"Please use following commands: \n" +
 		"/pa,/ua - Pause/Unpause all alerts (or use main keyboard buttons)\n" +
-		"/pp,/up - Pause/Unpause for specific project (or use message button)\n" +
-		"/pu,/uu - Pause/Unpause all specific check by UUID (or use message button)\n" +
+		"/pp,/up - Pause/Unpause specific project (or use message button)\n" +
+		"/pu,/uu - Pause/Unpause specific check by UUID (or use message button)\n" +
 		"/list - List all projects and checks with UUID's\n"
 )
 
