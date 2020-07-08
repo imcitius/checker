@@ -222,7 +222,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Infof("List pressed")
 		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + config.ListElements()))
 	})
-	bot.Handle(&btnList, func(m *tb.Message) {
+	bot.Handle(&btnStats, func(m *tb.Message) {
 		config.Log.Infof("Stats pressed")
 		statsHandler(m)
 	})
