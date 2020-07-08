@@ -24,6 +24,13 @@ var (
 	btnUA    = menu.Text("▶️ Unpause All")
 	btnList  = menu.Text("🔭 List")
 	btnStats = menu.Text("📊 Stats")
+
+	help = "This is checker version " + config.Version + "\n" +
+		"Please use following commands: \n" +
+		"/pa,/ua - Pause/Unpause all alerts (or use main keyboard buttons)\n" +
+		"/pp,/up - Pause/Unpause for specific project (or use message button)\n" +
+		"/pu,/uu - Pause/Unpause all specific check by UUID (or use message button)\n" +
+		"/list - List all projects and checks with UUID's\n"
 )
 
 func init() {
@@ -208,15 +215,15 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 	bot.Handle("/pa", func(m *tb.Message) { paHandler() })
 	bot.Handle("/ua", func(m *tb.Message) { uaHandler() })
-	bot.Handle("/uu", func(m *tb.Message) { uuHandler(m, a) })
 	bot.Handle("/pp", func(m *tb.Message) { ppHandler(m, a) })
-	bot.Handle("/pu", func(m *tb.Message) { puHandler(m, a) })
 	bot.Handle("/up", func(m *tb.Message) { upHandler(m, a) })
+	bot.Handle("/pu", func(m *tb.Message) { puHandler(m, a) })
+	bot.Handle("/uu", func(m *tb.Message) { uuHandler(m, a) })
 	bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
 
 	bot.Handle(&btnHelp, func(m *tb.Message) {
 		config.Log.Infof("Help pressed")
-		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + "that should be help"))
+		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + help))
 	})
 	bot.Handle(&btnList, func(m *tb.Message) {
 		config.Log.Infof("List pressed")
