@@ -18,7 +18,7 @@ Available Commands:
   check       Run scheduler and execute checks
   gentoken    Generate auth token
   help        Help about any command
-  listuuid    LIst UUIDs
+  list        List Projects, Healthchecks, check UUIDs
   testcfg     unmarshal config file into config structure
   version     Print the version number of Hugo
 

@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"my/checker/alerts"
+	"my/checker/auth"
 	"my/checker/catalog"
 	"my/checker/config"
 	"my/checker/scheduler"
@@ -57,7 +58,7 @@ func init() {
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
-	rootCmd.AddCommand(listUUID)
+	rootCmd.AddCommand(list)
 
 	config.SignalINT = make(chan os.Signal)
 	config.SignalHUP = make(chan os.Signal)
@@ -126,16 +127,16 @@ var genToken = &cobra.Command{
 	Short: "Generate auth token",
 	Long:  `Generate new jwt token for web auth`,
 	Run: func(cmd *cobra.Command, args []string) {
-		web.GenerateToken()
+		auth.GenerateToken()
 	},
 }
 
-var listUUID = &cobra.Command{
-	Use:   "listuuid",
-	Short: "List UUIDs",
-	Long:  `Load config and list all projects and checks uuids`,
+var list = &cobra.Command{
+	Use:   "list",
+	Short: "List config elements",
+	Long:  `List Projects, Healthchecks, Check UUIDs`,
 	Run: func(cmd *cobra.Command, args []string) {
-		config.ListUUID()
+		config.List()
 	},
 }
 

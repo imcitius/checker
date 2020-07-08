@@ -329,12 +329,7 @@ func WatchConfig() {
 	//configWatchSig <- true
 }
 
-func ListUUID() {
-
-	err := LoadConfig()
-	if err != nil {
-		Log.Infof("Config load error: %s", err)
-	}
+func ListElements() string {
 
 	list := ""
 	for _, p := range Config.Projects {
@@ -347,5 +342,15 @@ func ListUUID() {
 		}
 	}
 
-	Log.Info(list)
+	return list
+}
+
+func List() {
+
+	err := LoadConfig()
+	if err != nil {
+		Log.Infof("Config load error: %s", err)
+	}
+
+	fmt.Print(ListElements())
 }

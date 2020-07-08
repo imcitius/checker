@@ -3,7 +3,6 @@ package web
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/cristalhq/jwt/v3"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
@@ -88,7 +87,6 @@ func checkPing(w http.ResponseWriter, r *http.Request) {
 	config.Log.Debugf("Passive check %s ping received: %s", uuid, status.Statuses.Checks[uuid].When)
 
 	io.WriteString(w, "Pong\n")
-
 }
 
 func list(w http.ResponseWriter, r *http.Request) {
@@ -105,10 +103,10 @@ func list(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("Authorization") == "" {
 		config.Log.Info("Web: need auth")
-		io.WriteString(w, "Web: need auth	")
+		io.WriteString(w, "Web: need auth")
 		return
 	} else {
-		verifier, err := jwt.NewVerifierHS(jwt.HS256, key)
+		verifier, err := jwt.NewVerifierHS(jwt.HS256, config.Config.Defaults.TokenEncryptionKey)
 		newToken, err := jwt.ParseAndVerifyString(r.Header.Get("Authorization"), verifier)
 		if err != nil {
 			io.WriteString(w, "Web: token invalid")
@@ -117,29 +115,22 @@ func list(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var newClaims jwt.StandardClaims
-		errClaims := json.Unmarshal(newToken.RawClaims(), &newClaims)
-		checkErr(errClaims)
+		err = json.Unmarshal(newToken.RawClaims(), &newClaims)
+		if err != nil {
+			io.WriteString(w, "Web: token decoding failed")
+			config.Log.Info("Web: token decoding failed")
+			return
+
+		}
 
 		var claimed = newClaims.IsForAudience("admin")
 		var valid = newClaims.IsValidAt(time.Now())
 
 		if claimed && valid {
-			list := ""
-			for _, p := range config.Config.Projects {
-				list = list + fmt.Sprintf("Project: %s\n", p.Name)
-				for _, h := range p.Healthchecks {
-					list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)
-					for _, c := range h.Checks {
-						list = list + fmt.Sprintf("\t\tUUID: %s\n", c.UUid)
-					}
-				}
-			}
-			io.WriteString(w, list)
+			io.WriteString(w, config.ListElements())
 		} else {
-			io.WriteString(w, "Web: token invalid")
-			config.Log.Info("Web: token invalid")
+			io.WriteString(w, "Web: unauthorized")
+			config.Log.Info("Web: unauthorized")
 		}
-
 	}
-
 }

@@ -1,16 +1,23 @@
-package web
+package auth
 
 import (
+	"fmt"
 	"github.com/cristalhq/jwt/v3"
 	"my/checker/config"
 )
 
 var (
-	key = []byte(`bi6oNuisa0ooz6Ael6Eewaatoophoo0p`)
+	key = &config.Config.Defaults.TokenEncryptionKey
 )
 
 func GenerateToken() {
-	signer, err := jwt.NewSignerHS(jwt.HS256, key)
+
+	err := config.LoadConfig()
+	if err != nil {
+		config.Log.Infof("Config load error: %s", err)
+	}
+
+	signer, err := jwt.NewSignerHS(jwt.HS256, *key)
 	if err != nil {
 		config.Log.Infof("Cannot generate token signer: %s", err.Error())
 		return
@@ -30,7 +37,7 @@ func GenerateToken() {
 		return
 	}
 
-	config.Log.Infof("Jwt token: %s", token)
+	fmt.Printf("Jwt token: %s\n", token)
 }
 
 func checkErr(err error) {

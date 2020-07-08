@@ -43,12 +43,13 @@ type ConfigFile struct {
 		// HTTP port web interface listen
 		HTTPPort string `koanf:"http_port"`
 		// If not empty HTPP server not enabled
-		HTTPEnabled string `koanf:"http_enabled"`
+		HTTPEnabled        string `koanf:"http_enabled"`
+		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
 	}
 	Alerts   []AlertConfigs
 	Projects []Project
 
-	ConsulCatalog `koanf:"consul_catalog"`
+	ConsulCatalog ConsulCatalog `koanf:"consul_catalog"`
 }
 
 type Parameters struct {
