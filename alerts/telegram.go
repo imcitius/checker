@@ -16,8 +16,8 @@ var (
 	TgSignalCh chan bool
 
 	selectorAlert = &tb.ReplyMarkup{}
-	selPU         = selectorAlert.Data("pu", "pu")
-	selPP         = selectorAlert.Data("pp", "pp")
+	selPU         = selectorAlert.Data("Pause UUID", "pu")
+	selPP         = selectorAlert.Data("Pause project", "pp")
 
 	menu     = &tb.ReplyMarkup{ResizeReplyKeyboard: true}
 	btnHelp  = menu.Text("ℹ️ Help")
