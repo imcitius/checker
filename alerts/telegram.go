@@ -42,6 +42,49 @@ type TgMessage struct {
 	*tb.Message
 }
 
+type Telegram struct {
+	Alerter
+}
+
+func special(b byte) bool {
+
+	specials := []byte{'_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'}
+
+	for _, s := range specials {
+		if s == b {
+			return true
+		}
+	}
+	return false
+}
+
+func QuoteMeta(s string) string {
+	// A byte loop is correct because all metacharacters are ASCII.
+	var i int
+	for i = 0; i < len(s); i++ {
+		if special(s[i]) {
+			break
+		}
+	}
+	// No meta characters found, so return original string.
+	if i >= len(s) {
+		return s
+	}
+
+	b := make([]byte, 2*len(s)-i)
+	copy(b, s[:i])
+	j := i
+	for ; i < len(s); i++ {
+		if special(s[i]) {
+			b[j] = '\\'
+			j++
+		}
+		b[j] = s[i]
+		j++
+	}
+	return string(b[:j])
+}
+
 func (m TgMessage) GetProject() (string, error) {
 	var (
 		result      []string
@@ -106,48 +149,6 @@ func (m TgMessage) GetUUID() (string, error) {
 	// WIP test and write error handling
 }
 
-type Telegram struct {
-	Alerter
-}
-
-func special(b byte) bool {
-
-	specials := []byte{'_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'}
-
-	for _, s := range specials {
-		if s == b {
-			return true
-		}
-	}
-	return false
-}
-
-func QuoteMeta(s string) string {
-	// A byte loop is correct because all metacharacters are ASCII.
-	var i int
-	for i = 0; i < len(s); i++ {
-		if special(s[i]) {
-			break
-		}
-	}
-	// No meta characters found, so return original string.
-	if i >= len(s) {
-		return s
-	}
-
-	b := make([]byte, 2*len(s)-i)
-	copy(b, s[:i])
-	j := i
-	for ; i < len(s); i++ {
-		if special(s[i]) {
-			b[j] = '\\'
-			j++
-		}
-		b[j] = s[i]
-		j++
-	}
-	return string(b[:j])
-}
 func (t Telegram) Send(a *config.AlertConfigs, message, messageType string) error {
 
 	config.Log.Debugf("Sending alert, text: '%s' (alert channel %+v)", message, a.Name)

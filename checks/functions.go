@@ -2,7 +2,6 @@ package check
 
 import (
 	"fmt"
-	"my/checker/alerts"
 	"my/checker/config"
 	"my/checker/metrics"
 	projects "my/checker/projects"
@@ -19,7 +18,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		if check.AllowFails > 0 {
 			if status.Statuses.Checks[check.UUid].SeqErrorsCount >= check.AllowFails {
 				if status.GetCheckMode(check) != "quiet" {
-					alerts.ProjectAlert(project, err)
+					project.ProjectAlert(err)
 				}
 			}
 		}
@@ -32,7 +31,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 			status.Statuses.Checks[check.UUid].SeqErrorsCount++
 		}
 
-		err = metrics.AddCheckError(project, healthcheck, check)
+		err = AddCheckError(project, healthcheck, check)
 		if err != nil {
 			config.Log.Errorf("Metric count error: %v", err)
 		}

@@ -26,10 +26,12 @@ func GetRandomId() string {
 }
 
 func runReports(timeout string) {
+
 	config.Log.Debug("runReports")
 	for _, project := range Config.Projects {
 		if project.Parameters.PeriodicReport == timeout {
-			err := alerts.ProjectSendReport(&projects.Project{project})
+			project := projects.Project{project}
+			err := project.ProjectSendReport()
 			if err != nil {
 				config.Log.Infof("Cannot send report for project %s: %+v", project.Name, err)
 			}
@@ -60,7 +62,8 @@ func runCritAlerts(timeout string) {
 			//}
 			if status.Statuses.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
-				alerts.ProjectCritAlert(&projects.Project{project}, errors.New(errorMessage))
+				project := projects.Project{project}
+				project.ProjectCritAlert(errors.New(errorMessage))
 			}
 		}
 	}
@@ -95,7 +98,7 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 
 			startTime := time.Now()
 
-			err := metrics.AddCheckRunCount(project, healthcheck, &check)
+			err := checks.AddCheckRunCount(project, healthcheck, &check)
 			if err != nil {
 				config.Log.Errorf("Metric count error: %v", err)
 			}

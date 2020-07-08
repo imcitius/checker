@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
 	"io"
-	"my/checker/alerts"
 	"my/checker/config"
 	projects "my/checker/projects"
 	"my/checker/reports"
@@ -52,9 +51,9 @@ func incomingAlert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if alert.Severity == "critical" {
-		alerts.ProjectCritAlert(projects.GetProjectByName(alert.Project), errors.Errorf(alert.Text))
+		projects.GetProjectByName(alert.Project).ProjectCritAlert(errors.Errorf(alert.Text))
 	} else {
-		alerts.ProjectAlert(projects.GetProjectByName(alert.Project), errors.Errorf(alert.Text))
+		projects.GetProjectByName(alert.Project).ProjectAlert(errors.Errorf(alert.Text))
 	}
 }
 

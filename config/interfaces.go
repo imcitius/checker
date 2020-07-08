@@ -18,4 +18,6 @@ type CommonProject interface {
 	GetMode() string
 	Loud()
 	Quiet()
+	Send()
+	SendCrit()
 }

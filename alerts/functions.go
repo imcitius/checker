@@ -4,69 +4,7 @@ import (
 	"fmt"
 	"my/checker/config"
 	"my/checker/metrics"
-	projects "my/checker/projects"
-	"my/checker/status"
 )
-
-func ProjectAlert(p *projects.Project, e error) {
-	message := e.Error()
-
-	config.Log.Debugf("Send non-critical alert for project: '%+v', with error '%+v'\n", p.Name, e)
-	//config.Log.Printf("%+v", Config.Alerts)
-
-	if len(p.Parameters.Mentions) > 0 {
-		message = "\n" + message
-		for _, mention := range p.Parameters.Mentions {
-			message = mention + " " + message
-		}
-	}
-	if p.IsLoud() && status.MainStatus != "quiet" {
-		Send(p, message)
-	}
-}
-
-func ProjectCritAlert(p *projects.Project, e error) {
-	message := e.Error()
-
-	if len(p.Parameters.Mentions) > 0 {
-		message = "\n" + message
-		for _, mention := range p.Parameters.Mentions {
-			message = mention + " " + message
-		}
-	}
-
-	config.Log.Printf("Send critical alert for project: %+v with error %+v\n\n", p, e)
-	SendCrit(p, message)
-}
-
-func ProjectSendReport(p *projects.Project) error {
-	var (
-		ceasedChecks                []string
-		reportMessage, reportHeader string
-	)
-
-	for _, hc := range p.Healthchecks {
-		for _, c := range hc.Checks {
-			if status.GetCheckMode(&c) == "quiet" {
-				ceasedChecks = append(ceasedChecks, c.UUid)
-			}
-		}
-	}
-
-	if p.IsQuiet() {
-		reportMessage = fmt.Sprintf("Project %s in quiet state\n", p.Name)
-	} else {
-		if len(ceasedChecks) > 0 {
-			reportHeader = fmt.Sprintf("Project %s in %s state\n", p.Name, p.GetMode())
-			reportMessage = reportHeader + fmt.Sprintf("Ceased checks: %v\n", ceasedChecks)
-		}
-	}
-
-	if reportMessage != "" {
-		SendChatOps(reportMessage)
-	}
-	return nil
-}
 
 func GetAlertProto(a *config.AlertConfigs) Alerter {
 	if value, ok := AlerterCollections[a.Type]; ok {
@@ -83,43 +21,6 @@ func GetCommandChannel() (*config.AlertConfigs, error) {
 		}
 	}
 	return nil, fmt.Errorf("ChatOpsChannel not found: %s", config.Config.Defaults.Parameters.CommandChannel)
-}
-
-func GetProjectChannel(p *projects.Project) *config.AlertConfigs {
-	for _, a := range config.Config.Alerts {
-		if a.Name == p.Parameters.AlertChannel {
-			return &a
-		}
-	}
-	return nil
-}
-
-func GetCritChannel(p *projects.Project) *config.AlertConfigs {
-	for _, a := range config.Config.Alerts {
-		if a.Name == p.Parameters.CritAlertChannel {
-			return &a
-		}
-	}
-	return nil
-}
-
-func Send(p *projects.Project, text string) {
-	metrics.AddProjectMetricChatOpsAnswer(p)
-
-	err := Alert(GetProjectChannel(p), text, "alert")
-	if err != nil {
-		config.Log.Infof("Send alert error for project %s: %s", p.Name, err)
-	}
-}
-
-func SendCrit(p *projects.Project, text string) {
-	metrics.AddProjectMetricCriticalAlert(p)
-	metrics.AddAlertMetricCritical(GetCritChannel(p))
-
-	err := Alert(GetCritChannel(p), text, "alert")
-	if err != nil {
-		config.Log.Infof("Send critical alert error for project %s: %s", p.Name, err)
-	}
 }
 
 func SendChatOps(text string) {

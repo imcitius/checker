@@ -5,7 +5,6 @@ import (
 	tb "gopkg.in/tucnak/telebot.v2"
 	"my/checker/config"
 	"my/checker/metrics"
-	projects "my/checker/projects"
 	"my/checker/status"
 )
 
@@ -40,9 +39,9 @@ func ppHandler(m *tb.Message, a *config.AlertConfigs) {
 		return
 	}
 
-	project := projects.GetProjectByName(projectName)
+	// TODO
+	status.Statuses.Projects[projectName].Mode = "quiet"
 	config.Log.Printf("Pause req for project: %s\n", projectName)
-	project.Quiet()
 
 	SendChatOps(fmt.Sprintf("Messages ceased for project %s", projectName))
 }
@@ -109,9 +108,8 @@ func upHandler(m *tb.Message, a *config.AlertConfigs) {
 		return
 	}
 
-	project := projects.GetProjectByName(projectName)
 	config.Log.Printf("Resume req for project: %s\n", projectName)
-	project.Quiet()
+	status.Statuses.Projects[projectName].Mode = "loud"
 
 	SendChatOps(fmt.Sprintf("Messages resumed for project %s", projectName))
 }
