@@ -25,6 +25,8 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 					project.ProjectAlert(err)
 				}
 			}
+		} else {
+			project.ProjectAlert(err)
 		}
 
 		if status.Statuses.Projects[project.Name].SeqErrorsCount < project.Parameters.AllowFails {
