@@ -25,6 +25,7 @@ type CheckStatuses struct {
 	Status         string // represent current checks status
 	LastResult     bool
 	When           time.Time
+	ExecuteCount   int
 	SeqErrorsCount int
 	FailsCount     int
 }

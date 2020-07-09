@@ -46,6 +46,7 @@ type ConfigFile struct {
 		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
 	}
 	Alerts   []AlertConfigs
+	Actors   []ActorConfigs
 	Projects []Project
 
 	ConsulCatalog ConsulCatalog `koanf:"consul_catalog"`
@@ -87,6 +88,11 @@ type AlertConfigs struct {
 	ProjectChannel int64 `koanf:"noncritical_channel"`
 
 	MMWebHookURL string `koanf:"mattermost_webhook_url"`
+}
+
+type ActorConfigs struct {
+	Name string
+	Type string
 }
 
 type TimeoutsCollection struct {
@@ -160,6 +166,11 @@ type Check struct {
 		Channels []string
 		SSLMode  bool
 	} `koanf:"pubsub_config"`
+
+	Actors struct {
+		Up   string
+		Down string
+	} `koanf:"actors"`
 
 	// Runtime data
 	UUid       string

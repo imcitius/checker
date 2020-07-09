@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"my/checker/config"
 	projects "my/checker/projects"
+	"my/checker/status"
 	"regexp"
 )
 
@@ -16,11 +17,9 @@ func Execute(p *projects.Project, c *config.Check) error {
 
 	if _, ok := Checks[c.Type]; ok {
 		err = Checks[c.Type](c, p)
+		status.Statuses.Checks[c.UUid].ExecuteCount++
 		if err == nil {
-			c.LastResult = true
 			return nil
-		} else {
-			c.LastResult = false
 		}
 	} else {
 		err = fmt.Errorf("check %s not implemented", c.Type)
@@ -28,22 +27,6 @@ func Execute(p *projects.Project, c *config.Check) error {
 	return err
 }
 
-func UUID(c *config.Check) string {
-	return c.UUid
-}
-
-func GetCheckByUUID(uuid string) *config.Check {
-	for _, project := range config.Config.Projects {
-		for _, healthcheck := range project.Healthchecks {
-			for _, check := range healthcheck.Checks {
-				if uuid == check.UUid {
-					return &check
-				}
-			}
-		}
-	}
-	return nil
-}
 func GetCheckScheme(c *config.Check) string {
 	pattern := regexp.MustCompile("(.*)://")
 	result := pattern.FindStringSubmatch(c.Host)
