@@ -68,6 +68,8 @@ type Parameters struct {
 	CommandChannel      string `koanf:"command_channel"`
 	SSLExpirationPeriod string `koanf:"ssl_expiration_period"`
 
+	ConnectTimeout string `koanf:"connect_timeout"`
+
 	Mentions []string
 }
 
