@@ -19,7 +19,7 @@ stage instance:
 
 wl-staging:
   extends:
-    - .prod_instance
+    - .stage_instance
     - .docker_europe_tags
   variables:
     DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator"
@@ -30,7 +30,7 @@ wl-staging:
 
 iron-staging:
   extends:
-    - .prod_instance
+    - .stage_instance
     - .docker_europe_tags
   variables:
     DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator"
@@ -41,7 +41,7 @@ iron-staging:
 
 siam-staging:
   extends:
-    - .prod_instance
+    - .stage_instance
     - .docker_europe_tags
   variables:
     DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator"
