@@ -176,7 +176,7 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 		selectorAlert.Inline(selectorAlert.Row(selPP, selPU))
 		_, err = bot.Send(&user, QuoteMeta(message), options, menu, selectorAlert)
 	case "chatops":
-		_, err = bot.Send(&user, QuoteMeta(message), optionsChatops, menu, selectorAlert)
+		_, err = bot.Send(&user, QuoteMeta(message), optionsChatops, menu)
 	default:
 		_, err = bot.Send(&user, QuoteMeta(message), options, menu)
 	}
