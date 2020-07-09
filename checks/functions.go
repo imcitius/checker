@@ -41,6 +41,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		}
 
 		if _, ok := status.Statuses.Checks[check.UUid]; ok {
+			//config.Log.Infof("err name: %s, count: %d, last: %v", check.Host, status.Statuses.Checks[check.UUid].ExecuteCount, status.Statuses.Checks[check.UUid].LastResult)
 			if check.Actors.Up != "" && status.Statuses.Checks[check.UUid].ExecuteCount > 1 {
 				if status.Statuses.Checks[check.UUid].LastResult {
 					config.Log.Debugf("atype: %s", actors.GetActorByName(check.Actors.Down).Type)
@@ -57,7 +58,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 			}
 		}
 
-		check.LastResult = false
+		status.Statuses.Checks[check.UUid].LastResult = false
 
 	} else {
 		config.Log.Warnf("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
@@ -72,6 +73,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		}
 
 		if _, ok := status.Statuses.Checks[check.UUid]; ok {
+			//config.Log.Infof("good name: %s, count: %d, last: %v", check.Host, status.Statuses.Checks[check.UUid].ExecuteCount, status.Statuses.Checks[check.UUid].LastResult)
 			if check.Actors.Down != "" && status.Statuses.Checks[check.UUid].ExecuteCount > 1 {
 				if !status.Statuses.Checks[check.UUid].LastResult {
 
@@ -89,7 +91,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 				}
 			}
 		}
-		check.LastResult = true
+		status.Statuses.Checks[check.UUid].LastResult = true
 		status.Statuses.Projects[project.Name].Alive++
 	}
 }
