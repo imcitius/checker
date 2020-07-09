@@ -11,7 +11,7 @@ import (
 func init() {
 	Checks["passive"] = func(c *config.Check, p *projects.Project) error {
 
-		errorHeader := fmt.Sprintf("Passive error at project: %s\nCheck UUID: %s\n", p.Name, c.UUid)
+		errorHeader := fmt.Sprintf("Passive check %s\nerror at project: %s\nCheck UUID: %s\n", c.Name, p.Name, c.UUid)
 
 		timeout, err := time.ParseDuration(c.Timeout)
 		if err != nil {
