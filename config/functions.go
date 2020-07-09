@@ -20,7 +20,8 @@ func LoadConfig() error {
 
 	tempConfig, err := TestConfig()
 	if err != nil {
-		Log.Infof("Using config file: %s", Koanf.All())
+		//Log.Infof("Using config file: %s", Koanf.All())
+		Log.Infof("Сonfig parsing error: %s", err)
 	} else {
 		Config = tempConfig
 	}
