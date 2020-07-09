@@ -195,7 +195,7 @@ func mainChecker() {
 			}
 		}
 
-		config.InternalStatus = "started"
+		//config.InternalStatus = "started"
 
 		config.Wg.Wait()
 

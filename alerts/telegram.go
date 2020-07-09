@@ -162,6 +162,7 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 	//config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
 
 	options := &tb.SendOptions{ParseMode: "MarkDownV2"}
+	optionsChatops := &tb.SendOptions{ParseMode: "MarkDownV2", DisableNotification: true}
 
 	menu.Reply(
 		menu.Row(btnHelp, btnList),
@@ -174,6 +175,8 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 	case "alert":
 		selectorAlert.Inline(selectorAlert.Row(selPP, selPU))
 		_, err = bot.Send(&user, QuoteMeta(message), options, menu, selectorAlert)
+	case "chatops":
+		_, err = bot.Send(&user, QuoteMeta(message), optionsChatops, menu, selectorAlert)
 	default:
 		_, err = bot.Send(&user, QuoteMeta(message), options, menu)
 	}
@@ -264,7 +267,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Debugf("Internal status is: %s", config.InternalStatus)
 		switch config.InternalStatus {
 		case "reload":
-			message = "Config reloaded"
+			message = "Bot config reloaded"
 		default:
 			message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
 		}
