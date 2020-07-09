@@ -5,7 +5,6 @@ import (
 	"fmt"
 	tb "gopkg.in/tucnak/telebot.v2"
 	"my/checker/config"
-	"my/checker/metrics"
 	"my/checker/reports"
 	"regexp"
 	"sync"
@@ -149,7 +148,7 @@ func (m TgMessage) GetUUID() (string, error) {
 	// WIP test and write error handling
 }
 
-func (t Telegram) Send(a *config.AlertConfigs, message, messageType string) error {
+func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 
 	config.Log.Debugf("Sending alert, text: '%s' (alert channel %+v)", message, a.Name)
 	bot, err := tb.NewBot(tb.Settings{
@@ -183,7 +182,7 @@ func (t Telegram) Send(a *config.AlertConfigs, message, messageType string) erro
 		config.Log.Warnf("SendTgMessage error: %v", err)
 	} else {
 		config.Log.Debugf("sendTgMessage success")
-		metrics.AddAlertMetricNonCritical(a)
+		a.AddAlertMetricNonCritical()
 	}
 
 	return err

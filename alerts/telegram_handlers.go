@@ -8,8 +8,8 @@ import (
 	"my/checker/status"
 )
 
-func puHandler(m *tb.Message, a *config.AlertConfigs) {
-	metrics.AddAlertMetricChatOpsRequest(a)
+func puHandler(m *tb.Message, a *AlertConfigs) {
+	a.AddAlertMetricChatOpsRequest()
 
 	tgMessage := TgMessage{m}
 	uuID, err := tgMessage.GetUUID()
@@ -25,8 +25,8 @@ func puHandler(m *tb.Message, a *config.AlertConfigs) {
 	SendChatOps(fmt.Sprintf("Messages ceased for UUID %v", uuID))
 }
 
-func ppHandler(m *tb.Message, a *config.AlertConfigs) {
-	metrics.AddAlertMetricChatOpsRequest(a)
+func ppHandler(m *tb.Message, a *AlertConfigs) {
+	a.AddAlertMetricChatOpsRequest()
 
 	tgMessage := TgMessage{m}
 
@@ -59,9 +59,9 @@ func uaHandler() {
 	SendChatOps("All messages enabled")
 }
 
-func uuHandler(m *tb.Message, a *config.AlertConfigs) {
+func uuHandler(m *tb.Message, a *AlertConfigs) {
 
-	metrics.AddAlertMetricChatOpsRequest(a)
+	a.AddAlertMetricChatOpsRequest()
 
 	tgMessage := TgMessage{m}
 	uuID, err := tgMessage.GetUUID()
@@ -90,9 +90,9 @@ func getCheckByUUID(uuID string) *config.Check {
 
 }
 
-func upHandler(m *tb.Message, a *config.AlertConfigs) {
+func upHandler(m *tb.Message, a *AlertConfigs) {
 
-	metrics.AddAlertMetricChatOpsRequest(a)
+	a.AddAlertMetricChatOpsRequest()
 
 	tgMessage := TgMessage{m}
 

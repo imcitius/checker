@@ -180,15 +180,15 @@ func mainChecker() {
 
 		config.Log.Debugf("botsEnabled is %v", config.Koanf.Bool("bots.enabled"))
 		if config.Koanf.Bool("bots.enabled") {
-			config.Log.Debugf("Fire bots")
+			config.Log.Debugf("Fire bot")
 			config.Wg.Add(1)
 			commandChannel, err := alerts.GetCommandChannel()
 			if err != nil {
 				config.Log.Infof("root GetCommandChannel error: %s", err)
 			} else {
-				a := alerts.GetAlertProto(commandChannel)
+				a := commandChannel.GetAlertProto()
 				if a == nil {
-					config.Log.Fatal("root commandChannel not found, bot not init")
+					config.Log.Fatal("root commandChannel not found, bot not initialized")
 				} else {
 					a.InitBot(config.BotsSignalCh, &config.Wg)
 				}

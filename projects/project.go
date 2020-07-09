@@ -60,19 +60,19 @@ func (p *Project) Quiet() {
 	status.Statuses.Projects[p.Name].Mode = "quiet"
 }
 
-func (p *Project) GetCritChannel() *config.AlertConfigs {
+func (p *Project) GetCritChannel() *alerts.AlertConfigs {
 	for _, a := range config.Config.Alerts {
 		if a.Name == p.Parameters.CritAlertChannel {
-			return &a
+			return &alerts.AlertConfigs{a}
 		}
 	}
 	return nil
 }
 
-func (p *Project) GetProjectChannel() *config.AlertConfigs {
+func (p *Project) GetProjectChannel() *alerts.AlertConfigs {
 	for _, a := range config.Config.Alerts {
 		if a.Name == p.Parameters.AlertChannel {
-			return &a
+			return &alerts.AlertConfigs{a}
 		}
 	}
 	return nil
@@ -81,7 +81,7 @@ func (p *Project) GetProjectChannel() *config.AlertConfigs {
 func (p *Project) Send(text string) {
 	p.AddProjectMetricChatOpsAnswer()
 
-	err := alerts.Alert(p.GetProjectChannel(), text, "alert")
+	err := p.GetProjectChannel().Alert(text, "alert")
 	if err != nil {
 		config.Log.Infof("Send alert error for project %s: %s", p.Name, err)
 	}
@@ -91,9 +91,9 @@ func (p *Project) SendCrit(text string) {
 
 	critChannel := p.GetCritChannel()
 	p.AddProjectMetricCriticalAlert()
-	metrics.AddAlertMetricCritical(critChannel)
+	critChannel.AddAlertMetricCritical()
 
-	err := alerts.Alert(critChannel, text, "alert")
+	err := critChannel.Alert(text, "alert")
 	if err != nil {
 		config.Log.Infof("Send critical alert error for project %s: %s", p.Name, err)
 	}
