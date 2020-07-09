@@ -8,7 +8,7 @@ prod instance:
     INSTANCE_DC: ks-1
     CONSUL_PATH: configs/ks-1/checker/config
 
-ks1 stage instance:
+stage instance:
   extends:
     - .stage_instance
     - .docker_europe_tags
