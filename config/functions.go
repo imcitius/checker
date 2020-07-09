@@ -165,10 +165,6 @@ func (p *TimeoutsCollection) Add(period string) {
 
 func (c *ConfigFile) FillDefaults() error {
 
-	if Config.Defaults.Parameters.ConnectTimeout == "" {
-		Config.Defaults.Parameters.ConnectTimeout = DefaultConnectTimeout
-	}
-
 	//Log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, p := range c.Projects {
 		if p.Parameters.RunEvery == "" {
