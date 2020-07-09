@@ -274,7 +274,9 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Infof("Start listening telegram bots routine")
 		SendChatOps(message)
 		bot.Start()
-		SendChatOps("Bot is stopped")
+		if config.InternalStatus == "stop" {
+			SendChatOps("Bot is stopped")
+		}
 	}()
 
 	<-ch
