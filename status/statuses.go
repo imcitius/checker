@@ -20,6 +20,7 @@ type ProjectsStatuses struct {
 }
 
 type CheckStatuses struct {
+	Name           string
 	UUID           string
 	Mode           string // represent current alerting mode
 	Status         string // represent current checks status

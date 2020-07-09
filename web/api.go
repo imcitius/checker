@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/cristalhq/jwt/v3"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
@@ -139,4 +140,38 @@ func list(w http.ResponseWriter, r *http.Request) {
 			config.Log.Info("Web: unauthorized")
 		}
 	}
+}
+
+func checkStatus(w http.ResponseWriter, r *http.Request) {
+
+	if ok := strings.HasPrefix(r.URL.Path, "/check/status"); !ok {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	uuid := strings.Split(r.URL.Path, "/")[3]
+	if uuid == "" {
+		http.Error(w, "Status check's UUID not defined", http.StatusMethodNotAllowed)
+		config.Log.Debugf("Status check's UUID not defined")
+		return
+	}
+
+	if _, ok := status.Statuses.Checks[uuid]; !ok {
+		io.WriteString(w, "Empty\n")
+		return
+	}
+
+	config.Log.Debugf("Check status requested %s", uuid)
+
+	s, err := json.Marshal(status.Statuses.Checks[uuid])
+	if err != nil {
+		io.WriteString(w, fmt.Sprintf("%s", err))
+		return
+	}
+	io.WriteString(w, fmt.Sprintf("%s", s))
 }
