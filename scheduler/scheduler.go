@@ -151,7 +151,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 				if math.Remainder(roundUptime, tf.Seconds()) == 0 {
 					config.Log.Debugf("===\nTime: %v\n---\n\n", t)
 
-					config.Log.Infof("Timeout: %s", timeout)
+					config.Log.Infof("Checking run_every: %s", timeout)
 
 					checksStartTime := time.Now()
 					runChecks(timeout)
