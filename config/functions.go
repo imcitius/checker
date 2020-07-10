@@ -119,10 +119,14 @@ func TestConfig() (ConfigFile, error) {
 
 	dl, err := logrus.ParseLevel(Koanf.String("debug.level"))
 	if err != nil {
-		//Log.Panicf("Cannot parse debug level: %v", err)
+		Log.Warnf("Cannot parse debug level: %v", err)
 		return tempConfig, err
 	} else {
 		Log.SetLevel(dl)
+		if Koanf.String("debug.level") == "debug" {
+			// add file and line number
+			Log.SetReportCaller(true)
+		}
 	}
 
 	if err := Koanf.Unmarshal("", &tempConfig); err != nil {

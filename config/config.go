@@ -21,9 +21,10 @@ var (
 
 	ScheduleLoop int
 	Config       ConfigFile
-	Log          = logrus.New()
-	Timeouts     TimeoutsCollection
-	Sem          = semaphore.NewWeighted(int64(1))
+	Log          = *logrus.New()
+
+	Timeouts TimeoutsCollection
+	Sem      = semaphore.NewWeighted(int64(1))
 
 	SignalINT, SignalHUP                                          chan os.Signal
 	ConfigChangeSig, SchedulerSignalCh, BotsSignalCh, WebSignalCh chan bool
