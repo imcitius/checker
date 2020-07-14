@@ -18,7 +18,7 @@ func GenerateToken() {
 	if config.Koanf.String("checker.token.encryption.key") != "" {
 		key = config.Koanf.Bytes("checker.token.encryption.key")
 	} else {
-		key = config.Config.Defaults.TokenEncryptionKey
+		key = config.TokenEncryptionKey
 	}
 
 	signer, err := jwt.NewSignerHS(jwt.HS256, key)

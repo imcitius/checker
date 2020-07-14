@@ -107,7 +107,7 @@ func list(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "Web: need auth")
 		return
 	} else {
-		verifier, err := jwt.NewVerifierHS(jwt.HS256, config.Config.Defaults.TokenEncryptionKey)
+		verifier, err := jwt.NewVerifierHS(jwt.HS256, config.TokenEncryptionKey)
 		if err != nil {
 			io.WriteString(w, "cannot construct jwt verifier")
 			config.Log.Info("cannot construct jwt verifier")

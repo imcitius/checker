@@ -188,15 +188,18 @@ func WatchServices() {
 			// It is possible that there was an idempotent write that does not affect the result of the query.
 			// Thus it is required to do extra check for changes...
 			if hasChanged(current, flashback) {
+				//config.Log.Infof("%+v", len(current))
+				//config.Log.Infof("%+v", len(flashback))
 				//	watchCh <- data
 				flashback = current
 				ParseCatalog(current)
 			}
 			//config.Log.Infof("services: %+v\n\n\n", current)
+
+			// we do not want to DoS consul's api
+			time.Sleep(watchPeriod)
 		}
 
-		// we do not want to DoS consul's api
-		time.Sleep(watchPeriod)
 	}()
 
 }

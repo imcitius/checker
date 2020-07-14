@@ -37,6 +37,8 @@ var (
 	Koanf = koanf.New(".")
 
 	Secrets map[string]string
+
+	TokenEncryptionKey []byte
 )
 
 type ConfigFile struct {

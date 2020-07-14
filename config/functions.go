@@ -308,14 +308,15 @@ func (c *ConfigFile) FillSecrets() error {
 		}
 	}
 
-	if strings.HasPrefix(string(Config.Defaults.TokenEncryptionKey), "vault") {
-		token, err := GetVaultSecret(string(Config.Defaults.TokenEncryptionKey))
+	if strings.HasPrefix(string(c.Defaults.TokenEncryptionKey), "vault") {
+		token, err := GetVaultSecret(string(c.Defaults.TokenEncryptionKey))
 		if err == nil {
-			Config.Defaults.TokenEncryptionKey = []byte(token)
+			TokenEncryptionKey = []byte(token)
 		} else {
 			return fmt.Errorf("error getting jwt encryption token from vault: %v", err)
 		}
-
+	} else {
+		TokenEncryptionKey = c.Defaults.TokenEncryptionKey
 	}
 
 	return nil
@@ -323,7 +324,7 @@ func (c *ConfigFile) FillSecrets() error {
 
 func WatchConfig() {
 	if period, err := time.ParseDuration(Koanf.String("config.watchtimeout")); err != nil {
-		Log.Infof("KV watch timeout parser error: %+v, use 5s", err)
+		Log.Infof("KV watch timeout parser error: %+v, use default 5s", err)
 		time.Sleep(time.Second * 5) // default delay
 	} else {
 		time.Sleep(period)
