@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/common/log"
 	"io"
 	"my/checker/config"
+	"my/checker/misc"
 	projects "my/checker/projects"
 	"my/checker/reports"
 	"my/checker/status"
@@ -158,6 +159,12 @@ func checkStatus(w http.ResponseWriter, r *http.Request) {
 	if uuid == "" {
 		http.Error(w, "Status check's UUID not defined", http.StatusMethodNotAllowed)
 		config.Log.Debugf("Status check's UUID not defined")
+		return
+	}
+
+	if misc.GetCheckByUUID(uuid) == nil {
+		http.Error(w, "Check not found", http.StatusNotFound)
+		config.Log.Debugf("Check with UUID %s not found", uuid)
 		return
 	}
 

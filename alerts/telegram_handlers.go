@@ -5,6 +5,7 @@ import (
 	tb "gopkg.in/tucnak/telebot.v2"
 	"my/checker/config"
 	"my/checker/metrics"
+	"my/checker/misc"
 	"my/checker/status"
 )
 
@@ -20,9 +21,26 @@ func puHandler(m *tb.Message, a *AlertConfigs) {
 
 	config.Log.Infof("Bot request /pu")
 	config.Log.Printf("Pause req for UUID: %+v\n", uuID)
-	status.SetCheckMode(getCheckByUUID(uuID), "quiet")
+	status.SetCheckMode(misc.GetCheckByUUID(uuID), "quiet")
 
 	SendChatOps(fmt.Sprintf("Messages ceased for UUID %v", uuID))
+}
+
+func uuHandler(m *tb.Message, a *AlertConfigs) {
+
+	a.AddAlertMetricChatOpsRequest()
+
+	tgMessage := TgMessage{m}
+	uuID, err := tgMessage.GetUUID()
+	if err != nil {
+		SendChatOps(fmt.Sprintf("%s", err))
+		return
+	}
+	config.Log.Infof("Bot request /uu")
+	config.Log.Printf("Unpause req for UUID: %+v\n", uuID)
+	status.SetCheckMode(misc.GetCheckByUUID(uuID), "loud")
+
+	SendChatOps(fmt.Sprintf("Messages resumed for UUID %v", uuID))
 }
 
 func ppHandler(m *tb.Message, a *AlertConfigs) {
@@ -57,37 +75,6 @@ func uaHandler() {
 
 	status.MainStatus = "loud"
 	SendChatOps("All messages enabled")
-}
-
-func uuHandler(m *tb.Message, a *AlertConfigs) {
-
-	a.AddAlertMetricChatOpsRequest()
-
-	tgMessage := TgMessage{m}
-	uuID, err := tgMessage.GetUUID()
-	if err != nil {
-		SendChatOps(fmt.Sprintf("%s", err))
-		return
-	}
-	config.Log.Infof("Bot request /uu")
-	config.Log.Printf("Unpause req for UUID: %+v\n", uuID)
-	status.SetCheckMode(getCheckByUUID(uuID), "loud")
-
-	SendChatOps(fmt.Sprintf("Messages resumed for UUID %v", uuID))
-}
-
-func getCheckByUUID(uuID string) *config.Check {
-	for _, project := range config.Config.Projects {
-		for _, healthcheck := range project.Healthchecks {
-			for _, check := range healthcheck.Checks {
-				if uuID == check.UUid {
-					return &check
-				}
-			}
-		}
-	}
-	return nil
-
 }
 
 func upHandler(m *tb.Message, a *AlertConfigs) {
