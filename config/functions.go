@@ -169,6 +169,10 @@ func (p *TimeoutsCollection) Add(period string) {
 
 func (c *ConfigFile) FillDefaults() error {
 
+	if c.Defaults.Parameters.PeriodicReport == "" {
+		c.Defaults.Parameters.PeriodicReport = PeriodicReport
+	}
+
 	//Log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, p := range c.Projects {
 		if p.Parameters.RunEvery == "" {

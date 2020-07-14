@@ -27,10 +27,26 @@ func GetRandomId() string {
 
 func runReports(timeout string) {
 
-	config.Log.Debug("runReports")
-	for _, project := range Config.Projects {
-		if project.Parameters.PeriodicReport == timeout {
-			project := projects.Project{project}
+	config.Log.Info("runReports")
+	for _, p := range Config.Projects {
+		//config.Log.Info("runReports 1 %s", p.Name)
+		//config.Log.Info("runReports 2 %s", p.Parameters.Mode)
+		//config.Log.Info("runReports 3 %s", p.Parameters.Mode)
+		//config.Log.Info("runReports 4 %s", status.Statuses.Projects[p.Name].Mode)
+		//config.Log.Info("runReports 6 %s", p.Parameters.PeriodicReport)
+
+		schedTimeout, err := time.ParseDuration(timeout)
+		if err != nil {
+			config.Log.Warnf("runReports Cannot parse duration %s", err)
+		}
+		projTimeout, err := time.ParseDuration(p.Parameters.PeriodicReport)
+		if err != nil {
+			config.Log.Warnf("runReports Cannot parse duration %s", err)
+		}
+
+		if schedTimeout >= projTimeout {
+			project := projects.Project{p}
+			//config.Log.Info("runReports 5 %s", project.GetMode())
 			err := project.ProjectSendReport()
 			if err != nil {
 				config.Log.Infof("Cannot send report for project %s: %+v", project.Name, err)

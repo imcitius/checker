@@ -136,6 +136,7 @@ func (p *Project) ProjectSendReport() error {
 		reportMessage, reportHeader string
 	)
 
+	config.Log.Infof("Generate report for project %s", p.Name)
 	for _, hc := range p.Healthchecks {
 		for _, c := range hc.Checks {
 			if status.GetCheckMode(&c) == "quiet" {
@@ -148,6 +149,7 @@ func (p *Project) ProjectSendReport() error {
 		reportMessage = fmt.Sprintf("Project %s in quiet state\n", p.Name)
 	} else {
 		if len(ceasedChecks) > 0 {
+			config.Log.Infof("There is ceased check in proejct %s", p.Name)
 			reportHeader = fmt.Sprintf("Project %s in %s state\n", p.Name, p.GetMode())
 			reportMessage = reportHeader + fmt.Sprintf("Ceased checks: %v\n", ceasedChecks)
 		}

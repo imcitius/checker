@@ -11,6 +11,10 @@ import (
 	"github.com/knadh/koanf"
 )
 
+const (
+	PeriodicReport = "3600s"
+)
+
 var (
 	Version      string
 	VersionSHA   string
