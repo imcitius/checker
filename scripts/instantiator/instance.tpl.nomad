@@ -64,7 +64,6 @@ EOH
 CONSUL_PATH = "{$ .P.consul_path $}"
 CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500"
 VAULT_ADDR = "https://vault.service.infra1.consul"
-CHECKER_TOKEN_ENCRYPTION_KEY = "{{ if secrets secret/checker/{$ index .I.Datacenters 0 $}/tokens | contains jwt }}{{ with secret "secret/checker/{$ index .I.Datacenters 0 $}/tokens"}}{{.Data.jwt}}{{end}}{{ end }}"
 EOH
         env = true
         destination = "secrets/.env"
