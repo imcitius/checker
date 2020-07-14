@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -50,6 +51,10 @@ func (r *ConsulClient) ReadBytes() ([]byte, error) {
 	pair, _, err := kv.Get(r.ConsulParam.KVPath, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if pair == nil {
+		return []byte{}, fmt.Errorf("Cannot get data from consul, empty key")
 	}
 
 	data := pair.Value

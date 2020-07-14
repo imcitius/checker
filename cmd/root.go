@@ -142,6 +142,20 @@ var list = &cobra.Command{
 	Short: "List config elements",
 	Long:  `List Projects, Healthchecks, Check UUIDs`,
 	Run: func(cmd *cobra.Command, args []string) {
+		err := config.LoadConfig()
+		if err != nil {
+			config.Log.Infof("Config load error: %s", err)
+		}
+
+		if config.Config.ConsulCatalog.Enabled {
+			cat, err := catalog.GetConsulServices()
+			if err != nil {
+				config.Log.Errorf("Failed to get consul services: %s", err)
+				//notifyError(err)
+				return
+			}
+			catalog.ParseCatalog(cat)
+		}
 		reports.List()
 	},
 }

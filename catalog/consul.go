@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"fmt"
 	"github.com/BurntSushi/ty/fun"
 	"my/checker/common"
 	"my/checker/config"
@@ -97,95 +98,107 @@ func getChangedStringKeys(currState []string, prevState []string) ([]string, []s
 	return fun.Keys(addedKeys).([]string), fun.Keys(removedKeys).([]string)
 }
 
+func GetConsulServices() (map[string]config.ConsulService, error) {
+	const (
+		DefaultWatchWaitTime = 15 * time.Second
+		passingOnly          = true
+	)
+
+	var (
+		addr    = config.Config.ConsulCatalog.Address
+		conf    = consul.DefaultConfig()
+		options = &consul.QueryOptions{WaitTime: DefaultWatchWaitTime, AllowStale: false}
+		current = make(map[string]config.ConsulService)
+	)
+
+	config.Log.Debug("Getting consul services")
+
+	conf.Address = addr
+
+	c, err := consul.NewClient(conf)
+	if err != nil {
+		config.Log.Fatalf("Consul client error: %v", err)
+	}
+
+	catalog := c.Catalog()
+
+	data, meta, err := catalog.Services(options)
+	if err != nil {
+		config.Log.Errorf("Failed to list services: %v", err)
+		//notifyError(err)
+		return map[string]config.ConsulService{}, fmt.Errorf("Failed to list services: %v", err)
+	}
+
+	//if options.WaitIndex == meta.LastIndex {
+	//	continue
+	//}
+	options.WaitIndex = meta.LastIndex
+
+	if data != nil {
+		for key, value := range data {
+			nodes, _, err := catalog.Service(key, "", &consul.QueryOptions{AllowStale: false})
+			if err != nil {
+				config.Log.Errorf("Failed to get detail of service %s: %v", key, err)
+				//notifyError(err)
+				return map[string]config.ConsulService{}, fmt.Errorf("Failed to get detail of service %s: %v", key, err)
+
+			}
+
+			nodesID := getServiceIds(nodes)
+			ports := getServicePorts(nodes)
+			addresses := getServiceAddresses(nodes)
+
+			if service, ok := current[key]; ok {
+				service.Tags = value
+				service.Nodes = nodesID
+				service.Ports = ports
+			} else {
+				service := config.ConsulService{
+					Name:      key,
+					Tags:      value,
+					Nodes:     nodesID,
+					Addresses: addresses,
+					Ports:     ports,
+				}
+				current[key] = service
+			}
+		}
+	}
+	return current, nil
+}
+
 func WatchServices() {
 
 	//stopCh <-chan struct{}, watchCh chan<- map[string][]string
+	var flashback map[string]config.ConsulService
+	const watchPeriod = 30 * time.Second
 
 	go func() {
 
-		const (
-			DefaultWatchWaitTime = 15 * time.Second
-			passingOnly          = true
-			watchPeriod          = 30 * time.Second
-		)
-
-		var (
-			addr      = config.Config.ConsulCatalog.Address
-			conf      = consul.DefaultConfig()
-			options   = &consul.QueryOptions{WaitTime: DefaultWatchWaitTime, AllowStale: false}
-			flashback map[string]config.ConsulService
-		)
-
-		config.Log.Debug("Getting consul services")
-
-		conf.Address = addr
-
-		c, err := consul.NewClient(conf)
-		if err != nil {
-			config.Log.Fatalf("Consul client error: %v", err)
-		}
-
-		catalog := c.Catalog()
-
 		for {
-			data, meta, err := catalog.Services(options)
+
+			current, err := GetConsulServices()
 			if err != nil {
-				config.Log.Errorf("Failed to list services: %v", err)
+				config.Log.Errorf("Failed to get consul services: %s", err)
 				//notifyError(err)
 				return
 			}
 
-			if options.WaitIndex == meta.LastIndex {
-				continue
+			// A critical note is that the return of a blocking request is no guarantee of a change.
+			// It is possible that there was an idempotent write that does not affect the result of the query.
+			// Thus it is required to do extra check for changes...
+			if hasChanged(current, flashback) {
+				//	watchCh <- data
+				flashback = current
+				ParseCatalog(current)
 			}
-			options.WaitIndex = meta.LastIndex
-
-			if data != nil {
-				current := make(map[string]config.ConsulService)
-				for key, value := range data {
-					nodes, _, err := catalog.Service(key, "", &consul.QueryOptions{AllowStale: false})
-					if err != nil {
-						config.Log.Errorf("Failed to get detail of service %s: %v", key, err)
-						//notifyError(err)
-						return
-					}
-
-					nodesID := getServiceIds(nodes)
-					ports := getServicePorts(nodes)
-					addresses := getServiceAddresses(nodes)
-
-					if service, ok := current[key]; ok {
-						service.Tags = value
-						service.Nodes = nodesID
-						service.Ports = ports
-					} else {
-						service := config.ConsulService{
-							Name:      key,
-							Tags:      value,
-							Nodes:     nodesID,
-							Addresses: addresses,
-							Ports:     ports,
-						}
-						current[key] = service
-					}
-
-				}
-
-				// A critical note is that the return of a blocking request is no guarantee of a change.
-				// It is possible that there was an idempotent write that does not affect the result of the query.
-				// Thus it is required to do extra check for changes...
-				if hasChanged(current, flashback) {
-					//	watchCh <- data
-					flashback = current
-					ParseCatalog(current)
-				}
-				//config.Log.Infof("services: %+v\n\n\n", current)
-			}
-
-			// we do not want to DoS consul's api
-			time.Sleep(watchPeriod)
+			//config.Log.Infof("services: %+v\n\n\n", current)
 		}
+
+		// we do not want to DoS consul's api
+		time.Sleep(watchPeriod)
 	}()
+
 }
 
 func ParseCatalog(catalog map[string]config.ConsulService) {
