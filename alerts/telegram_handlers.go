@@ -19,7 +19,7 @@ func puHandler(m *tb.Message, a *AlertConfigs) {
 		return
 	}
 
-	config.Log.Infof("Bot request /pu")
+	//config.Log.Infof("Bot request /pu")
 	config.Log.Printf("Pause req for UUID: %+v\n", uuID)
 	status.SetCheckMode(misc.GetCheckByUUID(uuID), "quiet")
 
@@ -36,8 +36,8 @@ func uuHandler(m *tb.Message, a *AlertConfigs) {
 		SendChatOps(fmt.Sprintf("%s", err))
 		return
 	}
-	config.Log.Infof("Bot request /uu")
-	config.Log.Printf("Unpause req for UUID: %+v\n", uuID)
+	//config.Log.Infof("Bot request /uu")
+	config.Log.Infof("Unpause req for UUID: %+v\n", uuID)
 	status.SetCheckMode(misc.GetCheckByUUID(uuID), "loud")
 
 	SendChatOps(fmt.Sprintf("Messages resumed for UUID %v", uuID))
@@ -55,26 +55,10 @@ func ppHandler(m *tb.Message, a *AlertConfigs) {
 		return
 	}
 
-	// TODO
 	status.Statuses.Projects[projectName].Mode = "quiet"
-	config.Log.Printf("Pause req for project: %s\n", projectName)
+	config.Log.Infof("Pause req for project: %s\n", projectName)
 
 	SendChatOps(fmt.Sprintf("Messages ceased for project %s", projectName))
-}
-
-func paHandler() {
-	config.Log.Infof("Bot request /pa")
-
-	status.MainStatus = "quiet"
-	SendChatOps("All messages ceased")
-
-}
-
-func uaHandler() {
-	config.Log.Infof("Bot request /ua")
-
-	status.MainStatus = "loud"
-	SendChatOps("All messages enabled")
 }
 
 func upHandler(m *tb.Message, a *AlertConfigs) {
@@ -91,10 +75,25 @@ func upHandler(m *tb.Message, a *AlertConfigs) {
 		return
 	}
 
-	config.Log.Printf("Resume req for project: %s\n", projectName)
+	config.Log.Infof("Resume req for project: %s\n", projectName)
 	status.Statuses.Projects[projectName].Mode = "loud"
 
 	SendChatOps(fmt.Sprintf("Messages resumed for project %s", projectName))
+}
+
+func paHandler() {
+	config.Log.Infof("Bot request /pa")
+
+	status.MainStatus = "quiet"
+	SendChatOps("All messages ceased")
+
+}
+
+func uaHandler() {
+	config.Log.Infof("Bot request /ua")
+
+	status.MainStatus = "loud"
+	SendChatOps("All messages enabled")
 }
 
 func statsHandler(m *tb.Message) {
