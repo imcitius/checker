@@ -1,5 +1,8 @@
 # Реализация чекалки на Go
 
+Утилита задумана в качестве универсального демона, способного проводить периодические проверки (хелсчеки) различных IT систем, 
+отсылать алерты и выполнять какие-то действия в случае смены статуса проверки.
+
 Хранение конфигурации реализовано с помощью библиотеки [Koanf](https://github.com/knadh/koanf).
 По умолчанию загружается конфиг из файла config.yaml в текущем каталоге.
 
@@ -23,7 +26,7 @@ Available Commands:
   version     Print the version number of Hugo
 
 Flags:
-  -b, --bots                        start listening messenger bots (default true)
+  -b, --bots                        start listening messenger bots (boolean default true)
   -c, --config string               config file
   -f, --configformat string         config file format (default "yaml")
   -s, --configsource string         config file source: file or consul
