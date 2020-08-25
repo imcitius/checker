@@ -2,50 +2,57 @@ package config
 
 import (
 	"fmt"
-	"github.com/hashicorp/vault/api"
+	vaultApi "github.com/hashicorp/vault/api"
 	"strings"
 	"time"
 )
 
-func init() {
-	ClearSecrets()
-}
+var VaultClient vaultApi.Client
 
-func ClearSecrets() {
-	// Secret cache, to reduce Vault requests number
-	Secrets = make(map[string]string)
+func init() {
+	Secrets = make(map[string]CachedSecret)
+
+	//Log.Debugf("GetVaultSecret: vaultPath=%s", vaultPath)
+
+	VaultClient, err := vaultApi.NewClient(&vaultApi.Config{
+		Address: Koanf.String("vault.addr"),
+		Timeout: 3 * time.Second,
+	})
+	if err != nil {
+		Log.Warnf("failed to create Vault client: %v", err)
+	}
+
+	VaultClient.SetToken(Koanf.String("vault.token"))
+
 }
 
 func GetVaultSecret(vaultPath string) (string, error) {
 
-	//Log.Debugf("GetVaultSecret: vaultPath=%s", vaultPath)
 	vault := strings.Split(vaultPath, ":")
 	path := vault[1]
 	field := vault[2]
+	if path == "" {
+		return "", fmt.Errorf("failed to get secret, vault path is empty")
+	}
+	if field == "" {
+		return "", fmt.Errorf("failed to get secret, field name is empty")
+	}
 
 	if token, ok := Secrets[path]; ok {
-		//Log.Debugf("Secret return from cache")
-		return token, nil
+		if time.Now().Sub(token.TimeStamp) < 5*time.Minute {
+			//Log.Debugf("Secret return from cache")
+			return token.Secret, nil
+		}
 	}
 
-	client, err := api.NewClient(&api.Config{
-		Address: Koanf.String("vault.addr"),
-		Timeout: time.Duration(3 * time.Second),
-	})
-	if err != nil {
-		Log.Infof("Failed to create Vault client: %v", err)
-		return "", fmt.Errorf("failed to create Vault client: %v", err)
-	}
-
-	client.SetToken(Koanf.String("vault.token"))
-
-	sec, err := client.Logical().Read(path)
+	sec, err := VaultClient.Logical().Read(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to get secret: %v", err)
 	}
 	if sec == nil || sec.Data == nil {
 		return "", fmt.Errorf("no data for key %s", field)
 	}
-	Secrets[path] = fmt.Sprint(sec.Data[field])
+	Secrets[path] = CachedSecret{fmt.Sprint(sec.Data[field]), time.Now()}
+
 	return fmt.Sprint(sec.Data[field]), nil
 }

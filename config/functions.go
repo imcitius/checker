@@ -304,6 +304,14 @@ func (c *ConfigFile) FillSecrets() error {
 						return fmt.Errorf("error getting SQL password from vault: %v", err)
 					}
 				}
+				if strings.HasPrefix(check.Auth.Password, "vault") {
+					token, err := GetVaultSecret(check.Auth.Password)
+					if err == nil {
+						c.Projects[i].Healthchecks[j].Checks[k].Auth.Password = token
+					} else {
+						return fmt.Errorf("error getting http password from vault: %v", err)
+					}
+				}
 			}
 		}
 	}

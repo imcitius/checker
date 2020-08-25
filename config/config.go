@@ -36,10 +36,15 @@ var (
 
 	Koanf = koanf.New(".")
 
-	Secrets map[string]string
+	Secrets map[string]CachedSecret
 
 	TokenEncryptionKey []byte
 )
+
+type CachedSecret struct {
+	Secret    string
+	TimeStamp time.Time
+}
 
 type ConfigFile struct {
 	Defaults struct {

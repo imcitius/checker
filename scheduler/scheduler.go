@@ -135,7 +135,6 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 	}
 
 	Ticker := time.NewTicker(timerStep)
-	MaintPeriod := 5 * time.Minute
 	timerStepSeconds := timerStep.Seconds()
 
 	config.Log.Debug("Scheduler started")
@@ -190,9 +189,6 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 				}
 			}
 
-			if math.Remainder(uptime, MaintPeriod.Seconds()) == 0 {
-				config.ClearSecrets()
-			}
 		}
 
 		metrics.SchedulerLoopConfig.Set(float64(timerStep.Milliseconds()))
