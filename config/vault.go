@@ -7,12 +7,11 @@ import (
 	"time"
 )
 
-var VaultClient vaultApi.Client
-
 func init() {
 	Secrets = make(map[string]CachedSecret)
+}
 
-	//Log.Debugf("GetVaultSecret: vaultPath=%s", vaultPath)
+func GetVaultSecret(vaultPath string) (string, error) {
 
 	VaultClient, err := vaultApi.NewClient(&vaultApi.Config{
 		Address: Koanf.String("vault.addr"),
@@ -23,10 +22,6 @@ func init() {
 	}
 
 	VaultClient.SetToken(Koanf.String("vault.token"))
-
-}
-
-func GetVaultSecret(vaultPath string) (string, error) {
 
 	vault := strings.Split(vaultPath, ":")
 	path := vault[1]
@@ -45,6 +40,7 @@ func GetVaultSecret(vaultPath string) (string, error) {
 		}
 	}
 
+	Log.Debugf("Vault client: %+v", VaultClient)
 	sec, err := VaultClient.Logical().Read(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to get secret: %v", err)

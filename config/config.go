@@ -137,6 +137,8 @@ type Check struct {
 	Timeout string
 	Port    int
 
+	// hash for fileget check
+	Hash string
 	// retries
 	Attempts int
 

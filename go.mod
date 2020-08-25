@@ -7,6 +7,7 @@ go 1.14
 require (
 	github.com/BurntSushi/ty v0.0.0-20140213233908-6add9cd6ad42
 	github.com/ClickHouse/clickhouse-go v1.3.14
+	github.com/cavaliercoder/grab v2.0.0+incompatible
 	github.com/cristalhq/jwt/v3 v3.0.0
 	github.com/go-redis/redis/v7 v7.2.0
 	github.com/go-sql-driver/mysql v1.5.0
