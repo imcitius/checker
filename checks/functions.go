@@ -26,7 +26,9 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 				}
 			}
 		} else {
-			project.ProjectAlert(err)
+			if status.GetCheckMode(check) != "quiet" {
+				project.ProjectAlert(err)
+			}
 		}
 
 		if status.Statuses.Projects[project.Name].SeqErrorsCount < project.Parameters.AllowFails {
