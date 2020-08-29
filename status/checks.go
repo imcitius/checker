@@ -12,6 +12,7 @@ func InitCheckStatus(c *config.Check) {
 }
 
 func GetCheckMode(c *config.Check) string {
+	InitCheckStatus(c)
 	return Statuses.Checks[c.UUid].Mode
 }
 

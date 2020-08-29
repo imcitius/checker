@@ -3,6 +3,7 @@ package reports
 import (
 	"fmt"
 	"my/checker/config"
+	"my/checker/status"
 )
 
 func ListElements() string {
@@ -14,7 +15,8 @@ func ListElements() string {
 			list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)
 			for _, c := range h.Checks {
 				list = list + fmt.Sprintf("\t\tName: %s\n", c.Name)
-				list = list + fmt.Sprintf("\t\tUUID: %s\n", c.UUid)
+				list = list + fmt.Sprintf("\t\tUUID: %s (mode %s)\n", c.UUid, status.GetCheckMode(&c))
+
 				//list = list + fmt.Sprintf("\t\tseq errors: %d\n", status.Statuses.Checks[c.UUid].SeqErrorsCount)
 			}
 		}
