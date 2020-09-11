@@ -47,7 +47,7 @@ func init() {
 
 		connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbuser, dbpassword, dbhost, dbport, dbname)
 		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("?timeout=%f", int(dbConnectTimeout.Seconds()))
+			connStr = connStr + fmt.Sprintf("?timeout=%f", dbConnectTimeout.Seconds())
 		}
 
 		//config.Log.Printf("Connect string: %s", connStr)
@@ -123,7 +123,7 @@ func init() {
 
 		connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbuser, dbpassword, dbhost, dbport, dbname)
 		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("?timeout=%f", int(dbConnectTimeout.Seconds()))
+			connStr = connStr + fmt.Sprintf("?timeout=%f", dbConnectTimeout.Seconds())
 		}
 
 		//config.Log.Printf("Connect string: %s", connStr)
