@@ -193,7 +193,7 @@ func init() {
 			connStr = connStr + fmt.Sprintf("?timeout=%.0fs", dbConnectTimeout.Seconds())
 		}
 
-		config.Log.Printf("Replication Connect string: %s", connStr)
+		//config.Log.Printf("Replication Connect string: %s", connStr)
 
 		db, err := sql.Open("mysql", connStr)
 		if err != nil {
