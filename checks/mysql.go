@@ -47,7 +47,7 @@ func init() {
 
 		connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbuser, dbpassword, dbhost, dbport, dbname)
 		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("?timeout=%f", dbConnectTimeout.Seconds())
+			connStr = connStr + fmt.Sprintf("?timeout=%.0fs", dbConnectTimeout.Seconds())
 		}
 
 		//config.Log.Printf("Connect string: %s", connStr)
@@ -123,7 +123,7 @@ func init() {
 
 		connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbuser, dbpassword, dbhost, dbport, dbname)
 		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("?timeout=%f", dbConnectTimeout.Seconds())
+			connStr = connStr + fmt.Sprintf("?timeout=%.0fs", dbConnectTimeout.Seconds())
 		}
 
 		//config.Log.Printf("Connect string: %s", connStr)
@@ -190,14 +190,10 @@ func init() {
 
 		connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbUser, dbPassword, dbHost, dbPort, dbName)
 		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("?timeout=%f", dbConnectTimeout.Seconds())
+			connStr = connStr + fmt.Sprintf("?timeout=%.0fs", dbConnectTimeout.Seconds())
 		}
 
-		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("?timeout=%f", dbConnectTimeout.Seconds())
-		}
-
-		//config.Log.Printf("Replication Connect string: %s", connStr)
+		config.Log.Printf("Replication Connect string: %s", connStr)
 
 		db, err := sql.Open("mysql", connStr)
 		if err != nil {
@@ -233,7 +229,7 @@ func init() {
 			connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbUser, dbPassword, server, dbPort, dbName)
 
 			if dbConnectTimeout > 0 {
-				connStr = connStr + fmt.Sprintf("?timeout=%f", dbConnectTimeout.Seconds())
+				connStr = connStr + fmt.Sprintf("?timeout=%.0fs", dbConnectTimeout.Seconds())
 			}
 			db, err := sql.Open("mysql", connStr)
 			if err != nil {
