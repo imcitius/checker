@@ -10,7 +10,7 @@ send alerts and perform some actions if the check status changes.
 Configuration storage is implemented using the [Koanf] library (https://github.com/knadh/koanf).
 By default, the config is loaded from the config.yaml file in the current directory.
 
-``
+```
 $ ./checker
 
 Start dev
@@ -37,7 +37,7 @@ Flags:
   -h, --help help for checker
 
 Use "checker [command] --help" for more information about a command.
-``
+```
 
 Configuration storage is available in all repositories supported by the [Koanf] library (https://github.com/knadh/koanf).
 You can load any settings from the CHECKER_* environment variables (see the Koanf documentation).
@@ -65,6 +65,7 @@ ENV variable has higher priority.
 Loading a token from a Vault is supported.
 
 The configuration is loaded according to the template (json):
+```json
   {
     "defaults": {},
     "actors": {},
@@ -72,6 +73,7 @@ The configuration is loaded according to the template (json):
     "projects": {},
     "consul_catalog": {}
   }
+```
 
 Secret parameters (passwords, tokens) can be saved in the Hashicorp Vault, at the moment it supports downloading secrets for telegram bots, JWT authorization, passwords for SQL databases and http checks.
 Format: `vault: secret / path / to / token: field`. The value of the field `field` from the path` secret / path / to / token` will be used as the secret.
@@ -85,7 +87,7 @@ If the PORT environment variable is set, the port number from it is used.
 ## The `parameters` block contains the following settings:
 
 ### in defaults and projects
-``
+```
 run_every: The frequency of testing and running alerts.
 
 // TODO check the feature
@@ -106,3 +108,305 @@ ssl_expiration_period: checking the proximity of the expiration time of SSL cert
 
 // TODO check the feature
 periodic_report_time: submission period
+mentions: who to notify in alerts for this project. it is convenient for all chat participants to keep it muted, and to notify specific persons on specific problems.
+
+```
+
+It should be borne in mind that the `run_every` parameter must be a multiple of the` timer_step` parameter.
+
+For example, if the internal timer fires every 5 seconds, the check can be performed every number of seconds in multiples of 5 (60 seconds, 75 seconds, etc.)
+
+## An "actor" is an action that must be performed when the verification status changes (actor_up'actor_down).
+Actors (actions) are described in the ʻactors` block.
+
+// TODO
+
+
+## Description of notification methods is contained in the ʻalerts` block.
+
+Three types of notifications are supported: telegram, slack / mattermost, log.
+
+The block should contain sub-blocks, with settings specific to each notification method:
+
+```
+// Common parameters
+name: The name of the notification method
+type: The type of notification method (log, telegram, slack or mattermost)
+
+// telegram parameters
+bot_token: token
+noncritical_channel: Channel for non-critical notifications
+critical_channel: Channel for critical alerts
+
+// slack / mattermost parameters
+mattermost_webhook_url: webhook url. Used for all types of alerts and ChatOps.
+
+```
+
+If there is no `alerts` block, all alerts will be sent only to the log.
+
+### Manage alerts
+
+With the help of messages to the bot, you can manage alerts and the mode of checking projects.
+Command line switch
+The following commands are supported:
+
+*/pa* with a regular chat message - completely disables all notifications (analogue of quiet in the defaults block)
+
+*/ua* with a regular message in the chat - turns on all notifications (analogous to loud in the defaults block)
+
+Commands for managing alerts for the specified item.
+The `/pp,/up <project_name>` and `/pu,/uu <UUID>`  commands control project alerts and specific checks.
+They can be sent as a regular chat message, or as a response to a specific alert.
+
+In case of response to an alert, the project name or verification UUID is extracted from this alert.
+
+
+## Description of checks is contained in the `healthchecks` block of the project.
+
+The `healthchecks` block must contain blocks describing check sets and optionally a` parameters` block.
+These settings overlap the project level and root level settings.
+Each set of checks has a name in the `name` field and a description of the checks in the `checks` block.
+
+Checks of different types are supported (mandatory parameters are marked with `*` sign).
+- http
+- icmp
+- tcp
+- getfile
+- mysql_query
+- mysql_query_unixtime
+- mysql_replication
+- pgsql_query
+- pgsql_query_unixtime
+- pgsql_replication
+- redis_pubsub
+- clickhouse_query
+- clickhouse_query_unixtime
+
+### HTTP check
+```
+*type: "http"
+*url: URL to check with GET method
+code: a set of possible HTTP codes for a successful response (slice int, for example `[200,420]` by default only 200)
+answer: Text to search in the HTTP Body of the response
+answer_present: check whether the text is present (by default, or "present") or not ("absent")
+headers: An array of HTTP headers to transfer in an HTTP request
+    {
+        "User-Agent": "custom_user_aget"
+    }
+
+timeout: time to wait for a response
+auth: block containing credentials if http basic authentication is required.
+    "auth": {
+        "user": "username",
+        "password": "S3cr3t!"
+    }
+skip_check_ssl: do not check the validity of the server SSL certificate
+stop_follow_redirects: do not follow HTTP redirects
+cookies: an array of http.Cookie objects (you can pass any parameters from https://golang.org/src/net/http/cookie.go
+    "cookies": [
+        {
+          "name": "test_cookie",
+          "value": "12345"
+        }
+    ]
+```
+
+
+### ICMP Ping Check
+```
+*type: "icmp"
+*host: hostname or IP address to check
+*timeout: time to wait for a response (compared to the average RTT for all attempts)
+*count: number of requests sent
+```
+
+### TCP Ping check (checks that the port is open and responds at the right time)
+```
+*type: "tcp"
+*host: hostname or IP address to check
+*port: TCP port number
+*timeout: time to wait for a response
+attempts: number of attempts to open the port (default 3)
+```
+
+### GetFile check (downloads the file and checks its md5 hash).
+
+Each file is downloaded to the local file system, where the process is started in the embedded file, after verification is deleted.
+It is necessary to consider possible restrictions on the size of the file system.
+```
+*type: "getfile"
+*host: url from where to download the file
+*hash: TCP port number
+```
+
+### Checking Execution of Database Queries
+```
+*type: check type - mysql_query, pgsql_query, clickhouse_query
+*host: database server address
+port: port to connect (if omitted, default ports are used)
+timeout: connection and request execution timeout (connection time and request time are checked separately)
+*sql_query_config: contains query parameters
+**dbname: base name
+**username: username
+**password: password
+query: the query to execute. if omitted, `select 1` is executed and the response is not validated
+response: the response against which the value returned from the base is checked.
+_one_ field is expected in the response. If omitted, only the fact of a successful request is checked.
+```
+```json
+    {
+      "type": "mysql_query",
+      "host": "192.168.132.101",
+      "port": 3306,
+      "timeout": 1s,
+      "sql_query_config": {
+        "username": "username",
+        "dbname": "dbname",
+        "password": "vault: secret / cluster / userA / pass: value",
+        "query": "select regdate from users order by id asc limit 1;",
+        "response": "1278938100"
+      }
+    }
+
+```
+
+### Checking the age of a record in the database
+```
+*type: check type - clickhouse_query_unixtime, mysql_query_unixtime, pgsql_query_unixtime
+*host: database server address
+port: port to connect (if omitted, default ports are used)
+timeout: timeout for connection and request execution
+*sql_query_config: contains query parameters
+*dbname: database name
+*username: username
+*password: password
+query: the query to execute. if omitted, `select 1` is executed and the response is not validated
+difference: maximum difference from the current time. if omitted, no check is performed
+the response expects _one_ field containing an integer in UnixTime format.
+```
+```json
+    {
+      "type": "clickhouse_query_unixtime",
+      "host": "192.168.126.50",
+      "port": 9000,
+      "sql_query_config": {
+        "username": "username",
+        "dbname": "dbname",
+        "password": "she1Haiphae5",
+        "query": "select max (serverTime) from forex.quotes1sec",
+        "difference": "15m"
+      },
+      "timeout": "5s"
+    }
+```
+
+### Checking Database Replication
+```
+Configuring is similar to query validation, instead of the query / response parameters, the tablename and serverlist parameters.
+The tablename contains the name of the table to insert the test record ("repl_test" by default). The serverlist block contains a list of servers to check.
+It is best to include all servers in the cluster (including the master) in the list for better control.
+
+Algorithm of actions: a record with random values ​​id and test_value is inserted into the table on the master.
+Values ​​are selected in the range 1-5 for id and 1-9999 for test_value.
+If the insert was successful, then read from the servers in the serverlist field with the corresponding id.
+If replication works, then the result on each server must match test_value.
+
+*type: check type - mysql_replication, pgsql_replication
+```
+Configuration example:
+```json
+    {
+      "type": "pgsql_replication",
+      "host": "master.pgsql.service.staging.consul",
+      "port": 5432,
+        "sql_repl_config": {
+        "username": "username",
+        "dbname": "dbname",
+        "password": "ieb6aj2Queet",
+        "tablename": "repl_test",
+        "serverlist": [
+          "pgsql-main-0.node.staging.consul",
+          "pgsql-main-1.node.staging.consul",
+          "pgsql-main-2.node.staging.consul"
+        ]
+      }
+    }
+```
+The table with this DDL should be created:
+```
+    CREATE TABLE repl_test (
+       id int primary key,
+       test_value int
+    )
+```
+
+### Checking Redis Pub/Sub
+```
+* type: check type - redis_pubsub
+* host: server address
+port: port to connect (if omitted, default ports are used)
+timeout: timeout for connection and request execution
+* pubsub_config: contains request parameters
+* channel: the name of the channel to subscribe
+password: password
+
+After a successful subscription, any one message (of type other than Subscription / Pong) with data is expected in the channel.
+When calculating the timeout, you must take into account:
+
+1) time of connection to the server. 2) the time to complete the subscription and wait for confirmation in the Subscription message, the time to receive the data message.
+```
+```json
+    {
+      "type": "redis_pubsub",
+      "host": "master.redis.service.staging.consul",
+      "pubsub_config": {
+        "channels": [
+          "ticks_EURUSD",
+          "ticks_USBRUB"
+        ]
+      },
+      "timeout": 5s
+    }
+```
+
+### Passive checks
+```
+If an active check is undesirable or impossible for some reason, a passive check will allow you to track the check status.
+
+    {
+      "name": "passive check of service A",
+      "type": "passive",
+      "timeout": 5m
+    }
+
+Outs are accepted by a GET request to the endpoint http: // checker / check / ping / <check uuid>.
+A list of all UUIDs can be obtained with a GET request to the endpoint http: // checker / list, or by the CLI command list.
+To generate via WEB, JWT authorization is required, the token is generated by the CLI command gentoken (see).
+
+  curl -H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJPaTNvb3hpZTRhaWtlaW1vb3pvOEVnYWk2YWl6OXBvaCIsImF1ZCI6ImFkbWluIn0.wjCl69SvEbHFiMSK-iRXOIvcd5wkO-MCF0oQsNrqVL8" http: // checker / list
+
+```
+
+## importing services from Consul
+// TODO describe
+consul_catalog
+
+## Metrics
+
+Metrics in prometheus format are published at the / metrics endpoint.
+
+The `sched_ *` metrics reflect the work of the internal scheduling cycle.
+
+Metrics ʻalerts_by_event_type` - statistics on alerts in the context of various events.
+
+Metrics ʻevents_by_ * `- statistics on events in the context of various projects and audits.
+
+Metrics `check_duration` - statistics on the execution time of checks.
+
+
+## Web API
+
+/check/ping/ <check-uuid> - update passive check status
+
+/check/status/ <check-uuid> - request the check status
