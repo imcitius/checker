@@ -82,7 +82,7 @@ func upHandler(m *tb.Message, a *AlertConfigs) {
 }
 
 func paHandler() {
-	config.Log.Infof("Bot request /pa")
+	config.Log.Infof("Bot request /qa")
 
 	status.MainStatus = "quiet"
 	SendChatOps("All messages ceased")

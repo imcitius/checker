@@ -10,7 +10,7 @@ func ListElements() string {
 
 	list := ""
 	for _, p := range config.Config.Projects {
-		//list = list + fmt.Sprintf("Project: %s, seq errors count: %d\n", p.Name, status.Statuses.Projects[p.Name].SeqErrorsCount)
+		list = list + fmt.Sprintf("Project: %s\n", p.Name)
 		for _, h := range p.Healthchecks {
 			list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)
 			for _, c := range h.Checks {

@@ -149,7 +149,7 @@ type Check struct {
 	Count int
 
 	// allowed seq fails number
-	AllowFails int
+	AllowFails int `koanf:"allow_fails"`
 
 	// http checks optional parameters
 	Code          []int

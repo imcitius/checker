@@ -27,9 +27,9 @@ var (
 
 	help = "This is checker version " + config.Version + "\n" +
 		"Please use following commands: \n" +
-		"/pa,/ua - Pause/Unpause all alerts (or use main keyboard buttons)\n" +
-		"/pp,/up - Pause/Unpause specific project (or use message button)\n" +
-		"/pu,/uu - Pause/Unpause specific check by UUID (or use message button)\n" +
+		"/qa,/la - Pause/Unpause all alerts (or use main keyboard buttons)\n" +
+		"/qp,/lp - Pause/Unpause specific project (or use message button)\n" +
+		"/qu,/lu - Pause/Unpause specific check by UUID (or use message button)\n" +
 		"/list - List all projects and checks with UUID's\n"
 )
 
@@ -217,12 +217,12 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Fatal(err)
 	}
 
-	bot.Handle("/pa", func(m *tb.Message) { paHandler() })
-	bot.Handle("/ua", func(m *tb.Message) { uaHandler() })
-	bot.Handle("/pp", func(m *tb.Message) { ppHandler(m, a) })
-	bot.Handle("/up", func(m *tb.Message) { upHandler(m, a) })
-	bot.Handle("/pu", func(m *tb.Message) { puHandler(m, a) })
-	bot.Handle("/uu", func(m *tb.Message) { uuHandler(m, a) })
+	bot.Handle("/qa", func(m *tb.Message) { paHandler() })
+	bot.Handle("/la", func(m *tb.Message) { uaHandler() })
+	bot.Handle("/qp", func(m *tb.Message) { ppHandler(m, a) })
+	bot.Handle("/lp", func(m *tb.Message) { upHandler(m, a) })
+	bot.Handle("/qu", func(m *tb.Message) { puHandler(m, a) })
+	bot.Handle("/lu", func(m *tb.Message) { uuHandler(m, a) })
 	bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
 
 	bot.Handle(&btnHelp, func(m *tb.Message) {
