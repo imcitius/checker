@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"my/checker/config"
 )
 
 func init() {
@@ -11,9 +12,9 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of Hugo",
-	Long:  `All software has versions. This is Hugo's`,
+	Short: "Print the version number of Checker",
+	Long:  `All software has versions. This is Hugo's (no, Checker's of course ;)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Hugo Static Site Generator v0.9 -- HEAD")
+		fmt.Println("Checker version: " + config.Version + "" + config.VersionBuild)
 	},
 }

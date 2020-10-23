@@ -21,9 +21,9 @@ Available Commands:
   check       Run scheduler and execute checks
   gentoken    Generate auth token
   help        Help about any command
-  list        List Projects, Healthchecks, check UUIDs
+  list        List config elements
   testcfg     unmarshal config file into config structure
-  version     Print the version number of Hugo
+  version     Print the version number of Checker
 
 Flags:
   -b, --bots                        start listening messenger bots (boolean default true)

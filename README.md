@@ -20,12 +20,12 @@ Usage:
   checker [command]
 
 Available Commands:
-  check Run scheduler and execute checks
-  gentoken Generate auth token
-  help Help about any command
-  list List Projects, Healthchecks, check UUIDs
-  testcfg unmarshal config file into config structure
-  version Print the version number of Hugo
+  check       Run scheduler and execute checks
+  gentoken    Generate auth token
+  help        Help about any command
+  list        List config elements
+  testcfg     unmarshal config file into config structure
+  version     Print the version number of Checker
 
 Flags:
   -b, --bots start listening messenger bots (boolean default true)
