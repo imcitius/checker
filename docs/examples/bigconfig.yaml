@@ -1,0 +1,94 @@
+---
+defaults:
+  timer_step: 5s
+  http_port: '80'
+  parameters:
+    run_every: 300s
+    min_health: 1
+    allow_fails: 0
+    noncrit_alert: tg_staging
+    crit_alert: tg_staging
+    command_channel: tg_staging_test
+    mode: loud
+    periodic_report_time: 1800s
+    ssl_expiration_period: 720h
+alerts:
+  - name: tg_staging
+    type: telegram
+    bot_token: vault:secret/checker/staging/tokens:telegram_token
+    noncritical_channel: -237762717
+    critical_channel: -237762717
+  - name: tg_staging_test
+    type: telegram
+    bot_token: vault:secret/checker/staging/tokens:telegram_token
+    noncritical_channel: 1390752
+    critical_channel: 1390752
+projects:
+  - name: staging
+    healthchecks:
+      - name: back
+        checks:
+          - type: http
+            host: http://app.service.staging.consul/monitor/status.php
+            answer: IronTrade OK
+            code:
+              - 200
+            timeout: 2s
+      - name: helpdesk
+        checks:
+          - type: http
+            host: http://helpdesk.service.staging.consul/api/are-you-alive
+            answer: HelpdeskIrontrade OK
+            code:
+              - 200
+            timeout: 2s
+      - name: web
+        checks:
+          - type: http
+            host: http://web.service.staging.consul
+            answer: Trading platform
+            code:
+              - 200
+            timeout: 2s
+      - name: ws
+        checks:
+          - type: http
+            host: http://ws.service.staging.consul/healthcheck
+            code:
+              - 200
+            timeout: 2s
+      - name: cryptoindex
+        checks:
+          - type: http
+            host: http://cryptoindex.service.staging.consul:8082/healthcheck
+            code:
+              - 200
+            timeout: 2s
+      - name: pgsql-main
+        checks:
+          - type: pgsql_replication
+            host: master.pgsql.service.staging.consul
+            port: 5432
+            sql_repl_config:
+              dbname: repltest
+              username: repltest
+              password: vault:secret/staging/pgsql-main/repltest/pass:value
+              tablename: repl_test
+              serverlist:
+                - pgsql-main-0.node.staging.consul
+                - pgsql-main-1.node.staging.consul
+                - pgsql-main-2.node.staging.consul
+      - name: pgsql-aux
+        checks:
+          - type: pgsql_replication
+            host: master.pgsql-aux.service.staging.consul
+            port: 5432
+            sql_repl_config:
+              dbname: repltest
+              username: repltest
+              password: vault:secret/staging/pgsql-aux/repltest/pass:value
+              tablename: repl_test
+              serverlist:
+                - pgsql-aux-0.node.staging.consul
+                - pgsql-aux-1.node.staging.consul
+                - pgsql-aux-2.node.staging.consul
