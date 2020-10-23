@@ -151,12 +151,12 @@ With the help of messages to the bot, you can manage alerts and the mode of chec
 Command line switch
 The following commands are supported:
 
-*/pa* with a regular chat message - completely disables all notifications (analogue of quiet in the defaults block)
+*/qa* with a regular chat message - completely disables all notifications (analogue of quiet in the defaults block)
 
-*/ua* with a regular message in the chat - turns on all notifications (analogous to loud in the defaults block)
+*/la* with a regular message in the chat - turns on all notifications (analogous to loud in the defaults block)
 
 Commands for managing alerts for the specified item.
-The `/pp,/up <project_name>` and `/pu,/uu <UUID>`  commands control project alerts and specific checks.
+The `/qp,/lp <project_name>` and `/qu,/lu <UUID>`  commands control project alerts and specific checks.
 They can be sent as a regular chat message, or as a response to a specific alert.
 
 In case of response to an alert, the project name or verification UUID is extracted from this alert.
@@ -407,6 +407,6 @@ Metrics `check_duration` - statistics on the execution time of checks.
 
 ## Web API
 
-/check/ping/ <check-uuid> - update passive check status
+`/check/ping/<check-uuid>` - update passive check status
 
-/check/status/ <check-uuid> - request the check status
+`/check/status/<check-uuid>` - request the check status
