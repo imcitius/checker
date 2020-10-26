@@ -38,10 +38,10 @@ jobs:
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -v -i -ldflags "-X my/checker/config.Version=${VERSION} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${BINARY_NAME}
+        run: go build -v -i -ldflags "-X my/checker/config.Version=${{ env.VERSION }} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${{ env.BINARY_NAME }}
 
       - name: Compress binary
-        run: tar -czvf ${BINARY_NAME}-${VERSION}-linux-amd64.tgz build/${BINARY_NAME}
+        run: tar -czvf ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz build/${{ env.BINARY_NAME }}
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
