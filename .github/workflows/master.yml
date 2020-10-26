@@ -45,7 +45,7 @@ jobs:
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: checker
+          name: ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz
           path: ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz
 
       - name: Build and push Docker images

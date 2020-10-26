@@ -42,7 +42,7 @@ jobs:
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: checker
+          name: ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz
           path: ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz
 
       - name: Build and push Docker images
@@ -59,9 +59,9 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz
-          asset_name: checker
+          asset_name: ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz
           tag: ${{ github.ref }}
           overwrite: true
-          body: "Checker release ${{ env.VERSION }}"
+          body: "Checker release ${{ env.VERSION  }}"
         env:
           BINARY_NAME: "checker"
