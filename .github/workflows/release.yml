@@ -10,6 +10,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    env:
+      BINARY_NAME: "checker"
+      VERSION: ${GITHUB_REF##*/}
+
     steps:
 
       - name: Set up Go 1.x
@@ -26,12 +30,12 @@ jobs:
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -v -i -ldflags "-X my/checker/config.Version=${GITHUB_REF##*/} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${BINARY_NAME}
+        run: go build -v -i -ldflags "-X my/checker/config.Version=${VERSION} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${BINARY_NAME}
         env:
           BINARY_NAME: "checker"
 
       - name: Compress binary
-        run: tar -czvf ${BINARY_NAME}-${GITHUB_REF##*/}-linux_amd64.tgz build/${BINARY_NAME}
+        run: tar -czvf ${BINARY_NAME}-${VERSION}-linux-amd64.tgz build/${BINARY_NAME}
         env:
           BINARY_NAME: "checker"
 
@@ -39,7 +43,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: checker
-          path: ${BINARY_NAME}-${GITHUB_REF##*/}-linux_amd64.tgz
+          path: ${BINARY_NAME}-${VERSION}-linux-amd64.tgz
         env:
           BINARY_NAME: "checker"
 
@@ -56,7 +60,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${BINARY_NAME}-${GITHUB_REF}-linux_amd64.tgz
+          file: ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz
           asset_name: checker
           tag: ${{ github.ref }}
           overwrite: true
