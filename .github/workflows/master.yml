@@ -15,6 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      - uses: zweitag/github-actions/global-variables@master
+        with:
+          file: '.github-actions.env'
+
+      - name: Generate build number
+        uses: einaregilsson/build-number@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
@@ -29,15 +38,16 @@ jobs:
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -v -i -ldflags "-X my/checker/config.Version=${GITHUB_REF} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${BINARY_NAME}
-        env:
-          BINARY_NAME: "checker"
+        run: go build -v -i -ldflags "-X my/checker/config.Version=${BUILD_NUMBER} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${BINARY_NAME}
+
+      - name: Compress binary
+        run: tar -xzvf ${BINARY_NAME}-${BUILD_NUMBER}-linux_amd64.tgz build/${BINARY_NAME}
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: checker
-          path: build/checker
+          path: ${BINARY_NAME}-${GITHUB_REF}-linux_amd64.tgz
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v1.1.0
