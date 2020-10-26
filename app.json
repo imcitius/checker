@@ -1,0 +1,9 @@
+{
+  "name": "checker",
+  "description": "checker PoC on heroku",
+  "keywords": [
+    "checker"
+  ],
+  "website": "https://github.com/imcitius/checker/",
+  "repository": "https://github.com/imcitius/checker/"
+}

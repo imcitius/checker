@@ -1,0 +1,29 @@
+---
+defaults:
+  timer_step: 5s
+  http_port: '80'
+  parameters:
+    run_every: 10s
+    min_health: 1
+    allow_fails: 0
+    mode: loud
+    periodic_report_time: 10s
+    ssl_expiration_period: 720h
+projects:
+  - name: google
+    parameters:
+      run_every: 60s
+    healthchecks:
+      - name: tcp_test
+        checks:
+          - type: tcp
+            host: google.com
+            port: 80
+            timeout: 1s
+            attempts: 3
+        parameters:
+          run_every: 60s
+      - name: http checks
+        checks:
+          - type: http
+            host: https://google.com
