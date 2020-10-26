@@ -31,7 +31,7 @@ jobs:
           BINARY_NAME: "checker"
 
       - name: Compress binary
-        run: tar -xzvf ${BINARY_NAME}-${GITHUB_REF##*/}-linux_amd64.tgz build/${BINARY_NAME}
+        run: tar -czvf ${BINARY_NAME}-${GITHUB_REF##*/}-linux_amd64.tgz build/${BINARY_NAME}
         env:
           BINARY_NAME: "checker"
 

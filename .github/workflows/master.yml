@@ -35,7 +35,7 @@ jobs:
         run: go build -v -i -ldflags "-X my/checker/config.Version=${GITHUB_REF##*/} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${BINARY_NAME}
 
       - name: Compress binary
-        run: tar -xzvf ${BINARY_NAME}-${GITHUB_REF##*/}-linux_amd64.tgz build/${BINARY_NAME}
+        run: tar -czvf ${BINARY_NAME}-${GITHUB_REF##*/}-linux_amd64.tgz build/${BINARY_NAME}
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
