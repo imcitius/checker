@@ -26,8 +26,7 @@ jobs:
 
       - name: Get Branch
         run: |
-          raw=$(git branch -r --contains ${{ github.ref }})
-          branch=${raw/origin\/}
+          branch=$( echo ${{ github.ref }} | sed 's/^.*\/.*\///g')
           echo ::set-env name=VERSION::$branch
 
       - name: Get dependencies
@@ -35,22 +34,16 @@ jobs:
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -v -i -ldflags "-X my/checker/config.Version=${VERSION} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${BINARY_NAME}
-        env:
-          BINARY_NAME: "checker"
+        run: go build -v -i -ldflags "-X my/checker/config.Version=${{ env.VERSION }} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${{ env.BINARY_NAME }}
 
       - name: Compress binary
-        run: tar -czvf ${BINARY_NAME}-${VERSION}-linux-amd64.tgz build/${BINARY_NAME}
-        env:
-          BINARY_NAME: "checker"
+        run: tar -czvf ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz -C build ${{ env.BINARY_NAME }}
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
           name: checker
-          path: ${BINARY_NAME}-${VERSION}-linux-amd64.tgz
-        env:
-          BINARY_NAME: "checker"
+          path: ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v1.1.0
@@ -69,6 +62,6 @@ jobs:
           asset_name: checker
           tag: ${{ github.ref }}
           overwrite: true
-          body: "Checker release ${GITHUB_REF}"
+          body: "Checker release ${{ env.VERSION }}"
         env:
           BINARY_NAME: "checker"
