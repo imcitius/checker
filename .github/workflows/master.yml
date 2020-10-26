@@ -44,6 +44,6 @@ jobs:
         with:
           username: ${{ secrets.REGISTRY_LOGIN }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-          repository: ${{ secrets.REGISTRY_LOGIN }} /checker
+          repository: ${{ secrets.REGISTRY_LOGIN }}/checker
           tag_with_ref: true
           tag_with_sha: true
