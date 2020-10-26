@@ -1,3 +1,5 @@
+![Go](https://github.com/imcitius/checker/workflows/Go/badge.svg)
+
 ### THIS README IS AUTO-TRANSLATED USING Google Translate.
 If you would like to assist me with proper Russian to English translation, please feel free to send PR's or contact me directly. Thanks.
 
