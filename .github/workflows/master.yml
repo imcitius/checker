@@ -17,7 +17,7 @@ jobs:
 
       - uses: zweitag/github-actions/global-variables@master
         with:
-          file: '.github-actions.env'
+          file: '../../.github-actions.env'
 
       - name: Generate build number
         uses: einaregilsson/build-number@v2
