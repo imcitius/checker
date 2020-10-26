@@ -13,11 +13,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    steps:
+  env:
+    BINARY_NAME: "checker"
 
-      - uses: zweitag/github-actions/global-variables@master
-        with:
-          file: '../../.github-actions.env'
+  steps:
 
       - name: Generate build number
         uses: einaregilsson/build-number@v2
