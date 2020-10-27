@@ -2,6 +2,7 @@
 defaults:
   timer_step: 5s
   http_port: '80'
+  token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
   parameters:
     run_every: 10s
     min_health: 1

@@ -417,3 +417,7 @@ Some web endpoints require JWT authorization. JWT token is generated using the C
 The token is generated using encryption key specified in the configuration in the `defaults.token_encryption_key` parameter, or in the ENV variable.
 ENV variable has higher priority.
 Also loading a key from a Vault is supported.
+
+Test token for example config in [docs/examples/google.yaml](docs/examples/google.yaml) is:
+`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJPaTNvb3hpZTRhaWtlaW1vb3pvOEVnYWk2YWl6OXBvaCIsImF1ZCI6ImFkbWluIn0.MhkG4ox_-OeVSrn9yexLjpMJoYLAhiROySByiUnq2Nk`
+ 
