@@ -32,13 +32,13 @@ Available Commands:
   version     Print the version number of Checker
 
 Flags:
-  -b, --bots start listening messenger bots (boolean default true)
-  -c, --config string config file
-  -f, --configformat string config file format (default "yaml")
-  -s, --configsource string config file source: file or consul
-  -w, --configwatchtimeout string config watch period (default "5s")
-  -D, --debugLevel string Debug level: Debug, Info, Warn, Error, Fatal, Panic (default "info")
-  -h, --help help for checker
+  -b, --bots                        start listening messenger bots (default true)
+  -c, --config string               config file
+  -f, --configformat string         config file format (default "yaml")
+  -s, --configsource string         config file source: file, consul, s3
+  -w, --configwatchtimeout string   config watch period (default "5s")
+  -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
+  -h, --help                        help for checker
 
 Use "checker [command] --help" for more information about a command.
 ```
@@ -411,8 +411,8 @@ Metrics `check_duration` - statistics on the execution time of checks.
 ## Web API
 
 Some web endpoints require JWT authorization. JWT token is generated using the CLI command `checker gentoken`.
-The token is generated using encryption key specified in `defaults.token_encryption_key` configuration parameter, or using ENV variable (ENV has higher priority).
-Also loading a key from a Vault is supported.
+The token generated using encryption key specified in `defaults.token_encryption_key` configuration parameter, or using ENV variable (ENV has higher priority).
+Hashicorp Vault also supported.
 
 Test token for example config in [docs/examples/google.yaml](docs/examples/google.yaml) is:
 `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJPaTNvb3hpZTRhaWtlaW1vb3pvOEVnYWk2YWl6OXBvaCIsImF1ZCI6ImFkbWluIn0.MhkG4ox_-OeVSrn9yexLjpMJoYLAhiROySByiUnq2Nk`
