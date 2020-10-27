@@ -9,6 +9,8 @@ If you would like to assist me with proper Russian to English translation, pleas
 The utility intending to be a universal daemon capable of performing periodic checks (health checks) of various IT systems,
 send alerts and perform some actions if the check status changes.
 
+[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
+
 Configuration storage implemented using the [Koanf](https://github.com/knadh/koanf) library.
 By default, the configuration loading from `config.yaml` file in the current directory.
 
@@ -84,11 +86,10 @@ If the PORT environment variable is set, the port number from it is used.
 
 ### in defaults and projects
 ```
-run_every: The frequency of testing and running alerts.
+run_every: 600s The frequency of testing and running alerts (in seconds).
 
-// TODO check the feature
+// TODO check the features
 min_health: the minimum number of live checks within the healthchck that does not put the project in critical status
-
 allow_fails: the number of checks that have failed to the critical status that can pass before the alert is sent to the critical channel
 
 mode: notification mode, in loud mode alerts are sent to carts, in quiet mode they are only output to stdout.
@@ -108,11 +109,10 @@ mentions: who to notify in alerts for this project. it is convenient for all cha
 
 ```
 
-It should be borne in mind that the `run_every` parameter must be a multiple of the` timer_step` parameter.
-
+Keep in mind that the `run_every` parameter must be a multiple of the` timer_step` parameter.
 For example, if the internal timer fires every 5 seconds, the check can be performed every number of seconds in multiples of 5 (60 seconds, 75 seconds, etc.)
 
-## An "actor" is an action that must be performed when the verification status changes (actor_up'actor_down).
+## An "actor" is an action that must be performed when the verification status changes (actor_up/actor_down).
 Actors (actions) are described in the ʻactors` block.
 
 // TODO
