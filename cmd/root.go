@@ -91,7 +91,10 @@ func initConfig() {
 		"config.format":         configFormat,
 	}, "."), nil)
 
-	config.Koanf.Load(env.Provider("PORT", ".", func(s string) string { return "defaults.http.port" }), nil)
+	config.Koanf.Load(env.Provider("PORT", ".", func(s string) string {
+		return "defaults.http.port"
+	}), nil)
+
 	config.Koanf.Load(env.Provider("CONSUL_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)

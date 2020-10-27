@@ -48,7 +48,7 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 		return
 	}
 
-	addr = fmt.Sprintf(":%s", Config.Defaults.HTTPPort)
+	addr = fmt.Sprintf(":%s", config.Koanf.String("defaults.http.port"))
 
 	server = new(http.Server)
 	server.Addr = addr
