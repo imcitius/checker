@@ -411,6 +411,7 @@ Metrics `check_duration` - statistics on the execution time of checks.
 ## Web API
 
 `/check/ping/<check-uuid>` - update passive check status
+
 `/check/status/<check-uuid>` - request the check status
 
 Some web endpoints require JWT authorization. JWT token is generated using the CLI command `checker gentoken`.
