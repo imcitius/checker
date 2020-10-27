@@ -414,9 +414,28 @@ Metrics `check_duration` - statistics on the execution time of checks.
 
 `/check/status/<check-uuid>` - request the check status
 
+`/list` - returns all checks defined (require auth).
+```
+Project: google
+	Healthcheck: tcp_test
+		Name:
+		UUID: 271099c2-fd93-5d39-9d58-de0a733921bb (mode loud)
+	Healthcheck: http checks
+		Name:
+		UUID: 654f00b3-b182-5cc7-bc8b-c61626a78314 (mode loud)
+```
+
+`/alert` - webhook to fire alerts from other sources. Method POST, accepts json payload:
+```json
+{"project":"my_cool_project", "text":"critical testalert", "severity":"info"}
+``` 
+
+`/healthcheck` - own healthcheck url. Returns code 200 and text 'Ok!' if works as expected.
+
+`/metrics` - prometheus format metrics (require auth).
+
 Some web endpoints require JWT authorization. JWT token is generated using the CLI command `checker gentoken`.
-The token is generated using encryption key specified in the configuration in the `defaults.token_encryption_key` parameter, or in the ENV variable.
-ENV variable has higher priority.
+The token is generated using encryption key specified in `defaults.token_encryption_key` configuration parameter, or using ENV variable (ENV has higher priority).
 Also loading a key from a Vault is supported.
 
 Test token for example config in [docs/examples/google.yaml](docs/examples/google.yaml) is:

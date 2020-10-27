@@ -55,11 +55,12 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 	config.Log.Infof("HTTP listen on: %s", addr)
 
 	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/list", list)
 	http.HandleFunc("/alert", incomingAlert)
 	http.HandleFunc("/check/ping/", checkPing)
 	http.HandleFunc("/check/status/", checkStatus)
 	http.HandleFunc("/healthcheck", healthCheck)
+
+	http.Handle("/listChecks", authHandler(http.HandlerFunc(listChecks)))
 	http.Handle("/metrics", promhttp.Handler())
 
 	if err := server.ListenAndServe(); err != nil {

@@ -91,9 +91,9 @@ func checkPing(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Pong\n")
 }
 
-func list(w http.ResponseWriter, r *http.Request) {
+func listChecks(w http.ResponseWriter, r *http.Request) {
 
-	if ok := strings.HasPrefix(r.URL.Path, "/list"); !ok {
+	if ok := strings.HasPrefix(r.URL.Path, "/listChecks"); !ok {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
@@ -108,32 +108,7 @@ func list(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "Web: need auth")
 		return
 	} else {
-		verifier, err := jwt.NewVerifierHS(jwt.HS256, config.TokenEncryptionKey)
-		if err != nil {
-			io.WriteString(w, "cannot construct jwt verifier")
-			config.Log.Info("cannot construct jwt verifier")
-			return
-		}
-
-		newToken, err := jwt.ParseAndVerifyString(r.Header.Get("Authorization"), verifier)
-		if err != nil {
-			io.WriteString(w, "Web: token invalid")
-			config.Log.Info("Web: token invalid")
-			return
-		}
-
-		var newClaims jwt.StandardClaims
-		err = json.Unmarshal(newToken.RawClaims(), &newClaims)
-		if err != nil {
-			io.WriteString(w, "Web: token decoding failed")
-			config.Log.Info("Web: token decoding failed")
-			return
-
-		}
-
-		var claimed = newClaims.IsForAudience("admin")
-		var valid = newClaims.IsValidAt(time.Now())
-
+		claimed, valid := checkWebAuth(r.Header.Get("Authorization"))
 		if claimed && valid {
 			io.WriteString(w, reports.ListElements())
 		} else {
@@ -141,6 +116,33 @@ func list(w http.ResponseWriter, r *http.Request) {
 			config.Log.Info("Web: unauthorized")
 		}
 	}
+}
+
+func checkWebAuth(authHeader string) (bool, bool) {
+
+	verifier, err := jwt.NewVerifierHS(jwt.HS256, config.TokenEncryptionKey)
+	if err != nil {
+		config.Log.Info("cannot construct jwt verifier")
+		return false, false
+	}
+
+	newToken, err := jwt.ParseAndVerifyString(authHeader, verifier)
+	if err != nil {
+		config.Log.Info("Web: token invalid")
+		return false, false
+	}
+
+	var newClaims jwt.StandardClaims
+	err = json.Unmarshal(newToken.RawClaims(), &newClaims)
+	if err != nil {
+		config.Log.Info("Web: token decoding failed")
+		return false, false
+	}
+
+	claimed := newClaims.IsForAudience("admin")
+	valid := newClaims.IsValidAt(time.Now())
+
+	return claimed, valid
 }
 
 func checkStatus(w http.ResponseWriter, r *http.Request) {
@@ -181,4 +183,24 @@ func checkStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	io.WriteString(w, fmt.Sprintf("%s", s))
+}
+
+func authHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if r.Header.Get("Authorization") == "" {
+			config.Log.Info("Web: need auth")
+			io.WriteString(w, "Web: need auth")
+			return
+		} else {
+			claimed, valid := checkWebAuth(r.Header.Get("Authorization"))
+			if claimed && valid {
+				config.Log.Info("auth pass")
+				next.ServeHTTP(w, r)
+			} else {
+				io.WriteString(w, "Web: unauthorized")
+				config.Log.Info("Web: unauthorized")
+			}
+		}
+	})
 }
