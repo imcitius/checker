@@ -410,6 +410,13 @@ Metrics `check_duration` - statistics on the execution time of checks.
 
 ## Web API
 
+Some web endpoints require JWT authorization. JWT token is generated using the CLI command `checker gentoken`.
+The token is generated using encryption key specified in `defaults.token_encryption_key` configuration parameter, or using ENV variable (ENV has higher priority).
+Also loading a key from a Vault is supported.
+
+Test token for example config in [docs/examples/google.yaml](docs/examples/google.yaml) is:
+`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJPaTNvb3hpZTRhaWtlaW1vb3pvOEVnYWk2YWl6OXBvaCIsImF1ZCI6ImFkbWluIn0.MhkG4ox_-OeVSrn9yexLjpMJoYLAhiROySByiUnq2Nk`
+ 
 `/check/ping/<check-uuid>` - update passive check status
 
 `/check/status/<check-uuid>` - request the check status
@@ -432,12 +439,4 @@ Project: google
 
 `/healthcheck` - own healthcheck url. Returns code 200 and text 'Ok!' if works as expected.
 
-`/metrics` - prometheus format metrics (require auth).
-
-Some web endpoints require JWT authorization. JWT token is generated using the CLI command `checker gentoken`.
-The token is generated using encryption key specified in `defaults.token_encryption_key` configuration parameter, or using ENV variable (ENV has higher priority).
-Also loading a key from a Vault is supported.
-
-Test token for example config in [docs/examples/google.yaml](docs/examples/google.yaml) is:
-`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJPaTNvb3hpZTRhaWtlaW1vb3pvOEVnYWk2YWl6OXBvaCIsImF1ZCI6ImFkbWluIn0.MhkG4ox_-OeVSrn9yexLjpMJoYLAhiROySByiUnq2Nk`
- 
+`/metrics` - prometheus format metrics. Please note security concerns, because Prometheus does not allow custom headers in scrape configs.
