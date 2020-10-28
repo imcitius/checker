@@ -8,17 +8,17 @@ If you would like to assist me with proper Russian to English translation, pleas
 
 The utility intending to be a universal daemon capable of performing periodic checks (health checks) of various IT systems,
 send alerts and perform some actions if the check status changes.
-
-[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
-
 Configuration storage implemented using the [Koanf](https://github.com/knadh/koanf) library.
 By default, the configuration loading from `config.yaml` file in the current directory.
+
+## Quick running test instance 
+[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
 
 You can find example configurations files in [docs/examples](docs/examples) folder.
 `google.yaml` is very simple config, only checking google.com with log output, and no alerting methods defined.
 This configurations is used when running default service on Heroku.
 
-`bigconfing.yaml` contains more examples of healthchecks for various services, divided to two virtual projects.
+`bigconfing.yaml` contains more robust example of healthchecks for various services, divided to two virtual projects.
 
 Heroku button above allow to run test Checker service on Heroku free-tier, with simple config. You can update configuration of this test service later using Heroku's CLI:
 `heroku apps -A` - list running apps.
@@ -61,6 +61,9 @@ EOF
 ```
 Then copy this new config into clipboard, run in dyno `cat << EOF > docs/examples/google.yaml` and paste config into.
 Checker will load new config on the fly, and will start checking your website. 
+
+How to register your own Telegram bot and get credentials in [Telegram FAQ](https://core.telegram.org/bots/faq).
+
 
 ```
 $ ./checker
