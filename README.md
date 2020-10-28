@@ -19,7 +19,7 @@ You can find example configurations files in [docs/examples](docs/examples) fold
 `google.yaml` is very simple config, only checking google.com with log output, and no alerting methods defined.
 This configurations is used when running default service on Heroku.
 
-`bigconfing.yaml` contains more robust example of healthchecks for various services, divided to two virtual projects.
+`bigconfig.yaml` contains more robust example of healthchecks for various services, divided to two virtual projects.
 
 Heroku button above allow to run test Checker service on Heroku free-tier, with simple config. You can update configuration of this test service later using Heroku's CLI:
 
