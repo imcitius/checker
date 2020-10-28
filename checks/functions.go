@@ -16,7 +16,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 
 	if tempErr != nil {
 		err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
-		config.Log.Errorf("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
+		config.Log.Errorf("(%s) failure: %+v, took %d millisec", checkRandomId, err, t.Milliseconds())
 		//config.Log.Debugf("Check mode: %s", status.GetCheckMode(check))
 
 		if check.AllowFails > 0 {
@@ -65,7 +65,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		status.Statuses.Checks[check.UUid].LastResult = false
 
 	} else {
-		config.Log.Warnf("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
+		config.Log.Warnf("(%s) success, took %d millisec", checkRandomId, t.Milliseconds())
 		metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
 
 		if status.Statuses.Projects[project.Name].SeqErrorsCount > 0 {
