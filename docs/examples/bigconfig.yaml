@@ -25,6 +25,9 @@ alerts:
     critical_channel: -10543985
 projects:
   - name: staging
+    mentions:
+      - "@main_admin"
+      - "@vasyan"
     healthchecks:
       - name: back
         checks:
