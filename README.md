@@ -31,7 +31,7 @@ There is no direct way to update config file in running dyno (Heroku's container
 
 `heroku ps:exec -a <app-name>` - ssh into running dyno with checker.
 
-Then prepare new your own testing config. Last string of prepared config should contain only `EOF`, for example:
+Then prepare your new own testing config. Last string of prepared config should contain only `EOF`, for example:
 ```yaml
 ---
 defaults:
@@ -64,6 +64,8 @@ EOF
 ```
 Then copy this new config into clipboard, run in dyno `cat << EOF > docs/examples/google.yaml` and paste config into.
 Checker will load new config on the fly, and will start checking your website. 
+
+Of course, you always can fork this project (and please do it), update example config, and run your own version with simple `git push`.
 
 How to register your own Telegram bot and get credentials you will find in [Telegram FAQ](https://core.telegram.org/bots/faq).
 
