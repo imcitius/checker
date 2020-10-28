@@ -15,6 +15,7 @@ By default, the configuration loading from `config.yaml` file in the current dir
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
 
 You can find example configurations files in [docs/examples](docs/examples) folder.
+
 `google.yaml` is very simple config, only checking google.com with log output, and no alerting methods defined.
 This configurations is used when running default service on Heroku.
 
