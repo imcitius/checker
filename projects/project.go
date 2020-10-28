@@ -87,7 +87,7 @@ func (p *Project) Send(text string) {
 
 	err := p.GetProjectChannel().Alert(text, "alert")
 	if err != nil {
-		config.Log.Infof("Send alert error for project %s: %s", p.Name, err)
+		config.Log.Debugf("Send alert error for project %s: %s", p.Name, err)
 	}
 }
 

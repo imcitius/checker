@@ -122,7 +122,7 @@ func (m TgMessage) GetUUID() (string, error) {
 		uuid   string
 		err    error
 	)
-	config.Log.Infof("message: %v\n", m.Text)
+	config.Log.Debugf("message: %v\n", m.Text)
 
 	if m.Payload != "" {
 		uuid = m.Payload
@@ -198,7 +198,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 	a, err := GetCommandChannel()
 	if err != nil {
-		config.Log.Infof("GetCommandChannel error: %s", err)
+		config.Log.Errorf("GetCommandChannel error: %s", err)
 	}
 
 	defer wg.Done()

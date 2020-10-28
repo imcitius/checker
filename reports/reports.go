@@ -24,7 +24,7 @@ func ListElements() string {
 
 	if config.Config.ConsulCatalog.Enabled {
 		for _, p := range config.ProjectsCatalog {
-			config.Log.Infof("%s", p.Name)
+			config.Log.Debugf("%s", p.Name)
 			//list = list + fmt.Sprintf("Project: %s, seq errors count: %d\n", p.Name, status.Statuses.Projects[p.Name].SeqErrorsCount)
 			for _, h := range p.Healthchecks {
 				list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)

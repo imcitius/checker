@@ -34,7 +34,7 @@ func init() {
 		if p != nil && p.Parameters.SSLExpirationPeriod != "" {
 			SslExpTimeout, err = time.ParseDuration(p.Parameters.SSLExpirationPeriod)
 			if err != nil {
-				config.Log.Infof("cannot parse ssl expiration timeout: %s in project %s", err, p.Name)
+				config.Log.Errorf("cannot parse ssl expiration timeout: %s in project %s", err, p.Name)
 			}
 		}
 
@@ -43,7 +43,7 @@ func init() {
 		config.Log.Debugf("test: %s\n", c.Host)
 		_, err = url.Parse(c.Host)
 		if err != nil {
-			config.Log.Fatal(err)
+			config.Log.Errorf("Cannot parse http check url: %s", err)
 		}
 		checkNum++
 

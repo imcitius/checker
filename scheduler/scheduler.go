@@ -110,7 +110,7 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 		if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
 
 			checkRandomId := GetRandomId()
-			config.Log.Infof("(%s) Checking project '%s' check '%s' (type: %s) ... ", checkRandomId, project.Name, healthcheck.Name, check.Type)
+			config.Log.Warnf("(%s) Checking project '%s' check '%s' (type: %s) ... ", checkRandomId, project.Name, healthcheck.Name, check.Type)
 
 			startTime := time.Now()
 

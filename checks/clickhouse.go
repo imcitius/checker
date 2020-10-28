@@ -55,20 +55,20 @@ func init() {
 
 		db, err := sql.Open("clickhouse", connStr)
 		if err != nil {
-			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		err = db.Ping()
 		if err != nil {
-			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
 		defer db.Close()
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
-			config.Log.Printf("Error: Could not query database: %+v", err)
+			config.Log.Errorf("Error: Could not query database: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
 

@@ -62,7 +62,7 @@ func init() {
 
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
-			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
+			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
 		defer db.Close()

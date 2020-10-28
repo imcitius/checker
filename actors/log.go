@@ -9,7 +9,7 @@ type LogActor struct {
 }
 
 func (l *LogActor) Do(a *Actor) error {
-	config.Log.Debugf("Action: %+v (action details)", a)
+	config.Log.Warnf("Action: %+v (action details)", a)
 
 	config.Log.Infof("Log action: %s", a.Name)
 

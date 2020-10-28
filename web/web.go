@@ -52,7 +52,7 @@ func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
 
 	server = new(http.Server)
 	server.Addr = addr
-	config.Log.Infof("HTTP listen on: %s", addr)
+	config.Log.Debugf("HTTP listen on: %s", addr)
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/alert", incomingAlert)

@@ -20,7 +20,7 @@ func init() {
 		)
 
 		errorHeader := fmt.Sprintf("File get error at project: %s\nCheck url: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
-		config.Log.Infof("File get test: %s\n", c.Host)
+		config.Log.Infof("Get file test: %s\n", c.Host)
 
 		//config.Log.Panic(timeout)
 

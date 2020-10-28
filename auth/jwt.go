@@ -12,7 +12,7 @@ func GenerateToken() {
 
 	err := config.LoadConfig()
 	if err != nil {
-		config.Log.Infof("Config load error: %s", err)
+		config.Log.Errorf("Config load error: %s", err)
 	}
 
 	if config.Koanf.String("checker.token.encryption.key") != "" {
@@ -23,7 +23,7 @@ func GenerateToken() {
 
 	signer, err := jwt.NewSignerHS(jwt.HS256, key)
 	if err != nil {
-		config.Log.Infof("Cannot generate token signer: %s", err.Error())
+		config.Log.Errorf("Cannot generate token signer: %s", err.Error())
 		return
 	}
 
@@ -36,7 +36,7 @@ func GenerateToken() {
 
 	token, err := builder.Build(claims)
 	if err != nil {
-		config.Log.Infof("Cannot generate token builder: %s", err.Error())
+		config.Log.Errorf("Cannot generate token builder: %s", err.Error())
 		return
 	}
 

@@ -65,7 +65,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		status.Statuses.Checks[check.UUid].LastResult = false
 
 	} else {
-		config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
+		config.Log.Warnf("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
 		metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
 
 		if status.Statuses.Projects[project.Name].SeqErrorsCount > 0 {
