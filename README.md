@@ -1,4 +1,4 @@
-![Go](https://github.com/imcitius/checker/workflows/Go/badge.svg) ![Latest Semver Tag](https://img.shields.io/github/v/tag/imcitius/checker?include_prereleases) ![Docker hub pulls](https://img.shields.io/docker/pulls/imcitius/checker.svg)  
+![Go](https://github.com/imcitius/checker/workflows/Go/badge.svg) ![CodeQL](https://github.com/imcitius/checker/workflows/CodeQL/badge.svg) ![Latest Semver Tag](https://img.shields.io/github/v/tag/imcitius/checker?include_prereleases) ![Docker hub pulls](https://img.shields.io/docker/pulls/imcitius/checker.svg)  
 
 ### THIS README IS AUTO-TRANSLATED USING Google Translate.
 If you would like to assist me with proper Russian to English translation, please feel free to send PR's or contact me directly. Thanks.
