@@ -54,7 +54,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configWatchTimeout, "configwatchtimeout", "w", "5s", "config watch period")
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
-	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "error", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "bots", "b", true, "start listening messenger bots")
 
 	rootCmd.AddCommand(genToken)
