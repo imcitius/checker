@@ -70,6 +70,9 @@ You also can redefine command line run by Heroku inside dyno, in `Procfile` file
 
 How to register your own Telegram bot and get credentials you will find in [Telegram FAQ](https://core.telegram.org/bots/faq).
 
+## Building your forks
+Project CI pipeline includes building Docker image step, which needs `REGISTRY_LOGIN` and `REGISTRY_PASSWORD` secret variables to login to Docker Hub.
+`REGISTRY_LOGIN` should contain your Docker Hub login, and `REGISTRY_PASSWORD` - your password or (better) [personal access token](https://docs.docker.com/docker-hub/access-tokens/).
 
 ## General information about running Checker
 
