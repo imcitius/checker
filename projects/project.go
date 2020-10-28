@@ -111,7 +111,7 @@ func (p *Project) ProjectAlert(e error) {
 			message = mention + " " + message
 		}
 	}
-	if p.IsLoud() && status.MainStatus != "quiet" {
+	if p.IsLoud() && status.IsLoud() {
 		p.Send(message)
 	}
 }
