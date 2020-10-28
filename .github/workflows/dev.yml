@@ -3,10 +3,12 @@ name: Go
 on:
   push:
     branches:
-      - master
+      - '**'
+    branches-ignore:
+      - "master"
   pull_request:
     branches:
-      - master
+      - '**'
 
 jobs:
 
@@ -44,12 +46,3 @@ jobs:
         with:
           name: build/${{ env.BINARY_NAME }}
           path: ${{ env.BINARY_NAME }}
-
-      - name: Build and push Docker images
-        uses: docker/build-push-action@v1.1.0
-        with:
-          username: ${{ secrets.REGISTRY_LOGIN }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-          repository: ${{ secrets.REGISTRY_LOGIN }}/checker
-          tag_with_ref: true
-          tag_with_sha: true
