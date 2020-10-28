@@ -66,6 +66,7 @@ Then copy this new config into clipboard, run in dyno `cat << EOF > docs/example
 Checker will load new config on the fly, and will start checking your website. 
 
 Of course, you always can fork this project (and please do it), update example config, and run your own version with simple `git push`.
+You also can redefine command line run by Heroku inside dyno, in `Procfile` file in the projects' root.
 
 How to register your own Telegram bot and get credentials you will find in [Telegram FAQ](https://core.telegram.org/bots/faq).
 
