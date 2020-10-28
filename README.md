@@ -21,7 +21,9 @@ This configurations is used when running default service on Heroku.
 `bigconfing.yaml` contains more robust example of healthchecks for various services, divided to two virtual projects.
 
 Heroku button above allow to run test Checker service on Heroku free-tier, with simple config. You can update configuration of this test service later using Heroku's CLI:
+
 `heroku apps -A` - list running apps.
+
 `heroku logs -a <app-name> -t` - tail running app's logs.
 
 There is no direct way to update config file in running dyno (Heroku's container), but we can use some hack:
@@ -62,8 +64,10 @@ EOF
 Then copy this new config into clipboard, run in dyno `cat << EOF > docs/examples/google.yaml` and paste config into.
 Checker will load new config on the fly, and will start checking your website. 
 
-How to register your own Telegram bot and get credentials in [Telegram FAQ](https://core.telegram.org/bots/faq).
+How to register your own Telegram bot and get credentials you will find in [Telegram FAQ](https://core.telegram.org/bots/faq).
 
+
+## General information about running Checker
 
 ```
 $ ./checker
