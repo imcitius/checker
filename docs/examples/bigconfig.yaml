@@ -20,9 +20,9 @@ alerts:
     critical_channel: -237762717
   - name: tg_staging_test
     type: telegram
-    bot_token: vault:secret/checker/staging/tokens:telegram_token
-    noncritical_channel: 1390752
-    critical_channel: 1390752
+    bot_token: 987654313:AHGBR8ws-z2l2TJYhbGRjyyzJ-4H11112_k
+    noncritical_channel: 1330352
+    critical_channel: -10543985
 projects:
   - name: staging
     healthchecks:
@@ -42,6 +42,11 @@ projects:
             code:
               - 200
             timeout: 2s
+            headers:
+              user-agent: AndroidApp-HD
+            auth:
+              user: test-hd
+              pass: ke8thaul8ein
       - name: web
         checks:
           - type: http
@@ -56,7 +61,9 @@ projects:
             host: http://gen.service.staging.consul:8082/healthcheck
             code:
               - 200
-            timeout: 2s
+              - 301
+              - 406
+            timeout: 5s
       - name: pgsql-main
         checks:
           - type: pgsql_replication
@@ -85,3 +92,24 @@ projects:
                 - pgsql-aux-0.node.staging.consul
                 - pgsql-aux-1.node.staging.consul
                 - pgsql-aux-2.node.staging.consul
+  - name: production-zoneA
+    healthchecks:
+      - name: mysql statistics server
+        type: mysql_query
+        host: 192.168.132.101
+        port: 3306
+        timeout: 1s
+        sql_query_config:
+          username: username
+          dbname: dbname
+          password: aiHohquoogeeViey1weopiegeep7le2p
+          query: select reg_date from users order by id asc limit 1;
+          response: '1278938100'
+      - name: Backend cron is run
+        type: passive
+        timeout: 5m
+      - name: haproxy port is open
+        type: tcp
+        host: haproxy.prod.svc.zoneA.cluster.local
+        port: 33333
+        attempts: 1

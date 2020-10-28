@@ -14,6 +14,54 @@ send alerts and perform some actions if the check status changes.
 Configuration storage implemented using the [Koanf](https://github.com/knadh/koanf) library.
 By default, the configuration loading from `config.yaml` file in the current directory.
 
+You can find example configurations files in [docs/examples](docs/examples) folder.
+`google.yaml` is very simple config, only checking google.com with log output, and no alerting methods defined.
+This configurations is used when running default service on Heroku.
+
+`bigconfing.yaml` contains more examples of healthchecks for various services, divided to two virtual projects.
+
+Heroku button above allow to run test Checker service on Heroku free-tier, with simple config. You can update configuration of this test service later using Heroku's CLI:
+`heroku apps -A` - list running apps.
+`heroku logs -a <app-name> -t` - tail running app's logs.
+
+There is no direct way to update config file in running dyno (Heroku's container), but we can use some hack:
+
+`heroku ps:exec -a <app-name>` - ssh into running dyno with checker.
+
+Then prepare new your own testing config. Last string of prepared config should contain only `EOF`, for example:
+```yaml
+---
+defaults:
+  timer_step: 5s
+  http_port: '80'
+  token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
+  parameters:
+    run_every: 10s
+    min_health: 1
+    allow_fails: 0
+    mode: loud
+    periodic_report_time: 10s
+    ssl_expiration_period: 720h
+alerts:
+  - name: tg_staging
+    type: telegram
+    bot_token: vault:secret/checker/staging/tokens:telegram_token
+    noncritical_channel: -237762717
+    critical_channel: -237762717
+projects:
+  - name: my own project
+    parameters:
+      run_every: 600s
+    healthchecks:
+      - name: http checks
+        checks:
+          - type: http
+            host: https://my-very-cool-website.com
+EOF
+```
+Then copy this new config into clipboard, run in dyno `cat << EOF > docs/examples/google.yaml` and paste config into.
+Checker will load new config on the fly, and will start checking your website. 
+
 ```
 $ ./checker
 
@@ -304,12 +352,12 @@ Checking that database replication is working (MySQL, PostgreSQL).
 
 Checking algorithm: a record with random `id` and `test_value` is inserted into the table on the leading server.
 Values are selected in the range 1-5 for `id` and 1-9999 for `test_value`.
-If the insert was successful, then values read from all the servers in the `serverlist` field with the corresponding `id`.
-If replication works, then the result on each server must match `test_value`.
+If the insert was successful, then Checker tries to read values with corresponding `id` from all the servers in the `serverlist` field.
+If the result on each server matches `test_value`, replication on a specific server considered working.
 
-Configuring is similar to query validation, but with tablename and serverlist parameters instead of the query/response parameters.
-The tablename contains the name of the table to insert the test record ("repl_test" by default). The serverlist block contains a list of servers to check.
-It is best to include all servers in the cluster (including the master) in the list for better control.
+Configuring is similar to query validation, but with `tablename` and `serverlist` parameters instead of the query/response parameters.
+`tablename` contains the name of the table to insert the test record ("repl_test" by default). The `serverlist` block contains a list of servers to check.
+It is better to include all servers in the cluster (including the leading one) to the list for better result.
 
 ```
 *type: check type - mysql_replication, pgsql_replication
@@ -380,7 +428,7 @@ If an active check is undesirable or impossible for some reason, a passive check
     {
       "name": "passive check of service A",
       "type": "passive",
-      "timeout": 5m
+      "timeout": "5m"
     }
 
 Check refresh requests should be a GET request to the endpoint `http://checker/check/ping/<check uuid>`.

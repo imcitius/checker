@@ -15,16 +15,8 @@ projects:
     parameters:
       run_every: 60s
     healthchecks:
-      - name: tcp_test
-        checks:
-          - type: tcp
-            host: google.com
-            port: 80
-            timeout: 1s
-            attempts: 3
-        parameters:
-          run_every: 60s
       - name: http checks
         checks:
           - type: http
             host: https://google.com
+EOF
