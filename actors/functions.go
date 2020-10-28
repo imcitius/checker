@@ -5,7 +5,7 @@ import "my/checker/config"
 func GetActorByName(name string) *Actor {
 
 	if name == "" {
-		config.Log.Warn("Cannot get actor with empty name")
+		config.Log.Errorf("Cannot get actor with empty name")
 	}
 
 	for _, a := range config.Config.Actors {

@@ -37,7 +37,7 @@ func init() {
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 		if err != nil {
-			config.Log.Warnf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
 		if c.SqlQueryConfig.SSLMode == "" {
@@ -116,7 +116,7 @@ func init() {
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 		if err != nil {
-			config.Log.Warnf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
 		if c.SqlQueryConfig.SSLMode == "" {
@@ -213,7 +213,7 @@ func init() {
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 		if err != nil {
-			config.Log.Warnf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
 		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)

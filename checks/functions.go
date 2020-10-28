@@ -16,7 +16,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 
 	if tempErr != nil {
 		err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
-		config.Log.Warnf("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
+		config.Log.Errorf("(%s) failure: %+v, took %d millisec\n", checkRandomId, err, t.Milliseconds())
 		//config.Log.Debugf("Check mode: %s", status.GetCheckMode(check))
 
 		if check.AllowFails > 0 {
@@ -52,10 +52,10 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 					actor := actors.ActorCollection[actors.GetActorByName(check.Actors.Down).Type]
 
 					if actor == nil {
-						config.Log.Warnf("down actor %s error: empty actor", check.Actors.Down)
+						config.Log.Errorf("down actor %s error: empty actor", check.Actors.Down)
 					} else {
 						if err := actor.Do(actors.GetActorByName(check.Actors.Down)); err != nil {
-							config.Log.Warnf("down actor %s error: %s", check.Actors.Down, err)
+							config.Log.Errorf("down actor %s error: %s", check.Actors.Down, err)
 						}
 					}
 				}
@@ -65,7 +65,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		status.Statuses.Checks[check.UUid].LastResult = false
 
 	} else {
-		config.Log.Warnf("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
+		config.Log.Infof("(%s) success, took %d millisec\n", checkRandomId, t.Milliseconds())
 		metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
 
 		if status.Statuses.Projects[project.Name].SeqErrorsCount > 0 {
@@ -86,10 +86,10 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 					//config.Log.Infof("actor: %+v", actor)
 
 					if actor == nil {
-						config.Log.Warnf("up actor %s error: empty actor", check.Actors.Up)
+						config.Log.Errorf("up actor %s error: empty actor", check.Actors.Up)
 					} else {
 						if err := actor.Do(actors.GetActorByName(check.Actors.Up)); err != nil {
-							config.Log.Warnf("up actor %s error: %s", check.Actors.Up, err)
+							config.Log.Errorf("up actor %s error: %s", check.Actors.Up, err)
 						}
 					}
 				}

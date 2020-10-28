@@ -18,7 +18,7 @@ func GetVaultSecret(vaultPath string) (string, error) {
 		Timeout: 3 * time.Second,
 	})
 	if err != nil {
-		Log.Warnf("failed to create Vault client: %v", err)
+		Log.Errorf("failed to create Vault client: %v", err)
 	}
 
 	VaultClient.SetToken(Koanf.String("vault.token"))

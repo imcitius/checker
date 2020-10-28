@@ -29,7 +29,7 @@ func init() {
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 		if err != nil {
-			config.Log.Warnf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
 		dbPassword := c.PubSub.Password

@@ -36,7 +36,7 @@ func init() {
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 		if err != nil {
-			config.Log.Warnf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
 		if c.SqlQueryConfig.Query == "" {
@@ -107,7 +107,7 @@ func init() {
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 		if err != nil {
-			config.Log.Warnf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
@@ -185,7 +185,7 @@ func init() {
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 
 		if err != nil {
-			config.Log.Warnf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
 		connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", dbUser, dbPassword, dbHost, dbPort, dbName)

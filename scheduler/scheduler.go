@@ -27,7 +27,7 @@ func GetRandomId() string {
 
 func runReports(timeout string) {
 
-	config.Log.Info("runReports")
+	config.Log.Infof("runReports")
 	for _, p := range Config.Projects {
 		//config.Log.Info("runReports 1 %s", p.Name)
 		//config.Log.Info("runReports 2 %s", p.Parameters.Mode)
@@ -37,11 +37,11 @@ func runReports(timeout string) {
 
 		schedTimeout, err := time.ParseDuration(timeout)
 		if err != nil {
-			config.Log.Warnf("runReports Cannot parse duration %s", err)
+			config.Log.Errorf("runReports Cannot parse duration %s", err)
 		}
 		projTimeout, err := time.ParseDuration(p.Parameters.PeriodicReport)
 		if err != nil {
-			config.Log.Warnf("runReports Cannot parse duration %s", err)
+			config.Log.Errorf("runReports Cannot parse duration %s", err)
 		}
 
 		if schedTimeout >= projTimeout {
@@ -180,9 +180,9 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					runCritAlerts(timeout)
 					alertsDuration := time.Since(alertsStartTime)
 
-					config.Log.Warnf("Checks duration: %v msec", checksDuration.Milliseconds())
-					config.Log.Warnf("Reports duration: %v msec", reportsDuration.Milliseconds())
-					config.Log.Warnf("Alerts duration: %v msec", alertsDuration.Milliseconds())
+					config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
+					config.Log.Infof("Reports duration: %v msec", reportsDuration.Milliseconds())
+					config.Log.Infof("Alerts duration: %v msec", alertsDuration.Milliseconds())
 					metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
 					metrics.SchedulerReportsDuration.Set(float64(reportsDuration.Milliseconds()))
 					metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))

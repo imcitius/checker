@@ -182,7 +182,7 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 	}
 
 	if err != nil {
-		config.Log.Warnf("SendTgMessage error: %v", err)
+		config.Log.Errorf("SendTgMessage error: %v", err)
 	} else {
 		config.Log.Debugf("sendTgMessage success")
 		a.AddAlertMetricNonCritical()
