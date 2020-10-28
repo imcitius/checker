@@ -123,9 +123,16 @@ func TestConfig() (ConfigFile, error) {
 		return tempConfig, err
 	} else {
 		Log.SetLevel(dl)
+		switch Koanf.String("log.format") {
+		case "json":
+			Log.SetFormatter(&logrus.JSONFormatter{})
+		case "text":
+			Log.SetFormatter(&logrus.TextFormatter{})
+		}
 		if Koanf.String("debug.level") == "debug" {
 			// add file and line number
 			Log.SetReportCaller(true)
+
 		}
 	}
 

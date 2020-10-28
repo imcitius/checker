@@ -98,6 +98,7 @@ Flags:
   -w, --configwatchtimeout string   config watch period (default "5s")
   -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
   -h, --help                        help for checker
+  -l, --logformat string            log format: text/json (default "text")
 
 Use "checker [command] --help" for more information about a command.
 ```

@@ -30,8 +30,8 @@ var (
 	}
 	interrupt bool
 
-	debugLevel, configFile, configSource, configWatchTimeout, configFormat string
-	botsEnabled                                                            bool
+	logFormat, debugLevel, configFile, configSource, configWatchTimeout, configFormat string
+	botsEnabled                                                                       bool
 )
 
 // Execute executes the root command.
@@ -53,6 +53,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configSource, "configsource", "s", "", "config file source: file, consul, s3")
 	rootCmd.PersistentFlags().StringVarP(&configWatchTimeout, "configwatchtimeout", "w", "5s", "config watch period")
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
+	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "info", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "bots", "b", true, "start listening messenger bots")
 
@@ -84,6 +85,7 @@ func initConfig() {
 		"defaults.http.port":    "80",
 		"defaults.http.enabled": true,
 		"debug.level":           debugLevel,
+		"log.format":            logFormat,
 		"bots.enabled":          botsEnabled,
 		"config.file":           configFile,
 		"config.source":         configSource,
