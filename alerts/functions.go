@@ -52,13 +52,36 @@ func (a *AlertConfigs) Alert(text, messageType string) error {
 }
 
 func (a *AlertConfigs) AddAlertMetricChatOpsRequest() {
-	metrics.AlertsCount.WithLabelValues(a.Name, "ChatOps_Request").Inc()
+	var alertname string
+
+	if a != nil {
+		alertname = "log"
+	} else {
+		alertname = a.Name
+	}
+	metrics.AlertsCount.WithLabelValues(alertname, "ChatOps_Request").Inc()
 }
 
 func (a *AlertConfigs) AddAlertMetricNonCritical() {
-	metrics.AlertsCount.WithLabelValues(a.Name, "NonCritical").Inc()
+	var alertname string
+
+	if a != nil {
+		alertname = "log"
+	} else {
+		alertname = a.Name
+	}
+	metrics.AlertsCount.WithLabelValues(alertname, "NonCritical").Inc()
+
 }
 
 func (a *AlertConfigs) AddAlertMetricCritical() {
-	metrics.AlertsCount.WithLabelValues(a.Name, "Critical").Inc()
+	var alertname string
+
+	if a != nil {
+		alertname = "log"
+	} else {
+		alertname = a.Name
+	}
+	metrics.AlertsCount.WithLabelValues(alertname, "Critical").Inc()
+
 }
