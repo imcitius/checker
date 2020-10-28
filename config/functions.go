@@ -215,7 +215,7 @@ func (c *ConfigFile) FillDefaults() error {
 		c.Projects[i] = p
 	}
 
-	if len(c.Alerts) == 0 {
+	if c.Alerts == nil {
 		var alert AlertConfigs
 		alert.Name = "log"
 		alert.Type = "log"

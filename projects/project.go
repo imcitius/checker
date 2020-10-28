@@ -70,12 +70,16 @@ func (p *Project) GetCritChannel() *alerts.AlertConfigs {
 }
 
 func (p *Project) GetProjectChannel() *alerts.AlertConfigs {
+	var alert alerts.AlertConfigs
 	for _, a := range config.Config.Alerts {
 		if a.Name == p.Parameters.AlertChannel {
-			return &alerts.AlertConfigs{a}
+			alert = alerts.AlertConfigs{a}
+			break
 		}
+		alert = alerts.AlertConfigs{config.AlertConfigs{Name: "log", Type: "log"}}
 	}
-	return nil
+
+	return &alert
 }
 
 func (p *Project) Send(text string) {
