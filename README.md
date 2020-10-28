@@ -48,7 +48,7 @@ defaults:
 alerts:
   - name: tg_staging
     type: telegram
-    bot_token: vault:secret/checker/staging/tokens:telegram_token
+    bot_token: 987654313:AHGBR8ws-z2l2TJYhbGRjyyzJ-4H11112_k
     noncritical_channel: -237762717
     critical_channel: -237762717
 projects:
