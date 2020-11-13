@@ -118,14 +118,16 @@ func init() {
 		//config.Log.Printf("4")
 
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(response.Body)
+		if n, err := buf.ReadFrom(response.Body); err != nil {
+			config.Log.Warnf("Error reading answer body: %s (length %d)\n", err, n)
+		}
 		//config.Log.Printf("Server: %s, http answer body: %s\n", c.Host, buf)
 		// check that response code is correct
 
 		// found actual return code in answer codes slice
 		checkCode := func(codes []int, answercode int) bool {
 			found := false
-			// init asnwer codes slice if empty
+			// init answer codes slice if empty
 			if len(codes) == 0 {
 				codes = []int{200}
 			}
@@ -135,7 +137,7 @@ func init() {
 				}
 			}
 			return found
-		}(c.Code, int(response.StatusCode))
+		}(c.Code, response.StatusCode)
 
 		if !checkCode {
 			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode, c.Code)
