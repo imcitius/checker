@@ -30,7 +30,9 @@ var (
 		"/qa,/la - Pause/Unpause all alerts (or use main keyboard buttons)\n" +
 		"/qp,/lp - Pause/Unpause specific project (or use message button)\n" +
 		"/qu,/lu - Pause/Unpause specific check by UUID (or use message button)\n" +
-		"/list - List all projects and checks with UUID's\n"
+		"/list - List all projects and checks with UUID's\n\n\n" +
+		"Please find detailed documentation here:\n" +
+		"https://github.com/imcitius/checker"
 )
 
 func init() {
