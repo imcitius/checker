@@ -1,0 +1,31 @@
+.build_inject_cmd: &build_inject_cmd |
+  go build -v -i -x -ldflags \
+  "-X my/checker/config.Version=${CI_COMMIT_REF_NAME} -X my/checker/config.VersionSHA=${CI_COMMIT_SHORT_SHA} -X my/checker/config.VersionBuild=${CI_JOB_ID}" \
+  -o build/${BINARY_NAME}
+
+.build_common: &build_common
+  stage: build
+  artifacts:
+    expire_in: 30m
+    paths:
+      - build/${BINARY_NAME}
+
+.go_build_inject:
+  <<: *build_common
+  script:
+    - *build_inject_cmd
+  only:
+    variables:
+      - $INJECT_VERSION == "true"
+
+go inject linux:
+  variables:
+    GOOS: "linux"
+  extends:
+    - .go_build_inject
+    - .docker_europe_tags
+    - .go_image
+
+dev instance:
+  script:
+    - /bin/true
