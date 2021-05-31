@@ -77,6 +77,7 @@ checker_config_template: |
           - type: pgsql_replication
             host: iron-staging-pgsql
             port: 5432
+            sslmode: true
             sql_repl_config:
               dbname: checker
               username: checker
