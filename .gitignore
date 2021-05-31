@@ -2,3 +2,5 @@
 checker
 testconfigs
 gitlabci*
+kubeconfig.json
+build/*
