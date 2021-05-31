@@ -1,10 +1,10 @@
 checker_config_template: |
-  <<- $app_path := "configs/iron-staging/checker/%s" ->>
-  <<- $redis_path := "configs/iron-staging/redis/%s" ->>
+  <<- $app_path := "configs/siam/checker/%s" ->>
+  <<- $redis_path := "configs/siam/redis/%s" ->>
   <<- $redis_host := key (printf $redis_path "host") ->>
   <<- $redis_port := key (printf $redis_path "port") ->>
   <<- $redis_url := printf "redis://%s:%s" $redis_host $redis_port ->>
-  <<- $redis_pre_path := "configs/iron-staging/redis-pre/%s" ->>
+  <<- $redis_pre_path := "configs/siam/redis-pre/%s" ->>
   <<- $redis_pre_host := key (printf $redis_pre_path "host") ->>
   <<- $redis_pre_port := key (printf $redis_pre_path "port") ->>
   <<- $redis_pre_url := printf "redis://%s:%s" $redis_pre_host $redis_pre_port ->>
