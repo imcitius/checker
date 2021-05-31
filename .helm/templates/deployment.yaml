@@ -28,6 +28,9 @@ spec:
               bot_token: {{ "{{" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_token {{ "-}}" }}{{ "{{-" }} end {{ "}}" }}
               noncritical_channel: {{ "{{" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_channel {{ "-}}" }}{{ "{{-" }} end {{ "}}" }}
               critical_channel: {{ "{{" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_channel {{ "-}}" }}{{ "{{-" }} end {{ "}}" }}
+        vault.hashicorp.com/agent-inject-secret-pgsql.env: "secret/{{ .Values.werf.env }}/checker/token"
+        vault.hashicorp.com/agent-inject-template-pgsql.env: |
+          {{ "{{" }} with secret "secret/{{ .Values.werf.env }}/pgsql/checker/pass" {{ "-}}" }}{{ "{{-" }} .Data.value {{ "-}}" }}{{ "{{-" }} end {{ "}}" }}
 
     spec:
       serviceAccountName: vault-jwt-{{ .Values.werf.env }}
