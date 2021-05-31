@@ -25,9 +25,9 @@ spec:
 
         vault.hashicorp.com/agent-inject-secret-telegram.env: "secret/{{ .Values.werf.env }}/checker/token"
         vault.hashicorp.com/agent-inject-template-telegram.env: |
-              bot_token: {{ "{{-" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_token {{ "-}}" }}{{ "{{-" }} end {{ "-}}" }}
-              noncritical_channel: {{ "{{-" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_channel {{ "-}}" }}{{ "{{-" }} end {{ "-}}" }}
-              critical_channel: {{ "{{-" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_channel {{ "-}}" }}{{ "{{-" }} end {{ "-}}" }}
+              bot_token: {{ "{{" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_token {{ "-}}" }}{{ "{{-" }} end {{ "}}" }}
+              noncritical_channel: {{ "{{" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_channel {{ "-}}" }}{{ "{{-" }} end {{ "}}" }}
+              critical_channel: {{ "{{" }} with secret "secret/{{ .Values.werf.env }}/checker/token" {{ "-}}" }}{{ "{{-" }} .Data.telegram_channel {{ "-}}" }}{{ "{{-" }} end {{ "}}" }}
 
     spec:
       serviceAccountName: vault-jwt-{{ .Values.werf.env }}

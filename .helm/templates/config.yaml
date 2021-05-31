@@ -24,7 +24,7 @@ data:
         min_health: 1
         allow_fails: 0
         noncrit_alert: staging
-        crit_alert: critical
+        crit_alert: staging
         command_channel: staging
         mode: loud
         periodic_report_time: 1800s
