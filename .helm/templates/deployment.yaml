@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Chart.Name }}
+  name: {{ .Chart.Name }}-{{ .Release.Revision }}
   namespace: {{ .Values.werf.env }}
   annotations:
     reloader.stakater.com/auto: "true"
