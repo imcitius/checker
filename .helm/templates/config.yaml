@@ -4,4 +4,5 @@ kind: ConfigMap
 metadata:
   name: checker-config-template
 data:
-  config.yaml.tpl: {{ .Values.checker_config_template }}
+  config.yaml.tpl: |
+{{ .Values.checker_config_template | indent 4 }}
