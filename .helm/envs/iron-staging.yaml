@@ -14,7 +14,7 @@ checker_config_template: |
     timer_step: 5s
     http_port: '80'
     parameters:
-      run_every: 30s
+      run_every: 300s
       min_health: 1
       allow_fails: 0
       noncrit_alert: staging
