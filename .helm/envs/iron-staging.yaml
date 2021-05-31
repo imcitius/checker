@@ -72,20 +72,20 @@ checker_config_template: |
                 - 200
               timeout: 2s
 
-        - name: pgsql-main
-          checks:
-          - type: pgsql_replication
-            host: iron-staging-pgsql
-            port: 5432
-            sql_repl_config:
-              dbname: checker
-              username: checker
-              password: << file "/vault/secrets/pgsql.env" >>
-              tablename: repl_test
-              sslmode: enable
-              serverlist:
-              - iron-staging-pgsql-0
-              - iron-staging-pgsql-1
-              - iron-staging-pgsql-2
-
+#        - name: pgsql-main
+#          checks:
+#          - type: pgsql_replication
+#            host: iron-staging-pgsql
+#            port: 5432
+#            sql_repl_config:
+#              dbname: checker
+#              username: checker
+#              password: << file "/vault/secrets/pgsql.env" >>
+#              tablename: repl_test
+#              sslmode: require
+#              serverlist:
+#              - iron-staging-pgsql-0
+#              - iron-staging-pgsql-1
+#              - iron-staging-pgsql-2
+#
 ## add dynpercent, emailer, fxtickprocessor, landings, notify-trigger, offline-payment, private-api, pusher, redis (котировки), redis2clickhouse, statistics-aggregation, statistics-receicer
