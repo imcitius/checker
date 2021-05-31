@@ -54,6 +54,7 @@ spec:
         command:
           - /consul-template
           - -once
+          - -log-level=debug
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - name: config
