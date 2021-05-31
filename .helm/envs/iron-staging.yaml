@@ -30,22 +30,21 @@ checker_config_template: |
   projects:
     - name: binary-options
       healthchecks:
-        - name: fxcloud redis-pre
+        - name: FXCloud redis-pre ticks
           type: redis_pubsub
           host: redis-pre-redis-ha-haproxy
           pubsub_config:
             - fxcloud_EUR/USD
-#        - name: Metatrader redis-pre
-#          type: redis_pubsub
-#          host: redis-pre-redis-ha-haproxy
-#          pubsub_config:
-#            - fxcloud_EUR/USD
-        - name: redis ticks
+        - name: Redis ticks
           type: redis_pubsub
           host: redis-redis-ha-haproxy
           pubsub_config:
             - quotes_EURUSD
-
+        - name: Redis OTC ticks
+          type: redis_pubsub
+          host: redis-redis-ha-haproxy
+          pubsub_config:
+            - quotes_EURUSD_OTC
         - name: back
           checks:
             - type: http
