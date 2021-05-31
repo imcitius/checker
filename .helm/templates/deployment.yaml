@@ -98,3 +98,18 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checker
+spec:
+  selector:
+    name: {{ .Values.global.werf.name }}
+    version: {{ .Values.commit_refname }}
+    app: checker
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
