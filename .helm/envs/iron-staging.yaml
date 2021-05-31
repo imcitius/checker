@@ -94,14 +94,6 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-#        - name: pusher
-#          checks:
-#            - type: http
-#              host: http://pusher/healthcheck
-#              answer: Pusher
-#              code:
-#                - 200
-#              timeout: 2s
         - name: emailer
           checks:
             - type: http
