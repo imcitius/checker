@@ -14,7 +14,7 @@ k8s iron-staging:
     - .werf_deploy_template
     - .docker_europe_tags
   only:
-    - master
+    - jgit
 
 k8s siam:
   variables:
