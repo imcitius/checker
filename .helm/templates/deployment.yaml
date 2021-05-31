@@ -81,6 +81,7 @@ spec:
           - /checker
           - -c
           - /config/config.yaml
+          - check
         ports:
           - containerPort: 80
             protocol: TCP
