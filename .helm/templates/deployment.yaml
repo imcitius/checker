@@ -9,6 +9,8 @@ metadata:
 spec:
   selector:
     matchLabels:
+      name: {{ .Values.global.werf.name }}
+      version: {{ .Values.commit_refname }}
       app: {{ .Chart.Name }}
   revisionHistoryLimit: 3
   strategy:
@@ -17,6 +19,8 @@ spec:
   template:
     metadata:
       labels:
+        name: {{ .Values.global.werf.name }}
+        version: {{ .Values.commit_refname }}
         app: {{ .Chart.Name }}
       annotations:
         vault.hashicorp.com/role: "vault-injector"
