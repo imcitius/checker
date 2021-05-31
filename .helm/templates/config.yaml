@@ -32,7 +32,7 @@ data:
     alerts:
       - name: staging
         type: telegram
-    << file "/vault/secret/template-telegram.env" | indent 4 >>
+    << file "/vault/secrets/template-telegram.env" | indent 4 >>
     projects:
       - name: binary-options
         healthchecks:
