@@ -1,0 +1,96 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: checker-config-template
+data:
+  config.yaml.tpl: |
+    <<- $app_path := "configs/{{ .Values.werf.env }}/checker/%s" ->>
+    <<- $redis_path := "configs/{{ .Values.werf.env }}/redis/%s" ->>
+    <<- $redis_host := key (printf $redis_path "host") ->>
+    <<- $redis_port := key (printf $redis_path "port") ->>
+    <<- $redis_url := printf "redis://%s:%s" $redis_host $redis_port ->>
+    <<- $redis_pre_path := "configs/{{ .Values.werf.env }}/redis-pre/%s" ->>
+    <<- $redis_pre_host := key (printf $redis_pre_path "host") ->>
+    <<- $redis_pre_port := key (printf $redis_pre_path "port") ->>
+    <<- $redis_pre_url := printf "redis://%s:%s" $redis_pre_host $redis_pre_port ->>
+
+    ---
+    defaults:
+      timer_step: 5s
+      http_port: '80'
+      parameters:
+        run_every: 300s
+        min_health: 1
+        allow_fails: 0
+        noncrit_alert: staging
+        crit_alert: critical
+        command_channel: staging
+        mode: loud
+        periodic_report_time: 1800s
+        ssl_expiration_period: 720h
+    alerts:
+      - name: staging
+        type: telegram
+    << file "secret/{{ .Values.werf.env }}/checker/token" | indent 4 >>
+    projects:
+      - name: binary-options
+        healthchecks:
+          - name: back
+            checks:
+              - type: http
+                host: http://app/monitor/status.php
+                answer: .* OK$
+                code:
+                  - 200
+                timeout: 2s
+              - type: passive
+                name: backend cron running
+                timeout: 900s
+          - name: helpdesk
+            checks:
+              - type: http
+                host: http://helpdesk/api/are-you-alive
+                answer: ^Helpdesk.* OK$
+                code:
+                  - 200
+                timeout: 2s
+          - name: web
+            checks:
+              - type: http
+                host: http://frontend
+                answer: Trading platform
+                code:
+                  - 200
+                timeout: 2s
+          - name: ws
+            checks:
+              - type: http
+                host: http://ws/healthcheck
+                code:
+                  - 200
+                timeout: 2s
+          - name: cryptoindex
+            checks:
+              - type: http
+                host: http://cryptoindex:8082/healthcheck
+                code:
+                  - 200
+                timeout: 2s
+
+## add dynpercent, emailer, fxtickprocessor, landings, notify-trigger, offline-payment, private-api, pusher, redis (котировки), redis2clickhouse, statistics-aggregation, statistics-receicer
+
+#  - name: pgsql-main
+#    checks:
+#    - type: pgsql_replication
+#      host: iron-staging-pgsql
+#      port: 5432
+#      sql_repl_config:
+#        dbname: repltest
+#        username: repltest
+#        password: vault:secret/iron-prod2/pgsql-main/repltest/pass:value
+#        tablename: repl_test
+#        serverlist:
+#        - iron-staging-pgsql-0
+#        - iron-staging-pgsql-1
+#        - iron-staging-pgsql-2

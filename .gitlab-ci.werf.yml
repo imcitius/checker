@@ -1,0 +1,39 @@
+variables:
+  CI_BUILD_ENV: scaleway
+  CI_BUILD_REGISTRY: harbor-scw.jgit.me
+  CI_BUILD_LIBRARY: checker/checker
+  CI_DOCKER_PROXY: harbor-scw.jgit.me
+  WERF_REPO_CONTAINER_REGISTRY: harbor
+
+k8s iron-staging:
+  variables:
+    WERF_ENV: iron-staging
+    DEPLOY_ENV: scaleway/staging
+  when: on_success
+  extends:
+    - .werf_deploy_template
+    - .docker_europe_tags
+  only:
+    - master
+
+k8s siam:
+  variables:
+    WERF_ENV: siam
+    DEPLOY_ENV: scaleway/binary-prod
+  when: on_success
+  extends:
+    - .werf_deploy_template
+    - .docker_europe_tags
+  only:
+    - tags
+
+k8s iron:
+  variables:
+    WERF_ENV: iron
+    DEPLOY_ENV: scaleway/binary-prod
+  when: on_success
+  extends:
+    - .werf_deploy_template
+    - .docker_europe_tags
+  only:
+    - tags
