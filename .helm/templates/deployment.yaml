@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Chart.Name }}-{{ .Release.Revision }}
+  name: {{ .Chart.Name }}
   namespace: {{ .Values.werf.env }}
   annotations:
     reloader.stakater.com/auto: "true"
@@ -10,7 +10,6 @@ spec:
   selector:
     matchLabels:
       name: {{ .Values.global.werf.name }}
-      version: {{ .Values.commit_refname }}
       app: {{ .Chart.Name }}
   revisionHistoryLimit: 3
   strategy:
@@ -20,7 +19,6 @@ spec:
     metadata:
       labels:
         name: {{ .Values.global.werf.name }}
-        version: {{ .Values.commit_refname }}
         app: {{ .Chart.Name }}
       annotations:
         vault.hashicorp.com/role: "vault-injector"
@@ -112,7 +110,6 @@ metadata:
 spec:
   selector:
     name: {{ .Values.global.werf.name }}
-    version: {{ .Values.commit_refname }}
     app: checker
   ports:
     - name: http
