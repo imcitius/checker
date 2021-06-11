@@ -12,4 +12,3 @@
       name: consul
       key: consul_http_addr
 {{- end -}}
-
