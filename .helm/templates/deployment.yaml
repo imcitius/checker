@@ -59,7 +59,7 @@ spec:
       - name: template
         image: {{ .Values.docker.proxy.host }}/{{ .Values.docker.proxy.repo }}/hashicorp/consul-template
         command:
-          - /consul-template
+          - /bin/consul-template
           - -once
           - -log-level=debug
         imagePullPolicy: IfNotPresent
