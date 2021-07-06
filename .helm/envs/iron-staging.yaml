@@ -155,6 +155,7 @@ checker_config_template: |
           checks:
             - type: http
               host: http://billing-api.billing-staging/health/check
+              answer: Billing-billing-api OK
               code:
                 - 200
               timeout: 2s
@@ -162,13 +163,15 @@ checker_config_template: |
           checks:
             - type: http
               host: http://payouts-auto.billing-staging/health/check
+              answer: Billing-payouts-auto OK
               code:
                 - 200
               timeout: 2s
         - name: Payouts-Api
           checks:
             - type: http
-              host: http://payouts-api.billing-staging/health/check
+              host: http://payouts-api.billing-staging/monitoring/health/check
+              answer: Billing-payouts-api OK
               code:
                 - 200
               timeout: 2s
@@ -176,20 +179,23 @@ checker_config_template: |
           checks:
             - type: http
               host: http://payment-uid.billing-staging/health/check
+              answer: Billing-payment-uids OK
               code:
                 - 200
               timeout: 2s
         - name: refunds
           checks:
             - type: http
-              host: http://refunds.billing-staging/health/check
+              host: http://refunds.billing-staging/monitoring/health/check
+              answer: Billing-refunds OK
               code:
                 - 200
               timeout: 2s
         - name: Currency
           checks:
             - type: http
-              host: http://currency-staging/health/check
+              host: http://currency.billing-staging/health/check
+              answer: Billing-currencys OK
               code:
                 - 200
               timeout: 2s
