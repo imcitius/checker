@@ -103,16 +103,6 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-#        добавить возможность добавлять в запрос $date = date("Y-m-d", strtotime("-1 day"));
-#        - name: emailer-daily
-#          checks:
-#            - type: http
-#              host: http://emailer/healthcheck-types?date={$date}
-#              answer: Emailer OK
-#              code:
-#                - 200
-#              timeout: 2s
-
         - name: statistics-aggregation
           checks:
             - type: http
@@ -203,6 +193,15 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+#        добавить возможность добавлять в запрос $date = date("Y-m-d", strtotime("-1 day"));
+#        - name: emailer-daily
+#          checks:
+#            - type: http
+#              host: http://emailer/healthcheck-types?date={$date}
+#              answer: Emailer OK
+#              code:
+#                - 200
+#              timeout: 2s
 
 ## add dynpercent, fxtickprocessor, redis (котировки), redis2clickhouse
 #        - name: pgsql-main
