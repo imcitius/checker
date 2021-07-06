@@ -9,7 +9,7 @@ checker_config_template: |
   <<- $redis_pre_port := key (printf $redis_pre_path "port") ->>
   <<- $redis_pre_url := printf "redis://%s:%s" $redis_pre_host $redis_pre_port ->>
 
-    ---
+  ---
   defaults:
     timer_step: 5s
     http_port: '80'
@@ -83,6 +83,7 @@ checker_config_template: |
           checks:
             - type: http
               host: http://cryptoindex:8082/healthcheck
+              answer: .*Status.*Ok.*
               code:
                 - 200
               timeout: 2s
@@ -94,7 +95,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-        - name: emailer
+        - name: emailer-healthcheck
           checks:
             - type: http
               host: http://emailer/healthcheck
@@ -102,6 +103,16 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+#        добавить возможность добавлять в запрос $date = date("Y-m-d", strtotime("-1 day"));
+#        - name: emailer-daily
+#          checks:
+#            - type: http
+#              host: http://emailer/healthcheck-types?date={$date}
+#              answer: Emailer OK
+#              code:
+#                - 200
+#              timeout: 2s
+
         - name: statistics-aggregation
           checks:
             - type: http
@@ -126,14 +137,6 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-        - name: landings
-          checks:
-            - type: http
-              host: http://landings/api/are-you-alive
-              answer: Landings OK
-              code:
-                - 200
-              timeout: 2s
         - name: offline-payment
           checks:
             - type: http
@@ -145,6 +148,58 @@ checker_config_template: |
           checks:
             - type: http
               host: http://private-api
+              code:
+                - 200
+              timeout: 2s
+        - name: Stat
+          checks:
+            - type: http
+              host: http://poacher:5BvVvD4K@stat/check.php
+              answer: Stat OK
+              code:
+                - 200
+              timeout: 2s
+
+  # billing
+        - name: Billing-API
+          checks:
+            - type: http
+              host: http://billing-api.billing-staging/health/check
+              code:
+                - 200
+              timeout: 2s
+        - name: Payouts-Auto
+          checks:
+            - type: http
+              host: http://payouts-auto.billing-staging/health/check
+              code:
+                - 200
+              timeout: 2s
+        - name: Payouts-Api
+          checks:
+            - type: http
+              host: http://payouts-api.billing-staging/health/check
+              code:
+                - 200
+              timeout: 2s
+        - name: payment-uid
+          checks:
+            - type: http
+              host: http://payment-uid.billing-staging/health/check
+              code:
+                - 200
+              timeout: 2s
+        - name: refunds
+          checks:
+            - type: http
+              host: http://refunds.billing-staging/health/check
+              code:
+                - 200
+              timeout: 2s
+        - name: Currency
+          checks:
+            - type: http
+              host: http://currency-staging/health/check
               code:
                 - 200
               timeout: 2s
