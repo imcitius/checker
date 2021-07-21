@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"my/checker/config"
 	projects "my/checker/projects"
+	"net"
+	"strconv"
 	"time"
 )
 
@@ -256,6 +258,17 @@ func init() {
 
 			config.Log.Debugf("Read from slave %s", server)
 			//config.Log.Printf(" query: %s\n", sqlStatement)
+
+			// if slave defined as `host:port`
+			host, port, err := net.SplitHostPort(server)
+			if err == nil {
+				server = host
+				dbPort, err = strconv.Atoi(port)
+				if err != nil {
+					config.Log.Warnf("Cannot parse slave port %s", err)
+				}
+			}
+
 			connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, server, dbPort, dbName)
 
 			if dbConnectTimeout > 0 {
