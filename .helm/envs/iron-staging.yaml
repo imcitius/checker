@@ -1,3 +1,7 @@
+db:
+  check: false
+  password_path: secret/{{ .Values.werf.env }}/pgsql/checker/pass
+
 checker_config_template: |
   <<- $app_path := "configs/iron-staging/checker/%s" ->>
   <<- $redis_path := "configs/iron-staging/redis/%s" ->>
@@ -225,4 +229,3 @@ checker_config_template: |
 #              - iron-staging-pgsql-0
 #              - iron-staging-pgsql-1
 #              - iron-staging-pgsql-2
-#

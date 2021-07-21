@@ -1,3 +1,7 @@
+db:
+  check: true
+  password_path: secret/iron/pgsql-ext/checker/pass
+
 checker_config_template: |
   <<- $app_path := "configs/iron/checker/%s" ->>
   <<- $redis_path := "configs/iron/redis/%s" ->>
@@ -126,14 +130,6 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-        - name: landings
-          checks:
-            - type: http
-              host: http://landings/api/are-you-alive
-              answer: Landings OK
-              code:
-                - 200
-              timeout: 2s
         - name: offline-payment
           checks:
             - type: http
@@ -148,4 +144,77 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+        - name: Stat
+          checks:
+            - type: http
+              host: http://poacher:5BvVvD4K@stat/check.php
+              answer: Stat OK
+              code:
+                - 200
+              timeout: 2s
 
+  # billing
+        - name: Billing-API
+          checks:
+            - type: http
+              host: http://billing-api.billing/health/check
+              answer: Billing-billing-api OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Payouts-Auto
+          checks:
+            - type: http
+              host: http://payouts-auto.billing/health/check
+              answer: Billing-payouts-auto OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Payouts-Api
+          checks:
+            - type: http
+              host: http://payouts-api.billing/monitoring/health/check
+              answer: Billing-payouts-api OK
+              code:
+                - 200
+              timeout: 2s
+        - name: payment-uid
+          checks:
+            - type: http
+              host: http://payment-uid.billing/health/check
+              answer: Billing-payment-uids OK
+              code:
+                - 200
+              timeout: 2s
+        - name: refunds
+          checks:
+            - type: http
+              host: http://refunds.billing/monitoring/health/check
+              answer: Billing-refunds OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Currency
+          checks:
+            - type: http
+              host: http://currency.billing/health/check
+              answer: Billing-currencys OK
+              code:
+                - 200
+              timeout: 2s
+
+        - name: pgsql-main
+          checks:
+          - type: pgsql_replication
+            host: pgsql.online.irontrade.com
+            port: 5000
+            sql_repl_config:
+              dbname: checker
+              username: checker
+              password: << file "/vault/secrets/pgsql.env" >>
+              tablename: repl_test
+              sslmode: require
+              serverlist:
+              - sd-156610.dedibox.fr:5432
+              - sd-156610.dedibox.fr:5432
+              - sd-156610.dedibox.fr:5432
