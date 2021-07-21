@@ -253,9 +253,12 @@ func init() {
 		time.Sleep(1 * time.Second)
 
 		for _, slave := range c.SqlReplicationConfig.ServerList {
+			var (
+				host, port string
+			)
+
 			selectSql := "SELECT test_value FROM %s where %s.id=%d;"
 			sqlStatement := fmt.Sprintf(selectSql, dbTable, dbTable, recordId)
-			server := slave
 
 			config.Log.Debugf("Read from slave %s", slave)
 			//config.Log.Printf(" query: %s\n", sqlStatement)
@@ -263,11 +266,12 @@ func init() {
 			// if slave defined as `host:port`
 			host, port, err := net.SplitHostPort(slave)
 			if err == nil {
-				server = host
 				dbPort, err = strconv.Atoi(port)
 				if err != nil {
 					config.Log.Warnf("Cannot parse slave port %s", err)
 				}
+			} else {
+				host = slave
 			}
 
 			if c.SqlQueryConfig.SSLMode == "" {
@@ -276,13 +280,13 @@ func init() {
 				sslMode = c.SqlReplicationConfig.SSLMode
 			}
 
-			connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, server, dbPort, dbName, sslMode)
+			slaveConnStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, host, dbPort, dbName, sslMode)
 
 			if dbConnectTimeout > 0 {
-				connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
+				slaveConnStr = slaveConnStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
 			}
 
-			db, err := sql.Open("postgres", connStr)
+			db, err := sql.Open("postgres", slaveConnStr)
 			if err != nil {
 				config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 				return fmt.Errorf(errorHeader + err.Error())
