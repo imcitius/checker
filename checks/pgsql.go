@@ -252,15 +252,16 @@ func init() {
 		// allow replication to pass
 		time.Sleep(1 * time.Second)
 
-		for _, server := range c.SqlReplicationConfig.ServerList {
+		for _, slave := range c.SqlReplicationConfig.ServerList {
 			selectSql := "SELECT test_value FROM %s where %s.id=%d;"
 			sqlStatement := fmt.Sprintf(selectSql, dbTable, dbTable, recordId)
+			server := slave
 
-			config.Log.Debugf("Read from slave %s", server)
+			config.Log.Debugf("Read from slave %s", slave)
 			//config.Log.Printf(" query: %s\n", sqlStatement)
 
 			// if slave defined as `host:port`
-			host, port, err := net.SplitHostPort(server)
+			host, port, err := net.SplitHostPort(slave)
 			if err == nil {
 				server = host
 				dbPort, err = strconv.Atoi(port)
@@ -269,7 +270,13 @@ func init() {
 				}
 			}
 
-			connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", dbUser, dbPassword, server, dbPort, dbName)
+			if c.SqlQueryConfig.SSLMode == "" {
+				sslMode = "disable"
+			} else {
+				sslMode = c.SqlReplicationConfig.SSLMode
+			}
+
+			connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, server, dbPort, dbName, sslMode)
 
 			if dbConnectTimeout > 0 {
 				connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
