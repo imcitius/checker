@@ -36,7 +36,7 @@ spec:
         vault.hashicorp.com/agent-inject-secret-pgsql.env: "{{ .Values.db.password_path }}"
         vault.hashicorp.com/agent-inject-template-pgsql.env: |
           {{ "{{" }} with secret "{{ .Values.db.password_path }}" {{ "-}}" }}{{ "{{-" }} .Data.value {{ "-}}" }}{{ "{{-" }} end {{ "}}" }}
-        {{ endif }}
+        {{ end }}
 
     spec:
       serviceAccountName: vault-jwt-{{ .Values.werf.env }}
