@@ -32,7 +32,7 @@ checker_config_template: |
       type: telegram
   << file "/vault/secrets/telegram.env" | indent 4 >>
   projects:
-    - name: binary-options
+    - name: binary-staging
       healthchecks:
         - name: FXCloud redis-pre ticks
           type: redis_pubsub

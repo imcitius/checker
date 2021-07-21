@@ -401,7 +401,8 @@ The table with following DDL should be created:
 ```
     CREATE TABLE repl_test (
        id int primary key,
-       test_value int
+       test_value int,
+       timestamp timestamp default current_timestamp
     )
 ```
 
