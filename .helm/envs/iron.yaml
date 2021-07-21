@@ -221,5 +221,5 @@ checker_config_template: |
               sslmode: require
               serverlist:
               - sd-156610.dedibox.fr:5432
-              - sd-156610.dedibox.fr:5432
-              - sd-156610.dedibox.fr:5432
+              - sd-156668.dedibox.fr:5432
+              - sd-156793.dedibox.fr:5432
