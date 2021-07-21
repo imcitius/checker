@@ -20,10 +20,10 @@ shell:
     - export GOARCH="amd64"
     - cd /go/src
     - go get -v -t -d ./...
-    - go build -v -i -x --ldflags '-extldflags "-static"' \
+    - go build -v -i -x --ldflags '-extldflags "-static" \
       -X main.Version={{ env "CI_COMMIT_REF_NAME" }} \
       -X main.VersionSHA={{ env "CI_COMMIT_SHORT_SHA" }} \
-      -X main.VersionBuild={{ env "CI_JOB_ID" }} \
+      -X main.VersionBuild={{ env "CI_JOB_ID" }}' \
       -o checker
     - chmod +x checker
 ---
