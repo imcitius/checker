@@ -20,10 +20,9 @@ shell:
     - export GOARCH="amd64"
     - cd /go/src
     - go get -v -t -d ./...
-    - go build -v -i -x -o checker \
-      -ldflags "\
-      -X my/checker/config.Version={{ env "CI_COMMIT_REF_NAME" }} \
-      -X my/checker/config.VersionSHA={{ env "CI_COMMIT_SHORT_SHA" }} \
+    - go build -v -i -x -o checker
+      -ldflags "-X my/checker/config.Version={{ env "CI_COMMIT_REF_NAME" }}
+      -X my/checker/config.VersionSHA={{ env "CI_COMMIT_SHORT_SHA" }}
       -X my/checker/config.VersionBuild={{ env "CI_JOB_ID" }}"
     - chmod +x checker
 ---
