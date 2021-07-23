@@ -103,6 +103,14 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+        - name: notify-trigger-status
+          checks:
+            - type: http
+              host: http://notify-trigger/healthcheck-full
+              answer: Triggers.* OK
+              code:
+                - 200
+              timeout: 2s
         - name: emailer
           checks:
             - type: http

@@ -18,4 +18,4 @@ projects:
       - name: http checks
         checks:
           - type: http
-            host: https://google.com
+            host: https://google.com/
