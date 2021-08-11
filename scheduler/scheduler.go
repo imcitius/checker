@@ -29,24 +29,27 @@ func runReports(timeout string) {
 
 	config.Log.Infof("runReports")
 	for _, p := range Config.Projects {
-		//config.Log.Info("runReports 1 %s", p.Name)
-		//config.Log.Info("runReports 2 %s", p.Parameters.Mode)
-		//config.Log.Info("runReports 3 %s", p.Parameters.Mode)
-		//config.Log.Info("runReports 4 %s", status.Statuses.Projects[p.Name].Mode)
-		//config.Log.Info("runReports 6 %s", p.Parameters.PeriodicReport)
+		config.Log.Infof("runReports 0: %s\n", timeout)
+		config.Log.Infof("runReports 1: %s\n", p.Name)
+		config.Log.Infof("runReports 2: %s\n", p.Parameters.Mode)
+		config.Log.Infof("runReports 4: %s\n", status.Statuses.Projects[p.Name].Mode)
+		config.Log.Infof("runReports 6: %s\n", p.Parameters.PeriodicReport)
 
 		schedTimeout, err := time.ParseDuration(timeout)
 		if err != nil {
 			config.Log.Errorf("runReports Cannot parse duration %s", err)
 		}
+		config.Log.Infof("schedTimeout: %s\n", schedTimeout)
+
 		projTimeout, err := time.ParseDuration(p.Parameters.PeriodicReport)
 		if err != nil {
 			config.Log.Errorf("runReports Cannot parse duration %s", err)
 		}
+		config.Log.Infof("projTimeout: %s\n", projTimeout)
 
 		if schedTimeout >= projTimeout {
 			project := projects.Project{p}
-			//config.Log.Info("runReports 5 %s", project.GetMode())
+			config.Log.Infof("runReports 10: %s", project.GetMode())
 			err := project.ProjectSendReport()
 			if err != nil {
 				config.Log.Infof("Cannot send report for project %s: %+v", project.Name, err)
@@ -135,7 +138,6 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 	}
 
 	Ticker := time.NewTicker(timerStep)
-	timerStepSeconds := timerStep.Seconds()
 
 	config.Log.Debug("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
@@ -162,7 +164,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 				config.Log.Debugf("===\nUptime: %v", uptime)
 
-				roundUptime := math.Round(uptime/timerStepSeconds) * timerStepSeconds
+				roundUptime := math.Round(uptime/timerStep.Seconds()) * timerStep.Seconds()
 				if math.Remainder(roundUptime, tf.Seconds()) == 0 {
 					config.Log.Debugf("===\nTime: %v\n---\n\n", t)
 

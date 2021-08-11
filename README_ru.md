@@ -335,7 +335,8 @@ difference: максимальная разность с текущим врем
 Таблица для проверки должна соответствовать схеме:
     CREATE TABLE repl_test (
        id int primary key,
-       test_value int
+       test_value int,
+       timestamp NOT NULL DEFAULT NOW()
     )
 ```
 

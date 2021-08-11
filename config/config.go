@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	PeriodicReport = "3600s"
+	PeriodicReport = "30m"
 )
 
 var (
@@ -51,8 +51,10 @@ type ConfigFile struct {
 		// Main timer evaluates every TimerStep seconds
 		TimerStep  string     `koanf:"timer_step"`
 		Parameters Parameters `koanf:"parameters"`
+
 		// HTTP port web interface listen
 		HTTPPort string `koanf:"http_port"`
+
 		// If not empty HTPP server not enabled
 		HTTPEnabled        string `koanf:"http_enabled"`
 		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
@@ -67,13 +69,17 @@ type ConfigFile struct {
 type Parameters struct {
 	// Messages mode quiet/loud
 	Mode string
+
 	// Checks should be run every RunEvery seconds
 	RunEvery       string `koanf:"run_every"`
 	PeriodicReport string `koanf:"periodic_report_time"`
+
 	// minimum passed checks to consider project healthy
 	MinHealth int `koanf:"min_health"`
+
 	// how much consecutive critical checks may fail to consider not healthy
 	AllowFails int `koanf:"allow_fails"`
+
 	// alert name
 	AlertChannel        string `koanf:"noncrit_alert"`
 	CritAlertChannel    string `koanf:"crit_alert"`
