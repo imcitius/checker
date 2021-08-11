@@ -166,8 +166,8 @@ checker_config_template: |
         - name: Billing-API
           checks:
             - type: http
-              host: http://billing-api.billing-staging/health/check
-              answer: Billing-billing-api OK
+              host: http://api.billing-staging/health/check
+              answer: Billing-api OK
               code:
                 - 200
               timeout: 2s
