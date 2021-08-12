@@ -10,6 +10,7 @@ git:
 - to: /go/src
   stageDependencies:
     install:
+    - "**/*.go"
     - "*.go"
     - "go.*"
 shell:
