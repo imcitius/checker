@@ -17,9 +17,9 @@ include:
     file: "go-app.base.yml"
   - .gitlab-ci.build.yml
   - .gitlab-ci.deploy.yml
-  - '.gitlab-ci.werf.yml'
   - project: 'ci-library/werf-deploy'
     file: 'common.yml'
+  - '.gitlab-ci.werf.yml'
 
 .jgit_filter:
   only:

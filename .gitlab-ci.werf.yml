@@ -9,7 +9,6 @@ k8s iron-staging:
   variables:
     WERF_ENV: iron-staging
     DEPLOY_ENV: scaleway/staging
-  when: on_success
   extends:
     - .werf_deploy_template
     - .docker_europe_tags
@@ -22,7 +21,6 @@ k8s siam:
   variables:
     WERF_ENV: siam
     DEPLOY_ENV: scaleway/binary-prod
-  when: on_success
   extends:
     - .werf_deploy_template
     - .docker_europe_tags
@@ -34,7 +32,6 @@ k8s iron:
   variables:
     WERF_ENV: iron
     DEPLOY_ENV: scaleway/binary-prod
-  when: on_success
   extends:
     - .werf_deploy_template
     - .docker_europe_tags
