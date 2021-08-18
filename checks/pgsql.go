@@ -450,7 +450,7 @@ func init() {
 			if reply.state.String == "streaming" {
 				s := strings.Split(reply.replay_lag.String, ":")
 				s2 := strings.Split(s[2], ".")
-				lag, _ := time.ParseDuration(fmt.Sprintf("%sh%sm%ss%sms", s[0], s[1], s2[0], s2[1]))
+				lag, _ := time.ParseDuration(fmt.Sprintf("%sh%sm%ss%sus", s[0], s[1], s2[0], s2[1]))
 				if err != nil {
 					config.Log.Errorf("Error parsing replay_lag: %+v", err)
 					return fmt.Errorf(errorHeader + err.Error())
@@ -461,7 +461,7 @@ func init() {
 					return fmt.Errorf(errorHeader + err.Error())
 				}
 				if lag > allowedLag {
-					err := fmt.Errorf("replay_lag is more than 0 second on %s: %s", reply.application_name.String, lag.String())
+					err := fmt.Errorf("replay_lag is more than %s detected on %s: %s", allowedLag.String(), reply.application_name.String, lag.String())
 					config.Log.Infof(err.Error())
 					return fmt.Errorf(errorHeader + err.Error())
 				}
