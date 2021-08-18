@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
-	"log"
 	"math/rand"
 	"my/checker/config"
 	projects "my/checker/projects"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -448,17 +448,23 @@ func init() {
 		for i, reply := range repStatusReply {
 			config.Log.Infof("Rep statues reply row #%d: %s", i, reply)
 			if reply.state.String == "streaming" {
+				s := strings.Split(reply.replay_lag.String, ":")
+				s2 := strings.Split(s[2], ".")
+				lag, _ := time.ParseDuration(fmt.Sprintf("%sh%sm%ss%sms", s[0], s[1], s2[0], s2[1]))
 				if err != nil {
 					config.Log.Errorf("Error parsing replay_lag: %+v", err)
 					return fmt.Errorf(errorHeader + err.Error())
 				}
-				lag, _ := time.Parse(time.StampMicro, fmt.Sprintf("%s %d %s", "Aug", time.Now().Day(), reply.replay_lag.String))
-				log.Fatalln(time.Now() - lag)
-				//	lag := reply.replay_lag.Time
-				//	if  lag > 0 * time.Second {
-				//		config.Log.Errorf("replay_lag is more than 1 second on %s: %s", reply.application_name.String, reply.replay_lag.String)
-				//		return fmt.Errorf(errorHeader + err.Error())
-				//	}
+				allowedLag, err := time.ParseDuration(c.SqlReplicationConfig.Lag)
+				if err != nil {
+					config.Log.Errorf("Error parsing allowed lag: %+v", err)
+					return fmt.Errorf(errorHeader + err.Error())
+				}
+				if lag > allowedLag {
+					err := fmt.Errorf("replay_lag is more than 0 second on %s: %s", reply.application_name.String, lag.String())
+					config.Log.Infof(err.Error())
+					return fmt.Errorf(errorHeader + err.Error())
+				}
 			}
 		}
 
