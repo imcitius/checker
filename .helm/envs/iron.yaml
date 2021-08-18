@@ -231,8 +231,6 @@ checker_config_template: |
               - sd-156610.dedibox.fr:5432
               - sd-156668.dedibox.fr:5432
               - sd-156793.dedibox.fr:5432
-
-          checks:
           - type: pgsql_replication_status
             host: pgsql.online.irontrade.com
             port: 5000
