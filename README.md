@@ -409,6 +409,7 @@ The table with following DDL should be created:
 ### Database Replication Status
 Checking database replication internals (PostgreSQL).
 
+Checker uses database's internal replication counters to detect replication lag. Allowed lag is set in `lag` parameter of `sql_repl_config` block.
 
 
 ### Redis Pub/Sub
