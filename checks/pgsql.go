@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	"log"
 	"math/rand"
 	"my/checker/config"
 	projects "my/checker/projects"
@@ -316,4 +317,152 @@ func init() {
 
 		return nil
 	}
+
+	Checks["pgsql_replication_status"] = func(c *config.Check, p *projects.Project) error {
+
+		type repStatus struct {
+			pid              sql.NullInt32
+			usesysid         sql.NullInt32
+			usename          sql.NullString
+			application_name sql.NullString
+			client_addr      sql.NullString
+			client_hostname  sql.NullString
+			client_port      sql.NullInt32
+			backend_start    sql.NullString
+			backend_xmin     sql.NullString
+			state            sql.NullString
+			sent_lsn         sql.NullString
+			write_lsn        sql.NullString
+			flush_lsn        sql.NullString
+			replay_lsn       sql.NullString
+			write_lag        sql.NullString
+			flush_lag        sql.NullString
+			replay_lag       sql.NullString
+			sync_priority    sql.NullInt32
+			sync_state       sql.NullString
+			reply_time       sql.NullTime
+		}
+
+		var (
+			dbPort         int
+			dbTable        = "pg_stat_replication;"
+			dbName         = "postgres"
+			sslMode        string
+			repStatusReply []repStatus
+		)
+
+		errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+
+		dbUser := c.SqlReplicationConfig.UserName
+		dbPassword := c.SqlReplicationConfig.Password
+		dbHost := c.Host
+		if c.SqlReplicationConfig.SSLMode == "" {
+			sslMode = "disable"
+		} else {
+			sslMode = c.SqlReplicationConfig.SSLMode
+		}
+
+		if c.Port == 0 {
+			dbPort = 5432
+		} else {
+			dbPort = c.Port
+		}
+
+		if c.Timeout == "" {
+			c.Timeout = config.DefaultConnectTimeout
+		}
+		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+
+		if err != nil {
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+		}
+
+		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
+
+		if dbConnectTimeout > 0 {
+			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
+		}
+
+		config.Log.Debugf("Replication Connect string: %s", connStr)
+
+		db, err := sql.Open("postgres", connStr)
+		if err != nil {
+			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
+		}
+		defer db.Close()
+
+		err = db.Ping()
+		if err != nil {
+			config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
+		}
+
+		config.Log.Debugf("Getting replication status from master...")
+
+		sqlQuery := fmt.Sprintf("select * from %s;", dbTable)
+
+		rows, err := db.Query(sqlQuery)
+		if err != nil {
+			config.Log.Printf("Error: Could not query database: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			var reply repStatus
+			err := rows.Scan(
+				&reply.pid,
+				&reply.usesysid,
+				&reply.usename,
+				&reply.application_name,
+				&reply.client_addr,
+				&reply.client_hostname,
+				&reply.client_port,
+				&reply.backend_start,
+				&reply.backend_xmin,
+				&reply.state,
+				&reply.sent_lsn,
+				&reply.write_lsn,
+				&reply.flush_lsn,
+				&reply.replay_lsn,
+				&reply.write_lag,
+				&reply.flush_lag,
+				&reply.replay_lag,
+				&reply.sync_priority,
+				&reply.sync_state,
+				&reply.reply_time,
+			)
+			if err != nil {
+				config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
+				return fmt.Errorf(errorHeader + err.Error())
+			}
+			repStatusReply = append(repStatusReply, reply)
+		}
+		err = rows.Err()
+		if err != nil {
+			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
+		}
+
+		for i, reply := range repStatusReply {
+			config.Log.Infof("Rep statues reply row #%d: %s", i, reply)
+			if reply.state.String == "streaming" {
+				if err != nil {
+					config.Log.Errorf("Error parsing replay_lag: %+v", err)
+					return fmt.Errorf(errorHeader + err.Error())
+				}
+				lag, _ := time.Parse(time.StampMicro, fmt.Sprintf("%s %d %s", "Aug", time.Now().Day(), reply.replay_lag.String))
+				log.Fatalln(time.Now() - lag)
+				//	lag := reply.replay_lag.Time
+				//	if  lag > 0 * time.Second {
+				//		config.Log.Errorf("replay_lag is more than 1 second on %s: %s", reply.application_name.String, reply.replay_lag.String)
+				//		return fmt.Errorf(errorHeader + err.Error())
+				//	}
+			}
+		}
+
+		return nil
+	}
+
 }
