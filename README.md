@@ -406,6 +406,11 @@ The table with following DDL should be created:
     )
 ```
 
+### Database Replication Status
+Checking database replication internals (PostgreSQL).
+
+
+
 ### Redis Pub/Sub
 After a successful subscription, Checker waits for any message (of type other than Subscription/Pong) in each of the configured channels.
 When calculating the timeout for this kind of check, you must take into account:

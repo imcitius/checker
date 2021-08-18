@@ -446,7 +446,7 @@ func init() {
 		}
 
 		for i, reply := range repStatusReply {
-			config.Log.Infof("Rep statues reply row #%d: %s", i, reply)
+			config.Log.Infof("Rep statues reply row #%d: %v", i, reply)
 			if reply.state.String == "streaming" {
 				s := strings.Split(reply.replay_lag.String, ":")
 				s2 := strings.Split(s[2], ".")
