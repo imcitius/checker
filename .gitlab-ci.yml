@@ -5,7 +5,7 @@ variables:
   INST_UI_URL: "http://inst-ui.service.${INSTANCE_DC}.consul"
   GO_VERSION: "1.16"
   INJECT_VERSION: "true"
-#  PACKER_ONLY: "centos"
+  PACKER_ONLY: ""
   BINARY_NAME: "checker"
   INSTANCE_DC: ks-1
   VERSION: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
