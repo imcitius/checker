@@ -363,7 +363,7 @@ func init() {
 
 		var (
 			dbPort                                int
-			dbTable                               = "pg_stat_replication;"
+			dbTable                               = "pg_stat_replication"
 			dbName                                = "postgres"
 			sslMode                               = "disable"
 			repStatusReply                        []repStatus
@@ -480,16 +480,19 @@ func init() {
 					config.Log.Errorf("Error parsing allowed lag: %+v", err)
 					return fmt.Errorf(errorHeader + err.Error())
 				}
-				_, err = fmt.Sscanf(reply.state.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
+
+				_, err = fmt.Sscanf(reply.replay_lag.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
 				if err != nil {
 					config.Log.Errorf("Error parsing replay_lag: %+v", err)
 					return fmt.Errorf(errorHeader + err.Error())
 				}
+
 				lag, err := time.ParseDuration(fmt.Sprintf("%dh%dm%ds%dus", hours, minutes, seconds, microseconds))
 				if err != nil {
 					config.Log.Errorf("Error parsing replay_lag: %+v", err)
 					return fmt.Errorf(errorHeader + err.Error())
 				}
+
 				if lag > allowedLag {
 					err := fmt.Errorf("replay_lag is more than %s detected on %s: %s", allowedLag.String(), reply.application_name.String, lag.String())
 					config.Log.Infof(err.Error())
