@@ -14,13 +14,22 @@ import (
 )
 
 func init() {
-	Checks["pgsql_query"] = func(c *config.Check, p *projects.Project) error {
+	Checks["pgsql_query"] = func(c *config.Check, p *projects.Project) (ret error) {
 
 		var (
 			id, query string
 			dbPort    int
-			sslMode   string
+			sslMode   = "disable"
 		)
+
+		defer func() {
+			if err := recover(); err != nil {
+				errorHeader := fmt.Sprintf("PGSQL query error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+				errorMess := fmt.Sprintf("panic occurred: %+v", err)
+				config.Log.Errorf(errorMess)
+				ret = fmt.Errorf(errorHeader + errorMess)
+			}
+		}()
 
 		errorHeader := fmt.Sprintf("PGSQL query error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
@@ -43,9 +52,7 @@ func init() {
 			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
-		if c.SqlQueryConfig.SSLMode == "" {
-			sslMode = "disable"
-		} else {
+		if c.SqlQueryConfig.SSLMode != "" {
 			sslMode = c.SqlReplicationConfig.SSLMode
 		}
 
@@ -92,14 +99,23 @@ func init() {
 		return nil
 	}
 
-	Checks["pgsql_query_unixtime"] = func(c *config.Check, p *projects.Project) error {
+	Checks["pgsql_query_unixtime"] = func(c *config.Check, p *projects.Project) (ret error) {
 
 		var (
 			id      int64
 			query   string
 			dbPort  int
-			sslMode string
+			sslMode = "disable"
 		)
+
+		defer func() {
+			if err := recover(); err != nil {
+				errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+				errorMess := fmt.Sprintf("panic occurred: %+v", err)
+				config.Log.Errorf(errorMess)
+				ret = fmt.Errorf(errorHeader + errorMess)
+			}
+		}()
 
 		errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
@@ -122,9 +138,7 @@ func init() {
 			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
 		}
 
-		if c.SqlQueryConfig.SSLMode == "" {
-			sslMode = "disable"
-		} else {
+		if c.SqlQueryConfig.SSLMode != "" {
 			sslMode = c.SqlReplicationConfig.SSLMode
 		}
 
@@ -178,13 +192,22 @@ func init() {
 		return nil
 	}
 
-	Checks["pgsql_replication"] = func(c *config.Check, p *projects.Project) error {
+	Checks["pgsql_replication"] = func(c *config.Check, p *projects.Project) (ret error) {
 
 		var (
 			dbPort, recordId, recordValue, id int
-			dbTable                           string = "repl_test"
-			sslMode                           string
+			dbTable                           = "repl_test"
+			sslMode                           = "disable"
 		)
+
+		defer func() {
+			if err := recover(); err != nil {
+				errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+				errorMess := fmt.Sprintf("panic occurred: %+v", err)
+				config.Log.Errorf(errorMess)
+				ret = fmt.Errorf(errorHeader + errorMess)
+			}
+		}()
 
 		errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
@@ -195,9 +218,7 @@ func init() {
 		dbPassword := c.SqlReplicationConfig.Password
 		dbHost := c.Host
 		dbName := c.SqlReplicationConfig.DBName
-		if c.SqlReplicationConfig.SSLMode == "" {
-			sslMode = "disable"
-		} else {
+		if c.SqlReplicationConfig.SSLMode != "" {
 			sslMode = c.SqlReplicationConfig.SSLMode
 		}
 		if c.SqlReplicationConfig.TableName != "repl_test" {
@@ -275,9 +296,7 @@ func init() {
 				host = slave
 			}
 
-			if c.SqlQueryConfig.SSLMode == "" {
-				sslMode = "disable"
-			} else {
+			if c.SqlQueryConfig.SSLMode != "" {
 				sslMode = c.SqlReplicationConfig.SSLMode
 			}
 
@@ -318,7 +337,7 @@ func init() {
 		return nil
 	}
 
-	Checks["pgsql_replication_status"] = func(c *config.Check, p *projects.Project) error {
+	Checks["pgsql_replication_status"] = func(c *config.Check, p *projects.Project) (ret error) {
 
 		type repStatus struct {
 			pid              sql.NullInt32
@@ -347,18 +366,25 @@ func init() {
 			dbPort         int
 			dbTable        = "pg_stat_replication;"
 			dbName         = "postgres"
-			sslMode        string
+			sslMode        = "disable"
 			repStatusReply []repStatus
 		)
+
+		defer func() {
+			if err := recover(); err != nil {
+				errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+				errorMess := fmt.Sprintf("panic occurred: %+v", err)
+				config.Log.Errorf(errorMess)
+				ret = fmt.Errorf(errorHeader + errorMess)
+			}
+		}()
 
 		errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
 		dbUser := c.SqlReplicationConfig.UserName
 		dbPassword := c.SqlReplicationConfig.Password
 		dbHost := c.Host
-		if c.SqlReplicationConfig.SSLMode == "" {
-			sslMode = "disable"
-		} else {
+		if c.SqlReplicationConfig.SSLMode != "" {
 			sslMode = c.SqlReplicationConfig.SSLMode
 		}
 
@@ -450,7 +476,7 @@ func init() {
 			if reply.state.String == "streaming" {
 				s := strings.Split(reply.replay_lag.String, ":")
 				s2 := strings.Split(s[2], ".")
-				lag, _ := time.ParseDuration(fmt.Sprintf("%sh%sm%ss%sus", s[0], s[1], s2[0], s2[1]))
+				lag, err := time.ParseDuration(fmt.Sprintf("%sh%sm%ss%sus", s[0], s[1], s2[0], s2[1]))
 				if err != nil {
 					config.Log.Errorf("Error parsing replay_lag: %+v", err)
 					return fmt.Errorf(errorHeader + err.Error())
