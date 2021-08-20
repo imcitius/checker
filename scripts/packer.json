@@ -23,13 +23,18 @@
   ],
   "provisioners": [
     {
-      "type": "shell",
-      "inline": ["mkdir -p /app"]
-    },
-    {
       "type": "file",
       "source": "build/{{user `binary_name`}}",
       "destination": "/app/{{user `binary_name`}}"
+    },
+    {
+      "type": "file",
+      "source": "scripts/null-ca.pem",
+      "destination": "/usr/local/share/ca-certificates/ca.crt"
+    },
+    {
+      "type": "shell",
+      "inline": ["mkdir -p /app", "update-ca-certificates"]
     }
   ],
   "post-processors": [
