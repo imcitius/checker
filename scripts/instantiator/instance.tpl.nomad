@@ -73,20 +73,14 @@ EOH
         force_pull = true
         image = "{$ .P.image $}:{$ .P.version $}"
         network_mode = "weave"
-//        command = "/app/checker"
+        command = "/app/checker"
 
-//        args = [
-//          "check",
-//          "--configsource",
-//          "consul",
-//          "--configformat",
-//          "json"
-//        ]
-
-        command = "bash"
         args = [
-          "-c",
-          "'sleep 10000'"
+          "check",
+          "--configsource",
+          "consul",
+          "--configformat",
+          "json"
         ]
 
         port_map = {
@@ -126,16 +120,16 @@ tags = ["{$ .I.Name $}",
 
 canary_tags = ["{$- if ne .P.version .I.Name -$}{$ replace .P.version "." "-" $}-{$- end -$}canary"]
 
-//check {
-//address_mode = "driver"
-//port = "80"
-//type = "http"
-//path = "/healthcheck"
-//method = "GET"
-//interval = "5s"
-//timeout = "1s"
-//initial_status = "passing"
-//}
+check {
+address_mode = "driver"
+port = "80"
+type = "http"
+path = "/healthcheck"
+method = "GET"
+interval = "5s"
+timeout = "1s"
+initial_status = "passing"
+}
 
 check_restart {
 limit = 5
