@@ -17,7 +17,7 @@
       "privileged": "false",
       "changes": [
         "WORKDIR /app",
-        "ENTRYPOINT /app/checker"
+        "CMD /app/checker"
       ]
     }
   ],
