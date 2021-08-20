@@ -24,7 +24,7 @@
   "provisioners": [
     {
       "type": "shell",
-      "inline": ["mkdir -p /usr/local/share/ca-certificates", "mkdir -p /app"]
+      "inline": ["mkdir -p /app", "apk update", "apk add ca-certificates"]
     },
     {
       "type": "file",
