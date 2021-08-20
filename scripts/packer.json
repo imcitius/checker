@@ -17,7 +17,6 @@
       "privileged": "false",
       "changes": [
         "WORKDIR /app",
-        /* "CMD /app/{{user `binary_name`}}" */
         "ENTRYPOINT /bin/sh",
         "CMD [\"-c\",\"sleep 10000\"]"
       ]
