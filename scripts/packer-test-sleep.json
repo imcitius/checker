@@ -17,7 +17,9 @@
       "privileged": "false",
       "changes": [
         "WORKDIR /app",
-        "ENTRYPOINT /bin/checker"
+
+        "ENTRYPOINT /bin/sh",
+        "CMD [\"-c\",\"sleep 10000\"]"
       ]
     }
   ],
