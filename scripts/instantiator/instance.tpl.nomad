@@ -73,14 +73,19 @@ EOH
         force_pull = true
         image = "{$ .P.image $}:{$ .P.version $}"
         network_mode = "weave"
-        command = "/app/checker"
+//        command = "/app/checker"
 
+//        args = [
+//          "check",
+//          "--configsource",
+//          "consul",
+//          "--configformat",
+//          "json"
+//        ]
+
+        command = "sleep"
         args = [
-          "check",
-          "--configsource",
-          "consul",
-          "--configformat",
-          "json"
+          "10000"
         ]
 
         port_map = {
