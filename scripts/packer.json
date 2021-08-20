@@ -23,6 +23,10 @@
   ],
   "provisioners": [
     {
+      "type": "shell",
+      "inline": ["mkdir -p /usr/local/share/ca-certificates", "mkdir -p /app"]
+    },
+    {
       "type": "file",
       "source": "build/{{user `binary_name`}}",
       "destination": "/app/{{user `binary_name`}}"
@@ -34,7 +38,7 @@
     },
     {
       "type": "shell",
-      "inline": ["mkdir -p /app", "update-ca-certificates"]
+      "inline": ["update-ca-certificates"]
     }
   ],
   "post-processors": [
