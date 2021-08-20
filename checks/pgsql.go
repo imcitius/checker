@@ -474,6 +474,10 @@ func init() {
 		for i, reply := range repStatusReply {
 			config.Log.Infof("Rep statues reply row #%d: %v", i, reply)
 			if reply.state.String == "streaming" {
+				if len(reply.state.String) != 15 {
+					config.Log.Errorf("Error parsing replay_lag, too short: %s (%+v)", reply.state.String, err)
+					return fmt.Errorf(errorHeader + err.Error())
+				}
 				s := strings.Split(reply.replay_lag.String, ":")
 				s2 := strings.Split(s[2], ".")
 				lag, err := time.ParseDuration(fmt.Sprintf("%sh%sm%ss%sus", s[0], s[1], s2[0], s2[1]))
@@ -493,7 +497,6 @@ func init() {
 				}
 			}
 		}
-
 		return nil
 	}
 
