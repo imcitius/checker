@@ -9,7 +9,6 @@ import (
 	projects "my/checker/projects"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -474,23 +473,21 @@ func init() {
 		for i, reply := range repStatusReply {
 			config.Log.Infof("Rep statues reply row #%d: %v", i, reply)
 			if reply.state.String == "streaming" {
-				if len(reply.state.String) != 15 {
-					config.Log.Errorf("Error parsing replay_lag, too short: %s (%+v)", reply.state.String, err)
-					return fmt.Errorf(errorHeader + err.Error())
-				}
-				s := strings.Split(reply.replay_lag.String, ":")
-				s2 := strings.Split(s[2], ".")
-				lag, err := time.ParseDuration(fmt.Sprintf("%sh%sm%ss%sus", s[0], s[1], s2[0], s2[1]))
-				if err != nil {
-					config.Log.Errorf("Error parsing replay_lag: %+v", err)
-					return fmt.Errorf(errorHeader + err.Error())
-				}
+
 				allowedLag, err := time.ParseDuration(c.SqlReplicationConfig.Lag)
 				if err != nil {
 					config.Log.Errorf("Error parsing allowed lag: %+v", err)
 					return fmt.Errorf(errorHeader + err.Error())
 				}
-				if lag > allowedLag {
+
+				var t0, _ = time.Parse("00:00:00.000000", "00:00:00.000000")
+				lag, err := time.Parse("00:00:00.000000", reply.state.String)
+				if err != nil {
+					config.Log.Errorf("Error parsing replay_lag: %+v", err)
+					return fmt.Errorf(errorHeader + err.Error())
+				}
+				// lag.Sub needed to cast type time to time.Duration
+				if lag.Sub(t0) > allowedLag {
 					err := fmt.Errorf("replay_lag is more than %s detected on %s: %s", allowedLag.String(), reply.application_name.String, lag.String())
 					config.Log.Infof(err.Error())
 					return fmt.Errorf(errorHeader + err.Error())
