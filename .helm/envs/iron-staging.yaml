@@ -1,6 +1,6 @@
 db:
   check: true
-  password_path: secret/{{ .Values.werf.env }}/pgsql/checker/pass
+  password_path: secret/iron-staging/pgsql/checker/pass
 
 checker_config_template: |
   <<- $app_path := "configs/iron-staging/checker/%s" ->>

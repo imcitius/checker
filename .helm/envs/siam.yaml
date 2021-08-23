@@ -1,6 +1,6 @@
 db:
   check: false
-  password_path: secret/{{ .Values.werf.env }}/pgsql/checker/pass
+  password_path: secret/siam/pgsql/checker/pass
 
 checker_config_template: |
   <<- $app_path := "configs/siam/checker/%s" ->>
