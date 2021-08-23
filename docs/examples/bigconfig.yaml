@@ -95,6 +95,15 @@ projects:
                 - pgsql-aux-0.node.staging.consul
                 - pgsql-aux-1.node.staging.consul
                 - pgsql-aux-2.node.staging.consul
+          - type: pgsql_replication_status
+            host: master.pgsql-aux.service.staging.consul
+            port: 5432
+            sql_repl_config:
+              dbname: repltest
+              username: repltest
+              password: vault:secret/staging/pgsql-aux/repltest/pass:value
+              tablename: repl_test
+              lag: 3s
   - name: production-zoneA
     healthchecks:
       - name: mysql statistics server
