@@ -23,7 +23,7 @@ func puHandler(m *tb.Message, a *AlertConfigs) {
 	config.Log.Printf("Pause req for UUID: %+v\n", uuID)
 	status.SetCheckMode(misc.GetCheckByUUID(uuID), "quiet")
 
-	SendChatOps(fmt.Sprintf("Messages ceased for UUID %v", uuID))
+	SendChatOps(fmt.Sprintf("@%s Messages ceased for UUID %v", m.Sender.Username, uuID))
 }
 
 func uuHandler(m *tb.Message, a *AlertConfigs) {
@@ -40,7 +40,7 @@ func uuHandler(m *tb.Message, a *AlertConfigs) {
 	config.Log.Infof("Unpause req for UUID: %+v\n", uuID)
 	status.SetCheckMode(misc.GetCheckByUUID(uuID), "loud")
 
-	SendChatOps(fmt.Sprintf("Messages resumed for UUID %v", uuID))
+	SendChatOps(fmt.Sprintf("@%s Messages resumed for UUID %v", m.Sender.Username, uuID))
 }
 
 func ppHandler(m *tb.Message, a *AlertConfigs) {
@@ -58,7 +58,7 @@ func ppHandler(m *tb.Message, a *AlertConfigs) {
 	status.Statuses.Projects[projectName].Mode = "quiet"
 	config.Log.Infof("Pause req for project: %s\n", projectName)
 
-	SendChatOps(fmt.Sprintf("Messages ceased for project %s", projectName))
+	SendChatOps(fmt.Sprintf("@%s Messages ceased for project %s", m.Sender.Username, projectName))
 }
 
 func upHandler(m *tb.Message, a *AlertConfigs) {
@@ -78,26 +78,26 @@ func upHandler(m *tb.Message, a *AlertConfigs) {
 	config.Log.Infof("Resume req for project: %s\n", projectName)
 	status.Statuses.Projects[projectName].Mode = "loud"
 
-	SendChatOps(fmt.Sprintf("Messages resumed for project %s", projectName))
+	SendChatOps(fmt.Sprintf("@%s Messages resumed for project %s", m.Sender.Username, projectName))
 }
 
-func paHandler() {
+func paHandler(m *tb.Message) {
 	config.Log.Infof("Bot request /qa")
 
 	status.MainStatus = "quiet"
-	SendChatOps("All messages ceased")
+	SendChatOps(fmt.Sprintf("@%s All messages ceased", m.Sender.Username))
 
 }
 
-func uaHandler() {
+func uaHandler(m *tb.Message) {
 	config.Log.Infof("Bot request /ua")
 
 	status.MainStatus = "loud"
-	SendChatOps("All messages enabled")
+	SendChatOps(fmt.Sprintf("@%s All messages enabled", m.Sender.Username))
 }
 
 func statsHandler(m *tb.Message) {
 	config.Log.Infof("Bot request /stats from %s", m.Sender.Username)
 
-	SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + metrics.GenTextRuntimeStats()))
+	SendChatOps(fmt.Sprintf("@%s\n\n%v", m.Sender.Username, metrics.GenTextRuntimeStats()))
 }
