@@ -1,5 +1,5 @@
 db:
-  check: false
+  check: true
   password_path: secret/{{ .Values.werf.env }}/pgsql/checker/pass
 
 checker_config_template: |
