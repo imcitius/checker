@@ -219,7 +219,7 @@ checker_config_template: |
           checks:
             - type: http
               host: http://currency.billing-staging/health/check
-              answer: Billing-currencys OK
+              answer: Billing-currencies OK
               code:
                 - 200
               timeout: 2s
