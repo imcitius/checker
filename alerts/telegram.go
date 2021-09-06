@@ -219,8 +219,8 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Fatal(err)
 	}
 
-	bot.Handle("/qa", func(m *tb.Message) { paHandler() })
-	bot.Handle("/la", func(m *tb.Message) { uaHandler() })
+	bot.Handle("/qa", func(m *tb.Message) { paHandler(m) })
+	bot.Handle("/la", func(m *tb.Message) { uaHandler(m) })
 	bot.Handle("/qp", func(m *tb.Message) { ppHandler(m, a) })
 	bot.Handle("/lp", func(m *tb.Message) { upHandler(m, a) })
 	bot.Handle("/qu", func(m *tb.Message) { puHandler(m, a) })
@@ -241,11 +241,11 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 	bot.Handle(&btnPA, func(m *tb.Message) {
 		config.Log.Infof("PA pressed")
-		paHandler()
+		paHandler(m)
 	})
 	bot.Handle(&btnUA, func(m *tb.Message) {
 		config.Log.Infof("UA pressed")
-		uaHandler()
+		uaHandler(m)
 	})
 
 	// On inline button pressed (callback)
