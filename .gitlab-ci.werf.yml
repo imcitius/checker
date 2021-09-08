@@ -15,7 +15,8 @@ k8s iron-staging:
   only:
     - jgit
     - master
-  needs: []
+  needs:
+    - go tests
 
 k8s siam:
   variables:
@@ -26,7 +27,8 @@ k8s siam:
     - .docker_europe_tags
   only:
     - tags
-  needs: []
+  needs:
+    - go tests
 
 k8s iron:
   variables:
@@ -37,4 +39,5 @@ k8s iron:
     - .docker_europe_tags
   only:
     - tags
-  needs: []
+  needs:
+    - go tests

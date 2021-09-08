@@ -228,9 +228,9 @@ checker_config_template: |
               tablename: repl_test
               sslmode: require
               serverlist:
-              - sd-156610.dedibox.fr:5432
-              - sd-156668.dedibox.fr:5432
-              - sd-156793.dedibox.fr:5432
+              - sd-156610.dedibox.fr:5433
+              - sd-156668.dedibox.fr:5433
+              - sd-156793.dedibox.fr:5433
           - type: pgsql_replication_status
             host: pgsql.online.irontrade.com
             port: 5000
