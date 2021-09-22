@@ -15,8 +15,7 @@ k8s iron-staging:
   only:
     - jgit
     - master
-  needs:
-    - go tests
+  needs: []
   environment:
     name: staging
     kubernetes:
@@ -48,8 +47,7 @@ k8s siam:
     - .docker_europe_tags
   only:
     - tags
-  needs:
-    - go tests
+  needs: []
   environment:
     name: siam
     kubernetes:
@@ -80,8 +78,7 @@ k8s iron:
     - .docker_europe_tags
   only:
     - tags
-  needs:
-    - go tests
+  needs: []
   environment:
     name: iron
     kubernetes:
