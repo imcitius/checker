@@ -18,6 +18,20 @@ k8s iron-staging:
   needs:
     - go tests
 
+k8s destroy iron-staging:
+  variables:
+    WERF_ENV: iron-staging
+    DEPLOY_ENV: scaleway/staging
+  extends:
+    - .werf_destroy_template
+    - .docker_europe_tags
+  only:
+    - master
+  when: manual
+  environment:
+    name: staging
+    action: stop
+
 k8s siam:
   variables:
     WERF_ENV: siam
