@@ -368,6 +368,7 @@ func init() {
 			sslMode                               = "disable"
 			repStatusReply                        []repStatus
 			hours, minutes, seconds, microseconds int
+			streaming                             bool
 		)
 
 		defer func() {
@@ -414,14 +415,14 @@ func init() {
 		db, err := sql.Open("postgres", connStr)
 		if err != nil {
 			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
-			return fmt.Errorf(errorHeader + err.Error())
+			return fmt.Errorf(errorHeader + "sql.Open error\n" + err.Error())
 		}
 		defer db.Close()
 
 		err = db.Ping()
 		if err != nil {
 			config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
-			return fmt.Errorf(errorHeader + err.Error())
+			return fmt.Errorf(errorHeader + "db.Ping error\n" + err.Error())
 		}
 
 		config.Log.Debugf("Getting replication status from master...")
@@ -431,7 +432,7 @@ func init() {
 		rows, err := db.Query(sqlQuery)
 		if err != nil {
 			config.Log.Printf("Error: Could not query database: %+v", err)
-			return fmt.Errorf(errorHeader + err.Error())
+			return fmt.Errorf(errorHeader + "repstatus sql.Query error\n" + err.Error())
 		}
 
 		defer rows.Close()
@@ -461,36 +462,37 @@ func init() {
 			)
 			if err != nil {
 				config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
-				return fmt.Errorf(errorHeader + err.Error())
+				return fmt.Errorf(errorHeader + "repstatus rows.Scan error\n" + err.Error())
 			}
 			repStatusReply = append(repStatusReply, reply)
 		}
 		err = rows.Err()
 		if err != nil {
 			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
-			return fmt.Errorf(errorHeader + err.Error())
+			return fmt.Errorf(errorHeader + "repstatus rows.Err error\n" + err.Error())
 		}
 
 		for i, reply := range repStatusReply {
 			config.Log.Infof("Rep statues reply row #%d: %v", i, reply)
 			if reply.state.String == "streaming" {
+				streaming = true
 
 				allowedLag, err := time.ParseDuration(c.SqlReplicationConfig.Lag)
 				if err != nil {
 					config.Log.Errorf("Error parsing allowed lag: %+v", err)
-					return fmt.Errorf(errorHeader + err.Error())
+					return fmt.Errorf(errorHeader + "allowed lag parsing error\n" + err.Error())
 				}
 
 				_, err = fmt.Sscanf(reply.replay_lag.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
 				if err != nil {
 					config.Log.Errorf("Error parsing replay_lag: %+v", err)
-					return fmt.Errorf(errorHeader + err.Error())
+					return fmt.Errorf(errorHeader + "replay_lag scaning error\n" + err.Error())
 				}
 
 				lag, err := time.ParseDuration(fmt.Sprintf("%dh%dm%ds%dus", hours, minutes, seconds, microseconds))
 				if err != nil {
 					config.Log.Errorf("Error parsing replay_lag: %+v", err)
-					return fmt.Errorf(errorHeader + err.Error())
+					return fmt.Errorf(errorHeader + "replay_lag parsing error\n" + err.Error())
 				}
 
 				if lag > allowedLag {
@@ -499,8 +501,11 @@ func init() {
 					return fmt.Errorf(errorHeader + err.Error())
 				}
 			}
+			if !streaming {
+				config.Log.Errorf("Replication is not streaming\n")
+				return fmt.Errorf(errorHeader + "Replication is not streaming\n")
+			}
 		}
 		return nil
 	}
-
 }
