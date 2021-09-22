@@ -501,10 +501,10 @@ func init() {
 					return fmt.Errorf(errorHeader + err.Error())
 				}
 			}
-			if !streaming {
-				config.Log.Errorf("Replication is not streaming\n")
-				return fmt.Errorf(errorHeader + "Replication is not streaming\n")
-			}
+		}
+		if !streaming {
+			config.Log.Errorf("Replication is not streaming\n")
+			return fmt.Errorf(errorHeader + "Replication is not streaming\n")
 		}
 		return nil
 	}
