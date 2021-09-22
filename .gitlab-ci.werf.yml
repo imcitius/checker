@@ -17,6 +17,12 @@ k8s iron-staging:
     - master
   needs:
     - go tests
+  environment:
+    name: staging
+    kubernetes:
+      namespace: iron-staging
+    url: https://web.iron-staging.irontrade.com
+    on_stop: k8s destroy iron-staging
 
 k8s destroy iron-staging:
   variables:
@@ -26,6 +32,7 @@ k8s destroy iron-staging:
     - .werf_destroy_template
     - .docker_europe_tags
   only:
+    - jgit
     - master
   when: manual
   environment:
@@ -43,6 +50,26 @@ k8s siam:
     - tags
   needs:
     - go tests
+  environment:
+    name: siam
+    kubernetes:
+      namespace: siam
+    url: https://siamoption.com
+    on_stop: k8s destroy siam
+
+k8s destroy siam:
+  variables:
+    WERF_ENV: siam
+    DEPLOY_ENV: scaleway/binary-prod
+  extends:
+    - .werf_destroy_template
+    - .docker_europe_tags
+  only:
+    - tags
+  when: manual
+  environment:
+    name: siam
+    action: stop
 
 k8s iron:
   variables:
@@ -55,3 +82,23 @@ k8s iron:
     - tags
   needs:
     - go tests
+  environment:
+    name: iron
+    kubernetes:
+      namespace: iron
+    url: https://irontrade.com
+    on_stop: k8s destroy iron
+
+k8s destroy iron:
+  variables:
+    WERF_ENV: iron
+    DEPLOY_ENV: scaleway/binary-prod
+  extends:
+    - .werf_destroy_template
+    - .docker_europe_tags
+  only:
+    - tags
+  when: manual
+  environment:
+    name: iron
+    action: stop
