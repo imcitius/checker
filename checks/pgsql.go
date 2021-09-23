@@ -485,8 +485,9 @@ func init() {
 
 				_, err = fmt.Sscanf(reply.replay_lag.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
 				if err != nil {
-					config.Log.Errorf("Error parsing replay_lag: %+v", err)
-					return fmt.Errorf(errorHeader + "replay_lag scaning error\n" + err.Error())
+					err := fmt.Sprintf("Error scaning replay_lag: %+v\nreply_lag: '%s'\n", err, reply.replay_lag.String)
+					config.Log.Error(err)
+					return fmt.Errorf(errorHeader + err)
 				}
 
 				lag, err := time.ParseDuration(fmt.Sprintf("%dh%dm%ds%dus", hours, minutes, seconds, microseconds))
