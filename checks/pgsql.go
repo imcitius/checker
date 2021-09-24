@@ -473,7 +473,7 @@ func init() {
 		}
 
 		for i, reply := range repStatusReply {
-			config.Log.Infof("Rep statues reply row #%d: %v", i, reply)
+			config.Log.Infof("Rep status reply row #%d: %v", i, reply)
 			if reply.state.String == "streaming" {
 				streaming = true
 
@@ -485,8 +485,9 @@ func init() {
 
 				_, err = fmt.Sscanf(reply.replay_lag.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
 				if err != nil {
-					err := fmt.Sprintf("Error scaning replay_lag: %+v\nreply_lag: '%s'\n", err, reply.replay_lag.String)
+					err := fmt.Sprintf("Error scaning replay_lag: %+v\nreplay_lag: '%s'\n", err, reply.replay_lag.String)
 					config.Log.Error(err)
+					config.Log.Errorf("Rep status reply row #%d: %v", i, reply)
 					return fmt.Errorf(errorHeader + err)
 				}
 
