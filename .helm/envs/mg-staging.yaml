@@ -38,9 +38,6 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-#            - type: passive
-#              name: backend cron running
-#              timeout: 900s
         - name: client
           checks:
             - type: http
@@ -49,22 +46,6 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-#        - name: cat-front
-#          checks:
-#            - type: http
-#              host: http://client/check.php
-#              answer: ^ProjectM2Client OK$
-#              code:
-#                - 200
-#              timeout: 2s
-#        - name: imgproxy
-#          checks:
-#            - type: http
-#              host: http://client/check.php
-#              answer: ^ProjectM2Client OK$
-#              code:
-#                - 200
-#              timeout: 2s
         - name: dht
           checks:
             - type: http
@@ -101,7 +82,6 @@ checker_config_template: |
           checks:
             - type: http
               host: http://installer/health
-#              answer: Stat OK
               code:
                 - 200
               timeout: 2s
@@ -161,9 +141,6 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-  #            - type: passive
-  #              name: backend cron running
-  #              timeout: 900s
         - name: mg-stat
           checks:
             - type: http
@@ -196,5 +173,21 @@ checker_config_template: |
                 password: << file "/vault/secrets/pgsql.env" >>
                 lag: 3s
 
-
 # добавить мантикору
+# добавить кроны в api, поисковике, где там еще они есть
+#        - name: cat-front
+#          checks:
+#            - type: http
+#              host: http://client/check.php
+#              answer: ^ProjectM2Client OK$
+#              code:
+#                - 200
+#              timeout: 2s
+#        - name: imgproxy
+#          checks:
+#            - type: http
+#              host: http://client/check.php
+#              answer: ^ProjectM2Client OK$
+#              code:
+#                - 200
+#              timeout: 2s

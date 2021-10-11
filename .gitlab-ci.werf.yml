@@ -115,7 +115,7 @@ k8s mg-staging:
     name: mg-staging
     kubernetes:
       namespace: mg-staging
-    url: https://web.mg-staging.mediaget.com
+    url: https://test.mediaget.com
     on_stop: k8s destroy mg-staging
 
 k8s destroy mg-staging:
