@@ -336,7 +336,7 @@ difference: максимальная разность с текущим врем
     CREATE TABLE repl_test (
        id int primary key,
        test_value int,
-       timestamp NOT NULL DEFAULT NOW()
+       timestamp timestamp NOT NULL DEFAULT NOW()
     )
 ```
 

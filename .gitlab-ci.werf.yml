@@ -17,7 +17,7 @@ k8s iron-staging:
     - master
   needs: []
   environment:
-    name: staging
+    name: iron-staging
     kubernetes:
       namespace: iron-staging
     url: https://web.iron-staging.irontrade.com
@@ -35,7 +35,7 @@ k8s destroy iron-staging:
     - master
   when: manual
   environment:
-    name: staging
+    name: iron-staging
     action: stop
 
 k8s siam:
@@ -98,4 +98,37 @@ k8s destroy iron:
   when: manual
   environment:
     name: iron
+    action: stop
+
+k8s mg-staging:
+  variables:
+    WERF_ENV: mg-staging
+    DEPLOY_ENV: scaleway/staging
+  extends:
+    - .werf_deploy_template
+    - .docker_europe_tags
+  only:
+    - jgit
+    - master
+  needs: []
+  environment:
+    name: mg-staging
+    kubernetes:
+      namespace: mg-staging
+    url: https://web.mg-staging.mediaget.com
+    on_stop: k8s destroy mg-staging
+
+k8s destroy mg-staging:
+  variables:
+    WERF_ENV: mg-staging
+    DEPLOY_ENV: scaleway/staging
+  extends:
+    - .werf_destroy_template
+    - .docker_europe_tags
+  only:
+    - jgit
+    - master
+  when: manual
+  environment:
+    name: mg-staging
     action: stop
