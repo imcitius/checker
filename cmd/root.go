@@ -93,7 +93,7 @@ func initConfig() {
 		"config.format":         configFormat,
 	}, "."), nil)
 	if err != nil {
-		logrus.Panicf("Cannot parse default config: %s", err.Error())
+		logrus.Panicf("Cannot fill default config: %s", err.Error())
 	}
 
 	err = config.Koanf.Load(env.Provider("PORT", ".", func(s string) string {
