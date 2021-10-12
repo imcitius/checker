@@ -33,7 +33,7 @@ checker_config_template: |
         - name: api
           checks:
             - type: http
-              host: http://api/api//healthcheck
+              host: http://api/api/healthcheck
               answer: ^API OK$
               code:
                 - 200
@@ -112,7 +112,7 @@ checker_config_template: |
         - name: mg-web
           checks:
             - type: http
-              host: http://mg-ping/ping
+              host: http://mg-web/ping
               answer: ^ping$
               code:
                 - 200
@@ -120,7 +120,7 @@ checker_config_template: |
         - name: mg-msearch
           checks:
             - type: http
-              host: http://mg-msearch/check.php
+              host: http://msearch/check.php
               answer: ^ProjectM2Msearch OK$
               code:
                 - 200
