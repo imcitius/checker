@@ -55,7 +55,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
-	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "bots", "b", true, "start listening messenger bots")
 
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)
@@ -195,25 +194,11 @@ func mainChecker() {
 		config.Log.Debugf("Fire scheduler")
 		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
-		config.Log.Debugf("cmd botsEnabled is %v", config.Koanf.Bool("bots.enabled"))
 		config.Log.Debugf("config botsEnabled is %v", config.Config.Defaults.BotsEnabled)
-		// primary source of bots config is cmd, secondary is config
-		if config.Koanf.Bool("bots.enabled") {
-			if config.Config.Defaults.BotsEnabled {
-				config.Log.Debugf("Fire bot")
-				config.Wg.Add(1)
-				commandChannel, err := alerts.GetCommandChannel()
-				if err != nil {
-					config.Log.Infof("root GetCommandChannel error: %s", err)
-				} else {
-					a := commandChannel.GetAlertProto()
-					if a == nil {
-						config.Log.Fatal("root commandChannel not found, bot not initialized")
-					} else {
-						a.InitBot(config.BotsSignalCh, &config.Wg)
-					}
-				}
-			}
+
+		switch config.Config.Defaults.BotsEnabled {
+		case true:
+			fireBot()
 		}
 
 		//config.InternalStatus = "started"
@@ -229,6 +214,21 @@ func mainChecker() {
 	}
 }
 
+func fireBot() {
+	config.Log.Debugf("Fire bot")
+	config.Wg.Add(1)
+	commandChannel, err := alerts.GetCommandChannel()
+	if err != nil {
+		config.Log.Infof("root GetCommandChannel error: %s", err)
+	} else {
+		a := commandChannel.GetAlertProto()
+		if a == nil {
+			config.Log.Fatal("root commandChannel not found, bot not initialized")
+		} else {
+			a.InitBot(config.BotsSignalCh, &config.Wg)
+		}
+	}
+}
 func testConfig() {
 	_, err := config.TestConfig()
 	if err != nil {
