@@ -28,7 +28,6 @@ Available Commands:
   version     Print the version number of Checker
 
 Flags:
-  -b, --bots                        start listening messenger bots (boolean default true)
   -c, --config string               config file
   -f, --configformat string         config file format (default "yaml")
   -s, --configsource string         config file source: file or consul
@@ -111,6 +110,7 @@ periodic_report_time: период отправки отчетов по откл
 
 mentions: кого нотифицировать в алертах по данному проекту. бывает удобно всем участникам чата держать его замьюченным, а уведомлять по конкретным проблемам конкретные персоны.
 
+bots_enabled: запускать ли бота
 ```
 
 Нужно учитывать, что параметр `run_every` должен быть кратен параметру `timer_step`.

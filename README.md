@@ -45,6 +45,7 @@ defaults:
     mode: loud
     periodic_report_time: 10s
     ssl_expiration_period: 720h
+    bots_enabled: true
 alerts:
   - name: tg_staging
     type: telegram
@@ -94,7 +95,6 @@ Available Commands:
   version     Print the version number of Checker
 
 Flags:
-  -b, --bots                        start listening messenger bots (default true)
   -c, --config string               config file
   -f, --configformat string         config file format (default "yaml")
   -s, --configsource string         config file source: file, consul, s3
@@ -168,8 +168,9 @@ ssl_expiration_period: checking the proximity of the expiration time of SSL cert
 
 // TODO check the feature
 periodic_report_time: submission period
-mentions: who to notify in alerts for this project. it is convenient for all chat participants to keep it muted, and to notify specific persons on specific problems.
+mentions: who to not
 
+bots_enabled: wheether to allow run telegram bot
 ```
 
 Keep in mind that the `run_every` parameter must be a multiple of the` timer_step` parameter.
