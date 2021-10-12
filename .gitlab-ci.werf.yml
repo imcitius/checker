@@ -132,3 +132,36 @@ k8s destroy mg-staging:
   environment:
     name: mg-staging
     action: stop
+
+k8s mg-prod:
+  variables:
+    WERF_ENV: mg-prod
+    DEPLOY_ENV: scaleway/mg-prod
+  extends:
+    - .werf_deploy_template
+    - .docker_europe_tags
+  only:
+    - jgit
+    - master
+  needs: []
+  environment:
+    name: mg-prod
+    kubernetes:
+      namespace: mg-prod
+    url: https://mediaget.com
+    on_stop: k8s destroy mg-prod
+
+k8s destroy mg-prod:
+  variables:
+    WERF_ENV: mg-prod
+    DEPLOY_ENV: scaleway/staging
+  extends:
+    - .werf_destroy_template
+    - .docker_europe_tags
+  only:
+    - jgit
+    - master
+  when: manual
+  environment:
+    name: mg-prod
+    action: stop
