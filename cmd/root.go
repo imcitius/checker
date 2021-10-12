@@ -99,23 +99,19 @@ func initConfig() {
 	err = config.Koanf.Load(env.Provider("PORT", ".", func(s string) string {
 		return "defaults.http.port"
 	}), nil)
-	err = config.Koanf.Load(env.Provider("CONSUL_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			s), "_", ".", -1)
-	}), nil)
-	err = config.Koanf.Load(env.Provider("VAULT_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			s), "_", ".", -1)
-	}), nil)
-	err = config.Koanf.Load(env.Provider("AWS_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			s), "_", ".", -1)
-	}), nil)
-	err = config.Koanf.Load(env.Provider("CHECKER_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			s), "_", ".", -1)
-	}), nil)
+	if err != nil {
+		logrus.Infof("PORT env not defined: %s", err.Error())
+	}
 
+	for _, i := range []string{"CONSUL_", "VAULT_", "AWS_", "CHECKER_"} {
+		err = config.Koanf.Load(env.Provider(i, ".", func(s string) string {
+			return strings.Replace(strings.ToLower(
+				s), "_", ".", -1)
+		}), nil)
+		if err != nil {
+			logrus.Infof("%s env not defined: %s", i, err.Error())
+		}
+	}
 }
 
 var checkCommand = &cobra.Command{
