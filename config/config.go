@@ -59,7 +59,7 @@ type ConfigFile struct {
 		HTTPEnabled        string `koanf:"http_enabled"`
 		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
 
-		BotsEnabled bool `koanf:"bots_enanled"`
+		BotsEnabled bool `koanf:"bots_enabled"`
 	}
 	Alerts   []AlertConfigs
 	Actors   []ActorConfigs
