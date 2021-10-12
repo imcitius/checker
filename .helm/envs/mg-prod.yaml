@@ -1,10 +1,10 @@
 db:
   check: true
-  password_path: secret/mg-staging/pgsql-ext/checker/pass
+  password_path: secret/mg-prod/pgsql-ext/checker/pass
 
 checker_config_template: |
-  <<- $app_path := "configs/mg-staging/checker/%s" ->>
-  <<- $redis_path := "configs/mg-staging/redis/%s" ->>
+  <<- $app_path := "configs/mg-prod/checker/%s" ->>
+  <<- $redis_path := "configs/mg-prod/redis/%s" ->>
   <<- $redis_host := key (printf $redis_path "host") ->>
   <<- $redis_port := key (printf $redis_path "port") ->>
   <<- $redis_url := printf "redis://%s:%s" $redis_host $redis_port ->>

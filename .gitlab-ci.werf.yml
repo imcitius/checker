@@ -141,8 +141,7 @@ k8s mg-prod:
     - .werf_deploy_template
     - .docker_europe_tags
   only:
-    - jgit
-    - master
+    - tags
   needs: []
   environment:
     name: mg-prod
@@ -159,8 +158,7 @@ k8s destroy mg-prod:
     - .werf_destroy_template
     - .docker_europe_tags
   only:
-    - jgit
-    - master
+    - tags
   when: manual
   environment:
     name: mg-prod
