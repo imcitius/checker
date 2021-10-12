@@ -339,6 +339,9 @@ difference: максимальная разность с текущим врем
        timestamp timestamp NOT NULL DEFAULT NOW()
     )
 ```
+В PostgreSQL версий 10+ нужно дать права пользователю для получения данных о репликации без роли суперпользователя:
+```GRANT pg_monitor TO checker;```
+
 
 ### Проверка Pub/Sub
 ```
