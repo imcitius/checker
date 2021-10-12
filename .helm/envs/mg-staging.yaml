@@ -148,20 +148,20 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-       - name: imgproxy
-         checks:
-           - type: http
-             host: http://imgproxy
-             code:
-               - 200
-             timeout: 2s
-       - name: catalogue-front
-         checks:
-           - type: http
-             host: http://cat-front
-             code:
-               - 200
-             timeout: 2s
+        - name: imgproxy
+          checks:
+            - type: http
+              host: http://imgproxy
+              code:
+                - 200
+              timeout: 2s
+        - name: catalogue-front
+          checks:
+            - type: http
+              host: http://cat-front
+              code:
+                - 200
+              timeout: 2s
         - name: pgsql-main
           checks:
             - type: pgsql_replication
