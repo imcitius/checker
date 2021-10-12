@@ -165,7 +165,7 @@ checker_config_template: |
         - name: pgsql-main
           checks:
             - type: pgsql_replication
-              host: pgsql.online.mediaget.com
+              host: pgsql.mg-staging.mediaget.com
               port: 5000
               sql_repl_config:
                 dbname: checker
@@ -178,7 +178,7 @@ checker_config_template: |
                   - 51.15.206.209:5433
                   - 163.172.183.48:5433
             - type: pgsql_replication_status
-              host: pgsql.online.mediaget.com
+              host: pgsql.mg-staging.mediaget.com
               port: 5000
               sql_repl_config:
                 dbname: checker
