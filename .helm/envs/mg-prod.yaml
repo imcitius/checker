@@ -166,7 +166,7 @@ checker_config_template: |
         - name: pgsql-main
           checks:
             - type: pgsql_replication
-              host: pgsql.mg-staging.mediaget.com
+              host: pgsql.online.mediaget.com
               port: 5000
               sql_repl_config:
                 dbname: checker
@@ -175,11 +175,11 @@ checker_config_template: |
                 tablename: repl_test
                 sslmode: require
                 serverlist:
-                  - 51.158.156.17:5433
-                  - 51.158.156.18:5433
-                  - 51.158.156.19:5433
+                  - 212.47.233.229:5433
+                  - 51.15.206.209:5433
+                  - 163.172.183.48:5433
             - type: pgsql_replication_status
-              host: pgsql.mg-prod.mediaget.com
+              host: pgsql.online.mediaget.com
               port: 5000
               sql_repl_config:
                 dbname: checker
@@ -189,4 +189,3 @@ checker_config_template: |
 
 # добавить мантикору
 # добавить кроны в api, поисковике, где там еще они есть
-
