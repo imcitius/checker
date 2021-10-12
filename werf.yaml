@@ -25,10 +25,6 @@ shell:
     # go test needs cgo, needs gcc
 #    - go test ./...
     - go build -v -i -x -o checker
-# breaks giterminism, rebuild on every commit :(
-#      -ldflags "-X my/checker/config.Version={{ env "CI_COMMIT_REF_NAME" }}
-#      -X my/checker/config.VersionSHA={{ env "CI_COMMIT_SHORT_SHA" }}
-#      -X my/checker/config.VersionBuild={{ env "CI_JOB_ID" }}"
     - chmod +x checker
 ---
 image: checker
