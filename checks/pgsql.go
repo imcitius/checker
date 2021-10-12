@@ -484,16 +484,18 @@ func init() {
 					return fmt.Errorf(errorHeader + "allowed lag parsing error\n" + err.Error())
 				}
 
-				_, err = fmt.Sscanf(reply.replay_lag.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
-				if err != nil {
-					err := fmt.Sprintf("Error scanning replay_lag: %+v\nreplay_lag: '%s'\n", err, reply.replay_lag.String)
-					config.Log.Error(err)
-					config.Log.Errorf("Rep status reply row #%d\n", i)
-					fields := reflect.ValueOf(reply)
-					for i := 0; i < fields.NumField(); i++ {
-						config.Log.Errorf("Rep status reply field: '%s'\tValue: '%s'\n", fields.Type().Field(i).Name, fields.Field(i))
+				if reply.replay_lag.Valid {
+					_, err = fmt.Sscanf(reply.replay_lag.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
+					if err != nil {
+						err := fmt.Sprintf("Error scanning replay_lag: %+v\nreplay_lag: '%s'\n", err, reply.replay_lag.String)
+						config.Log.Error(err)
+						config.Log.Errorf("Rep status reply row #%d\n", i)
+						fields := reflect.ValueOf(reply)
+						for i := 0; i < fields.NumField(); i++ {
+							config.Log.Errorf("Rep status reply field: '%s'\tValue: '%s'\n", fields.Type().Field(i).Name, fields.Field(i))
+						}
+						return fmt.Errorf(errorHeader + err)
 					}
-					return fmt.Errorf(errorHeader + err)
 				}
 
 				lag, err := time.ParseDuration(fmt.Sprintf("%dh%dm%ds%dus", hours, minutes, seconds, microseconds))
