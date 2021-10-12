@@ -113,7 +113,7 @@ checker_config_template: |
           checks:
             - type: http
               host: http://mg-web/ping
-              answer: ^ping$
+              answer: ^pong$
               code:
                 - 200
               timeout: 2s
@@ -159,14 +159,14 @@ checker_config_template: |
         - name: catalogue-front
           checks:
             - type: http
-              host: http://cat-front
+              host: http://cat-front/health
               code:
                 - 200
               timeout: 2s
         - name: pgsql-main
           checks:
             - type: pgsql_replication
-              host: pgsql.mg-staging.mediaget.com
+              host: pgsql.mg-prod.mediaget.com
               port: 5000
               sql_repl_config:
                 dbname: checker
