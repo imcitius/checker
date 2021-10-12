@@ -58,6 +58,8 @@ type ConfigFile struct {
 		// If not empty HTPP server not enabled
 		HTTPEnabled        string `koanf:"http_enabled"`
 		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
+
+		BotsEnabled bool `koanf:"bots_enanled"`
 	}
 	Alerts   []AlertConfigs
 	Actors   []ActorConfigs

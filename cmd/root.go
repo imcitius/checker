@@ -6,6 +6,7 @@ import (
 	"github.com/knadh/koanf/providers/env"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"log"
 	"my/checker/alerts"
 	"my/checker/auth"
 	"my/checker/catalog"
@@ -81,7 +82,7 @@ func init() {
 
 func initConfig() {
 
-	config.Koanf.Load(confmap.Provider(map[string]interface{}{
+	err := config.Koanf.Load(confmap.Provider(map[string]interface{}{
 		"defaults.http.port":    "80",
 		"defaults.http.enabled": true,
 		"debug.level":           debugLevel,
@@ -93,26 +94,29 @@ func initConfig() {
 		"config.format":         configFormat,
 	}, "."), nil)
 
-	config.Koanf.Load(env.Provider("PORT", ".", func(s string) string {
+	err = config.Koanf.Load(env.Provider("PORT", ".", func(s string) string {
 		return "defaults.http.port"
 	}), nil)
 
-	config.Koanf.Load(env.Provider("CONSUL_", ".", func(s string) string {
+	err = config.Koanf.Load(env.Provider("CONSUL_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)
 	}), nil)
-	config.Koanf.Load(env.Provider("VAULT_", ".", func(s string) string {
+	err = config.Koanf.Load(env.Provider("VAULT_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)
 	}), nil)
-	config.Koanf.Load(env.Provider("AWS_", ".", func(s string) string {
+	err = config.Koanf.Load(env.Provider("AWS_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)
 	}), nil)
-	config.Koanf.Load(env.Provider("CHECKER_", ".", func(s string) string {
+	err = config.Koanf.Load(env.Provider("CHECKER_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)
 	}), nil)
+	if err != nil {
+		log.Panicf("Cannot load config: %s", err.Error())
+	}
 
 }
 
@@ -197,19 +201,23 @@ func mainChecker() {
 		config.Log.Debugf("Fire scheduler")
 		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
-		config.Log.Debugf("botsEnabled is %v", config.Koanf.Bool("bots.enabled"))
+		config.Log.Debugf("cmd botsEnabled is %v", config.Koanf.Bool("bots.enabled"))
+		config.Log.Debugf("config botsEnabled is %v", config.Config.Defaults.BotsEnabled)
+		// primary source of bots config is cmd, secondary is config
 		if config.Koanf.Bool("bots.enabled") {
-			config.Log.Debugf("Fire bot")
-			config.Wg.Add(1)
-			commandChannel, err := alerts.GetCommandChannel()
-			if err != nil {
-				config.Log.Infof("root GetCommandChannel error: %s", err)
-			} else {
-				a := commandChannel.GetAlertProto()
-				if a == nil {
-					config.Log.Fatal("root commandChannel not found, bot not initialized")
+			if config.Config.Defaults.BotsEnabled {
+				config.Log.Debugf("Fire bot")
+				config.Wg.Add(1)
+				commandChannel, err := alerts.GetCommandChannel()
+				if err != nil {
+					config.Log.Infof("root GetCommandChannel error: %s", err)
 				} else {
-					a.InitBot(config.BotsSignalCh, &config.Wg)
+					a := commandChannel.GetAlertProto()
+					if a == nil {
+						config.Log.Fatal("root commandChannel not found, bot not initialized")
+					} else {
+						a.InitBot(config.BotsSignalCh, &config.Wg)
+					}
 				}
 			}
 		}
