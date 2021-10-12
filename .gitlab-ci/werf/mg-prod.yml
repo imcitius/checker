@@ -1,0 +1,37 @@
+variables:
+  CI_BUILD_ENV: scaleway
+  CI_BUILD_REGISTRY: harbor-scw.jgit.me
+  CI_BUILD_LIBRARY: checker/checker
+  CI_DOCKER_PROXY: harbor-scw.jgit.me
+  WERF_REPO_CONTAINER_REGISTRY: harbor
+
+k8s mg-prod:
+  variables:
+    WERF_ENV: mg-prod
+    DEPLOY_ENV: scaleway/mg-prod
+  extends:
+    - .werf_deploy_template
+    - .docker_europe_tags
+  only:
+    - tags
+  needs: []
+  environment:
+    name: mg-prod
+    kubernetes:
+      namespace: mg-prod
+    url: https://mediaget.com
+    on_stop: k8s destroy mg-prod
+
+k8s destroy mg-prod:
+  variables:
+    WERF_ENV: mg-prod
+    DEPLOY_ENV: scaleway/staging
+  extends:
+    - .werf_destroy_template
+    - .docker_europe_tags
+  only:
+    - tags
+  when: manual
+  environment:
+    name: mg-prod
+    action: stop

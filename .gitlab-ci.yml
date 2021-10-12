@@ -21,4 +21,5 @@ include:
 
   - project: 'ci-library/werf-deploy'
     file: 'common.yml'
-  - '.gitlab-ci.werf.yml'
+
+  - .gitlab-ci/werf/*.yml
