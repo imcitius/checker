@@ -6,7 +6,6 @@ import (
 	"github.com/knadh/koanf/providers/env"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"log"
 	"my/checker/alerts"
 	"my/checker/auth"
 	"my/checker/catalog"
@@ -93,11 +92,13 @@ func initConfig() {
 		"config.watchtimeout":   configWatchTimeout,
 		"config.format":         configFormat,
 	}, "."), nil)
+	if err != nil {
+		logrus.Panicf("Cannot parse default config: %s", err.Error())
+	}
 
 	err = config.Koanf.Load(env.Provider("PORT", ".", func(s string) string {
 		return "defaults.http.port"
 	}), nil)
-
 	err = config.Koanf.Load(env.Provider("CONSUL_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)
@@ -114,9 +115,6 @@ func initConfig() {
 		return strings.Replace(strings.ToLower(
 			s), "_", ".", -1)
 	}), nil)
-	if err != nil {
-		log.Panicf("Cannot load config: %s", err.Error())
-	}
 
 }
 
