@@ -8,6 +8,7 @@ import (
 	"my/checker/config"
 	projects "my/checker/projects"
 	"net"
+	"reflect"
 	"strconv"
 	"time"
 )
@@ -473,7 +474,7 @@ func init() {
 		}
 
 		for i, reply := range repStatusReply {
-			config.Log.Infof("Rep status reply row #%d: %v", i, reply)
+			//config.Log.Infof("Rep status reply row #%d: %v", i, reply)
 			if reply.state.String == "streaming" {
 				streaming = true
 
@@ -487,7 +488,11 @@ func init() {
 				if err != nil {
 					err := fmt.Sprintf("Error scanning replay_lag: %+v\nreplay_lag: '%s'\n", err, reply.replay_lag.String)
 					config.Log.Error(err)
-					config.Log.Errorf("Rep status reply row #%d: %v", i, reply)
+					config.Log.Errorf("Rep status reply row #%d\n", i)
+					fields := reflect.ValueOf(reply)
+					for i := 0; i < fields.NumField(); i++ {
+						config.Log.Errorf("Rep status reply field: '%s'\tValue: '%s'\n", fields.Type().Field(i).Name, fields.Field(i))
+					}
 					return fmt.Errorf(errorHeader + err)
 				}
 
