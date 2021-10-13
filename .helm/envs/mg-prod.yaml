@@ -7,6 +7,7 @@ checker_config_template: |
   defaults:
     timer_step: 5s
     http_port: '80'
+    bots_enabled: true
     parameters:
       run_every: 300s
       min_health: 1
@@ -17,7 +18,6 @@ checker_config_template: |
       mode: loud
       periodic_report_time: 1800s
       ssl_expiration_period: 720h
-      bots_enabled: true
   alerts:
     - name: prod
       type: telegram

@@ -55,7 +55,7 @@ type ConfigFile struct {
 		// HTTP port web interface listen
 		HTTPPort string `koanf:"http_port"`
 
-		// If not empty HTPP server not enabled
+		// If empty HTTP server is not enabled
 		HTTPEnabled        string `koanf:"http_enabled"`
 		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
 

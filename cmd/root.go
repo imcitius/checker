@@ -198,9 +198,10 @@ func mainChecker() {
 
 		switch config.Config.Defaults.BotsEnabled {
 		case true:
+			config.Log.Infof("Active bot is enabled")
 			fireBot()
 		case false:
-			config.Log.Debug("Active bot is disabled, alerts only")
+			config.Log.Infof("Active bot is disabled, alerts only")
 			message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
 			alerts.SendChatOps(message)
 		}
@@ -233,6 +234,7 @@ func fireBot() {
 		}
 	}
 }
+
 func testConfig() {
 	_, err := config.TestConfig()
 	if err != nil {
@@ -250,7 +252,7 @@ func signalWait() {
 		config.InternalStatus = "stop"
 		interrupt = true
 		config.SchedulerSignalCh <- true
-		if config.Koanf.Bool("bots.enabled") {
+		if config.Config.Defaults.BotsEnabled {
 			config.BotsSignalCh <- true
 		}
 		config.WebSignalCh <- true
@@ -264,7 +266,7 @@ func signalWait() {
 		config.InternalStatus = "reload"
 		config.SchedulerSignalCh <- true
 		//config.WebSignalCh <- true
-		if config.Koanf.Bool("bots.enabled") {
+		if config.Config.Defaults.BotsEnabled {
 			config.BotsSignalCh <- true
 		}
 		return
