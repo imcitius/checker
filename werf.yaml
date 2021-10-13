@@ -16,7 +16,7 @@ git:
 shell:
   cacheVersion: 1
   install:
-    - apk update && apk add git openssh
+    - apk update && apk add git openssh gcc musl-dev
     - export GOOS="linux"
     - export GOARCH="amd64"
     - cd /go/src
