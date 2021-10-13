@@ -14,7 +14,8 @@ k8s mg-prod:
     - .docker_europe_tags
   only:
     - tags
-  needs: []
+  needs:
+    - werf-build
   environment:
     name: mg-prod
     kubernetes:
