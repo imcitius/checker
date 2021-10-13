@@ -1,0 +1,4 @@
+build:
+  extends:
+    - .werf_build_template
+    - .docker_europe_tags
