@@ -16,7 +16,7 @@ git:
 shell:
   cacheVersion: 1
   install:
-    - apk update && apk add git openssh gcc musl-dev
+    - apk update && apk add git openssh
     - export GOOS="linux"
     - export GOARCH="amd64"
     - cd /go/src
@@ -24,6 +24,9 @@ shell:
 #    - go lint ./...
     - go test ./...
     - go build -v -i -x -o checker
+      -ldflags "-X my/checker/config.Version={{ env "CI_COMMIT_REF_NAME" }}
+      -X my/checker/config.VersionSHA={{ env "CI_COMMIT_SHORT_SHA" }}
+      -X my/checker/config.VersionBuild={{ env "CI_JOB_ID" }}"
     - chmod +x checker
 ---
 image: checker

@@ -1,0 +1,7 @@
+giterminismConfigVersion: 1
+config:
+  goTemplateRendering:
+    allowEnvVariables:
+      - CI_COMMIT_REF_NAME
+      - CI_JOB_ID
+      - CI_COMMIT_SHORT_SHA
