@@ -199,6 +199,10 @@ func mainChecker() {
 		switch config.Config.Defaults.BotsEnabled {
 		case true:
 			fireBot()
+		case false:
+			config.Log.Debug("Active bot is disabled, alerts only")
+			message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
+			alerts.SendChatOps(message)
 		}
 
 		//config.InternalStatus = "started"
