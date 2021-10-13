@@ -35,11 +35,14 @@ func init() {
 			conn, err := net.DialTimeout("tcp", address, timeout)
 
 			if err == nil {
-				defer conn.Close()
+				defer func() {
+					err = conn.Close()
+				}()
+				config.Log.Printf("Error closing connection %s", err.Error())
 				return nil
 			}
 
-			errorMessage = errorHeader + fmt.Sprintf("connection to %s:%d failed: %v (attempt %d)\n", c.Host, c.Port, err, checkAttempts)
+			errorMessage = errorHeader + fmt.Sprintf("connection to %s:%d failed: %s (attempt %d)\n", c.Host, c.Port, err.Error(), checkAttempts)
 			config.Log.Printf(errorMessage)
 			checkAttempt++
 		}
