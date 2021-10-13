@@ -42,18 +42,18 @@ func SendChatOps(text string, args ...interface{}) {
 }
 
 func (a *AlertConfigs) Alert(text, messageType string, args ...interface{}) error {
-	noMetrics := false
+	allowMetrics := true
 
 	if args != nil {
 		for _, arg := range args {
 			val, _ := arg.(string)
 			if val == "noMetrics" {
-				noMetrics = true
+				allowMetrics = false
 			}
 		}
 	}
 
-	if !noMetrics {
+	if allowMetrics {
 		a.AddAlertMetricNonCritical()
 	}
 
@@ -84,7 +84,6 @@ func (a *AlertConfigs) AddAlertMetricNonCritical() {
 		alertname = a.Name
 	}
 	metrics.AlertsCount.WithLabelValues(alertname, "NonCritical").Inc()
-
 }
 
 func (a *AlertConfigs) AddAlertMetricCritical() {
