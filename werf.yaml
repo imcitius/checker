@@ -16,14 +16,13 @@ git:
 shell:
   cacheVersion: 1
   install:
-    - apk update && apk add git openssh
+    - apk update && apk add git openssh gcc musl-dev
     - export GOOS="linux"
     - export GOARCH="amd64"
     - cd /go/src
     - go get -v -t -d ./...
 #    - go lint ./...
-    # go test needs cgo, needs gcc
-#    - go test ./...
+    - go test ./...
     - go build -v -i -x -o checker
     - chmod +x checker
 ---

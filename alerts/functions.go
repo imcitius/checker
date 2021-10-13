@@ -27,7 +27,7 @@ func GetCommandChannel() (*AlertConfigs, error) {
 	return nil, fmt.Errorf("ChatOpsChannel not found: %s", config.Config.Defaults.Parameters.CommandChannel)
 }
 
-func SendChatOps(text string) {
+func SendChatOps(text string, args ...interface{}) {
 	//metrics.AddProjectMetricChatOpsAnswer(&projects.Project{
 	//	Name: "ChatOps"})
 	commandChannel, err := GetCommandChannel()
@@ -35,14 +35,27 @@ func SendChatOps(text string) {
 		config.Log.Infof("GetCommandChannel error: %s", err)
 	}
 
-	err = commandChannel.Alert(text, "chatops")
+	err = commandChannel.Alert(text, "chatops", args)
 	if err != nil {
 		config.Log.Infof("SendTgChatOpsMessage error: %s", err)
 	}
 }
 
-func (a *AlertConfigs) Alert(text, messageType string) error {
-	a.AddAlertMetricNonCritical()
+func (a *AlertConfigs) Alert(text, messageType string, args ...interface{}) error {
+	noMetrics := false
+
+	if args != nil {
+		for _, arg := range args {
+			val, _ := arg.(string)
+			if val == "noMetrics" {
+				noMetrics = true
+			}
+		}
+	}
+
+	if !noMetrics {
+		a.AddAlertMetricNonCritical()
+	}
 
 	err := a.GetAlertProto().Send(a, text, messageType)
 	if err != nil {
