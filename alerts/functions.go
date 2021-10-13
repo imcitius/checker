@@ -53,7 +53,7 @@ func (a *AlertConfigs) Alert(text, messageType string, args ...interface{}) erro
 		}
 	}
 
-	if allowMetrics {
+	if allowMetrics == true {
 		a.AddAlertMetricNonCritical()
 	}
 
