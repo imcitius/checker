@@ -15,7 +15,7 @@ k8s siam:
   only:
     - tags
   needs:
-    - werf-build
+    - werf build
   environment:
     name: siam
     kubernetes:
@@ -47,7 +47,7 @@ k8s iron:
   only:
     - tags
   needs:
-    - werf-build
+    - werf build
   environment:
     name: iron
     kubernetes:

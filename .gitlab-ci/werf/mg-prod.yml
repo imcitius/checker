@@ -15,7 +15,7 @@ k8s mg-prod:
   only:
     - tags
   needs:
-    - werf-build
+    - werf build
   environment:
     name: mg-prod
     kubernetes:

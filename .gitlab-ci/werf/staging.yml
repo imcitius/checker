@@ -16,7 +16,7 @@ k8s iron-staging:
     - jgit
     - master
   needs:
-    - werf-build
+    - werf build
   environment:
     name: iron-staging
     kubernetes:
@@ -50,7 +50,7 @@ k8s mg-staging:
     - jgit
     - master
   needs:
-    - werf-build
+    - werf build
   environment:
     name: mg-staging
     kubernetes:
