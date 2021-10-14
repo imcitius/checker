@@ -33,5 +33,9 @@ import:
   add: /go/src/checker
   to: /checker
   after: install
+shell:
+  cacheVersion: 2
+  install:
+    - apk add curl jq
 docker:
   WORKDIR: /
