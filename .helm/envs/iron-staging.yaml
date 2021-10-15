@@ -169,6 +169,14 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+        - name: dynamic-percent
+          checks:
+            - type: http
+              host: http://dynamicpercent:8081/health-check
+              answer: '{"status":"ok"}'
+              code:
+                - 200
+              timeout: 2s
         - name: iron-staging-pgsql
           checks:
           - type: pgsql_replication_status
