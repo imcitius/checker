@@ -12,7 +12,8 @@ Configuration storage implemented using the [Koanf](https://github.com/knadh/koa
 By default, the configuration loading from `config.yaml` file in the current directory.
 
 ## Quick running test instance 
-[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
+You can use fly.io free tier to run Checker PoC, and for personal use:
+https://fly.io/docs/speedrun/
 
 You can find example configurations files in [docs/examples](docs/examples) folder.
 
@@ -457,10 +458,10 @@ If an active check is undesirable or impossible for some reason, a passive check
     }
 
 Check refresh requests should be a GET request to the endpoint `http://checker/check/ping/<check uuid>`.
-A list of all UUIDs can be obtained with a GET request to the endpoint http://checker/list, or with the CLI command `checker list`.
+A list of all UUIDs can be obtained with a GET request to the endpoint http://checker/listChecks, or with the CLI command `checker list`.
 To get the list via WEB, JWT authorization is required, [see](#web-api):
 
-  curl -H "Authorization: <token>" http://checker/list
+  curl -H "Authorization: <token>" http://checker/listChecks
 
 ```
 
@@ -494,7 +495,7 @@ Test token for example config in [docs/examples/google.yaml](docs/examples/googl
 
 `/check/status/<check-uuid>` - request the check status
 
-`/list` - returns all checks defined (require auth).
+`/listChecks` - returns all checks defined (require auth).
 ```
 Project: google
 	Healthcheck: tcp_test

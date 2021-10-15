@@ -1,5 +1,5 @@
 .idea
-checker
+checker*
 testconfigs
 gitlabci*
 kubeconfig.json

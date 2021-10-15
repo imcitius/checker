@@ -5,7 +5,8 @@
 Утилита задумана в качестве универсального демона, способного проводить периодические проверки (хелсчеки) различных IT систем, 
 отсылать алерты и выполнять какие-то действия в случае смены статуса проверки.
 
-[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
+Запустить Чекалку в облаке можно бесплатно, например с помощью fly.io Free tier:
+https://fly.io/docs/speedrun/
 
 Хранение конфигурации реализовано с помощью библиотеки [Koanf](https://github.com/knadh/koanf).
 По умолчанию загружается конфиг из файла config.yaml в текущем каталоге.
@@ -382,10 +383,10 @@ password: пароль
     }
 
 Отстуки принимаются GET запросом на эндпоинт http://checker/check/ping/<check uuid>.
-Список всех UUID можно получить GET запросом на эндпоинт http://checker/list, либо CLI командой list. 
+Список всех UUID можно получить GET запросом на эндпоинт http://checker/listChecks, либо CLI командой list. 
 Для генерации через WEB, требуется JWT авторизация, токен генерируется CLI командой gentoken (см).
 
-  curl -H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJPaTNvb3hpZTRhaWtlaW1vb3pvOEVnYWk2YWl6OXBvaCIsImF1ZCI6ImFkbWluIn0.wjCl69SvEbHFiMSK-iRXOIvcd5wkO-MCF0oQsNrqVL8" http://checker/list
+  curl -H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJPaTNvb3hpZTRhaWtlaW1vb3pvOEVnYWk2YWl6OXBvaCIsImF1ZCI6ImFkbWluIn0.wjCl69SvEbHFiMSK-iRXOIvcd5wkO-MCF0oQsNrqVL8" http://checker/listChecks
 
 ```
 
