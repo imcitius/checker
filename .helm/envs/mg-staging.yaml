@@ -176,8 +176,8 @@ checker_config_template: |
           checks:
             - type: http
               host: http://markup/healthcheck/new-torrents
-# на стейджинге новых торрентов нет
-#              answer: ^NewTorrents OK$
+          # на стейджинге новых торрентов нет
+          #   answer: ^NewTorrents OK$
               code:
                 - 200
                 - 500
