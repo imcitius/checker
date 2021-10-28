@@ -46,14 +46,13 @@ func (a *AlertConfigs) Alert(text, messageType string, args ...interface{}) erro
 
 	if args != nil {
 		for _, arg := range args {
-			val, _ := arg.(string)
-			if val == "noMetrics" {
+			if arg == "noMetrics" {
 				allowMetrics = false
 			}
 		}
 	}
 
-	if allowMetrics == true {
+	if allowMetrics {
 		a.AddAlertMetricNonCritical()
 	}
 

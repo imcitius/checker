@@ -1,10 +1,12 @@
-FROM centos
+FROM alpine
 
 LABEL "repository" = "https://github.com/imcitius/checker"
 LABEL "homepage" = "https://github.com/imcitius/checker"
 LABEL "maintainer" = "Ilya Rubinchik <citius@citius.dev>"
 
 COPY checker-amd64 /bin/checker
-COPY docs/examples/google.yaml /config.yaml
+COPY scripts/fly-deploy/entrypoint.sh /
+COPY scripts/fly-deploy/config /
 
-ENTRYPOINT ["/bin/checker", "check", "-c", "/config.yaml"]
+ENTRYPOINT ["sh", "-c"]
+CMD ["/entrypoint.sh"]

@@ -158,6 +158,30 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+        - name: grabbers
+          checks:
+            - type: http
+              host: http://grabbers/healthcheck
+              answer: ^Grabbers OK$
+              code:
+                - 200
+              timeout: 2s
+        - name: torrents-markup
+          checks:
+            - type: http
+              host: http://markup/healthcheck
+              answer: ^TorrentsMarkup OK$
+              code:
+                - 200
+              timeout: 2s
+        - name: torrents-markup-new-torrents
+          checks:
+            - type: http
+              host: http://markup/healthcheck/new-torrents
+              answer: ^NewTorrents OK$
+              code:
+                - 200
+              timeout: 2s
         - name: pgsql-main
           checks:
             - type: pgsql_replication

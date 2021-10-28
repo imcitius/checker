@@ -1,4 +1,4 @@
-# fly.toml file generated for checker on 2021-10-16T01:00:37+03:00
+# fly.toml file generated for checker on 2021-10-19T13:44:47+03:00
 
 app = "checker"
 
@@ -7,11 +7,14 @@ kill_timeout = 5
 processes = []
 
 [env]
-  PORT = 8080
+  PORT = "8080"
 
 [experimental]
   allowed_public_ports = []
   auto_rollback = true
+  cmd = []
+  entrypoint = []
+  exec = []
 
 [[services]]
   http_checks = []
