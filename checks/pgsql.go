@@ -243,7 +243,7 @@ func init() {
 		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
 
 		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
+			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
 		}
 
 		config.Log.Debugf("Replication Connect string: %s", connStr)
@@ -303,7 +303,7 @@ func init() {
 			slaveConnStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, host, dbPort, dbName, sslMode)
 
 			if dbConnectTimeout > 0 {
-				slaveConnStr = slaveConnStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
+				slaveConnStr = slaveConnStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
 			}
 
 			db, err := sql.Open("postgres", slaveConnStr)
@@ -408,7 +408,7 @@ func init() {
 		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
 
 		if dbConnectTimeout > 0 {
-			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", dbConnectTimeout)
+			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
 		}
 
 		config.Log.Debugf("Replication Connect string: %s", connStr)
