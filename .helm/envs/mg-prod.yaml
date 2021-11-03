@@ -33,6 +33,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: client
           checks:
             - type: http
@@ -41,6 +42,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: dht
           checks:
             - type: http
@@ -49,27 +51,11 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-        - name: emailer-healthcheck
+        - name: emailer
           checks:
             - type: http
               host: http://emailer/healthcheck
               answer: Emailer OK
-              code:
-                - 200
-              timeout: 2s
-        - name: Stat
-          checks:
-            - type: http
-              host: http://poacher:5BvVvD4K@stat/check.php
-              answer: Stat OK
-              code:
-                - 200
-              timeout: 2s
-        - name: Imgproxy
-          checks:
-            - type: http
-              host: http://poacher:5BvVvD4K@stat/check.php
-              answer: Stat OK
               code:
                 - 200
               timeout: 2s
@@ -80,6 +66,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: Ld
           checks:
             - type: http
@@ -88,6 +75,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: mg-backend
           checks:
             - type: http
@@ -96,11 +84,11 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-        - name: mg-backend
+              severity: critical
+        - name: mg-parser
           checks:
             - type: http
               host: http://mg-parser/healthcheck
-              #              answer: ^API OK$
               code:
                 - 200
               timeout: 2s
@@ -112,6 +100,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: mg-msearch
           checks:
             - type: http
@@ -144,13 +133,6 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-        - name: imgproxy
-          checks:
-            - type: http
-              host: http://imgproxy
-              code:
-                - 200
-              timeout: 2s
         - name: catalogue-front
           checks:
             - type: http
@@ -158,6 +140,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: grabbers
           checks:
             - type: http
@@ -178,9 +161,11 @@ checker_config_template: |
           checks:
             - type: http
               host: http://markup/healthcheck/new-torrents
-              answer: ^NewTorrents OK$
+          # на стейджинге новых торрентов нет
+          #   answer: ^NewTorrents OK$
               code:
                 - 200
+                - 500
               timeout: 2s
         - name: pgsql-main
           checks:
@@ -197,6 +182,7 @@ checker_config_template: |
                   - 51.158.156.17:5433
                   - 51.158.156.18:5433
                   - 51.158.156.19:5433
+              severity: critical
             - type: pgsql_replication_status
               host: pgsql.mg-prod.mediaget.com
               port: 5000
@@ -205,6 +191,7 @@ checker_config_template: |
                 username: checker
                 password: << file "/vault/secrets/pgsql.env" >>
                 lag: 3s
+              severity: critical
 
-# добавить мантикору
+# добавить мантикору, imgproxy
 # добавить кроны в api, поисковике, где там еще они есть

@@ -40,7 +40,7 @@ checker_config_template: |
           host: redis-redis-ha-haproxy
           pubsub_config:
             - quotes_EURUSD_OTC
-        - name: back
+        - name: back  # crit
           checks:
             - type: http
               host: http://app/monitor/status.php
@@ -48,9 +48,11 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
             - type: passive
               name: backend cron running
               timeout: 900s
+              severity: critical
         - name: helpdesk
           checks:
             - type: http
@@ -67,6 +69,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: ws
           checks:
             - type: http
@@ -74,6 +77,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: cryptoindex
           checks:
             - type: http
@@ -130,6 +134,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: offline-payment
           checks:
             - type: http
@@ -147,7 +152,7 @@ checker_config_template: |
         - name: Stat
           checks:
             - type: http
-              host: http://poacher:5BvVvD4K@stat/check.php
+              host: http://stat/check.php
               answer: Stat OK
               code:
                 - 200
@@ -160,7 +165,17 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-        - name: dynamic-percent
+              severity: critical
+        - name: dynamic-percent-old
+          checks:
+            - type: http
+              host: http://dynpercent:8081/health-check
+              answer: '{"status":"ok"}'
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: dynamic-percent-new
           checks:
             - type: http
               host: http://dynamicpercent:8081/health-check
@@ -168,6 +183,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: iron-staging-pgsql
           checks:
           - type: pgsql_replication_status
@@ -180,6 +196,7 @@ checker_config_template: |
               tablename: postgres
               sslmode: require
               lag: 3s
+              severity: critical
 
   # billing
         - name: Billing-API
@@ -190,6 +207,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: Payouts-Auto
           checks:
             - type: http
@@ -214,6 +232,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: refunds
           checks:
             - type: http
@@ -241,4 +260,4 @@ checker_config_template: |
 #                - 200
 #              timeout: 2s
 
-## add dynpercent, fxtickprocessor, redis (котировки), redis2clickhouse
+## fxtickprocessor, redis2clickhouse

@@ -53,9 +53,11 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
             - type: passive
               name: backend cron running
               timeout: 900s
+              severity: critical
         - name: helpdesk
           checks:
             - type: http
@@ -72,6 +74,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: ws
           checks:
             - type: http
@@ -79,6 +82,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
+              severity: critical
         - name: cryptoindex
           checks:
             - type: http
@@ -134,14 +138,7 @@ checker_config_template: |
               code:
                 - 200
               timeout: 2s
-        - name: landings
-          checks:
-            - type: http
-              host: http://landings/api/are-you-alive
-              answer: Landings OK
-              code:
-                - 200
-              timeout: 2s
+              severity: critical
         - name: private-api
           checks:
             - type: http

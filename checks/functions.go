@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+func chooseChannelAndSendAlert(project *projects.Project, check *config.Check, err error) {
+	if check.Severity == "critical" || check.Severity == "crit" {
+		project.ProjectCritAlert(err)
+	} else {
+		project.ProjectAlert(err)
+	}
+}
+
 func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration) {
 
 	//config.Log.Panicf("%+v", check.Actors)
@@ -22,12 +30,12 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		if check.AllowFails > 0 {
 			if status.Statuses.Checks[check.UUid].SeqErrorsCount >= check.AllowFails {
 				if status.GetCheckMode(check) != "quiet" {
-					project.ProjectAlert(err)
+					chooseChannelAndSendAlert(project, check, err)
 				}
 			}
 		} else {
 			if status.GetCheckMode(check) != "quiet" {
-				project.ProjectAlert(err)
+				chooseChannelAndSendAlert(project, check, err)
 			}
 		}
 

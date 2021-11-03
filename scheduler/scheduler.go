@@ -66,22 +66,22 @@ func runReports(timeout string) {
 }
 
 func runCritAlerts(timeout string) {
-	config.Log.Debug("runAlerts")
+	config.Log.Debug("runCritAlerts")
 
-	for _, project := range Config.Projects {
-		if project.Parameters.RunEvery == timeout {
-			//if status.Statuses.Projects[project.Name].Alive < project.Parameters.MinHealth {
-			//	status.Statuses.Projects[project.Name].SeqErrorsCount++
+	for _, prj := range Config.Projects {
+		if prj.Parameters.RunEvery == timeout {
+			//if status.Statuses.Projects[prj.Name].Alive < prj.Parameters.MinHealth {
+			//	status.Statuses.Projects[prj.Name].SeqErrorsCount++
 			//} else {
-			//	if status.Statuses.Projects[project.Name].SeqErrorsCount > 0 {
-			//		status.Statuses.Projects[project.Name].SeqErrorsCount--
+			//	if status.Statuses.Projects[prj.Name].SeqErrorsCount > 0 {
+			//		status.Statuses.Projects[prj.Name].SeqErrorsCount--
 			//	} else {
-			//		status.Statuses.Projects[project.Name].SeqErrorsCount = 0
+			//		status.Statuses.Projects[prj.Name].SeqErrorsCount = 0
 			//	}
 			//}
-			if status.Statuses.Projects[project.Name].FailsCount > project.Parameters.AllowFails {
-				errorMessage := fmt.Sprintf("Critical alert project %s", project.Name)
-				project := projects.Project{project}
+			if status.Statuses.Projects[prj.Name].FailsCount > prj.Parameters.AllowFails {
+				errorMessage := fmt.Sprintf("Critical alert prj %s", prj.Name)
+				project := projects.Project{prj}
 				project.ProjectCritAlert(errors.New(errorMessage))
 			}
 		}

@@ -140,10 +140,11 @@ type Check struct {
 	Name string
 
 	// Parameters related to check execution
-	Type    string
-	Host    string
-	Timeout string
-	Port    int
+	Type     string
+	Host     string
+	Timeout  string
+	Port     int
+	Severity string `koanf:"severity"`
 
 	// hash for fileget check
 	Hash string

@@ -206,6 +206,8 @@ mattermost_webhook_url: webhook url. Used for all types of alerts and ChatOps.
 
 If there is no `alerts` block, all alerts will be sent only to the log.
 
+Parameter `severity: critical` may be set in each check's description, to explicitly send alerts to Critical alerts channel.
+
 ### Manage alerts
 
 With the help of messages to the bot, you can manage alerts and the mode of checking projects.
