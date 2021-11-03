@@ -12,9 +12,9 @@ type Project struct {
 	config.Project
 }
 
-func GetName(p *config.Project) string {
-	return p.Name
-}
+//func GetName(p *config.Project) string {
+//	return p.Name
+//}
 
 func (p *Project) GetMode() string {
 	return status.Statuses.Projects[p.Name].Mode
@@ -121,7 +121,7 @@ func (p *Project) ProjectAlert(e error) {
 }
 
 func (p *Project) ProjectCritAlert(e error) {
-	message := "CRITICAL " + e.Error()
+	message := e.Error()
 
 	if len(p.Parameters.Mentions) > 0 {
 		message = "\n" + message

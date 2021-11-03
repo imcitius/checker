@@ -5,7 +5,6 @@ import (
 	"my/checker/config"
 	projects "my/checker/projects"
 	"my/checker/status"
-	"regexp"
 )
 
 var (
@@ -25,10 +24,4 @@ func Execute(p *projects.Project, c *config.Check) error {
 		err = fmt.Errorf("check %s not implemented", c.Type)
 	}
 	return err
-}
-
-func GetCheckScheme(c *config.Check) string {
-	pattern := regexp.MustCompile("(.*)://")
-	result := pattern.FindStringSubmatch(c.Host)
-	return result[1]
 }

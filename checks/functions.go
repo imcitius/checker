@@ -21,10 +21,15 @@ func chooseChannelAndSendAlert(project *projects.Project, check *config.Check, e
 func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration) {
 
 	//config.Log.Panicf("%+v", check.Actors)
-
 	if tempErr != nil {
-		err := fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
-		config.Log.Errorf("(%s) failure: %+v, took %d millisec", checkRandomId, err, t.Milliseconds())
+		var err error
+		if check.IsCritical() {
+			err = fmt.Errorf("(%s) CRITICAL %s", checkRandomId, tempErr.Error())
+			config.Log.Errorf("(%s) CRITICAL failure: %+v, took %d millisec", checkRandomId, err, t.Milliseconds())
+		} else {
+			err = fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
+			config.Log.Errorf("(%s) failure: %+v, took %d millisec", checkRandomId, err, t.Milliseconds())
+		}
 		//config.Log.Debugf("Check mode: %s", status.GetCheckMode(check))
 
 		if check.AllowFails > 0 {

@@ -246,7 +246,7 @@ checker_config_template: |
         - name: pgsql-main
           checks:
           - type: pgsql_replication
-            host: pgsql.online.irontrade.com
+            host: pgsql.iron.irontrade.com
             port: 5000
             sql_repl_config:
               dbname: checker

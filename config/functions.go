@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"my/checker/common"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -363,4 +364,17 @@ func WatchConfig() {
 	}
 
 	//configWatchSig <- true
+}
+
+func (c *Check) IsCritical() bool {
+	if c.Severity == "critical" || c.Severity == "crit" {
+		return true
+	}
+	return false
+}
+
+func (c *Check) GetCheckScheme() string {
+	pattern := regexp.MustCompile("(.*)://")
+	result := pattern.FindStringSubmatch(c.Host)
+	return result[1]
 }

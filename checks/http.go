@@ -93,7 +93,7 @@ func init() {
 			return errors.New(errorMessage)
 		}
 
-		switch GetCheckScheme(c) {
+		switch c.GetCheckScheme() {
 		case "https":
 			//config.Log.Debugf("SSL: %v", response.TLS.PeerCertificates)
 			if len(response.TLS.PeerCertificates) > 0 {
