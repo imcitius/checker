@@ -26,7 +26,7 @@ checker_config_template: |
       healthchecks:
         - name: api
           parameters:
-            run_every: 10s
+            run_every: 30s
           checks:
             - type: http
               host: http://api/api/healthcheck

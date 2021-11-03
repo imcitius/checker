@@ -121,7 +121,7 @@ func (p *Project) ProjectAlert(e error) {
 }
 
 func (p *Project) ProjectCritAlert(e error) {
-	message := e.Error()
+	message := "CRITICAL " + e.Error()
 
 	if len(p.Parameters.Mentions) > 0 {
 		message = "\n" + message

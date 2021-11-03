@@ -155,6 +155,5 @@ func init() {
 		}
 
 		return checkErr
-
 	}
 }

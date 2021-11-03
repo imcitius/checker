@@ -65,8 +65,8 @@ func runReports(timeout string) {
 	}
 }
 
-func runCritAlerts(timeout string) {
-	config.Log.Debug("runCritAlerts")
+func sendCritAlerts(timeout string) {
+	config.Log.Debug("sendCritAlerts")
 
 	for _, prj := range Config.Projects {
 		if prj.Parameters.RunEvery == timeout {
@@ -179,7 +179,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					reportsDuration := time.Since(reportsStartTime)
 
 					alertsStartTime := time.Now()
-					runCritAlerts(timeout)
+					sendCritAlerts(timeout)
 					alertsDuration := time.Since(alertsStartTime)
 
 					config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
