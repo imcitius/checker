@@ -260,7 +260,7 @@ checker_config_template: |
               - sd-156793.dedibox.fr:5433
             severity: critical
           - type: pgsql_replication_status
-            host: pgsql.online.irontrade.com
+            host: pgsql.iron.irontrade.com
             port: 5000
             sql_repl_config:
               dbname: checker
