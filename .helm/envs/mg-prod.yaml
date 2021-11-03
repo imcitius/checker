@@ -9,7 +9,7 @@ checker_config_template: |
     http_port: '80'
     bots_enabled: true
     parameters:
-      run_every: 300s
+      run_every: 900s
       min_health: 1
       allow_fails: 0
       noncrit_alert: prod
@@ -48,8 +48,6 @@ checker_config_template: |
               timeout: 2s
               severity: critical
         - name: dht
-          parameters:
-            run_every: 300s
           checks:
             - type: http
               host: http://dht/dht/healthcheck
@@ -58,8 +56,6 @@ checker_config_template: |
                 - 200
               timeout: 2s
         - name: emailer
-          parameters:
-            run_every: 300s
           checks:
             - type: http
               host: http://emailer/healthcheck
@@ -176,6 +172,8 @@ checker_config_template: |
                 - 200
               timeout: 2s
         - name: torrents-markup-new-torrents
+          parameters:
+            run_every: 1h
           checks:
             - type: http
               host: http://markup/healthcheck/new-torrents
