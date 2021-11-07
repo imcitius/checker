@@ -183,7 +183,7 @@ checker_config_template: |
               answer: '{"status":"ok"}'
               code:
                 - 200
-              timeout: 2s
+              timeout: 4s
               severity: critical
         - name: iron-staging-pgsql
           checks:
