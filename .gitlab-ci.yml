@@ -18,6 +18,7 @@ include:
 
   - .gitlab-ci.build.yml
   - .gitlab-ci.deploy.yml
+  - .gitlab-ci.fly.yml
 
   - project: 'ci-library/werf-deploy'
     file: 'common.yml'
