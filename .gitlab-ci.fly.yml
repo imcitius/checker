@@ -5,8 +5,7 @@ fly-deploy:
     - apt-get update -qq && apt-get install -y curl
     - curl -L https://fly.io/install.sh | sh
   script:
-    - export FLYCTL_INSTALL="/root/.fly" PATH="$FLYCTL_INSTALL/bin:$PATH"
-    - flyctl deploy
+    - /root/.fly/bin/flyctl deploy
   extends:
     - .jgit_filter
     - .docker_europe_tags
