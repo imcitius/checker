@@ -11,3 +11,4 @@ fly-deploy:
     - .docker_europe_tags
   environment:
     name: fly.dev
+  needs: []
