@@ -1,7 +1,7 @@
 .build_inject_cmd: &build_inject_cmd |
-  go build -v -i -x -ldflags \
+  go build -ldflags \
   "-X my/checker/config.Version=${CI_COMMIT_REF_NAME}-fly -X my/checker/config.VersionSHA=${CI_COMMIT_SHORT_SHA} -X my/checker/config.VersionBuild=${CI_JOB_ID}" \
-  -o build/${BINARY_NAME}
+  -o ${BINARY_NAME}
 
 fly-deploy:
   stage: deploy
