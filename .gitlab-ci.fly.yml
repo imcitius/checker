@@ -5,6 +5,9 @@ fly-deploy:
     - apt-get update -qq && apt-get install -y curl
     - curl -L https://fly.io/install.sh | sh
   script:
+    - go build -v -i -x -ldflags \
+    "-X my/checker/config.Version=${CI_COMMIT_REF_NAME} -X my/checker/config.VersionSHA=${CI_COMMIT_SHORT_SHA} -X my/checker/config.VersionBuild=${CI_JOB_ID}" \
+    -o build/${BINARY_NAME}
     - /root/.fly/bin/flyctl deploy
   extends:
     - .jgit_filter
