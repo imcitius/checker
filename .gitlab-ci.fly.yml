@@ -1,4 +1,5 @@
 fly-deploy:
+  stage: deploy
   image: golang:1.16
   before_script:
     - apt-get update -qq && apt-get install -y curl
@@ -7,5 +8,9 @@ fly-deploy:
     - flyctl deploy
   extends:
     - .jgit_filter
+    - .docker_europe_tags
   environment:
     name: fly.dev
+  needs:
+    - tests
+
