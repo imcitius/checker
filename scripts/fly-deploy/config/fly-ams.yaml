@@ -11,7 +11,7 @@ defaults:
     crit_alert: tg_prod
     command_channel: tg_prod
     mode: loud
-    periodic_report_time: 10s
+    periodic_report_time: 1h
     ssl_expiration_period: 720h
     token_encryption_key: bi6oNuisa0ooz6Ael6Eewaatoophoo0p
 alerts:
