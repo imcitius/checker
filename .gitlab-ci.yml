@@ -9,7 +9,6 @@ variables:
   BINARY_NAME: "checker"
   INSTANCE_DC: ks-1
   VERSION: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
-  REGISTRY_TAG: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
   REGISTRY_IMAGE: ${REGISTRY_URL}/${CI_PROJECT_PATH_SLUG}
   REGISTRY_URL: "harbor-ks.jgit.me/library"
   CONSUL_PATH: ""
@@ -19,7 +18,7 @@ include:
     file: "go-app.base.yml"
 
   - .gitlab-ci.build.yml
-  - .gitlab-ci.deploy.yml
+  - .gitlab-ci.instantiator.yml
   - .gitlab-ci.fly.yml
 
   - project: 'ci-library/werf-deploy'
