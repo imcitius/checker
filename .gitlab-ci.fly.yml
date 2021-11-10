@@ -9,9 +9,11 @@ fly-deploy:
   before_script:
     - apt-get update -qq && apt-get install -y curl
     - curl -L https://fly.io/install.sh | sh
+    - wget -q https://releases.hashicorp.com/vault/1.8.5/vault_1.8.5_darwin_amd64.zip
+    - unzip vault_1.8.5_darwin_amd64.zip
   script:
     - *build_inject_cmd
-    - export FLY_API_TOKEN=$(vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)
+    - export FLY_API_TOKEN=$(./vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)
     - /root/.fly/bin/flyctl deploy
   extends:
     - .jgit_filter
