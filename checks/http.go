@@ -38,7 +38,7 @@ func init() {
 			}
 		}
 
-		errorHeader = fmt.Sprintf("HTTP error at project: %s\nCheck URL: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+		errorHeader = fmt.Sprintf("HTTP error at project: %s\nCheck URL: %s\nCheck UUID: %s\nCheck name: %s\n", p.Name, c.Host, c.UUid, c.Name)
 
 		config.Log.Debugf("test: %s\n", c.Host)
 		_, err = url.Parse(c.Host)

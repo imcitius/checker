@@ -196,14 +196,14 @@ projects:
           - type: http
             name: MG2ApiDHTSearch
             host: https://mediaget.com/dht/v1/torrents/search?q=avatar&page=1&page_size=10
-            answer: avatar
+            answer: (?is)avatar
             code:
               - 200
             timeout: 3s
           - type: http
             name: MG2ApiDHTMoviesID
             host: https://mediaget.com/dht/v1/torrents/movies/384436?lang=en&page=1&page_size=10
-            answer: Avatar
+            answer: (?is)avatar
             code:
               - 200
             timeout: 3s

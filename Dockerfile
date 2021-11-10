@@ -6,7 +6,7 @@ LABEL "maintainer" = "Ilya Rubinchik <citius@citius.dev>"
 
 COPY checker /bin/checker
 COPY scripts/fly-deploy/entrypoint.sh /
-COPY scripts/fly-deploy/config /
+COPY .helm/envs/fly /
 
 ENTRYPOINT ["sh", "-c"]
 CMD ["/entrypoint.sh"]

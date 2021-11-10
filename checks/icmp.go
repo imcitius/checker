@@ -15,7 +15,7 @@ func init() {
 			errorHeader, errorMessage string
 		)
 
-		errorHeader = fmt.Sprintf("ICMP error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+		errorHeader = fmt.Sprintf("ICMP error at project: %s\nCheck Host: %s\nCheck UUID: %s\nCheck name: %s\n", p.Name, c.Host, c.UUid, c.Name)
 
 		fmt.Println("icmp ping test: ", c.Host)
 		pinger, err := ping.NewPinger(c.Host)
