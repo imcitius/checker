@@ -2,7 +2,7 @@
 defaults:
   timer_step: 5s
   http_port: '80'
-  bots_enabled: 'false'
+  bots_enabled: 'true'
   parameters:
     run_every: 300s
     min_health: 1
