@@ -7,7 +7,7 @@ fly-deploy:
   stage: deploy
   image: golang:1.16
   before_script:
-    - apt-get update -qq && apt-get install -y curl
+    - apt-get update -qq && apt-get install -y curl unzip
     - curl -L https://fly.io/install.sh | sh
     - wget -q https://releases.hashicorp.com/vault/1.8.5/vault_1.8.5_darwin_amd64.zip
     - unzip vault_1.8.5_darwin_amd64.zip
