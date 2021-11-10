@@ -7,12 +7,12 @@ fly-deploy:
   stage: deploy
   image: harbor-ks.jgit.me/dockerhub_proxy/library/golang:1.16
   before_script:
-    - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
-    - echo "deb [arch=amd64] https://apt.releases.hashicorp.com bullseye main" >> /etc/apt/sources.list
-    - apt-get update -qq && apt-get install -y curl unzip vault
+    - wget https://releases.hashicorp.com/vault/1.8.5/vault_1.8.5_linux_amd64.zip
+    - unzip vault_1.8.5_linux_amd64.zip
+    - apt-get update -qq && apt-get install -y curl
     - curl -L https://fly.io/install.sh | sh
   script:
-    - export FLY_API_TOKEN=$(vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)
+    - export FLY_API_TOKEN=$(./vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)
     - *build_inject_cmd
     - /root/.fly/bin/flyctl deploy
   extends:
