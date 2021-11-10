@@ -11,10 +11,11 @@ fly-deploy:
     - curl -L https://fly.io/install.sh | sh
   script:
     - *build_inject_cmd
+    - export FLY_API_TOKEN=$(vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)
     - /root/.fly/bin/flyctl deploy
   extends:
     - .jgit_filter
     - .docker_europe_tags
   environment:
-    name: fly.dev
+    name: fly-prod
   needs: []
