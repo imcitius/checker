@@ -23,7 +23,7 @@ func puHandler(m *tb.Message, a *AlertConfigs) {
 	config.Log.Printf("Pause req for UUID: %+v\n", uuID)
 	status.SetCheckMode(misc.GetCheckByUUID(uuID), "quiet")
 
-	SendChatOps(fmt.Sprintf("@%s Messages ceased for UUID %v", m.Sender.Username, uuID))
+	SendChatOps(fmt.Sprintf("@%s Messages ceased for UUID %v\n", m.Sender.Username, uuID))
 }
 
 func uuHandler(m *tb.Message, a *AlertConfigs) {

@@ -3,6 +3,7 @@ defaults:
   timer_step: 5s
   http_port: '80'
   bots_enabled: 'true'
+  token_encryption_key: bi6oNuisa0ooz6Ael6Eewaatoophoo0p
   parameters:
     run_every: 900s
     min_health: 1
@@ -13,7 +14,6 @@ defaults:
     mode: loud
     periodic_report_time: 1h
     ssl_expiration_period: 720h
-    token_encryption_key: bi6oNuisa0ooz6Ael6Eewaatoophoo0p
 alerts:
   - name: tg_prod
     type: telegram
