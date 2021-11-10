@@ -150,7 +150,11 @@ func init() {
 		//config.Log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, c.AnswerPresent, answerGood)
 
 		if !answerGood {
-			errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' ('%s' should be %s)", buf.String(), c.Answer, c.AnswerPresent)
+			answer := buf.String()
+			if len(buf.String()) > 350 {
+				answer = "Answer is too long, check the logs"
+			}
+			errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' ('%s' should be %s)", answer, c.Answer, c.AnswerPresent)
 			return errors.New(errorMessage)
 		}
 
