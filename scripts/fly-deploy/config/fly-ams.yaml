@@ -2,7 +2,7 @@
 defaults:
   timer_step: 5s
   http_port: '80'
-  bots_enabled: 'true'
+  bots_enabled: 'false'
   parameters:
     run_every: 300s
     min_health: 1
@@ -17,9 +17,9 @@ defaults:
 alerts:
   - name: tg_prod
     type: telegram
-    bot_token: 988868513:AAHWL8ws-z2l2TLPbRb9jyyzJ-4HFbA71_k
-    noncritical_channel: -424750238
-    critical_channel: -424750238
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -730661309
+    critical_channel: -730661309
 #  - name: tg_main
 #    type: telegram
 #    bot_token: 988868513:AAHWL8ws-z2l2TLPbRb9jyyzJ-4HFbA71_k
