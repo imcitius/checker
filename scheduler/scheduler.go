@@ -25,8 +25,8 @@ func GetRandomId() string {
 	return checkRuntimeId
 }
 
-func runReports(timeout string) {
-
+func runReports(timeout string) time.Duration {
+	startTime := time.Now()
 	config.Log.Infof("runReports")
 	for _, p := range Config.Projects {
 		config.Log.Infof("runReports 0: %s\n", timeout)
@@ -41,13 +41,13 @@ func runReports(timeout string) {
 		}
 		config.Log.Infof("schedTimeout: %s\n", schedTimeout)
 
-		projTimeout, err := time.ParseDuration(p.Parameters.PeriodicReport)
+		reportsTimeout, err := time.ParseDuration(p.Parameters.PeriodicReport)
 		if err != nil {
 			config.Log.Errorf("runReports Cannot parse duration %s", err)
 		}
-		config.Log.Infof("projTimeout: %s\n", projTimeout)
+		config.Log.Infof("reportsTimeout: %s\n", reportsTimeout)
 
-		if schedTimeout >= projTimeout {
+		if schedTimeout >= reportsTimeout {
 			project := projects.Project{p}
 			config.Log.Infof("runReports 10: %s", project.GetMode())
 			err := project.ProjectSendReport()
@@ -63,9 +63,11 @@ func runReports(timeout string) {
 			alerts.SendChatOps(reportMessage)
 		}
 	}
+	return time.Since(startTime)
 }
 
-func sendCritAlerts(timeout string) {
+func sendCritAlerts(timeout string) time.Duration {
+	startTime := time.Now()
 	config.Log.Debug("sendCritAlerts")
 
 	for _, prj := range Config.Projects {
@@ -86,13 +88,16 @@ func sendCritAlerts(timeout string) {
 			}
 		}
 	}
+	return time.Since(startTime)
 }
 
-func runChecks(timeout string) {
+func runChecks(timeout string) time.Duration {
+	startTime := time.Now()
 	config.Log.Debug("runChecks")
 
 	checkProjects(timeout)
 	catalog.CheckCatalog(timeout)
+	return time.Since(startTime)
 }
 
 func checkProjects(timeout string) {
@@ -116,18 +121,24 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 			config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s'", checkRandomId, project.Name, healthcheck.Name, check.Type)
 
 			startTime := time.Now()
-
 			err := checks.AddCheckRunCount(project, healthcheck, &check)
 			if err != nil {
 				config.Log.Errorf("Metric count error: %v", err)
 			}
-
 			tempErr := checks.Execute(project, &check)
 			endTime := time.Now()
+
 			t := endTime.Sub(startTime)
 			checks.EvaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, t)
 		}
 	}
+}
+
+func timeIsDivisible(uptime time.Duration, timer time.Duration) bool {
+	if math.Remainder(uptime.Seconds(), timer.Seconds()) == 0 {
+		return true
+	}
+	return false
 }
 
 func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
@@ -152,7 +163,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 			return
 		case t := <-Ticker.C:
 			go config.WatchConfig()
-			uptime := float64(t.Sub(config.StartTime) / time.Second)
+			uptime := t.Sub(config.StartTime)
 
 			for _, timeout := range config.Timeouts.Periods {
 				config.Log.Debugf("Looking for projects with timeout: %s", timeout)
@@ -164,27 +175,18 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 				config.Log.Debugf("===\nUptime: %v", uptime)
 
-				roundUptime := math.Round(uptime/timerStep.Seconds()) * timerStep.Seconds()
-				if math.Remainder(roundUptime, tf.Seconds()) == 0 {
+				if timeIsDivisible(uptime, tf) {
 					config.Log.Debugf("===\nTime: %v\n---\n\n", t)
-
 					config.Log.Infof("Checking run_every: %s", timeout)
 
-					checksStartTime := time.Now()
-					runChecks(timeout)
-					checksDuration := time.Since(checksStartTime)
-
-					reportsStartTime := time.Now()
-					runReports(timeout)
-					reportsDuration := time.Since(reportsStartTime)
-
-					alertsStartTime := time.Now()
-					sendCritAlerts(timeout)
-					alertsDuration := time.Since(alertsStartTime)
+					checksDuration := runChecks(timeout)
+					reportsDuration := runReports(timeout)
+					alertsDuration := sendCritAlerts(timeout)
 
 					config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
 					config.Log.Infof("Reports duration: %v msec", reportsDuration.Milliseconds())
 					config.Log.Infof("Alerts duration: %v msec", alertsDuration.Milliseconds())
+
 					metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
 					metrics.SchedulerReportsDuration.Set(float64(reportsDuration.Milliseconds()))
 					metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))

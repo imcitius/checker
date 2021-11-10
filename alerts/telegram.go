@@ -20,8 +20,8 @@ var (
 
 	menu     = &tb.ReplyMarkup{ResizeReplyKeyboard: true}
 	btnHelp  = menu.Text("ℹ️ Help")
-	btnPA    = menu.Text("⏸️ Pause All")
-	btnUA    = menu.Text("▶️ Unpause All")
+	btnQA    = menu.Text("⏸️ Quiet All")
+	btnLA    = menu.Text("▶️ Loud All")
 	btnList  = menu.Text("🔭 List")
 	btnStats = menu.Text("📊 Stats")
 
@@ -168,7 +168,7 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 
 	menu.Reply(
 		menu.Row(btnHelp, btnList),
-		menu.Row(btnPA, btnUA),
+		menu.Row(btnQA, btnLA),
 	)
 
 	//config.Log.Debugf("Bot quoted answer: %s", QuoteMeta(message))
@@ -219,12 +219,12 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Fatal(err)
 	}
 
-	bot.Handle("/qa", func(m *tb.Message) { paHandler(m) })
-	bot.Handle("/la", func(m *tb.Message) { uaHandler(m) })
-	bot.Handle("/qp", func(m *tb.Message) { ppHandler(m, a) })
-	bot.Handle("/lp", func(m *tb.Message) { upHandler(m, a) })
-	bot.Handle("/qu", func(m *tb.Message) { puHandler(m, a) })
-	bot.Handle("/lu", func(m *tb.Message) { uuHandler(m, a) })
+	bot.Handle("/qa", func(m *tb.Message) { qaHandler(m) })
+	bot.Handle("/la", func(m *tb.Message) { laHandler(m) })
+	bot.Handle("/qp", func(m *tb.Message) { qpHandler(m, a) })
+	bot.Handle("/lp", func(m *tb.Message) { lpHandler(m, a) })
+	bot.Handle("/qu", func(m *tb.Message) { quHandler(m, a) })
+	bot.Handle("/lu", func(m *tb.Message) { luHandler(m, a) })
 	bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
 
 	bot.Handle(&btnHelp, func(m *tb.Message) {
@@ -239,28 +239,24 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Infof("Stats pressed")
 		statsHandler(m)
 	})
-	bot.Handle(&btnPA, func(m *tb.Message) {
-		config.Log.Infof("PA pressed")
-		paHandler(m)
+	bot.Handle(&btnQA, func(m *tb.Message) {
+		config.Log.Infof("QA pressed")
+		qaHandler(m)
 	})
-	bot.Handle(&btnUA, func(m *tb.Message) {
-		config.Log.Infof("UA pressed")
-		uaHandler(m)
+	bot.Handle(&btnLA, func(m *tb.Message) {
+		config.Log.Infof("LA pressed")
+		laHandler(m)
 	})
 
 	// On inline button pressed (callback)
 	bot.Handle(&selPU, func(c *tb.Callback) {
-		puHandler(c.Message, a)
-		// ...
-		// Always respond!
+		quHandler(c.Message, a)
 		bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
 	})
 
 	// On inline button pressed (callback)
 	bot.Handle(&selPP, func(c *tb.Callback) {
-		ppHandler(c.Message, a)
-		// ...
-		// Always respond!
+		qpHandler(c.Message, a)
 		bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
 	})
 
