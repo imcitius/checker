@@ -56,9 +56,9 @@ projects:
             code:
               - 200
             timeout: 3s
-  - name: ProjectOStatistic
+  - name: Orbitum
     healthchecks:
-      - name: O stat ks
+      - name: Orbitum Stat
         checks:
           - type: http
             host: https://stat.orbitum.com/check_orbitum_stat.php
@@ -66,9 +66,7 @@ projects:
             code:
               - 200
             timeout: 3s
-  - name: ProjectOSite
-    healthchecks:
-      - name: O stat ks
+      - name: Orbitum Site
         checks:
           - type: http
             host: https://orbitum.com/check_site_db.php
