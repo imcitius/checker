@@ -58,7 +58,7 @@ projects:
         checks:
           - type: http
             host: https://2.bubblesmedia.ru/invoke.php?id=42
-            answer: <script>.*</script>
+            answer: (?is)<script>.*</script>
             code:
               - 200
             timeout: 3s
