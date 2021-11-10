@@ -5,10 +5,10 @@
 
 fly-deploy:
   stage: deploy
-  image: golang:1.16
+  image: harbor-ks.jgit.me/dockerhub_proxy/library/golang:1.16
   before_script:
     - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
-    - apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+    - echo "deb [arch=amd64] https://apt.releases.hashicorp.com bullseye main" >> /etc/apt/sources.list
     - apt-get update -qq && apt-get install -y curl unzip vault
     - curl -L https://fly.io/install.sh | sh
   script:
