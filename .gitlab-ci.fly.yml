@@ -12,7 +12,7 @@ fly-deploy:
     - unzip vault_1.8.5_linux_amd64.zip
     - curl -L https://fly.io/install.sh | sh
   script:
-    - export FLY_API_TOKEN=$(./vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)
+    - mkdir ~/.fly && echo "access_token: $(./vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)" > ~/.fly/config.yml
     - *build_inject_cmd
     - /root/.fly/bin/flyctl deploy
   extends:

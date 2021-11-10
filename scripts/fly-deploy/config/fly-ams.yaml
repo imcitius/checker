@@ -2,20 +2,77 @@
 defaults:
   timer_step: 5s
   http_port: '80'
-  token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
+  bots_enabled: 'true'
   parameters:
-    run_every: 10s
+    run_every: 300s
     min_health: 1
-    allow_fails: 0
+    allow_fails: 1
+    noncrit_alert: tg_prod
+    crit_alert: tg_prod
+    command_channel: tg_prod
     mode: loud
     periodic_report_time: 10s
     ssl_expiration_period: 720h
+    token_encryption_key: bi6oNuisa0ooz6Ael6Eewaatoophoo0p
+alerts:
+  - name: tg_prod
+    type: telegram
+    bot_token: 988868513:AAHWL8ws-z2l2TLPbRb9jyyzJ-4HFbA71_k
+    noncritical_channel: -424750238
+    critical_channel: -424750238
+#  - name: tg_main
+#    type: telegram
+#    bot_token: 988868513:AAHWL8ws-z2l2TLPbRb9jyyzJ-4HFbA71_k
+#    noncritical_channel: 1390752
+#    critical_channel: 1390752
 projects:
-  - name: yandex
-    parameters:
-      run_every: 60s
+  - name: Admitlead
     healthchecks:
-      - name: http checks
+      - name: Admitlead ks
         checks:
           - type: http
-            host: https://yandex.com/
+            host: https://ks.admitlead.ru/main/check
+            answer: AdmitLead OK
+            code:
+              - 200
+            timeout: 3s
+  - name: Bubblesmedia
+    healthchecks:
+      - name: Bubbles ks
+        checks:
+          - type: http
+            host: http://s2.bubblesmedia.ru/main/check
+            answer: Bubbles OK
+            code:
+              - 200
+            timeout: 3s
+  - name: Mediaget site
+    healthchecks:
+      - name: 'Mediaget site'
+        checks:
+          - type: http
+            host: https://mediaget.com/ping
+            answer: pong
+            code:
+              - 200
+            timeout: 3s
+  - name: ProjectOStatistic
+    healthchecks:
+      - name: O stat ks
+        checks:
+          - type: http
+            host: https://stat.orbitum.com/check_orbitum_stat.php
+            answer: ProjectOStatistic OK
+            code:
+              - 200
+            timeout: 3s
+  - name: ProjectOSite
+    healthchecks:
+      - name: O stat ks
+        checks:
+          - type: http
+            host: https://orbitum.com/check_site_db.php
+            answer: ProjectO OK
+            code:
+              - 200
+            timeout: 3s
