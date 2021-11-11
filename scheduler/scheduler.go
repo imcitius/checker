@@ -114,10 +114,9 @@ func checkProjects(timeout string) {
 func executeHealthcheck(project *projects.Project, healthcheck *config.Healthcheck, timeout string) {
 	config.Log.Debugf("Total checks %+v", healthcheck.Checks)
 	for _, check := range healthcheck.Checks {
-		config.Log.Debugf("Now checking %s", check.Host)
+		checkRandomId := GetRandomId()
+		config.Log.Warnf("(%s) Evaluating check %s", checkRandomId, check.Name)
 		if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
-
-			checkRandomId := GetRandomId()
 			config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s(%s)'", checkRandomId, project.Name, healthcheck.Name, check.Name, check.Type)
 
 			err := checks.AddCheckRunCount(project, healthcheck, &check)
@@ -126,6 +125,8 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 			}
 			duration, tempErr := checks.Execute(project, &check)
 			checks.EvaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, duration)
+		} else {
+			config.Log.Warnf("(%s) check %s timeout is not eligible for checking", checkRandomId, check.Name)
 		}
 	}
 }
