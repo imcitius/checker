@@ -102,6 +102,13 @@ func initConfig() {
 		logrus.Infof("PORT env not defined: %s", err.Error())
 	}
 
+	err = config.Koanf.Load(env.Provider("DEBUG_LEVEL", ".", func(s string) string {
+		return "debug.level"
+	}), nil)
+	if err != nil {
+		logrus.Infof("DEBUG_LEVEL env not defined: %s", err.Error())
+	}
+
 	for _, i := range []string{"CONSUL_", "VAULT_", "AWS_", "CHECKER_"} {
 		err = config.Koanf.Load(env.Provider(i, ".", func(s string) string {
 			return strings.Replace(strings.ToLower(

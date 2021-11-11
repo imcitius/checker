@@ -118,18 +118,14 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 		if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
 
 			checkRandomId := GetRandomId()
-			config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s'", checkRandomId, project.Name, healthcheck.Name, check.Type)
+			config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s(%s)'", checkRandomId, project.Name, healthcheck.Name, check.Name, check.Type)
 
-			startTime := time.Now()
 			err := checks.AddCheckRunCount(project, healthcheck, &check)
 			if err != nil {
 				config.Log.Errorf("Metric count error: %v", err)
 			}
-			tempErr := checks.Execute(project, &check)
-			endTime := time.Now()
-
-			t := endTime.Sub(startTime)
-			checks.EvaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, t)
+			duration, tempErr := checks.Execute(project, &check)
+			checks.EvaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, duration)
 		}
 	}
 }
