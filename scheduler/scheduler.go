@@ -135,9 +135,12 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 }
 
 func timeIsDivisible(uptime time.Duration, timer time.Duration) bool {
+	config.Log.Debugf("Checking divisibility: uptime/timer --- %t/%t", uptime.Seconds(), timer.Seconds())
 	if math.Remainder(uptime.Seconds(), timer.Seconds()) == 0 {
+		config.Log.Debugf("Divisible")
 		return true
 	}
+	config.Log.Debugf("Not divisible")
 	return false
 }
 
@@ -163,7 +166,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 			return
 		case t := <-Ticker.C:
 			go config.WatchConfig()
-			uptime := t.Sub(config.StartTime)
+			uptime := t.Round(time.Second).Sub(config.StartTime.Round(time.Second))
 
 			for _, timeout := range config.Timeouts.Periods {
 				config.Log.Debugf("Looking for projects with timeout: %s", timeout)
@@ -172,7 +175,6 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 				if err != nil {
 					config.Log.Errorf("Cannot parse timeout: %s", err)
 				}
-
 				config.Log.Debugf("===\nUptime: %v", uptime)
 
 				if timeIsDivisible(uptime, tf) {
