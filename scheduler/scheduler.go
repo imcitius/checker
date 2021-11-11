@@ -3,12 +3,11 @@ package scheduler
 import (
 	"errors"
 	"fmt"
-	"github.com/teris-io/shortid"
 	"math"
-	"math/rand"
 	"my/checker/alerts"
 	"my/checker/catalog"
 	checks "my/checker/checks"
+	"my/checker/common"
 	"my/checker/config"
 	"my/checker/metrics"
 	projects "my/checker/projects"
@@ -18,12 +17,6 @@ import (
 )
 
 var Config = &config.Config
-
-func GetRandomId() string {
-	sid, _ := shortid.New(1, shortid.DefaultABC, rand.Uint64())
-	checkRuntimeId, _ := sid.Generate()
-	return checkRuntimeId
-}
 
 func runReports(timeout string) time.Duration {
 	startTime := time.Now()
@@ -106,15 +99,15 @@ func checkProjects(timeout string) {
 
 			status.Statuses.Projects[project.Name].Alive = 0
 
-			executeHealthcheck(&projects.Project{project}, &healthcheck, timeout)
+			ExecuteHealthcheck(&projects.Project{project}, &healthcheck, timeout)
 		}
 	}
 }
 
-func executeHealthcheck(project *projects.Project, healthcheck *config.Healthcheck, timeout string) {
+func ExecuteHealthcheck(project *projects.Project, healthcheck *config.Healthcheck, timeout string) {
 	config.Log.Debugf("Total checks %+v", healthcheck.Checks)
 	for _, check := range healthcheck.Checks {
-		checkRandomId := GetRandomId()
+		checkRandomId := common.GetRandomId()
 		config.Log.Debugf("(%s) Evaluating check %s", checkRandomId, check.Name)
 		if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
 			config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s(%s)'", checkRandomId, project.Name, healthcheck.Name, check.Name, check.Type)
@@ -124,7 +117,7 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 				config.Log.Errorf("Metric count error: %v", err)
 			}
 			duration, tempErr := checks.Execute(project, &check)
-			checks.EvaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, duration)
+			checks.EvaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, duration, "ExecuteHealthcheck")
 		} else {
 			config.Log.Debugf("(%s) check %s timeout is not eligible for checking", checkRandomId, check.Name)
 		}

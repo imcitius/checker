@@ -18,7 +18,7 @@ func chooseChannelAndSendAlert(project *projects.Project, check *config.Check, e
 	}
 }
 
-func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration) {
+func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration, callingFunction string) {
 
 	statusByUUID := status.Statuses.Checks[check.UUid]
 	statusByProject := status.Statuses.Projects[project.Name]
@@ -80,7 +80,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		status.Statuses.Checks[check.UUid].LastResult = false
 
 	} else {
-		config.Log.Warnf("(%s) %s/%s/%s success, took %d millisec", checkRandomId, check.Name, check.Type, check.Host, t.Milliseconds())
+		config.Log.Warnf("(%s) %s/%s/%s success, took %d millisec //call from %s", checkRandomId, check.Name, check.Type, check.Host, t.Milliseconds(), callingFunction)
 		metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
 
 		if statusByProject.SeqErrorsCount > 0 {

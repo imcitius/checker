@@ -15,9 +15,10 @@ func CheckCatalog(timeout string) {
 		for _, h := range p.Healthchecks {
 			for _, c := range h.Checks {
 				if timeout == h.Parameters.RunEvery || timeout == p.Parameters.RunEvery {
-					//config.Log.Debugf("check: %+v", c)
+					checkRandomId := common.GetRandomId()
+					config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s(%s)'", checkRandomId, "projectCatalog", h.Name, c.Name, c.Type)
 					duration, tempErr := checks.Execute(&projects.Project{p}, &c)
-					checks.EvaluateCheckResult(&projects.Project{p}, &h, &c, tempErr, common.GetRandomId(), duration)
+					checks.EvaluateCheckResult(&projects.Project{p}, &h, &c, tempErr, common.GetRandomId(), duration, "CheckCatalog")
 				}
 			}
 		}
