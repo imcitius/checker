@@ -41,7 +41,6 @@ func Execute() error {
 	} else {
 		fmt.Println("Start dev ")
 	}
-
 	return rootCmd.Execute()
 }
 
@@ -55,6 +54,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+	rootCmd.PersistentFlags().BoolVarP(&config.BotsEnabledFlag, "botsenabled", "b", false, "Whether to enable active bots")
 
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)
@@ -169,6 +169,18 @@ var list = &cobra.Command{
 	},
 }
 
+func fireActiveBot() {
+	config.Log.Infof("Active bot is enabled")
+	fireBot()
+
+}
+func firePassiveBot() {
+	config.Log.Infof("Active bot is disabled, alerts only")
+	message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
+	// Metrics structures is not initialized yet, so we prevent panic with "noMetrics"
+	alerts.SendChatOps(message, "noMetrics")
+}
+
 func mainChecker() {
 
 	for {
@@ -205,13 +217,19 @@ func mainChecker() {
 
 		switch config.Config.Defaults.BotsEnabled {
 		case true:
-			config.Log.Infof("Active bot is enabled")
-			fireBot()
+			fireActiveBot()
+			//if config.BotsEnabledFlag {
+			//	fireActiveBot()
+			//} else {
+			//	firePassiveBot()
+			//}
 		case false:
-			config.Log.Infof("Active bot is disabled, alerts only")
-			message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
-			// Metrics structures is not initialized yet, so we prevent panic with "noMetrics"
-			alerts.SendChatOps(message, "noMetrics")
+			firePassiveBot()
+			//if config.BotsEnabledFlag {
+			//	fireActiveBot()
+			//} else {
+			//	firePassiveBot()
+			//}
 		}
 
 		//config.InternalStatus = "started"

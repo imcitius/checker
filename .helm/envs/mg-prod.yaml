@@ -207,7 +207,7 @@ checker_config_template: |
                 dbname: checker
                 username: checker
                 password: << file "/vault/secrets/pgsql.env" >>
-                lag: 3s
+                lag: 10s
               severity: critical
 
 # добавить мантикору, imgproxy

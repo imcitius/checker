@@ -2,29 +2,56 @@
 defaults:
   timer_step: 5s
   http_port: '80'
-  bots_enabled: 'true'
+  bots_enabled: 'false'
   token_encryption_key: bi6oNuisa0ooz6Ael6Eewaatoophoo0p
   parameters:
     run_every: 900s
     min_health: 1
     allow_fails: 1
-    noncrit_alert: tg_prod
-    crit_alert: tg_prod
-    command_channel: tg_prod
+    noncrit_alert: tg_OtherChecker
+    crit_alert: tg_OtherChecker
+    command_channel: tg_OtherChecker
     mode: loud
     periodic_report_time: 1h
     ssl_expiration_period: 720h
+
 alerts:
-  - name: tg_prod
+  - name: tg_OtherChecker
     type: telegram
     bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
-    noncritical_channel: -730661309
-    critical_channel: -730661309
-#  - name: tg_main
-#    type: telegram
-#    bot_token: 988868513:AAHWL8ws-z2l2TLPbRb9jyyzJ-4HFbA71_k
-#    noncritical_channel: 1390752
-#    critical_channel: 1390752
+    noncritical_channel: -17879045
+    critical_channel: -220630561
+
+  - name: mg_prod
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -37817795
+    critical_channel: -220630561
+
+  - name: orb_prod
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -6405887
+    critical_channel: -220630561
+
+  - name: bubbles_prod
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -178164039
+    critical_channel: -220630561
+
+  - name: siam_prod
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -160116356
+    critical_channel: -220630561
+
+  - name: iron_prod
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -213063262
+    critical_channel: -220630561
+
 projects:
   - name: Admitlead
     healthchecks:
@@ -39,7 +66,11 @@ projects:
               - 200
             timeout: 3s
             severity: critical
-  - name: BubblesMedia Critical
+
+  - name: BubblesMedia
+    parameters:
+      noncrit_alert: bubbles_prod
+      crit_alert: bubbles_prod
     healthchecks:
       - name: Bubbles ks
         parameters:
@@ -74,9 +105,6 @@ projects:
               - 200
             timeout: 3s
             severity: critical
-
-  - name: BubblesMedia Warning
-    healthchecks:
       - name: BubblesMedia mg1
         checks:
           - type: http
@@ -86,7 +114,10 @@ projects:
               - 200
             timeout: 3s
 
-  - name: Mediaget Critical
+  - name: Mediaget
+    parameters:
+      noncrit_alert: mg_prod
+      crit_alert: mg_prod
     healthchecks:
       - name: 'Mediaget site'
         parameters:
@@ -132,9 +163,6 @@ projects:
               - 200
             timeout: 3s
             severity: critical
-
-  - name: Mediaget Warning
-    healthchecks:
       - name: 'Mediaget DHT API'
         checks:
           - type: http
@@ -209,6 +237,9 @@ projects:
             timeout: 3s
 
   - name: Mediaget OLD
+    parameters:
+      noncrit_alert: mg_prod
+      crit_alert: mg_prod
     healthchecks:
       - name: 'old Mediaget torr'
         checks:
@@ -248,6 +279,9 @@ projects:
             timeout: 3s
 
   - name: Orbitum
+    parameters:
+      noncrit_alert: orb_prod
+      crit_alert: orb_prod
     healthchecks:
       - name: Orbitum Stat
         checks:

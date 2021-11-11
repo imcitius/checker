@@ -266,8 +266,10 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		switch config.InternalStatus {
 		case "reload":
 			message = "Bot config reloaded"
+			config.Log.Warn(message)
 		default:
 			message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
+			config.Log.Warn(message)
 		}
 		config.Log.Infof("Start listening telegram bots routine")
 		SendChatOps(message)
@@ -279,7 +281,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 
 	<-ch
 	bot.Stop()
-	// let bot to actually stop
 	config.Log.Infof("Exit listening telegram bots")
+	// let bot to actually stop
 	time.Sleep(5 * time.Second)
 }

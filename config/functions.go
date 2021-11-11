@@ -133,7 +133,6 @@ func TestConfig() (ConfigFile, error) {
 		if Koanf.String("debug.level") == "debug" {
 			// add file and line number
 			Log.SetReportCaller(true)
-
 		}
 	}
 
@@ -354,9 +353,6 @@ func WatchConfig() {
 			if err != nil {
 				Log.Infof("Config load error: %s", err)
 			}
-			//else {
-			//	Log.Debugf("Loaded config: %+v", Config)
-			//}
 			ConfigChangeSig <- true
 		}
 	} else {
