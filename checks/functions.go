@@ -20,6 +20,8 @@ func chooseChannelAndSendAlert(project *projects.Project, check *config.Check, e
 
 func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthcheck, check *config.Check, tempErr error, checkRandomId string, t time.Duration) {
 
+	statusByUUID := status.Statuses.Checks[check.UUid]
+	statusByProject := status.Statuses.Projects[project.Name]
 	//config.Log.Panicf("%+v", check.Actors)
 	if tempErr != nil {
 		var err error
@@ -33,7 +35,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		//config.Log.Debugf("Check mode: %s", status.GetCheckMode(check))
 
 		if check.AllowFails > 0 {
-			if status.Statuses.Checks[check.UUid].SeqErrorsCount >= check.AllowFails {
+			if statusByUUID.SeqErrorsCount >= check.AllowFails {
 				if status.GetCheckMode(check) != "quiet" {
 					chooseChannelAndSendAlert(project, check, err)
 				}
@@ -44,12 +46,12 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 			}
 		}
 
-		if status.Statuses.Projects[project.Name].SeqErrorsCount < project.Parameters.AllowFails {
-			status.Statuses.Projects[project.Name].SeqErrorsCount++
+		if statusByProject.SeqErrorsCount < project.Parameters.AllowFails {
+			statusByProject.SeqErrorsCount++
 		}
 
-		if status.Statuses.Checks[check.UUid].SeqErrorsCount < check.AllowFails {
-			status.Statuses.Checks[check.UUid].SeqErrorsCount++
+		if statusByUUID.SeqErrorsCount < check.AllowFails {
+			statusByUUID.SeqErrorsCount++
 		}
 
 		err = AddCheckError(project, healthcheck, check)
@@ -57,36 +59,36 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 			config.Log.Errorf("Metric count error: %v", err)
 		}
 
-		if _, ok := status.Statuses.Checks[check.UUid]; ok {
-			//config.Log.Infof("err name: %s, count: %d, last: %v", check.Host, status.Statuses.Checks[check.UUid].ExecuteCount, status.Statuses.Checks[check.UUid].LastResult)
-			if check.Actors.Up != "" && status.Statuses.Checks[check.UUid].ExecuteCount > 1 {
-				if status.Statuses.Checks[check.UUid].LastResult {
-					config.Log.Debugf("atype: %s", actors.GetActorByName(check.Actors.Down).Type)
-					actor := actors.ActorCollection[actors.GetActorByName(check.Actors.Down).Type]
+		//if _, ok := status.Statuses.Checks[check.UUid]; ok {
+		//config.Log.Infof("err name: %s, count: %d, last: %v", check.Host, status.Statuses.Checks[check.UUid].ExecuteCount, status.Statuses.Checks[check.UUid].LastResult)
+		if check.Actors.Up != "" && statusByUUID.ExecuteCount > 1 {
+			if statusByUUID.LastResult {
+				config.Log.Debugf("atype: %s", actors.GetActorByName(check.Actors.Down).Type)
+				actor := actors.ActorCollection[actors.GetActorByName(check.Actors.Down).Type]
 
-					if actor == nil {
-						config.Log.Errorf("down actor %s error: empty actor", check.Actors.Down)
-					} else {
-						if err := actor.Do(actors.GetActorByName(check.Actors.Down)); err != nil {
-							config.Log.Errorf("down actor %s error: %s", check.Actors.Down, err)
-						}
+				if actor == nil {
+					config.Log.Errorf("down actor %s error: empty actor", check.Actors.Down)
+				} else {
+					if err := actor.Do(actors.GetActorByName(check.Actors.Down)); err != nil {
+						config.Log.Errorf("down actor %s error: %s", check.Actors.Down, err)
 					}
 				}
 			}
 		}
+		//}
 
 		status.Statuses.Checks[check.UUid].LastResult = false
 
 	} else {
-		config.Log.Warnf("(%s) success, took %d millisec", checkRandomId, t.Milliseconds())
+		config.Log.Warnf("(%s) %s success, took %d millisec", checkRandomId, check.Name, t.Milliseconds())
 		metrics.CheckDuration.WithLabelValues(project.Name, healthcheck.Name, check.UUid, check.Type).Set(float64(t.Milliseconds()))
 
-		if status.Statuses.Projects[project.Name].SeqErrorsCount > 0 {
-			status.Statuses.Projects[project.Name].SeqErrorsCount--
+		if statusByProject.SeqErrorsCount > 0 {
+			statusByProject.SeqErrorsCount--
 		}
 
-		if status.Statuses.Checks[check.UUid].SeqErrorsCount > 0 {
-			status.Statuses.Checks[check.UUid].SeqErrorsCount--
+		if statusByUUID.SeqErrorsCount > 0 {
+			statusByUUID.SeqErrorsCount = 0
 		}
 
 		if _, ok := status.Statuses.Checks[check.UUid]; ok {
@@ -108,7 +110,7 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 				}
 			}
 		}
-		status.Statuses.Checks[check.UUid].LastResult = true
-		status.Statuses.Projects[project.Name].Alive++
+		statusByUUID.LastResult = true
+		statusByProject.Alive++
 	}
 }
