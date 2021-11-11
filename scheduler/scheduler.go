@@ -135,7 +135,7 @@ func executeHealthcheck(project *projects.Project, healthcheck *config.Healthche
 }
 
 func timeIsDivisible(uptime time.Duration, timer time.Duration) bool {
-	config.Log.Debugf("Checking divisibility: uptime/timer --- %t/%t", uptime.Seconds(), timer.Seconds())
+	config.Log.Debugf("Checking divisibility: uptime/timer --- %f/%f", uptime.Seconds(), timer.Seconds())
 	if math.Remainder(uptime.Seconds(), timer.Seconds()) == 0 {
 		config.Log.Debugf("Divisible")
 		return true
