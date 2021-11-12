@@ -203,9 +203,7 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 		config.Log.Debugf("sendTgMessage success")
 		a.AddAlertMetricNonCritical()
 	}
-
 	return err
-
 }
 
 func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {

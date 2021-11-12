@@ -476,21 +476,21 @@ projects:
             answer: (?is)ЛУКОЙЛ</title>
             code:
               - 200
-            timeout: 3s
+            timeout: 5s
           - type: http
             name: Lukoil-academy.ru
             host: https://lukoil-academy.ru
             answer: (?is)ЛУКОЙЛ</title>
             code:
               - 200
-            timeout: 3s
+            timeout: 5s
           - type: http
             name: b2b.lukoil-shop.ru
             host: https://b2b.lukoil-shop.ru
             answer: (?is)<title>Автомобильные масла ЛУКОЙЛ
             code:
               - 200
-            timeout: 3s
+            timeout: 5s
 
   - name: AdsKiller
     healthchecks:
