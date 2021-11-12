@@ -155,7 +155,6 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 			wg.Done()
 			return
 		case t := <-Ticker.C:
-			go config.WatchConfig()
 			uptime := t.Round(time.Second).Sub(config.StartTime.Round(time.Second))
 
 			for _, timeout := range config.Timeouts.Periods {
@@ -176,15 +175,15 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					alertsDuration := sendCritAlerts(timeout)
 
 					config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
-					config.Log.Infof("Reports duration: %v msec", reportsDuration.Milliseconds())
-					config.Log.Infof("Alerts duration: %v msec", alertsDuration.Milliseconds())
+					config.Log.Debugf("Reports duration: %v msec", reportsDuration.Milliseconds())
+					config.Log.Debugf("Alerts duration: %v msec", alertsDuration.Milliseconds())
 
 					metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
 					metrics.SchedulerReportsDuration.Set(float64(reportsDuration.Milliseconds()))
 					metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))
 				}
 			}
-
+			go config.WatchConfig()
 		}
 
 		metrics.SchedulerLoopConfig.Set(float64(timerStep.Milliseconds()))

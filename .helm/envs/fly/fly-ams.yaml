@@ -458,6 +458,8 @@ projects:
   - name: Domec
     healthchecks:
       - name: DomecWebsite
+        parameters:
+          run_every: 30s
         checks:
           - type: http
             host: https://domec.ru/
