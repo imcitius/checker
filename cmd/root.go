@@ -54,7 +54,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
-	rootCmd.PersistentFlags().BoolVarP(&config.BotsEnabledFlag, "botsenabled", "b", false, "Whether to enable active bots")
 
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)

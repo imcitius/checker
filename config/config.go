@@ -20,9 +20,8 @@ var (
 	VersionSHA   string
 	VersionBuild string
 
-	StartTime       = time.Now()
-	InternalStatus  = "starting"
-	BotsEnabledFlag bool
+	StartTime      = time.Now()
+	InternalStatus = "starting"
 
 	ScheduleLoop int
 	Config       ConfigFile

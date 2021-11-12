@@ -27,10 +27,10 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		var err error
 		if check.IsCritical() {
 			err = fmt.Errorf("(%s) CRITICAL %s", checkRandomId, tempErr.Error())
-			config.Log.Errorf("(%s) CRITICAL failure: %+v, took %d millisec", checkRandomId, err, t.Milliseconds())
+			config.Log.Warnf("(%s) CRITICAL failure: %+v, took %d millisec", checkRandomId, err, t.Milliseconds())
 		} else {
 			err = fmt.Errorf("(%s) %s", checkRandomId, tempErr.Error())
-			config.Log.Errorf("(%s) failure: %+v, took %d millisec", checkRandomId, err, t.Milliseconds())
+			config.Log.Warnf("(%s) failure: %+v, took %d millisec", checkRandomId, err, t.Milliseconds())
 		}
 		//config.Log.Debugf("Check mode: %s", status.GetCheckMode(check))
 
