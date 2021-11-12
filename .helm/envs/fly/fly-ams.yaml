@@ -466,6 +466,32 @@ projects:
               - 200
             timeout: 3s
 
+  - name: Lukoil
+    healthchecks:
+      - name: Lukoil
+        checks:
+          - type: http
+            name: Lukoil-shop.ru
+            host: https://lukoil-shop.ru
+            answer: (?is)ЛУКОЙЛ</title>
+            code:
+              - 200
+            timeout: 3s
+          - type: http
+            name: Lukoil-academy.ru
+            host: https://lukoil-academy.ru
+            answer: (?is)ЛУКОЙЛ</title>
+            code:
+              - 200
+            timeout: 3s
+          - type: http
+            name: b2b.lukoil-shop.ru
+            host: https://b2b.lukoil-shop.ru
+            answer: (?is)<title>Автомобильные масла ЛУКОЙЛ
+            code:
+              - 200
+            timeout: 3s
+
   - name: AdsKiller
     healthchecks:
       - name: AdsKiller
@@ -512,4 +538,3 @@ projects:
         checks:
           - type: passive
             timeout: 960s
-            severity: critical
