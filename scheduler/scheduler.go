@@ -20,32 +20,32 @@ var Config = &config.Config
 
 func runReports(timeout string) time.Duration {
 	startTime := time.Now()
-	config.Log.Infof("runReports")
+	config.Log.Debugf("runReports")
 	for _, p := range Config.Projects {
-		config.Log.Infof("runReports 0: %s\n", timeout)
-		config.Log.Infof("runReports 1: %s\n", p.Name)
-		config.Log.Infof("runReports 2: %s\n", p.Parameters.Mode)
-		config.Log.Infof("runReports 4: %s\n", status.Statuses.Projects[p.Name].Mode)
-		config.Log.Infof("runReports 6: %s\n", p.Parameters.PeriodicReport)
+		config.Log.Debugf("runReports 0: %s\n", timeout)
+		config.Log.Debugf("runReports 1: %s\n", p.Name)
+		config.Log.Debugf("runReports 2: %s\n", p.Parameters.Mode)
+		config.Log.Debugf("runReports 4: %s\n", status.Statuses.Projects[p.Name].Mode)
+		config.Log.Debugf("runReports 6: %s\n", p.Parameters.PeriodicReport)
 
 		schedTimeout, err := time.ParseDuration(timeout)
 		if err != nil {
 			config.Log.Errorf("runReports Cannot parse duration %s", err)
 		}
-		config.Log.Infof("schedTimeout: %s\n", schedTimeout)
+		config.Log.Debugf("schedTimeout: %s\n", schedTimeout)
 
 		reportsTimeout, err := time.ParseDuration(p.Parameters.PeriodicReport)
 		if err != nil {
 			config.Log.Errorf("runReports Cannot parse duration %s", err)
 		}
-		config.Log.Infof("reportsTimeout: %s\n", reportsTimeout)
+		config.Log.Debugf("reportsTimeout: %s\n", reportsTimeout)
 
 		if schedTimeout >= reportsTimeout {
 			project := projects.Project{p}
-			config.Log.Infof("runReports 10: %s", project.GetMode())
+			config.Log.Debugf("runReports 10: %s", project.GetMode())
 			err := project.ProjectSendReport()
 			if err != nil {
-				config.Log.Infof("Cannot send report for project %s: %+v", project.Name, err)
+				config.Log.Errorf("Cannot send report for project %s: %+v", project.Name, err)
 			}
 		}
 	}
