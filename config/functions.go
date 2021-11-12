@@ -178,7 +178,7 @@ func (c *ConfigFile) FillDefaults() error {
 
 	if c.Defaults.Parameters.PeriodicReport == "" {
 		c.Defaults.Parameters.PeriodicReport = PeriodicReport
-		Log.Infof("PeriodicReport not found in config, use defaults: %s", c.Defaults.Parameters.PeriodicReport)
+		Log.Debugf("PeriodicReport not found in config, use defaults: %s", c.Defaults.Parameters.PeriodicReport)
 	}
 
 	//Log.Printf("Loaded config %+v\n\n", Config.Projects)

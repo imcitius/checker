@@ -93,11 +93,11 @@ func (p *Project) Send(text string) {
 
 func (p *Project) SendCrit(text string) {
 
-	critChannel := p.GetCritChannel()
+	projectAlert := p.GetCritChannel()
 	p.AddProjectMetricCriticalAlert()
-	critChannel.AddAlertMetricCritical()
+	projectAlert.AddAlertMetricCritical()
 
-	err := critChannel.Alert(text, "alert")
+	err := projectAlert.Alert(text, "critalert")
 	if err != nil {
 		config.Log.Infof("Send critical alert error for project %s: %s", p.Name, err)
 	}
@@ -130,7 +130,7 @@ func (p *Project) ProjectCritAlert(e error) {
 		}
 	}
 
-	config.Log.Printf("Send critical alert for project: %+v with error %+v\n\n", p, e)
+	config.Log.Printf("Send critical alert for project: %+v with error %+v\n\n", p.Name, e)
 	p.SendCrit(message)
 }
 

@@ -82,6 +82,7 @@ func initConfig() {
 	err := config.Koanf.Load(confmap.Provider(map[string]interface{}{
 		"defaults.http.port":    "80",
 		"defaults.http.enabled": true,
+		"defaults.timer_step":   "5s",
 		"debug.level":           debugLevel,
 		"log.format":            logFormat,
 		"bots.enabled":          botsEnabled,
@@ -187,6 +188,10 @@ func mainChecker() {
 		go signalWait()
 		interrupt = false
 
+		config.Wg.Add(1)
+		config.Log.Debugf("Fire scheduler")
+		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
+
 		err := config.LoadConfig()
 		if err != nil {
 			config.Log.Infof("Config load error: %s", err)
@@ -207,10 +212,6 @@ func mainChecker() {
 		} else {
 			config.Log.Debugf("Webserver already running")
 		}
-
-		config.Wg.Add(1)
-		config.Log.Debugf("Fire scheduler")
-		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
 		config.Log.Debugf("config botsEnabled is %v", config.Config.Defaults.BotsEnabled)
 

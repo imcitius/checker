@@ -152,7 +152,7 @@ func (m TgMessage) GetUUID() (string, error) {
 
 func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 
-	config.Log.Debugf("Sending alert, text: '%s' (alert channel %+v)", message, a.Name)
+	config.Log.Debugf("Sending alert type %s, text: '%s' (alert channel %+v)", messageType, message, a.Name)
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  a.BotToken,
 		Poller: &tb.LongPoller{Timeout: 5 * time.Second},
@@ -160,7 +160,6 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 	if err != nil {
 		config.Log.Fatal(err)
 	}
-	user := tb.Chat{ID: a.ProjectChannel}
 	//config.Log.Debugf("Alert to user: %+v with token %s, error: %+v", user, a.BotToken, e)
 
 	options := &tb.SendOptions{ParseMode: "MarkDownV2"}
@@ -175,12 +174,27 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 
 	switch messageType {
 	case "alert":
+		config.Log.Infof("Sending 'alert' type message")
+		user := tb.Chat{ID: a.ProjectChannel}
+		messageToSend := tb.Message{Text: message}
 		selectorAlert.Inline(selectorAlert.Row(selPP, selPU))
-		_, err = bot.Send(&user, QuoteMeta(message), options, menu, selectorAlert)
+		_, err = bot.Send(&user, QuoteMeta(messageToSend.Text), options, menu, selectorAlert)
+	case "critalert":
+		config.Log.Infof("Sending 'critalert' type message")
+		chat := tb.Chat{ID: a.CriticalChannel}
+		messageToSend := tb.Message{Text: message}
+		selectorAlert.Inline(selectorAlert.Row(selPP, selPU))
+		_, err = bot.Send(&chat, messageToSend.Text)
 	case "chatops":
-		_, err = bot.Send(&user, QuoteMeta(message), optionsChatops, menu)
+		config.Log.Infof("Sending 'chatops' type message")
+		user := tb.Chat{ID: a.ProjectChannel}
+		messageToSend := tb.Message{Text: message}
+		_, err = bot.Send(&user, QuoteMeta(messageToSend.Text), optionsChatops, menu)
 	default:
-		_, err = bot.Send(&user, QuoteMeta(message), options, menu)
+		config.Log.Infof("Sending 'default' type message")
+		user := tb.Chat{ID: a.ProjectChannel}
+		messageToSend := tb.Message{Text: message}
+		_, err = bot.Send(&user, messageToSend.Text, options, menu)
 	}
 
 	if err != nil {

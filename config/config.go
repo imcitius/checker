@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	PeriodicReport = "30m"
+	PeriodicReport = "60m"
 )
 
 var (
