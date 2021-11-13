@@ -49,6 +49,7 @@ type CachedSecret struct {
 type ConfigFile struct {
 	Defaults struct {
 		// Main timer evaluates every TimerStep seconds
+		// should always be 1s, to avoid time drift bugs in scheduler
 		TimerStep  string     `koanf:"timer_step"`
 		Parameters Parameters `koanf:"parameters"`
 

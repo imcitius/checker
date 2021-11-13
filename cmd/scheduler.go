@@ -161,7 +161,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 				if timeIsDivisible(uptime, tf) {
 					config.Log.Debugf("===\nTime: %v\n---\n\n", t)
-					config.Log.Infof("Checking run_every: %s", timeout)
+					config.Log.Infof("Checking run_every: %s, uptime %s seconds", timeout, uptime)
 
 					checksDuration := runChecks(timeout)
 					reportsDuration := runReports(timeout)

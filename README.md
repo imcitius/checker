@@ -36,7 +36,6 @@ Then prepare your new own testing config. Last string of prepared config should 
 ```yaml
 ---
 defaults:
-  timer_step: 5s
   http_port: '80'
   token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
   parameters:
@@ -143,7 +142,7 @@ Secrets retrieved from the Vault are cached for 5 minutes to reduce the load on 
 
 The `defaults` block in the` parameters` subblock describes the default check parameters that are applied to the settings of projects, if they have not been reassigned in the `parameters` block of a specific project.
 
-Separate parameters `timer_step` and` http_port` in the `defaults` block contain the period of checks by the internal timer for the presence of actions that need to be performed at the moment, and the default port for the HTTP server.
+Parameter and` http_port` in the `defaults` block contain the default port for the HTTP server.
 If the PORT environment variable is set, the port number from it is used.
 
 ## The `parameters` block contains the following settings:
@@ -173,9 +172,6 @@ mentions: who to not
 
 bots_enabled: wheether to allow run telegram bot
 ```
-
-Keep in mind that the `run_every` parameter must be a multiple of the` timer_step` parameter.
-For example, if the internal timer fires every 5 seconds, the check can be performed every number of seconds in multiples of 5 (60 seconds, 75 seconds, etc.)
 
 ## An "actor" is an action that must be performed when the verification status changes (actor_up/actor_down).
 Actors (actions) are described in the ʻactors` block.

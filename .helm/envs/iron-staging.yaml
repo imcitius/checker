@@ -5,7 +5,6 @@ db:
 checker_config_template: |
   ---
   defaults:
-    timer_step: 5s
     http_port: '80'
     token_encryption_key: maeyoa6caeshooph1Aefeezooshaenai
     parameters:

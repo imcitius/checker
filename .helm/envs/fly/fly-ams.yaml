@@ -1,6 +1,5 @@
 ---
 defaults:
-  timer_step: 30s
   http_port: '80'
   bots_enabled: 'true'
   token_encryption_key: bi6oNuisa0ooz6Ael6Eewaatoophoo0p

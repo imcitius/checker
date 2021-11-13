@@ -84,14 +84,15 @@ func initConfig() {
 	err := config.Koanf.Load(confmap.Provider(map[string]interface{}{
 		"defaults.http.port":    "80",
 		"defaults.http.enabled": true,
-		"defaults.timer_step":   "1s",
-		"debug.level":           debugLevel,
-		"log.format":            logFormat,
-		"bots.enabled":          botsEnabled,
-		"config.file":           configFile,
-		"config.source":         configSource,
-		"config.watchtimeout":   configWatchTimeout,
-		"config.format":         configFormat,
+		// should always be 1s, to avoid time drift bugs in scheduler
+		"defaults.timer_step": "1s",
+		"debug.level":         debugLevel,
+		"log.format":          logFormat,
+		"bots.enabled":        botsEnabled,
+		"config.file":         configFile,
+		"config.source":       configSource,
+		"config.watchtimeout": configWatchTimeout,
+		"config.format":       configFormat,
 	}, "."), nil)
 	if err != nil {
 		logrus.Panicf("Cannot fill default config: %s", err.Error())
