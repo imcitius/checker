@@ -540,8 +540,12 @@ projects:
 
   - name: BetterUptime active ping
     healthchecks:
-      - type: http
-        host: https://betteruptime.com/api/v1/heartbeat/hXyiRzTcr8uAYyqhDBRNFjsa
-        code:
-          - 200
-        timeout: 3s
+      - name: Checker Running
+#        parameters:
+#          run_every: 3600s
+        checks:
+          - type: http
+            host: https://betteruptime.com/api/v1/heartbeat/hXyiRzTcr8uAYyqhDBRNFjsa
+            code:
+              - 200
+            timeout: 3s
