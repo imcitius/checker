@@ -80,7 +80,7 @@ projects:
             answer: Bubbles OK
             code:
               - 200
-            timeout: 3s
+            timeout: 10s
             severity: critical
       - name: BubblesMedia content
         parameters:
@@ -91,7 +91,7 @@ projects:
             answer: (?is)<script>.*</script>
             code:
               - 200
-            timeout: 3s
+            timeout: 10s
             severity: critical
       - name: BubblesMedia promo_code
         parameters:
@@ -102,7 +102,7 @@ projects:
             answer: promo_code
             code:
               - 200
-            timeout: 3s
+            timeout: 10s
             severity: critical
       - name: BubblesMedia mg1
         checks:
@@ -111,7 +111,7 @@ projects:
             answer: mg1 OK
             code:
               - 200
-            timeout: 3s
+            timeout: 10s
 
   - name: Mediaget
     parameters:
