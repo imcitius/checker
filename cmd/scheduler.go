@@ -1,4 +1,4 @@
-package scheduler
+package cmd
 
 import (
 	"errors"
@@ -136,13 +136,6 @@ func timeIsDivisible(uptime time.Duration, timer time.Duration) bool {
 
 func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
-	timerStep, err := time.ParseDuration(config.Koanf.String("defaults.timer_step"))
-	if err != nil {
-		config.Log.Fatal(err)
-	}
-
-	Ticker := time.NewTicker(timerStep)
-
 	config.Log.Debug("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
 
@@ -186,7 +179,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 			go config.WatchConfig()
 		}
 
-		metrics.SchedulerLoopConfig.Set(float64(timerStep.Milliseconds()))
+		metrics.SchedulerLoopConfig.Set(float64(TimerStep.Milliseconds()))
 		metrics.SchedulerLoops.Inc()
 		config.ScheduleLoop++
 	}

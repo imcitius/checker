@@ -11,13 +11,13 @@ import (
 	"my/checker/catalog"
 	"my/checker/config"
 	"my/checker/reports"
-	"my/checker/scheduler"
 	"my/checker/status"
 	"my/checker/web"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var (
@@ -32,6 +32,8 @@ var (
 
 	logFormat, debugLevel, configFile, configSource, configWatchTimeout, configFormat string
 	botsEnabled                                                                       bool
+	Ticker                                                                            *time.Ticker
+	TimerStep                                                                         time.Duration
 )
 
 // Execute executes the root command.
@@ -94,6 +96,12 @@ func initConfig() {
 	if err != nil {
 		logrus.Panicf("Cannot fill default config: %s", err.Error())
 	}
+
+	timerStep, err := time.ParseDuration(config.Koanf.String("defaults.timer_step"))
+	if err != nil {
+		config.Log.Fatal(err)
+	}
+	Ticker = time.NewTicker(timerStep)
 
 	err = config.Koanf.Load(env.Provider("PORT", ".", func(s string) string {
 		return "defaults.http.port"
@@ -190,7 +198,7 @@ func mainChecker() {
 
 		config.Wg.Add(1)
 		config.Log.Debugf("Fire scheduler")
-		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
+		go RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
 		err := config.LoadConfig()
 		if err != nil {
