@@ -84,7 +84,7 @@ func initConfig() {
 	err := config.Koanf.Load(confmap.Provider(map[string]interface{}{
 		"defaults.http.port":    "80",
 		"defaults.http.enabled": true,
-		"defaults.timer_step":   "5s",
+		"defaults.timer_step":   "1s",
 		"debug.level":           debugLevel,
 		"log.format":            logFormat,
 		"bots.enabled":          botsEnabled,
