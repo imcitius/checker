@@ -64,7 +64,7 @@ checker_config_template: |
               timeout: 2s
         - name: Installer
           parameters:
-            run_every: 30s
+            run_every: 60s
           checks:
             - type: http
               host: http://installer/health
@@ -74,7 +74,7 @@ checker_config_template: |
               severity: critical
         - name: Ld
           parameters:
-            run_every: 30s
+            run_every: 60s
           checks:
             - type: http
               host: http://ld/check.php
