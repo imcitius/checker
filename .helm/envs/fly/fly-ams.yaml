@@ -549,3 +549,11 @@ projects:
             code:
               - 200
             timeout: 3s
+
+  - name: mail.relay4.xyz
+    healthchecks:
+      - name: Web interface
+        checks:
+          - type: http
+            host: https://mail.relay4.xyz
+            timeout: 10s
