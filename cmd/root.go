@@ -31,7 +31,7 @@ var (
 	interrupt bool
 
 	logFormat, debugLevel, configFile, configSource, configWatchTimeout, configFormat string
-	botsEnabled                                                                       bool
+	botsEnabled, watchConfig                                                          bool
 	Ticker                                                                            *time.Ticker
 	TimerStep                                                                         time.Duration
 )
@@ -56,6 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+	rootCmd.PersistentFlags().BoolVarP(&watchConfig, "watchConfig", "W", true, "Whether to watch config file changes on disk")
 
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)

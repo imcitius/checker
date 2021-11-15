@@ -139,6 +139,13 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 	config.Log.Debug("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
 
+	if watchConfig {
+		config.Log.Info("Start config watch")
+		go config.WatchConfig()
+	} else {
+		config.Log.Info("Config watch disabled")
+	}
+
 	for {
 		config.Log.Debugf("Scheduler loop #: %d", config.ScheduleLoop)
 
@@ -176,11 +183,11 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))
 				}
 			}
-			go config.WatchConfig()
 		}
 
 		metrics.SchedulerLoopConfig.Set(float64(TimerStep.Milliseconds()))
 		metrics.SchedulerLoops.Inc()
 		config.ScheduleLoop++
 	}
+
 }
