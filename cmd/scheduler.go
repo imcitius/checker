@@ -124,7 +124,7 @@ func ExecuteHealthcheck(project *projects.Project, healthcheck *config.Healthche
 	}
 }
 
-func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
+func runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 	config.Log.Info("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)

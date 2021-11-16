@@ -221,7 +221,7 @@ func mainChecker() {
 
 		config.Wg.Add(1)
 		config.Log.Debugf("Fire scheduler")
-		go RunScheduler(config.SchedulerSignalCh, &config.Wg)
+		go runScheduler(config.SchedulerSignalCh, &config.Wg)
 
 		if config.Config.ConsulCatalog.Enabled {
 			catalog.WatchServices()
