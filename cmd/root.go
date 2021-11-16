@@ -11,6 +11,7 @@ import (
 	"my/checker/catalog"
 	"my/checker/config"
 	"my/checker/reports"
+	"my/checker/scheduler"
 	"my/checker/status"
 	"my/checker/web"
 	"os"
@@ -194,7 +195,6 @@ func firePassiveBot() {
 }
 
 func mainChecker() {
-
 	for {
 		config.Log.Info("Start main loop")
 		go signalWait()
@@ -203,6 +203,13 @@ func mainChecker() {
 		err := config.LoadConfig()
 		if err != nil {
 			config.Log.Infof("Config load error: %s", err)
+		}
+
+		if watchConfig {
+			config.Log.Info("Start config watch")
+			go config.WatchConfig()
+		} else {
+			config.Log.Info("Config watch disabled")
 		}
 
 		if len(config.Timeouts.Periods) == 0 {
@@ -221,7 +228,7 @@ func mainChecker() {
 
 		config.Wg.Add(1)
 		config.Log.Debugf("Fire scheduler")
-		go runScheduler(config.SchedulerSignalCh, &config.Wg)
+		go scheduler.RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
 		if config.Config.ConsulCatalog.Enabled {
 			catalog.WatchServices()

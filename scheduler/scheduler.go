@@ -1,4 +1,4 @@
-package cmd
+package scheduler
 
 import "C"
 import (
@@ -124,28 +124,20 @@ func ExecuteHealthcheck(project *projects.Project, healthcheck *config.Healthche
 	}
 }
 
-func runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
+func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
 	config.Log.Info("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
-
-	if watchConfig {
-		config.Log.Info("Start config watch")
-		go config.WatchConfig()
-	} else {
-		config.Log.Info("Config watch disabled")
-	}
 
 	config.Log.Debugf("Tickers %+v", config.TickersCollection)
 	if len(config.TickersCollection) == 0 {
 		config.Log.Fatal("No tickers")
 	} else {
 		for _, ticker := range config.TickersCollection {
-			config.Log.Infof("Looping over tickerz")
+			config.Log.Debugf("Looping over tickerz")
 			go func(ticker config.Ticker) {
-				//wg.Add(1)
-				config.Log.Infof("Waiting for ticker %s", ticker.Description)
-				defer config.Log.Infof("Finished ticker %s", ticker.Description)
+				config.Log.Debugf("Waiting for ticker %s", ticker.Description)
+				defer config.Log.Debugf("Finished ticker %s", ticker.Description)
 				for {
 					select {
 					case <-signalCh:
@@ -172,18 +164,4 @@ func runScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 			}(ticker)
 		}
 	}
-
-	//for {
-	//	select {
-	//	case <-signalCh:
-	//		config.Log.Infof("Exit scheduler")
-	//		wg.Done()
-	//		return
-	//	default:
-	//metrics.SchedulerLoops.Inc()
-	//config.ScheduleLoop++
-	//config.Log.Infof("Finished loop")
-	//
-	//	}
-	//}
 }
