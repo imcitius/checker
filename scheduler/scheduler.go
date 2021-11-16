@@ -125,6 +125,7 @@ func ExecuteHealthcheck(project *projects.Project, healthcheck *config.Healthche
 }
 
 func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	config.Log.Info("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
@@ -135,14 +136,16 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 	} else {
 		for _, ticker := range config.TickersCollection {
 			config.Log.Debugf("Looping over tickerz")
+			config.Wg.Add(1)
 			go func(ticker config.Ticker) {
+				defer wg.Done()
+
 				config.Log.Debugf("Waiting for ticker %s", ticker.Description)
 				defer config.Log.Debugf("Finished ticker %s", ticker.Description)
 				for {
 					select {
 					case <-signalCh:
 						config.Log.Infof("Exit ticker")
-						wg.Done()
 						return
 					case t := <-ticker.Ticker.C:
 						uptime := t.Round(time.Second).Sub(config.StartTime.Round(time.Second))
