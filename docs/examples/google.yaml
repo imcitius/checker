@@ -7,7 +7,7 @@ defaults:
     min_health: 1
     allow_fails: 0
     mode: loud
-    periodic_report_time: 10s
+    report_period: 10s
     ssl_expiration_period: 720h
 projects:
   - name: google

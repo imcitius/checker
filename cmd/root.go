@@ -51,12 +51,12 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "config file")
 	rootCmd.PersistentFlags().StringVarP(&configSource, "configsource", "s", "", "config file source: file, consul, s3")
-	rootCmd.PersistentFlags().StringVarP(&configWatchTimeout, "configwatchtimeout", "w", "5s", "config watch period")
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
+	rootCmd.PersistentFlags().StringVarP(&configWatchTimeout, "configwatchtimeout", "w", "5s", "config watch period")
+	rootCmd.PersistentFlags().BoolVarP(&watchConfig, "watchConfig", "W", true, "Whether to watch config file changes on disk")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "botsEnabled", "b", true, "Whether to enable active bot")
-	rootCmd.PersistentFlags().BoolVarP(&watchConfig, "watchConfig", "W", true, "Whether to watch config file changes on disk")
 
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)

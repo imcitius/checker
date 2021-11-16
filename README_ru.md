@@ -29,12 +29,15 @@ Available Commands:
   version     Print the version number of Checker
 
 Flags:
+  -b, --botsEnabled                 Whether to enable active bot (default true)
   -c, --config string               config file
   -f, --configformat string         config file format (default "yaml")
-  -s, --configsource string         config file source: file or consul
+  -s, --configsource string         config file source: file, consul, s3
   -w, --configwatchtimeout string   config watch period (default "5s")
-  -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
+  -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "warn")
   -h, --help                        help for checker
+  -l, --logformat string            log format: text/json (default "text")
+  -W, --watchConfig                 Whether to watch config file changes on disk (default true)
 
 Use "checker [command] --help" for more information about a command.
 ```
@@ -89,6 +92,8 @@ ENV переменная имеет бОльший приоритет.
 ### в defaults и в проектах
 ```
 check_period: частота проведения проверки и отработки алертов.
+// TODO проверить работу фичи
+report_period: частота отправки отчетов по отключенным проверкам в каналы 
 
 // TODO проверить работу фичи
 min_health: минимальное кол-во живых проверок в рамках healthchck, которое не вводит проект в статус critical
@@ -105,9 +110,6 @@ command_channel: имя метода оповещения для приема к
 
 // TODO добавить проверку сертификатов для всех tls, а не только для https
 ssl_expiration_period: проверка близости времени истечения SSL сертификатов при http проверках
-
-// TODO проверить работу фичи
-periodic_report_time: период отправки отчетов по отключенным проверкам в каналы 
 
 mentions: кого нотифицировать в алертах по данному проекту. бывает удобно всем участникам чата держать его замьюченным, а уведомлять по конкретным проблемам конкретные персоны.
 

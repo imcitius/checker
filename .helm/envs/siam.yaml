@@ -15,7 +15,7 @@ checker_config_template: |
       crit_alert: telegram
       command_channel: telegram
       mode: loud
-      periodic_report_time: 1800s
+      report_period: 1800s
       ssl_expiration_period: 720h
   alerts:
     - name: telegram

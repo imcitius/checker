@@ -77,8 +77,8 @@ type Parameters struct {
 	Mode string
 
 	// Checks should be run every Period seconds
-	Period         string `koanf:"check_period"`
-	PeriodicReport string `koanf:"periodic_report_time"`
+	Period       string `koanf:"check_period"`
+	ReportPeriod string `koanf:"report_period"`
 
 	// minimum passed checks to consider project healthy
 	MinHealth int `koanf:"min_health"`

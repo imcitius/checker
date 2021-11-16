@@ -26,7 +26,7 @@ func runReports(timeout string) time.Duration {
 		config.Log.Debugf("runReports 1: %s\n", p.Name)
 		config.Log.Debugf("runReports 2: %s\n", p.Parameters.Mode)
 		config.Log.Debugf("runReports 4: %s\n", status.Statuses.Projects[p.Name].Mode)
-		config.Log.Debugf("runReports 6: %s\n", p.Parameters.PeriodicReport)
+		config.Log.Debugf("runReports 6: %s\n", p.Parameters.ReportPeriod)
 
 		schedTimeout, err := time.ParseDuration(timeout)
 		if err != nil {
@@ -34,7 +34,7 @@ func runReports(timeout string) time.Duration {
 		}
 		config.Log.Debugf("schedTimeout: %s\n", schedTimeout)
 
-		reportsTimeout, err := time.ParseDuration(p.Parameters.PeriodicReport)
+		reportsTimeout, err := time.ParseDuration(p.Parameters.ReportPeriod)
 		if err != nil {
 			config.Log.Errorf("runReports Cannot parse duration %s", err)
 		}
@@ -50,7 +50,7 @@ func runReports(timeout string) time.Duration {
 		}
 	}
 
-	if config.Config.Defaults.Parameters.PeriodicReport == timeout {
+	if config.Config.Defaults.Parameters.ReportPeriod == timeout {
 		if status.MainStatus == "quiet" {
 			reportMessage := "All messages ceased"
 			alerts.SendChatOps(reportMessage)

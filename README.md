@@ -43,7 +43,7 @@ defaults:
     min_health: 1
     allow_fails: 0
     mode: loud
-    periodic_report_time: 10s
+    report_period: 10s
     ssl_expiration_period: 720h
     bots_enabled: true
 alerts:
@@ -95,13 +95,15 @@ Available Commands:
   version     Print the version number of Checker
 
 Flags:
+  -b, --botsEnabled                 Whether to enable active bot (default true)
   -c, --config string               config file
   -f, --configformat string         config file format (default "yaml")
   -s, --configsource string         config file source: file, consul, s3
   -w, --configwatchtimeout string   config watch period (default "5s")
-  -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "info")
+  -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "warn")
   -h, --help                        help for checker
   -l, --logformat string            log format: text/json (default "text")
+  -W, --watchConfig                 Whether to watch config file changes on disk (default true)
 
 Use "checker [command] --help" for more information about a command.
 ```
@@ -150,6 +152,8 @@ If the PORT environment variable is set, the port number from it is used.
 ### in defaults and projects
 ```
 check_period: 600s The frequency of testing and running alerts (in seconds).
+// TODO check the feature
+report_period: reportdisabled check report submission period
 
 // TODO check the features
 min_health: the minimum number of live checks within the healthchck that does not put the project in critical status
@@ -166,9 +170,7 @@ command_channel: the name of the notification method for receiving a command int
 // TODO add certificate checking for all tls, not just https
 ssl_expiration_period: checking the proximity of the expiration time of SSL certificates during http checks
 
-// TODO check the feature
-periodic_report_time: submission period
-mentions: who to not
+mentions: whom to notify in alerts for this project. It is convenient for all chat participants to keep it muted, and notify the person on specific problems. 
 
 bots_enabled: wheether to allow run telegram bot
 ```

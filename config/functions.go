@@ -176,9 +176,9 @@ func (p *TimeoutsCollection) Add(period string) {
 
 func (c *ConfigFile) FillDefaults() error {
 
-	if c.Defaults.Parameters.PeriodicReport == "" {
-		c.Defaults.Parameters.PeriodicReport = PeriodicReport
-		Log.Debugf("PeriodicReport not found in config, use defaults: %s", c.Defaults.Parameters.PeriodicReport)
+	if c.Defaults.Parameters.ReportPeriod == "" {
+		c.Defaults.Parameters.ReportPeriod = PeriodicReport
+		Log.Debugf("ReportPeriod not found in config, use defaults: %s", c.Defaults.Parameters.ReportPeriod)
 	}
 	if c.Defaults.Parameters.Period == "" {
 		c.Defaults.Parameters.Period = DefaultPeriod
@@ -208,8 +208,8 @@ func (c *ConfigFile) FillDefaults() error {
 		if p.Parameters.CritAlertChannel == "" {
 			p.Parameters.CritAlertChannel = c.Defaults.Parameters.AlertChannel
 		}
-		if p.Parameters.PeriodicReport == "" {
-			p.Parameters.PeriodicReport = c.Defaults.Parameters.PeriodicReport
+		if p.Parameters.ReportPeriod == "" {
+			p.Parameters.ReportPeriod = c.Defaults.Parameters.ReportPeriod
 		}
 		if p.Parameters.SSLExpirationPeriod == "" {
 			p.Parameters.SSLExpirationPeriod = c.Defaults.Parameters.SSLExpirationPeriod
