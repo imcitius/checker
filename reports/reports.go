@@ -7,7 +7,6 @@ import (
 )
 
 func ListElements() string {
-
 	list := ""
 	for _, p := range config.Config.Projects {
 		list = list + fmt.Sprintf("Project: %s\n", p.Name)
@@ -39,7 +38,6 @@ func ListElements() string {
 	return list
 }
 
-func List() {
-
-	fmt.Print(ListElements())
+func List() string {
+	return ListElements()
 }

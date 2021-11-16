@@ -20,7 +20,7 @@ type ConsulClient struct {
 	*ConsulParam
 }
 
-// Service represent a Consul service.
+// ConsulService represent a Consul service.
 type ConsulService struct {
 	Name      string
 	Tags      []string
@@ -54,7 +54,7 @@ func (r *ConsulClient) ReadBytes() ([]byte, error) {
 	}
 
 	if pair == nil {
-		return []byte{}, fmt.Errorf("Cannot get data from consul, empty key")
+		return []byte{}, fmt.Errorf("cannot get data from consul, empty key")
 	}
 
 	data := pair.Value
@@ -68,6 +68,6 @@ func (r *ConsulClient) Read() (map[string]interface{}, error) {
 }
 
 // Watch is not supported.
-func (r *ConsulClient) Watch(cb func(event interface{}, err error)) error {
+func (r *ConsulClient) Watch(_ func(event interface{}, err error)) error {
 	return errors.New("consul provider does not support this method")
 }

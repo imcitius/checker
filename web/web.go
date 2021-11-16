@@ -10,7 +10,7 @@ import (
 	_ "net/http/pprof"
 )
 
-var Config *config.ConfigFile = &config.Config
+var Config = &config.Config
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -33,10 +33,10 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	io.WriteString(w, "Ok!\n")
+	_, _ = io.WriteString(w, "Ok!\n")
 }
 
-func WebInterface(webSignalCh chan bool, sem *semaphore.Weighted) {
+func Serve(_ chan bool, sem *semaphore.Weighted) {
 	defer sem.Release(1)
 
 	var (

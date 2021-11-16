@@ -37,11 +37,7 @@ var (
 
 // Execute executes the root command.
 func Execute() error {
-	if config.Version != "" && config.VersionSHA != "" && config.VersionBuild != "" {
-		fmt.Printf("Start %s (commit: %s; build: %s)\n", config.Version, config.VersionSHA, config.VersionBuild)
-	} else {
-		fmt.Println("Start dev ")
-	}
+	fmt.Printf("Start %s (commit: %s; build: %s)\n", config.Version, config.VersionSHA, config.VersionBuild)
 	return rootCmd.Execute()
 }
 
@@ -68,7 +64,7 @@ func init() {
 	//config.DoneCh = make(chan bool)
 	config.SchedulerSignalCh = make(chan bool)
 	config.WebSignalCh = make(chan bool)
-	config.ConfigChangeSig = make(chan bool)
+	config.ChangeSig = make(chan bool)
 	//config.ConfigWatchSig = make(chan bool)
 	config.BotsSignalCh = make(chan bool)
 	signal.Notify(config.SignalINT, syscall.SIGINT)
@@ -169,7 +165,7 @@ var list = &cobra.Command{
 			}
 			catalog.ParseCatalog(cat)
 		}
-		reports.List()
+		fmt.Println(reports.List())
 	},
 }
 
@@ -221,7 +217,7 @@ func mainChecker() {
 				if err != nil {
 					config.Log.Fatal(err)
 				}
-				config.TickersCollection[ticker] = config.Ticker{*time.NewTicker(tickerDuration), ticker}
+				config.TickersCollection[ticker] = config.Ticker{Ticker: *time.NewTicker(tickerDuration), Description: ticker}
 			}
 			config.Log.Debugf("Tickers generated: %+v", config.TickersCollection)
 		}
@@ -241,7 +237,7 @@ func mainChecker() {
 
 		if config.Sem.TryAcquire(1) {
 			config.Log.Debugf("Fire webserver")
-			go web.WebInterface(config.WebSignalCh, config.Sem)
+			go web.Serve(config.WebSignalCh, config.Sem)
 		} else {
 			config.Log.Debugf("Webserver already running")
 		}
@@ -308,9 +304,9 @@ func signalWait() {
 		return
 	case <-config.SignalHUP:
 		config.Log.Infof("Got SIGHUP")
-		config.ConfigChangeSig <- true
+		config.ChangeSig <- true
 		return
-	case <-config.ConfigChangeSig:
+	case <-config.ChangeSig:
 		config.Log.Infof("Config file reload")
 		config.InternalStatus = "reload"
 		config.SchedulerSignalCh <- true

@@ -6,7 +6,7 @@ import (
 
 var (
 	// to count check errors and make alerting decisions
-	ProjectErrorStatus map[string]map[string]int
+	//ProjectErrorStatus map[string]map[string]int
 
 	SchedulerLoops = prometheus.NewCounter(
 		prometheus.CounterOpts{
@@ -73,7 +73,7 @@ var (
 
 func init() {
 
-	ProjectErrorStatus = make(map[string]map[string]int)
+	//ProjectErrorStatus = make(map[string]map[string]int)
 
 	prometheus.MustRegister(SchedulerLoops)
 	prometheus.MustRegister(SchedulerChecksDuration)

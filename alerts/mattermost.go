@@ -17,7 +17,7 @@ type MmMessage struct {
 	Text string `json:"text"`
 }
 
-func (m *Mattermost) Send(a *AlertConfigs, message, messageType string) error {
+func (m *Mattermost) Send(a *AlertConfigs, message, _ string) error {
 	config.Log.Debugf("Alert send: %s (alert details %+v)", message, a)
 
 	mmMessage := &MmMessage{
@@ -49,6 +49,6 @@ func (m *Mattermost) Send(a *AlertConfigs, message, messageType string) error {
 	return err
 }
 
-func (t Mattermost) InitBot(ch chan bool, wg *sync.WaitGroup) {
+func (m Mattermost) InitBot(_ chan bool, _ *sync.WaitGroup) {
 	config.Log.Panic("Mattermost bot not implemented yet")
 }

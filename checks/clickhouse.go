@@ -64,7 +64,7 @@ func init() {
 			config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		err = db.QueryRow(query).Scan(&id)
 		if err != nil {
@@ -134,7 +134,7 @@ func init() {
 		if err != nil {
 			return fmt.Errorf(errorHeader + err.Error())
 		}
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		err = db.Ping()
 		if err != nil {

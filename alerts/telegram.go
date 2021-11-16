@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	TgSignalCh chan bool
+	//TgSignalCh chan bool
 
 	selectorAlert = &tb.ReplyMarkup{}
 	selQU         = selectorAlert.Data("Quiet UUID", "pu")
@@ -41,7 +41,7 @@ var (
 )
 
 func init() {
-	TgSignalCh = make(chan bool)
+	//TgSignalCh = make(chan bool)
 }
 
 type TgMessage struct {
@@ -252,7 +252,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 	bot.Handle(&btnList, func(c tb.Context) error {
 		config.Log.Infof("List pressed")
-		SendChatOps(fmt.Sprintf("@" + c.Sender().Username + "\n\n" + reports.ListElements()))
+		SendChatOps(fmt.Sprintf("@" + c.Sender().Username + "\n\n" + reports.List()))
 		return nil
 	})
 	bot.Handle(&btnStats, func(c tb.Context) error {
@@ -265,7 +265,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 	bot.Handle(&btnQA, func(c tb.Context) error {
 		config.Log.Infof("QA pressed")
-		qaHandler(c)
+		err = qaHandler(c)
 		if err != nil {
 			config.Log.Errorf("/qa button handler error: %s", err.Error())
 		}
@@ -273,7 +273,7 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 	bot.Handle(&btnLA, func(c tb.Context) error {
 		config.Log.Infof("LA pressed")
-		laHandler(c)
+		err = laHandler(c)
 		if err != nil {
 			config.Log.Errorf("/la button handler error: %s", err.Error())
 		}
@@ -283,16 +283,16 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	//On inline button pressed (callback)
 	bot.Handle(&selQU, func(c tb.Context) error {
 		config.Log.Infof("PU pressed")
-		quHandler(c)
-		bot.Respond(c.Callback(), &tb.CallbackResponse{Text: "trying"})
+		err = quHandler(c)
+		err = bot.Respond(c.Callback(), &tb.CallbackResponse{Text: "trying"})
 		return nil
 	})
 
 	// On inline button pressed (callback)
 	bot.Handle(&selQP, func(c tb.Context) error {
 		config.Log.Infof("PP pressed")
-		qpHandler(c)
-		bot.Respond(c.Callback(), &tb.CallbackResponse{Text: "trying"})
+		err = qpHandler(c)
+		err = bot.Respond(c.Callback(), &tb.CallbackResponse{Text: "trying"})
 		return nil
 	})
 

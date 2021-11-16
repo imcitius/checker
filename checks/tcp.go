@@ -13,7 +13,7 @@ func init() {
 	Checks["tcp"] = func(c *config.Check, p *projects.Project) error {
 		var (
 			errorMessage  string
-			checkAttempts int = 3
+			checkAttempts = 3
 			checkAttempt  int
 		)
 

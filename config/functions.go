@@ -30,9 +30,9 @@ func LoadConfig() error {
 	return nil
 }
 
-func TestConfig() (ConfigFile, error) {
+func TestConfig() (File, error) {
 
-	var tempConfig ConfigFile
+	var tempConfig File
 
 	switch {
 	case Koanf.String("config.source") == "" || Koanf.String("config.source") == "file":
@@ -174,7 +174,7 @@ func (p *TimeoutsCollection) Add(period string) {
 	}
 }
 
-func (c *ConfigFile) FillDefaults() error {
+func (c *File) FillDefaults() error {
 
 	if c.Defaults.Parameters.ReportPeriod == "" {
 		c.Defaults.Parameters.ReportPeriod = PeriodicReport
@@ -232,7 +232,7 @@ func (c *ConfigFile) FillDefaults() error {
 	return nil
 }
 
-func (c *ConfigFile) FillUUIDs() error {
+func (c *File) FillUUIDs() error {
 	var err error
 	for i := range c.Projects {
 		for j, h := range c.Projects[i].Healthchecks {
@@ -261,7 +261,7 @@ func (p *TimeoutCollection) Add(period string) {
 	}
 }
 
-func (c *ConfigFile) FillPeriods() error {
+func (c *File) FillPeriods() error {
 
 	Timeouts.Add(Koanf.String("defaults.parameters.period"))
 
@@ -277,7 +277,7 @@ func (c *ConfigFile) FillPeriods() error {
 	return nil
 }
 
-func (c *ConfigFile) FillSecrets() error {
+func (c *File) FillSecrets() error {
 
 	for i, alert := range c.Alerts {
 		if strings.HasPrefix(alert.BotToken, "vault") {
@@ -350,7 +350,7 @@ func WatchConfig() {
 			if err != nil {
 				Log.Infof("Config load error: %s", err)
 			}
-			ConfigChangeSig <- true
+			ChangeSig <- true
 		}
 	} else {
 		Log.Infof("KV config seems to be broken: %+v", err)

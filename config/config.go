@@ -25,15 +25,19 @@ var (
 	InternalStatus = "starting"
 
 	ScheduleLoop int
-	Config       ConfigFile
+	Config       File
 	Log          = *logrus.New()
 
 	Timeouts TimeoutsCollection
 	Sem      = semaphore.NewWeighted(int64(1))
 
-	SignalINT, SignalHUP                                          chan os.Signal
-	ConfigChangeSig, SchedulerSignalCh, BotsSignalCh, WebSignalCh chan bool
-	Wg                                                            sync.WaitGroup
+	SignalINT         chan os.Signal
+	SignalHUP         chan os.Signal
+	ChangeSig         chan bool
+	SchedulerSignalCh chan bool
+	BotsSignalCh      chan bool
+	WebSignalCh       chan bool
+	Wg                sync.WaitGroup
 
 	Koanf = koanf.New(".")
 
@@ -49,7 +53,7 @@ type CachedSecret struct {
 	TimeStamp time.Time
 }
 
-type ConfigFile struct {
+type File struct {
 	Defaults struct {
 		// Main timer evaluates every TimerStep seconds
 		// should always be 1s, to avoid time drift bugs in scheduler

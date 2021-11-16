@@ -16,7 +16,7 @@ import (
 func init() {
 	Checks["http"] = func(c *config.Check, p *projects.Project) error {
 		var (
-			answerPresent bool = true
+			answerPresent = true
 			checkNum      int
 			checkErr      error
 			errorHeader   string
@@ -110,7 +110,7 @@ func init() {
 		}
 
 		if response.Body != nil {
-			defer response.Body.Close()
+			defer func() { _ = response.Body.Close() }()
 		} else {
 			errorMessage := errorHeader + fmt.Sprintf("empty body: %+v", response)
 			return errors.New(errorMessage)

@@ -3,7 +3,7 @@ package check
 import (
 	//"encoding/json"
 	"fmt"
-	redis "github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v7"
 	"my/checker/config"
 	projects "my/checker/projects"
 	"time"
@@ -48,7 +48,7 @@ func init() {
 		if err != nil {
 			return fmt.Errorf(errorHeader+"redis connect error %+v", err)
 		}
-		defer client.Close()
+		defer func() { _ = client.Close() }()
 
 		for _, channel := range c.PubSub.Channels {
 

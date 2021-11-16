@@ -25,7 +25,7 @@ func init() {
 		//config.Log.Panic(timeout)
 
 		tmpfile, err := ioutil.TempFile("", "getfile")
-		defer os.Remove(tmpfile.Name())
+		defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 		resp, err := grab.Get(tmpfile.Name(), c.Host)
 		if err != nil {

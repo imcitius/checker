@@ -75,7 +75,7 @@ func init() {
 			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		err = db.Ping()
 		if err != nil {
@@ -166,7 +166,7 @@ func init() {
 			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		err = db.Ping()
 		if err != nil {
@@ -253,7 +253,7 @@ func init() {
 			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
 			return fmt.Errorf(errorHeader + err.Error())
 		}
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		err = db.Ping()
 		if err != nil {
@@ -311,7 +311,7 @@ func init() {
 				config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			err = db.Ping()
 			if err != nil {
@@ -340,26 +340,26 @@ func init() {
 	Checks["pgsql_replication_status"] = func(c *config.Check, p *projects.Project) (ret error) {
 
 		type repStatus struct {
-			pid              sql.NullInt32
-			usesysid         sql.NullInt32
-			usename          sql.NullString
-			application_name sql.NullString
-			client_addr      sql.NullString
-			client_hostname  sql.NullString
-			client_port      sql.NullInt32
-			backend_start    sql.NullString
-			backend_xmin     sql.NullString
-			state            sql.NullString
-			sent_lsn         sql.NullString
-			write_lsn        sql.NullString
-			flush_lsn        sql.NullString
-			replay_lsn       sql.NullString
-			write_lag        sql.NullString
-			flush_lag        sql.NullString
-			replay_lag       sql.NullString
-			sync_priority    sql.NullInt32
-			sync_state       sql.NullString
-			reply_time       sql.NullTime
+			pid             sql.NullInt32
+			usesysid        sql.NullInt32
+			usename         sql.NullString
+			applicationName sql.NullString
+			clientAddr      sql.NullString
+			clientHostname  sql.NullString
+			clientPort      sql.NullInt32
+			backendStart    sql.NullString
+			backendXmin     sql.NullString
+			state           sql.NullString
+			sentLsn         sql.NullString
+			writeLsn        sql.NullString
+			flushLsn        sql.NullString
+			replayLsn       sql.NullString
+			writeLag        sql.NullString
+			flushLag        sql.NullString
+			replayLag       sql.NullString
+			syncPriority    sql.NullInt32
+			syncState       sql.NullString
+			replyTime       sql.NullTime
 		}
 
 		var (
@@ -418,7 +418,7 @@ func init() {
 			config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
 			return fmt.Errorf(errorHeader + "sql.Open error\n" + err.Error())
 		}
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		err = db.Ping()
 		if err != nil {
@@ -436,30 +436,30 @@ func init() {
 			return fmt.Errorf(errorHeader + "repstatus sql.Query error\n" + err.Error())
 		}
 
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var reply repStatus
 			err := rows.Scan(
 				&reply.pid,
 				&reply.usesysid,
 				&reply.usename,
-				&reply.application_name,
-				&reply.client_addr,
-				&reply.client_hostname,
-				&reply.client_port,
-				&reply.backend_start,
-				&reply.backend_xmin,
+				&reply.applicationName,
+				&reply.clientAddr,
+				&reply.clientHostname,
+				&reply.clientPort,
+				&reply.backendStart,
+				&reply.backendXmin,
 				&reply.state,
-				&reply.sent_lsn,
-				&reply.write_lsn,
-				&reply.flush_lsn,
-				&reply.replay_lsn,
-				&reply.write_lag,
-				&reply.flush_lag,
-				&reply.replay_lag,
-				&reply.sync_priority,
-				&reply.sync_state,
-				&reply.reply_time,
+				&reply.sentLsn,
+				&reply.writeLsn,
+				&reply.flushLsn,
+				&reply.replayLsn,
+				&reply.writeLag,
+				&reply.flushLag,
+				&reply.replayLag,
+				&reply.syncPriority,
+				&reply.syncState,
+				&reply.replyTime,
 			)
 			if err != nil {
 				config.Log.Errorf("Error: The data source arguments are not valid: %+v", err)
@@ -484,10 +484,10 @@ func init() {
 					return fmt.Errorf(errorHeader + "allowed lag parsing error\n" + err.Error())
 				}
 
-				if reply.replay_lag.Valid {
-					_, err = fmt.Sscanf(reply.replay_lag.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
+				if reply.replayLag.Valid {
+					_, err = fmt.Sscanf(reply.replayLag.String, "%d:%d:%d.%d", &hours, &minutes, &seconds, &microseconds)
 					if err != nil {
-						err := fmt.Sprintf("Error scanning replay_lag: %+v\nreplay_lag: '%s'\n", err, reply.replay_lag.String)
+						err := fmt.Sprintf("Error scanning replay_lag: %+v\nreplay_lag: '%s'\n", err, reply.replayLag.String)
 						config.Log.Error(err)
 						config.Log.Errorf("Rep status reply row #%d\n", i)
 						fields := reflect.ValueOf(reply)
@@ -505,7 +505,7 @@ func init() {
 				}
 
 				if lag > allowedLag {
-					err := fmt.Errorf("replay_lag is more than %s detected on %s: %s", allowedLag.String(), reply.application_name.String, lag.String())
+					err := fmt.Errorf("replay_lag is more than %s detected on %s: %s", allowedLag.String(), reply.applicationName.String, lag.String())
 					config.Log.Infof(err.Error())
 					return fmt.Errorf(errorHeader + err.Error())
 				}

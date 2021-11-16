@@ -7,7 +7,7 @@ import (
 
 var (
 	MainStatus string
-	Statuses   *StatusCollection
+	Statuses   *Collection
 )
 
 type ProjectsStatuses struct {
@@ -31,13 +31,13 @@ type CheckStatuses struct {
 	FailsCount     int
 }
 
-type StatusCollection struct {
+type Collection struct {
 	Projects map[string]*ProjectsStatuses
 	Checks   map[string]*CheckStatuses
 }
 
 func init() {
-	Statuses = new(StatusCollection)
+	Statuses = new(Collection)
 	Statuses.Projects = make(map[string]*ProjectsStatuses)
 	Statuses.Checks = make(map[string]*CheckStatuses)
 }

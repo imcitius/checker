@@ -101,7 +101,7 @@ func getChangedStringKeys(currState []string, prevState []string) ([]string, []s
 func GetConsulServices() (map[string]config.ConsulService, error) {
 	const (
 		DefaultWatchWaitTime = 15 * time.Second
-		passingOnly          = true
+		//passingOnly          = true
 	)
 
 	var (
@@ -126,7 +126,7 @@ func GetConsulServices() (map[string]config.ConsulService, error) {
 	if err != nil {
 		config.Log.Errorf("Failed to list services: %v", err)
 		//notifyError(err)
-		return map[string]config.ConsulService{}, fmt.Errorf("Failed to list services: %v", err)
+		return map[string]config.ConsulService{}, fmt.Errorf("failed to list services: %v", err)
 	}
 
 	//if options.WaitIndex == meta.LastIndex {
@@ -140,7 +140,7 @@ func GetConsulServices() (map[string]config.ConsulService, error) {
 			if err != nil {
 				config.Log.Errorf("Failed to get detail of service %s: %v", key, err)
 				//notifyError(err)
-				return map[string]config.ConsulService{}, fmt.Errorf("Failed to get detail of service %s: %v", key, err)
+				return map[string]config.ConsulService{}, fmt.Errorf("failed to get detail of service %s: %v", key, err)
 
 			}
 
@@ -216,7 +216,7 @@ func ParseCatalog(catalog map[string]config.ConsulService) {
 			project      = config.Project{}
 			healthcheck  = config.Healthcheck{}
 			check        = config.Check{}
-			healthchecks = []config.Healthcheck{}
+			healthchecks []config.Healthcheck
 			tags         = make(map[string]string)
 			found        = false
 		)

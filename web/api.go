@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
 	"io"
+	check "my/checker/checks"
 	"my/checker/config"
-	"my/checker/misc"
 	projects "my/checker/projects"
 	"my/checker/reports"
 	"my/checker/status"
@@ -79,8 +79,7 @@ func checkPing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, ok := status.Statuses.Checks[uuid]; !ok {
-		check := config.Check{UUid: uuid}
-		status.InitCheckStatus(&check)
+		status.InitCheckStatus(&config.Check{UUid: uuid})
 	}
 
 	status.Statuses.Checks[uuid].LastResult = true
@@ -88,7 +87,7 @@ func checkPing(w http.ResponseWriter, r *http.Request) {
 
 	config.Log.Debugf("Passive check %s ping received: %s", uuid, status.Statuses.Checks[uuid].When)
 
-	io.WriteString(w, "Pong\n")
+	_, _ = io.WriteString(w, "Pong\n")
 }
 
 func listChecks(w http.ResponseWriter, r *http.Request) {
@@ -105,18 +104,18 @@ func listChecks(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("Authorization") == "" {
 		config.Log.Info("Web: need auth")
-		io.WriteString(w, "Web: need auth")
+		_, _ = io.WriteString(w, "Web: need auth")
 		return
 	} else {
 		claimed, valid := checkWebAuth(r.Header.Get("Authorization"))
 		if claimed && valid {
-			list := reports.ListElements()
+			list := reports.List()
 			if len(list) > 350 {
 				list = "List is too long for message, use CLI"
 			}
-			io.WriteString(w, list)
+			_, _ = io.WriteString(w, list)
 		} else {
-			io.WriteString(w, "Web: unauthorized")
+			_, _ = io.WriteString(w, "Web: unauthorized")
 			config.Log.Info("Web: unauthorized")
 		}
 	}
@@ -168,14 +167,14 @@ func checkStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if misc.GetCheckByUUID(uuid) == nil {
+	if check.GetCheckByUUID(uuid) == nil {
 		http.Error(w, "Check not found", http.StatusNotFound)
 		config.Log.Debugf("Check with UUID %s not found", uuid)
 		return
 	}
 
 	if _, ok := status.Statuses.Checks[uuid]; !ok {
-		io.WriteString(w, "Empty\n")
+		_, _ = io.WriteString(w, "Empty\n")
 		return
 	}
 
@@ -183,10 +182,10 @@ func checkStatus(w http.ResponseWriter, r *http.Request) {
 
 	s, err := json.Marshal(status.Statuses.Checks[uuid])
 	if err != nil {
-		io.WriteString(w, fmt.Sprintf("%s", err))
+		_, _ = io.WriteString(w, fmt.Sprintf("%s", err))
 		return
 	}
-	io.WriteString(w, fmt.Sprintf("%s", s))
+	_, _ = io.WriteString(w, fmt.Sprintf("%s", s))
 }
 
 func authHandler(next http.Handler) http.Handler {
@@ -194,7 +193,7 @@ func authHandler(next http.Handler) http.Handler {
 
 		if r.Header.Get("Authorization") == "" {
 			config.Log.Info("Web: need auth")
-			io.WriteString(w, "Web: need auth")
+			_, _ = io.WriteString(w, "Web: need auth")
 			return
 		} else {
 			claimed, valid := checkWebAuth(r.Header.Get("Authorization"))
@@ -202,7 +201,7 @@ func authHandler(next http.Handler) http.Handler {
 				config.Log.Info("auth pass")
 				next.ServeHTTP(w, r)
 			} else {
-				io.WriteString(w, "Web: unauthorized")
+				_, _ = io.WriteString(w, "Web: unauthorized")
 				config.Log.Info("Web: unauthorized")
 			}
 		}
