@@ -92,7 +92,9 @@ func laHandler(c tb.Context) error {
 	return nil
 }
 
-func statsHandler(c tb.Context) {
+func statsHandler(c tb.Context) error {
 	config.Log.Infof("Bot request /stats from %s", c.Sender().Username)
 	SendChatOps(fmt.Sprintf("@%s\n\n%v", c.Sender().Username, metrics.GenTextRuntimeStats()))
+
+	return nil
 }

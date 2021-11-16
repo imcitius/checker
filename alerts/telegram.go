@@ -238,19 +238,13 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	bot.Handle("/lp", lpHandler)
 	bot.Handle("/qu", quHandler)
 	bot.Handle("/lu", luHandler)
-	//bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
+	bot.Handle("/stats", statsHandler)
 
-	//bot.Handle("/la", func(m *tb.Message) { laHandler(m) })
-	//bot.Handle("/qp", func(m *tb.Message) { qpHandler(m, a) })
-	//bot.Handle("/lp", func(m *tb.Message) { lpHandler(m, a) })
-	//bot.Handle("/qu", func(m *tb.Message) { quHandler(m, a) })
-	//bot.Handle("/lu", func(m *tb.Message) { luHandler(m, a) })
-	//bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
-
-	//bot.Handle(&btnHelp, func(m *tb.Message) {
-	//	config.Log.Infof("Help pressed")
-	//	SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + help))
-	//})
+	bot.Handle(&btnHelp, func(c tb.Context) error {
+		config.Log.Infof("Help pressed")
+		SendChatOps(fmt.Sprintf("@" + c.Sender().Username + "\n\n" + help))
+		return nil
+	})
 	//bot.Handle(&btnList, func(m *tb.Message) {
 	//	config.Log.Infof("List pressed")
 	//	SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + reports.ListElements()))
