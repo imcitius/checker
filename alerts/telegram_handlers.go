@@ -2,86 +2,97 @@ package alerts
 
 import (
 	"fmt"
-	tb "gopkg.in/tucnak/telebot.v2"
+	tb "gopkg.in/tucnak/telebot.v3"
 	"my/checker/config"
 	"my/checker/metrics"
 	"my/checker/misc"
 	"my/checker/status"
 )
 
-func quHandler(m *tb.Message, a *AlertConfigs) {
-	a.AddAlertMetricChatOpsRequest()
+func quHandler(c tb.Context) error {
+	//a.AddAlertMetricChatOpsRequest()
 
-	tgMessage := TgMessage{m}
+	tgMessage := TgMessage{c.Message()}
 	uuID, err := tgMessage.GetUUID()
 	if err != nil {
 		SendChatOps(fmt.Sprintf("%s", err))
-		return
+		return err
 	}
 
 	//config.Log.Infof("Bot request /pu")
 	config.Log.Printf("Pause req for UUID: %+v\n", uuID)
 	status.SetCheckMode(misc.GetCheckByUUID(uuID), "quiet")
 
-	SendChatOps(fmt.Sprintf("@%s Messages ceased for UUID %v\n", m.Sender.Username, uuID))
+	SendChatOps(fmt.Sprintf("@%s Messages ceased for UUID %v\n", c.Sender().Username, uuID))
+
+	return nil
 }
 
-func luHandler(m *tb.Message, a *AlertConfigs) {
-	a.AddAlertMetricChatOpsRequest()
-	tgMessage := TgMessage{m}
+func luHandler(c tb.Context) error {
+	//a.AddAlertMetricChatOpsRequest()
+	tgMessage := TgMessage{c.Message()}
 	uuID, err := tgMessage.GetUUID()
 	if err != nil {
 		SendChatOps(fmt.Sprintf("%s", err))
-		return
+		return err
 	}
 	//config.Log.Infof("Bot request /uu")
 	config.Log.Infof("Unpause req for UUID: %+v\n", uuID)
 	status.SetCheckMode(misc.GetCheckByUUID(uuID), "loud")
-	SendChatOps(fmt.Sprintf("@%s Messages resumed for UUID %v", m.Sender.Username, uuID))
+	SendChatOps(fmt.Sprintf("@%s Messages resumed for UUID %v", c.Sender().Username, uuID))
+
+	return nil
 }
 
-func qpHandler(m *tb.Message, a *AlertConfigs) {
-	a.AddAlertMetricChatOpsRequest()
-	tgMessage := TgMessage{m}
+func qpHandler(c tb.Context) error {
+	//a.AddAlertMetricChatOpsRequest()
+	tgMessage := TgMessage{c.Message()}
 	config.Log.Infof("Bot request /pp")
 	projectName, err := tgMessage.GetProject()
 	if err != nil {
 		SendChatOps(fmt.Sprintf("%s", err))
-		return
+		return err
 	}
 	status.Statuses.Projects[projectName].Mode = "quiet"
 	config.Log.Infof("Pause req for project: %s\n", projectName)
-	SendChatOps(fmt.Sprintf("@%s Messages ceased for project %s", m.Sender.Username, projectName))
+	SendChatOps(fmt.Sprintf("@%s Messages ceased for project %s", c.Sender().Username, projectName))
+
+	return nil
 }
 
-func lpHandler(m *tb.Message, a *AlertConfigs) {
-	a.AddAlertMetricChatOpsRequest()
-	tgMessage := TgMessage{m}
+func lpHandler(c tb.Context) error {
+	//a.AddAlertMetricChatOpsRequest()
+	tgMessage := TgMessage{c.Message()}
 	config.Log.Infof("Bot request /up")
 	projectName, err := tgMessage.GetProject()
 	if err != nil {
 		SendChatOps(fmt.Sprintf("%s", err))
-		return
+		return err
 	}
 	config.Log.Infof("Resume req for project: %s\n", projectName)
 	status.Statuses.Projects[projectName].Mode = "loud"
-	SendChatOps(fmt.Sprintf("@%s Messages resumed for project %s", m.Sender.Username, projectName))
+	SendChatOps(fmt.Sprintf("@%s Messages resumed for project %s", c.Sender().Username, projectName))
+
+	return nil
 }
 
-func qaHandler(m *tb.Message) {
+func qaHandler(c tb.Context) error {
 	config.Log.Infof("Bot request /qa")
 	status.MainStatus = "quiet"
-	SendChatOps(fmt.Sprintf("@%s All messages ceased", m.Sender.Username))
+	SendChatOps(fmt.Sprintf("@%s All messages ceased", c.Sender().Username))
 
+	return nil
 }
 
-func laHandler(m *tb.Message) {
+func laHandler(c tb.Context) error {
 	config.Log.Infof("Bot request /ua")
 	status.MainStatus = "loud"
-	SendChatOps(fmt.Sprintf("@%s All messages enabled", m.Sender.Username))
+	SendChatOps(fmt.Sprintf("@%s All messages enabled", c.Sender().Username))
+
+	return nil
 }
 
-func statsHandler(m *tb.Message) {
-	config.Log.Infof("Bot request /stats from %s", m.Sender.Username)
-	SendChatOps(fmt.Sprintf("@%s\n\n%v", m.Sender.Username, metrics.GenTextRuntimeStats()))
+func statsHandler(c tb.Context) {
+	config.Log.Infof("Bot request /stats from %s", c.Sender().Username)
+	SendChatOps(fmt.Sprintf("@%s\n\n%v", c.Sender().Username, metrics.GenTextRuntimeStats()))
 }

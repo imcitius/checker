@@ -3,9 +3,9 @@ package alerts
 import (
 	"encoding/json"
 	"fmt"
-	tb "gopkg.in/tucnak/telebot.v2"
+	tb "gopkg.in/tucnak/telebot.v3"
 	"my/checker/config"
-	"my/checker/reports"
+	//"my/checker/reports"
 	"regexp"
 	"sync"
 	"time"
@@ -18,7 +18,8 @@ var (
 	selPU         = selectorAlert.Data("Pause UUID", "pu")
 	selPP         = selectorAlert.Data("Pause project", "pp")
 
-	menu     = &tb.ReplyMarkup{ResizeReplyKeyboard: true}
+	//menu     = &tb.ReplyMarkup{ResizeReplyKeyboard: true}
+	menu     = &tb.ReplyMarkup{}
 	btnHelp  = menu.Text("ℹ️ Help")
 	btnQA    = menu.Text("⏸️ Quiet All")
 	btnLA    = menu.Text("▶️ Loud All")
@@ -231,46 +232,53 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		config.Log.Fatal(err)
 	}
 
-	bot.Handle("/qa", func(m *tb.Message) { qaHandler(m) })
-	bot.Handle("/la", func(m *tb.Message) { laHandler(m) })
-	bot.Handle("/qp", func(m *tb.Message) { qpHandler(m, a) })
-	bot.Handle("/lp", func(m *tb.Message) { lpHandler(m, a) })
-	bot.Handle("/qu", func(m *tb.Message) { quHandler(m, a) })
-	bot.Handle("/lu", func(m *tb.Message) { luHandler(m, a) })
-	bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
+	bot.Handle("/qa", qaHandler)
+	bot.Handle("/la", laHandler)
+	bot.Handle("/qp", qpHandler)
+	bot.Handle("/lp", lpHandler)
+	bot.Handle("/qu", quHandler)
+	bot.Handle("/lu", luHandler)
+	//bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
 
-	bot.Handle(&btnHelp, func(m *tb.Message) {
-		config.Log.Infof("Help pressed")
-		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + help))
-	})
-	bot.Handle(&btnList, func(m *tb.Message) {
-		config.Log.Infof("List pressed")
-		SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + reports.ListElements()))
-	})
-	bot.Handle(&btnStats, func(m *tb.Message) {
-		config.Log.Infof("Stats pressed")
-		statsHandler(m)
-	})
-	bot.Handle(&btnQA, func(m *tb.Message) {
-		config.Log.Infof("QA pressed")
-		qaHandler(m)
-	})
-	bot.Handle(&btnLA, func(m *tb.Message) {
-		config.Log.Infof("LA pressed")
-		laHandler(m)
-	})
+	//bot.Handle("/la", func(m *tb.Message) { laHandler(m) })
+	//bot.Handle("/qp", func(m *tb.Message) { qpHandler(m, a) })
+	//bot.Handle("/lp", func(m *tb.Message) { lpHandler(m, a) })
+	//bot.Handle("/qu", func(m *tb.Message) { quHandler(m, a) })
+	//bot.Handle("/lu", func(m *tb.Message) { luHandler(m, a) })
+	//bot.Handle("/stats", func(m *tb.Message) { statsHandler(m) })
 
-	// On inline button pressed (callback)
-	bot.Handle(&selPU, func(c *tb.Callback) {
-		quHandler(c.Message, a)
-		bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
-	})
-
-	// On inline button pressed (callback)
-	bot.Handle(&selPP, func(c *tb.Callback) {
-		qpHandler(c.Message, a)
-		bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
-	})
+	//bot.Handle(&btnHelp, func(m *tb.Message) {
+	//	config.Log.Infof("Help pressed")
+	//	SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + help))
+	//})
+	//bot.Handle(&btnList, func(m *tb.Message) {
+	//	config.Log.Infof("List pressed")
+	//	SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + reports.ListElements()))
+	//})
+	//bot.Handle(&btnStats, func(m *tb.Message) {
+	//	config.Log.Infof("Stats pressed")
+	//	statsHandler(m)
+	//})
+	//bot.Handle(&btnQA, func(m *tb.Message) {
+	//	config.Log.Infof("QA pressed")
+	//	qaHandler(m)
+	//})
+	//bot.Handle(&btnLA, func(m *tb.Message) {
+	//	config.Log.Infof("LA pressed")
+	//	laHandler(m)
+	//})
+	//
+	//// On inline button pressed (callback)
+	//bot.Handle(&selPU, func(c *tb.Callback) {
+	//	quHandler(c.Message, a)
+	//	bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
+	//})
+	//
+	//// On inline button pressed (callback)
+	//bot.Handle(&selPP, func(c *tb.Callback) {
+	//	qpHandler(c.Message, a)
+	//	bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
+	//})
 
 	go func() {
 		var message string
