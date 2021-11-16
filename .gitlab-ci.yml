@@ -12,6 +12,7 @@ variables:
   REGISTRY_IMAGE: ${REGISTRY_URL}/${CI_PROJECT_PATH_SLUG}
   REGISTRY_URL: "harbor-ks.jgit.me/library"
   CONSUL_PATH: ""
+  CGO_ENABLED: 1
 
 include:
   - project: "ci-library/ci-collections"
