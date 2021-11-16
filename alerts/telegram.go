@@ -17,8 +17,8 @@ var (
 	TgSignalCh chan bool
 
 	selectorAlert = &tb.ReplyMarkup{}
-	selPU         = selectorAlert.Data("Pause UUID", "pu")
-	selPP         = selectorAlert.Data("Pause project", "pp")
+	selQU         = selectorAlert.Data("Quiet UUID", "pu")
+	selQP         = selectorAlert.Data("Quiet project", "pp")
 
 	//menu     = &tb.ReplyMarkup{ResizeReplyKeyboard: true}
 	menu     = &tb.ReplyMarkup{}
@@ -34,7 +34,9 @@ var (
 		"/qp,/lp - Pause/Unpause specific project (or use message button)\n" +
 		"/qu,/lu - Pause/Unpause specific check by UUID (or use message button)\n" +
 		"/list - List all projects and checks with UUID's\n\n\n" +
-		"Please find detailed documentation here:\n" +
+		"/stats - Show app statistics\n" +
+		"/version - Show app version\n" +
+		"\n\nPlease find detailed documentation here:\n" +
 		"https://github.com/imcitius/checker"
 )
 
@@ -180,13 +182,13 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 		config.Log.Infof("Sending 'alert' type message")
 		user := tb.Chat{ID: a.ProjectChannel}
 		messageToSend := tb.Message{Text: message}
-		selectorAlert.Inline(selectorAlert.Row(selPP, selPU))
+		selectorAlert.Inline(selectorAlert.Row(selQP, selQU))
 		_, err = bot.Send(&user, QuoteMeta(messageToSend.Text), options, menu, selectorAlert)
 	case "critalert":
 		config.Log.Infof("Sending 'critalert' type message")
 		chat := tb.Chat{ID: a.CriticalChannel}
 		messageToSend := tb.Message{Text: message}
-		selectorAlert.Inline(selectorAlert.Row(selPP, selPU))
+		selectorAlert.Inline(selectorAlert.Row(selQP, selQU))
 		_, err = bot.Send(&chat, messageToSend.Text)
 	case "chatops":
 		config.Log.Infof("Sending 'chatops' type message")
@@ -278,19 +280,21 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 		return err
 	})
 
-	// On inline button pressed (callback)
-	//bot.Handle(&selPU, func(c tb.Context) error {
-	//	quHandler(c)
-	//	bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
-	//	return nil
-	//})
+	//On inline button pressed (callback)
+	bot.Handle(&selQU, func(c tb.Context) error {
+		config.Log.Infof("PU pressed")
+		quHandler(c)
+		bot.Respond(c.Callback(), &tb.CallbackResponse{Text: "trying"})
+		return nil
+	})
 
 	// On inline button pressed (callback)
-	//bot.Handle(&selPP, func(c tb.Context) error {
-	//	qpHandler(c)
-	//	bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
-	//	return nil
-	//})
+	bot.Handle(&selQP, func(c tb.Context) error {
+		config.Log.Infof("PP pressed")
+		qpHandler(c)
+		bot.Respond(c.Callback(), &tb.CallbackResponse{Text: "trying"})
+		return nil
+	})
 
 	go func() {
 		var message string

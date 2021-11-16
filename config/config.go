@@ -17,9 +17,9 @@ const (
 )
 
 var (
-	Version      string
-	VersionSHA   string
-	VersionBuild string
+	Version      = "dev"
+	VersionSHA   = "dev"
+	VersionBuild = "dev"
 
 	StartTime      = time.Now()
 	InternalStatus = "starting"
