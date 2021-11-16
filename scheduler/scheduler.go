@@ -150,7 +150,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 					case t := <-ticker.Ticker.C:
 						uptime := t.Round(time.Second).Sub(config.StartTime.Round(time.Second))
 						period := ticker.Description
-						config.Log.Infof("Uptime %d seconds (%s ticker)", int(uptime.Seconds()), ticker.Description)
+						config.Log.Infof("Uptime %d (%s ticker)", uptime, ticker.Description)
 
 						checksDuration := runChecks(period)
 						reportsDuration := runReports(period)
