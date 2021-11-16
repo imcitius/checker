@@ -7,6 +7,7 @@ LABEL "maintainer" = "Ilya Rubinchik <citius@citius.dev>"
 COPY checker /bin/checker
 COPY scripts/fly-deploy/entrypoint.sh /
 COPY .helm/envs/fly /
+RUN apt update && apt upgrade ca-certificates
 
 ENTRYPOINT ["sh", "-c"]
 CMD ["/entrypoint.sh"]

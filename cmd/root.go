@@ -223,7 +223,7 @@ func mainChecker() {
 				}
 				config.TickersCollection[ticker] = config.Ticker{*time.NewTicker(tickerDuration), ticker}
 			}
-			config.Log.Infof("Tickers generated: %+v", config.TickersCollection)
+			config.Log.Debugf("Tickers generated: %+v", config.TickersCollection)
 		}
 
 		config.Wg.Add(1)
