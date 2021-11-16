@@ -1,4 +1,4 @@
-FROM alpine
+FROM debian
 
 LABEL "repository" = "https://github.com/imcitius/checker"
 LABEL "homepage" = "https://github.com/imcitius/checker"
