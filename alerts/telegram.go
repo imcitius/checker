@@ -255,18 +255,27 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 	bot.Handle(&btnStats, func(c tb.Context) error {
 		config.Log.Infof("Stats pressed")
-		statsHandler(c)
-		return nil
+		err = statsHandler(c)
+		if err != nil {
+			config.Log.Errorf("/stats button handler error: %s", err.Error())
+		}
+		return err
 	})
 	bot.Handle(&btnQA, func(c tb.Context) error {
 		config.Log.Infof("QA pressed")
 		qaHandler(c)
-		return nil
+		if err != nil {
+			config.Log.Errorf("/qa button handler error: %s", err.Error())
+		}
+		return err
 	})
 	bot.Handle(&btnLA, func(c tb.Context) error {
 		config.Log.Infof("LA pressed")
 		laHandler(c)
-		return nil
+		if err != nil {
+			config.Log.Errorf("/la button handler error: %s", err.Error())
+		}
+		return err
 	})
 
 	// On inline button pressed (callback)
