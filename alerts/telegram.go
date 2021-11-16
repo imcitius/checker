@@ -5,6 +5,8 @@ import (
 	"fmt"
 	tb "gopkg.in/tucnak/telebot.v3"
 	"my/checker/config"
+	"my/checker/reports"
+
 	//"my/checker/reports"
 	"regexp"
 	"sync"
@@ -239,39 +241,46 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	bot.Handle("/qu", quHandler)
 	bot.Handle("/lu", luHandler)
 	bot.Handle("/stats", statsHandler)
+	bot.Handle("/version", versionHandler)
 
 	bot.Handle(&btnHelp, func(c tb.Context) error {
 		config.Log.Infof("Help pressed")
 		SendChatOps(fmt.Sprintf("@" + c.Sender().Username + "\n\n" + help))
 		return nil
 	})
-	//bot.Handle(&btnList, func(m *tb.Message) {
-	//	config.Log.Infof("List pressed")
-	//	SendChatOps(fmt.Sprintf("@" + m.Sender.Username + "\n\n" + reports.ListElements()))
-	//})
-	//bot.Handle(&btnStats, func(m *tb.Message) {
-	//	config.Log.Infof("Stats pressed")
-	//	statsHandler(m)
-	//})
-	//bot.Handle(&btnQA, func(m *tb.Message) {
-	//	config.Log.Infof("QA pressed")
-	//	qaHandler(m)
-	//})
-	//bot.Handle(&btnLA, func(m *tb.Message) {
-	//	config.Log.Infof("LA pressed")
-	//	laHandler(m)
-	//})
-	//
-	//// On inline button pressed (callback)
-	//bot.Handle(&selPU, func(c *tb.Callback) {
-	//	quHandler(c.Message, a)
+	bot.Handle(&btnList, func(c tb.Context) error {
+		config.Log.Infof("List pressed")
+		SendChatOps(fmt.Sprintf("@" + c.Sender().Username + "\n\n" + reports.ListElements()))
+		return nil
+	})
+	bot.Handle(&btnStats, func(c tb.Context) error {
+		config.Log.Infof("Stats pressed")
+		statsHandler(c)
+		return nil
+	})
+	bot.Handle(&btnQA, func(c tb.Context) error {
+		config.Log.Infof("QA pressed")
+		qaHandler(c)
+		return nil
+	})
+	bot.Handle(&btnLA, func(c tb.Context) error {
+		config.Log.Infof("LA pressed")
+		laHandler(c)
+		return nil
+	})
+
+	// On inline button pressed (callback)
+	//bot.Handle(&selPU, func(c tb.Context) error {
+	//	quHandler(c)
 	//	bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
+	//	return nil
 	//})
-	//
-	//// On inline button pressed (callback)
-	//bot.Handle(&selPP, func(c *tb.Callback) {
-	//	qpHandler(c.Message, a)
+
+	// On inline button pressed (callback)
+	//bot.Handle(&selPP, func(c tb.Context) error {
+	//	qpHandler(c)
 	//	bot.Respond(c, &tb.CallbackResponse{Text: "trying"})
+	//	return nil
 	//})
 
 	go func() {

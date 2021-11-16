@@ -98,3 +98,10 @@ func statsHandler(c tb.Context) error {
 
 	return nil
 }
+
+func versionHandler(c tb.Context) error {
+	config.Log.Infof("Bot request /version from %s", c.Sender().Username)
+	SendChatOps(fmt.Sprintf("@%s\n%s, %s, %s\n", c.Sender().Username, metrics.GenTextRuntimeStats()), config.Version, config.VersionSHA, config.VersionBuild)
+
+	return nil
+}
