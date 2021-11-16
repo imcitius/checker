@@ -4,7 +4,7 @@ defaults:
   bots_enabled: 'true'
   token_encryption_key: bi6oNuisa0ooz6Ael6Eewaatoophoo0p
   parameters:
-    run_every: 900s
+    check_period: 900s
     min_health: 1
     allow_fails: 1
     noncrit_alert: tg_OtherChecker
@@ -56,7 +56,7 @@ projects:
     healthchecks:
       - name: Admitlead ks
         parameters:
-          run_every: 60s
+          check_period: 60s
         checks:
           - type: http
             host: https://ks.admitlead.ru/main/check
@@ -73,7 +73,7 @@ projects:
     healthchecks:
       - name: Bubbles ks
         parameters:
-          run_every: 60s
+          check_period: 60s
         checks:
           - type: http
             host: http://s2.bubblesmedia.ru/main/check
@@ -84,7 +84,7 @@ projects:
             severity: critical
       - name: BubblesMedia content
         parameters:
-          run_every: 60s
+          check_period: 60s
         checks:
           - type: http
             host: https://2.bubblesmedia.ru/invoke.php?id=42
@@ -95,7 +95,7 @@ projects:
             severity: critical
       - name: BubblesMedia promo_code
         parameters:
-          run_every: 60s
+          check_period: 60s
         checks:
           - type: http
             host: https://stat.bubblesmedia.ru/display/42/0
@@ -120,7 +120,7 @@ projects:
     healthchecks:
       - name: 'Mediaget site'
         parameters:
-          run_every: 60s
+          check_period: 60s
         checks:
           - type: http
             host: https://mediaget.com/ping
@@ -131,7 +131,7 @@ projects:
             severity: critical
       - name: 'Mediaget Client'
         parameters:
-          run_every: 60s
+          check_period: 60s
         checks:
           - type: http
             host: https://mediaget.com/client/check.php
@@ -142,7 +142,7 @@ projects:
             severity: critical
       - name: 'Mediaget LD'
         parameters:
-          run_every: 60s
+          check_period: 60s
         checks:
           - type: http
             host: https://mediaget.com/ld/check.php
@@ -153,7 +153,7 @@ projects:
             severity: critical
       - name: 'Mediaget Catalogue API'
         parameters:
-          run_every: 60s
+          check_period: 60s
         checks:
           - type: http
             host: https://mediaget.com/api/healthcheck
@@ -542,7 +542,7 @@ projects:
     healthchecks:
       - name: Checker Running
 #        parameters:
-#          run_every: 3600s
+#          check_period: 3600s
         checks:
           - type: http
             host: https://betteruptime.com/api/v1/heartbeat/hXyiRzTcr8uAYyqhDBRNFjsa

@@ -13,6 +13,7 @@ import (
 
 const (
 	PeriodicReport = "60m"
+	DefaultPeriod  = "60s"
 )
 
 var (
@@ -75,8 +76,8 @@ type Parameters struct {
 	// Messages mode quiet/loud
 	Mode string
 
-	// Checks should be run every RunEvery seconds
-	RunEvery       string `koanf:"run_every"`
+	// Checks should be run every Period seconds
+	Period         string `koanf:"check_period"`
 	PeriodicReport string `koanf:"periodic_report_time"`
 
 	// minimum passed checks to consider project healthy

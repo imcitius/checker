@@ -2,7 +2,7 @@
 defaults:
   http_port: '80'
   parameters:
-    run_every: 300s
+    check_period: 300s
     min_health: 1
     allow_fails: 0
     noncrit_alert: tg_staging

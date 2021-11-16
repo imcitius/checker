@@ -7,7 +7,7 @@ checker_config_template: |
   defaults:
     http_port: '80'
     parameters:
-      run_every: 300s
+      check_period: 300s
       min_health: 1
       allow_fails: 0
       noncrit_alert: staging
@@ -25,7 +25,7 @@ checker_config_template: |
       healthchecks:
         - name: api
           parameters:
-            run_every: 60s
+            check_period: 60s
           checks:
             - type: http
               host: http://api/api/healthcheck
@@ -36,7 +36,7 @@ checker_config_template: |
               severity: critical
         - name: client
           parameters:
-            run_every: 60s
+            check_period: 60s
           checks:
             - type: http
               host: http://client/check.php
@@ -47,7 +47,7 @@ checker_config_template: |
               severity: critical
         - name: dht
           parameters:
-            run_every: 300s
+            check_period: 300s
           checks:
             - type: http
               host: http://dht/dht/healthcheck
@@ -57,7 +57,7 @@ checker_config_template: |
               timeout: 2s
         - name: emailer
           parameters:
-            run_every: 300s
+            check_period: 300s
           checks:
             - type: http
               host: http://emailer/healthcheck
@@ -67,7 +67,7 @@ checker_config_template: |
               timeout: 2s
         - name: Installer
           parameters:
-            run_every: 60s
+            check_period: 60s
           checks:
             - type: http
               host: http://installer/health
@@ -77,7 +77,7 @@ checker_config_template: |
               severity: critical
         - name: Ld
           parameters:
-            run_every: 60s
+            check_period: 60s
           checks:
             - type: http
               host: http://ld/check.php
@@ -88,7 +88,7 @@ checker_config_template: |
               severity: critical
         - name: mg-backend
           parameters:
-            run_every: 60s
+            check_period: 60s
           checks:
             - type: http
               host: http://mg-backend/bapi/healthcheck
@@ -106,7 +106,7 @@ checker_config_template: |
               timeout: 2s
         - name: mg-web
           parameters:
-            run_every: 60s
+            check_period: 60s
           checks:
             - type: http
               host: http://mg-web/ping
@@ -149,7 +149,7 @@ checker_config_template: |
               timeout: 2s
         - name: catalogue-front
           parameters:
-            run_every: 60s
+            check_period: 60s
           checks:
             - type: http
               host: http://cat-front/health
@@ -185,7 +185,7 @@ checker_config_template: |
               timeout: 2s
         - name: pgsql-main
           parameters:
-            run_every: 60s
+            check_period: 60s
           checks:
             - type: pgsql_replication
               host: pgsql.mg-staging.mediaget.com

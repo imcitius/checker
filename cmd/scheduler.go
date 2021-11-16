@@ -64,7 +64,7 @@ func sendCritAlerts(timeout string) time.Duration {
 	config.Log.Debug("sendCritAlerts")
 
 	for _, prj := range Config.Projects {
-		if prj.Parameters.RunEvery == timeout {
+		if prj.Parameters.Period == timeout {
 			//if status.Statuses.Projects[prj.Name].Alive < prj.Parameters.MinHealth {
 			//	status.Statuses.Projects[prj.Name].SeqErrorsCount++
 			//} else {
@@ -109,7 +109,7 @@ func ExecuteHealthcheck(project *projects.Project, healthcheck *config.Healthche
 	for _, check := range healthcheck.Checks {
 		checkRandomId := common.GetRandomId()
 		config.Log.Debugf("(%s) Evaluating check %s", checkRandomId, check.Name)
-		if timeout == healthcheck.Parameters.RunEvery || timeout == project.Parameters.RunEvery {
+		if timeout == healthcheck.Parameters.Period || timeout == project.Parameters.Period {
 			config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s(%s)'", checkRandomId, project.Name, healthcheck.Name, check.Name, check.Type)
 
 			err := checks.AddCheckRunCount(project, healthcheck, &check)

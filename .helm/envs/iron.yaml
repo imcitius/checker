@@ -8,7 +8,7 @@ checker_config_template: |
     http_port: '80'
     bots_enabled: true
     parameters:
-      run_every: 300s
+      check_period: 300s
       min_health: 1
       allow_fails: 0
       noncrit_alert: telegram

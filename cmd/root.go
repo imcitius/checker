@@ -200,9 +200,6 @@ func mainChecker() {
 		go signalWait()
 		interrupt = false
 
-		config.Wg.Add(1)
-		config.Log.Debugf("Fire scheduler")
-
 		err := config.LoadConfig()
 		if err != nil {
 			config.Log.Infof("Config load error: %s", err)
@@ -222,6 +219,8 @@ func mainChecker() {
 			config.Log.Infof("Tickers generated: %+v", config.TickersCollection)
 		}
 
+		config.Wg.Add(1)
+		config.Log.Debugf("Fire scheduler")
 		go RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
 		if config.Config.ConsulCatalog.Enabled {

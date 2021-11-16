@@ -3,7 +3,7 @@ defaults:
   http_port: '80'
   token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
   parameters:
-    run_every: 10s
+    check_period: 10s
     min_health: 1
     allow_fails: 0
     mode: loud
@@ -12,7 +12,7 @@ defaults:
 projects:
   - name: scaleway
     parameters:
-      run_every: 60s
+      check_period: 60s
     healthchecks:
       - name: http checks
         checks:

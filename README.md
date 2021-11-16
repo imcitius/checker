@@ -39,7 +39,7 @@ defaults:
   http_port: '80'
   token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
   parameters:
-    run_every: 10s
+    check_period: 10s
     min_health: 1
     allow_fails: 0
     mode: loud
@@ -55,7 +55,7 @@ alerts:
 projects:
   - name: my own project
     parameters:
-      run_every: 600s
+      check_period: 600s
     healthchecks:
       - name: http checks
         checks:
@@ -149,7 +149,7 @@ If the PORT environment variable is set, the port number from it is used.
 
 ### in defaults and projects
 ```
-run_every: 600s The frequency of testing and running alerts (in seconds).
+check_period: 600s The frequency of testing and running alerts (in seconds).
 
 // TODO check the features
 min_health: the minimum number of live checks within the healthchck that does not put the project in critical status

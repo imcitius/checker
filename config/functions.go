@@ -152,7 +152,7 @@ func TestConfig() (ConfigFile, error) {
 	if err != nil {
 		return tempConfig, err
 	}
-	err = tempConfig.FillTimeouts()
+	err = tempConfig.FillPeriods()
 	if err != nil {
 		return tempConfig, err
 	}
@@ -180,11 +180,15 @@ func (c *ConfigFile) FillDefaults() error {
 		c.Defaults.Parameters.PeriodicReport = PeriodicReport
 		Log.Debugf("PeriodicReport not found in config, use defaults: %s", c.Defaults.Parameters.PeriodicReport)
 	}
+	if c.Defaults.Parameters.Period == "" {
+		c.Defaults.Parameters.Period = DefaultPeriod
+		Log.Debugf("DefaultPeriod not found in config, use default: %s", DefaultPeriod)
+	}
 
 	//Log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, p := range c.Projects {
-		if p.Parameters.RunEvery == "" {
-			p.Parameters.RunEvery = c.Defaults.Parameters.RunEvery
+		if p.Parameters.Period == "" {
+			p.Parameters.Period = c.Defaults.Parameters.Period
 		}
 		if p.Parameters.Mode == "" {
 			p.Parameters.Mode = c.Defaults.Parameters.Mode
@@ -257,22 +261,15 @@ func (p *TimeoutCollection) Add(period string) {
 	}
 }
 
-func (c *ConfigFile) FillTimeouts() error {
+func (c *ConfigFile) FillPeriods() error {
 
-	defRunEvery := Koanf.String("defaults.parameters.run_every")
-	Timeouts.Add(defRunEvery)
+	Timeouts.Add(Koanf.String("defaults.parameters.period"))
 
 	for _, p := range c.Projects {
-
-		if p.Parameters.RunEvery != defRunEvery {
-			Timeouts.Add(p.Parameters.RunEvery)
-		}
+		Timeouts.Add(p.Parameters.Period)
 		for _, h := range p.Healthchecks {
-			if h.Parameters.RunEvery != defRunEvery {
-				Timeouts.Add(h.Parameters.RunEvery)
-				p.Timeouts.Add(h.Parameters.RunEvery)
-			}
-			//Log.Debugf("Project %s timeouts found: %+v\n", p.Name, p.Timeouts)
+			Timeouts.Add(h.Parameters.Period)
+			p.Timeouts.Add(h.Parameters.Period)
 		}
 	}
 	Log.Debugf("Total timeouts found: %+v\n\n", Timeouts)
