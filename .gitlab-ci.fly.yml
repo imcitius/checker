@@ -5,7 +5,7 @@
 
 fly-deploy:
   stage: deploy
-  image: harbor-ks.jgit.me/dockerhub_proxy/library/golang:1.16
+  image: harbor-ks.jgit.me/dockerhub_proxy/library/golang:1.17
   before_script:
     - apt-get update -qq && apt-get install -y curl unzip
     - wget -q https://releases.hashicorp.com/vault/1.8.5/vault_1.8.5_linux_amd64.zip

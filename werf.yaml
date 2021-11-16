@@ -5,7 +5,7 @@ deploy:
   helmRelease: checker
 ---
 artifact: app
-from: harbor.jgit.me/releases/golang-builder:1.16-alpine
+from: harbor.jgit.me/releases/golang-builder:1.17-alpine
 git:
 - to: /go/src
   stageDependencies:

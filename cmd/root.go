@@ -32,8 +32,6 @@ var (
 
 	logFormat, debugLevel, configFile, configSource, configWatchTimeout, configFormat string
 	botsEnabled, watchConfig                                                          bool
-	Ticker                                                                            *time.Ticker
-	TimerStep                                                                         time.Duration
 )
 
 // Execute executes the root command.
@@ -56,6 +54,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFormat, "configformat", "f", "yaml", "config file format")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "botsEnabled", "b", true, "Whether to enable active bot")
 	rootCmd.PersistentFlags().BoolVarP(&watchConfig, "watchConfig", "W", true, "Whether to watch config file changes on disk")
 
 	rootCmd.AddCommand(genToken)
@@ -86,7 +85,7 @@ func initConfig() {
 		"defaults.http.port":    "80",
 		"defaults.http.enabled": true,
 		// should always be 1s, to avoid time drift bugs in scheduler
-		"defaults.timer_step": "1s",
+		//"defaults.timer_step": "1s",
 		"debug.level":         debugLevel,
 		"log.format":          logFormat,
 		"bots.enabled":        botsEnabled,
@@ -98,12 +97,6 @@ func initConfig() {
 	if err != nil {
 		logrus.Panicf("Cannot fill default config: %s", err.Error())
 	}
-
-	timerStep, err := time.ParseDuration(config.Koanf.String("defaults.timer_step"))
-	if err != nil {
-		config.Log.Fatal(err)
-	}
-	Ticker = time.NewTicker(timerStep)
 
 	err = config.Koanf.Load(env.Provider("PORT", ".", func(s string) string {
 		return "defaults.http.port"
@@ -180,15 +173,24 @@ var list = &cobra.Command{
 }
 
 func fireActiveBot() {
-	config.Log.Infof("Active bot is enabled")
-	fireBot()
+	if botsEnabled {
+		config.Log.Infof("Active bot is enabled")
+		fireBot()
+	} else {
+		firePassiveBot()
+	}
 
 }
+
 func firePassiveBot() {
-	config.Log.Infof("Active bot is disabled, alerts only")
-	message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
-	// Metrics structures is not initialized yet, so we prevent panic with "noMetrics"
-	alerts.SendChatOps(message, "noMetrics")
+	if !botsEnabled {
+		config.Log.Infof("Active bot is disabled, alerts only")
+		message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
+		// Metrics structures is not initialized yet, so we prevent panic with "noMetrics"
+		alerts.SendChatOps(message, "noMetrics")
+	} else {
+		fireActiveBot()
+	}
 }
 
 func mainChecker() {
@@ -200,12 +202,27 @@ func mainChecker() {
 
 		config.Wg.Add(1)
 		config.Log.Debugf("Fire scheduler")
-		go RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
 		err := config.LoadConfig()
 		if err != nil {
 			config.Log.Infof("Config load error: %s", err)
 		}
+
+		if len(config.Timeouts.Periods) == 0 {
+			config.Log.Fatal("No periods found")
+		} else {
+			for _, ticker := range config.Timeouts.Periods {
+				tickerDuration, err := time.ParseDuration(ticker)
+				config.Log.Infof("Create ticker: ", ticker)
+				if err != nil {
+					config.Log.Fatal(err)
+				}
+				config.TickersCollection[ticker] = config.Ticker{*time.NewTicker(tickerDuration), ticker}
+			}
+			config.Log.Infof("Tickers generated: %+v", config.TickersCollection)
+		}
+
+		go RunScheduler(config.SchedulerSignalCh, &config.Wg)
 
 		if config.Config.ConsulCatalog.Enabled {
 			catalog.WatchServices()
@@ -228,18 +245,8 @@ func mainChecker() {
 		switch config.Config.Defaults.BotsEnabled {
 		case true:
 			fireActiveBot()
-			//if config.BotsEnabledFlag {
-			//	fireActiveBot()
-			//} else {
-			//	firePassiveBot()
-			//}
 		case false:
 			firePassiveBot()
-			//if config.BotsEnabledFlag {
-			//	fireActiveBot()
-			//} else {
-			//	firePassiveBot()
-			//}
 		}
 
 		//config.InternalStatus = "started"
@@ -287,7 +294,7 @@ func signalWait() {
 		config.Log.Infof("Got SIGINT")
 		config.InternalStatus = "stop"
 		interrupt = true
-		config.SchedulerSignalCh <- true
+		close(config.SchedulerSignalCh)
 		if config.Config.Defaults.BotsEnabled {
 			config.BotsSignalCh <- true
 		}

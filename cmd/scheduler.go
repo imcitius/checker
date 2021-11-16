@@ -1,9 +1,9 @@
 package cmd
 
+import "C"
 import (
 	"errors"
 	"fmt"
-	"math"
 	"my/checker/alerts"
 	"my/checker/catalog"
 	checks "my/checker/checks"
@@ -124,19 +124,9 @@ func ExecuteHealthcheck(project *projects.Project, healthcheck *config.Healthche
 	}
 }
 
-func timeIsDivisible(uptime time.Duration, timer time.Duration) bool {
-	//config.Log.Infof("Checking divisibility: uptime/timer --- %f/%f", uptime.Seconds(), timer.Seconds())
-	if math.Remainder(uptime.Seconds(), timer.Seconds()) == 0 {
-		config.Log.Debugf("Divisible")
-		return true
-	}
-	config.Log.Debugf("Not divisible")
-	return false
-}
-
 func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 
-	config.Log.Debug("Scheduler started")
+	config.Log.Info("Scheduler started")
 	config.Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
 
 	if watchConfig {
@@ -146,48 +136,54 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 		config.Log.Info("Config watch disabled")
 	}
 
-	for {
-		config.Log.Debugf("Scheduler loop #: %d", config.ScheduleLoop)
+	config.Log.Debugf("Tickers %+v", config.TickersCollection)
+	if len(config.TickersCollection) == 0 {
+		config.Log.Fatal("No tickers")
+	} else {
+		for _, ticker := range config.TickersCollection {
+			config.Log.Infof("Looping over tickerz")
+			go func(ticker config.Ticker) {
+				//wg.Add(1)
+				config.Log.Infof("Waiting for ticker %s", ticker.Description)
+				defer config.Log.Infof("Finished ticker %s", ticker.Description)
+				for {
+					select {
+					case <-signalCh:
+						config.Log.Infof("Exit ticker")
+						wg.Done()
+						return
+					case t := <-ticker.Ticker.C:
+						uptime := t.Round(time.Second).Sub(config.StartTime.Round(time.Second))
+						config.Log.Infof("Uptime %d seconds (%s ticker)", int(uptime.Seconds()), ticker.Description)
 
-		select {
-		case <-signalCh:
-			config.Log.Infof("Exit scheduler")
-			wg.Done()
-			return
-		case t := <-Ticker.C:
-			uptime := t.Round(time.Second).Sub(config.StartTime.Round(time.Second))
+						checksDuration := runChecks(ticker.Description)
+						reportsDuration := runReports(ticker.Description)
+						alertsDuration := sendCritAlerts(ticker.Description)
 
-			for _, timeout := range config.Timeouts.Periods {
-				config.Log.Debugf("Looking for projects with timeout: %s", timeout)
+						config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
+						config.Log.Debugf("Reports duration: %v msec", reportsDuration.Milliseconds())
+						config.Log.Debugf("Alerts duration: %v msec", alertsDuration.Milliseconds())
 
-				tf, err := time.ParseDuration(timeout)
-				if err != nil {
-					config.Log.Errorf("Cannot parse timeout: %s", err)
+						metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
+						metrics.SchedulerReportsDuration.Set(float64(reportsDuration.Milliseconds()))
+						metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))
+					}
 				}
-				config.Log.Debugf("===\nUptime: %v", uptime)
-
-				if timeIsDivisible(uptime, tf) {
-					config.Log.Debugf("===\nTime: %v\n---\n\n", t)
-					config.Log.Infof("Checking run_every: %s, uptime %s seconds", timeout, uptime)
-
-					checksDuration := runChecks(timeout)
-					reportsDuration := runReports(timeout)
-					alertsDuration := sendCritAlerts(timeout)
-
-					config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
-					config.Log.Debugf("Reports duration: %v msec", reportsDuration.Milliseconds())
-					config.Log.Debugf("Alerts duration: %v msec", alertsDuration.Milliseconds())
-
-					metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
-					metrics.SchedulerReportsDuration.Set(float64(reportsDuration.Milliseconds()))
-					metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))
-				}
-			}
+			}(ticker)
 		}
-
-		metrics.SchedulerLoopConfig.Set(float64(TimerStep.Milliseconds()))
-		metrics.SchedulerLoops.Inc()
-		config.ScheduleLoop++
 	}
 
+	//for {
+	//	select {
+	//	case <-signalCh:
+	//		config.Log.Infof("Exit scheduler")
+	//		wg.Done()
+	//		return
+	//	default:
+	//metrics.SchedulerLoops.Inc()
+	//config.ScheduleLoop++
+	//config.Log.Infof("Finished loop")
+	//
+	//	}
+	//}
 }
