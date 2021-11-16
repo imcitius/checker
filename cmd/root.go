@@ -210,7 +210,7 @@ func mainChecker() {
 		} else {
 			for _, ticker := range config.Timeouts.Periods {
 				tickerDuration, err := time.ParseDuration(ticker)
-				config.Log.Infof("Create ticker: ", ticker)
+				config.Log.Infof("Create ticker: %s", ticker)
 				if err != nil {
 					config.Log.Fatal(err)
 				}
