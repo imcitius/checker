@@ -171,7 +171,8 @@ checker_config_template: |
                 - 200
               timeout: 2s
               severity: critical
-    - name: checker-fly.io active ping
+
+    - name: checker-fly.io crosscheck
       healthchecks:
         - name: Siam checker Running
           checks:

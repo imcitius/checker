@@ -208,7 +208,9 @@ checker_config_template: |
               timeout: 2s
               severity: critical
 
-        # billing
+    # billing
+    - name: billing-prod
+      healthchecks:
         - name: Billing-API
           parameters:
             check_period: 60s
@@ -295,7 +297,7 @@ checker_config_template: |
                 lag: 3s
               severity: critical
 
-    - name: checker-fly.io active ping
+    - name: checker-fly.io crosscheck
       healthchecks:
         - name: Iron checker Running
           checks:

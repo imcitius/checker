@@ -216,7 +216,7 @@ checker_config_template: |
                 lag: 10s
               severity: critical
 
-    - name: checker-fly.io active ping
+    - name: checker-fly.io crosscheck
       healthchecks:
         - name: MG prod checker Running
           checks:
