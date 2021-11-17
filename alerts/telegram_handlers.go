@@ -20,7 +20,10 @@ func quHandler(c tb.Context) error {
 
 	//config.Log.Infof("Bot request /pu")
 	config.Log.Printf("Pause req for UUID: %+v\n", uuID)
-	status.SetCheckMode(config.GetCheckByUUID(uuID), "quiet")
+	err = status.SetCheckMode(config.GetCheckByUUID(uuID), "quiet")
+	if err != nil {
+		config.Log.Errorf("Error change check's status: %s", err)
+	}
 
 	SendChatOps(fmt.Sprintf("@%s Messages ceased for UUID %v\n", c.Sender().Username, uuID))
 
@@ -37,7 +40,11 @@ func luHandler(c tb.Context) error {
 	}
 	//config.Log.Infof("Bot request /uu")
 	config.Log.Infof("Unpause req for UUID: %+v\n", uuID)
-	status.SetCheckMode(config.GetCheckByUUID(uuID), "loud")
+	err = status.SetCheckMode(config.GetCheckByUUID(uuID), "loud")
+	if err != nil {
+		config.Log.Errorf("Error change check's status: %s", err)
+	}
+
 	SendChatOps(fmt.Sprintf("@%s Messages resumed for UUID %v", c.Sender().Username, uuID))
 
 	return nil

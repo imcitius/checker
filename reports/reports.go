@@ -14,7 +14,12 @@ func ListElements() string {
 			list = list + fmt.Sprintf("\tHealthcheck: %s\n", h.Name)
 			for _, c := range h.Checks {
 				list = list + fmt.Sprintf("\t\tName: %s\n", c.Name)
-				list = list + fmt.Sprintf("\t\tUUID: %s (mode %s)\n", c.UUid, status.GetCheckMode(&c))
+
+				st, err := status.GetCheckMode(&c)
+				if err != nil {
+					config.Log.Errorf("Error checking checks's status: %s", err.Error())
+				}
+				list = list + fmt.Sprintf("\t\tUUID: %s (mode '%s')\n", c.UUid, st)
 
 				//list = list + fmt.Sprintf("\t\tseq errors: %d\n", status.Statuses.Checks[c.UUid].SeqErrorsCount)
 			}

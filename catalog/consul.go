@@ -242,7 +242,10 @@ func ParseCatalog(catalog map[string]config.ConsulService) {
 				case strings.HasPrefix(name, "checker.check.timeout"):
 					check.Timeout = value
 				case strings.HasPrefix(name, "checker.check.mode"):
-					status.SetCheckMode(&check, value)
+					err := status.SetCheckMode(&check, value)
+					if err != nil {
+						config.Log.Errorf("Error change check's status: %s", err)
+					}
 				case strings.HasPrefix(name, "checker.project.name"):
 					project.Name = value
 				case strings.HasPrefix(name, "checker.healthcheck.name"):

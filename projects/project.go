@@ -143,8 +143,12 @@ func (p *Project) ProjectSendReport() error {
 	config.Log.Infof("Generate report for project %s", p.Name)
 	for _, hc := range p.Healthchecks {
 		for _, c := range hc.Checks {
-			if status.GetCheckMode(&c) == "quiet" {
+			if st, err := status.GetCheckMode(&c); st == "quiet" && err == nil {
 				ceasedChecks = append(ceasedChecks, c.UUid)
+			} else {
+				if err != nil {
+					config.Log.Errorf("Error checking checks's status: %s", err.Error())
+				}
 			}
 		}
 	}

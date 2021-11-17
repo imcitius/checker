@@ -36,13 +36,21 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 
 		if check.AllowFails > 0 {
 			if statusByUUID.SeqErrorsCount >= check.AllowFails {
-				if status.GetCheckMode(check) != "quiet" {
+				if st, err := status.GetCheckMode(check); st != "quiet" && err == nil {
 					chooseChannelAndSendAlert(project, check, err)
+				} else {
+					if err != nil {
+						config.Log.Errorf("Error checking checks's status: %s", err.Error())
+					}
 				}
 			}
 		} else {
-			if status.GetCheckMode(check) != "quiet" {
+			if st, err := status.GetCheckMode(check); st != "quiet" && err == nil {
 				chooseChannelAndSendAlert(project, check, err)
+			} else {
+				if err != nil {
+					config.Log.Errorf("Error checking checks's status: %s", err.Error())
+				}
 			}
 		}
 

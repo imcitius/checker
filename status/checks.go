@@ -11,12 +11,13 @@ func InitCheckStatus(c *config.Check) {
 	}
 }
 
-func GetCheckMode(c *config.Check) string {
+func GetCheckMode(c *config.Check) (string, error) {
 	InitCheckStatus(c)
-	return Statuses.Checks[c.UUid].Mode
+	return Statuses.Checks[c.UUid].Mode, nil
 }
 
-func SetCheckMode(c *config.Check, status string) {
+func SetCheckMode(c *config.Check, status string) error {
 	InitCheckStatus(c)
 	Statuses.Checks[c.UUid].Mode = status
+	return nil
 }
