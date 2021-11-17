@@ -295,12 +295,12 @@ checker_config_template: |
                 lag: 3s
               severity: critical
 
-        - name: checker-fly.io active ping
-          healthchecks:
-            - name: Iron checker Running
-              checks:
-                - type: http
-                  host: https://checker.fly.dev/check/ping/089142cd-dc57-568e-b0b6-c976f2191939
-                  code:
-                    - 200
-                  timeout: 3s
+    - name: checker-fly.io active ping
+      healthchecks:
+        - name: Iron checker Running
+          checks:
+            - type: http
+              host: https://checker.fly.dev/check/ping/089142cd-dc57-568e-b0b6-c976f2191939
+              code:
+                - 200
+              timeout: 3s

@@ -171,13 +171,12 @@ checker_config_template: |
                 - 200
               timeout: 2s
               severity: critical
-
-        - name: checker-fly.io active ping
-          healthchecks:
-            - name: Siam checker Running
-              checks:
-                - type: http
-                  host: https://checker.fly.dev/check/ping/dc07e03a-552c-5436-b15b-85495aa659bf
-                  code:
-                    - 200
-                  timeout: 3s
+    - name: checker-fly.io active ping
+      healthchecks:
+        - name: Siam checker Running
+          checks:
+            - type: http
+              host: https://checker.fly.dev/check/ping/dc07e03a-552c-5436-b15b-85495aa659bf
+              code:
+                - 200
+              timeout: 3s

@@ -216,15 +216,15 @@ checker_config_template: |
                 lag: 10s
               severity: critical
 
-        - name: checker-fly.io active ping
-          healthchecks:
-            - name: MG prod checker Running
-              checks:
-                - type: http
-                  host: https://checker.fly.dev/check/ping/168bafa2-e61a-5895-b4fc-58095a86e691
-                  code:
-                    - 200
-                  timeout: 3s
+    - name: checker-fly.io active ping
+      healthchecks:
+        - name: MG prod checker Running
+          checks:
+            - type: http
+              host: https://checker.fly.dev/check/ping/168bafa2-e61a-5895-b4fc-58095a86e691
+              code:
+                - 200
+              timeout: 3s
 
   # добавить мантикору, imgproxy
   # добавить кроны в api, поисковике, где там еще они есть
