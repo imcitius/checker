@@ -3,7 +3,6 @@ package catalog
 import (
 	"fmt"
 	"github.com/BurntSushi/ty/fun"
-	"my/checker/common"
 	"my/checker/config"
 	"my/checker/status"
 	"strings"
@@ -239,7 +238,7 @@ func ParseCatalog(catalog map[string]config.ConsulService) {
 					check.Type = value
 				case strings.HasPrefix(name, "checker.check.host"):
 					check.Host = value
-					check.UUid = common.GenUUID(value)
+					check.UUid = config.GenUUID(name, value)
 				case strings.HasPrefix(name, "checker.check.timeout"):
 					check.Timeout = value
 				case strings.HasPrefix(name, "checker.check.mode"):

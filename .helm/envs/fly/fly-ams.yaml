@@ -538,6 +538,30 @@ projects:
           - type: passive
             timeout: 960s
 
+  - name: CrossCheck iron
+    healthchecks:
+      - name: Checker Running
+        checks:
+          - type: passive
+            name: iron checker
+            timeout: 960s
+
+  - name: CrossCheck siam
+    healthchecks:
+      - name: Checker Running
+        checks:
+          - type: passive
+            name: siam checker
+            timeout: 960s
+
+  - name: CrossCheck mediaget
+    healthchecks:
+      - name: Checker Running
+        checks:
+          - type: passive
+            name: mediaget checker
+            timeout: 960s
+
   - name: BetterUptime active ping
     healthchecks:
       - name: Checker Running

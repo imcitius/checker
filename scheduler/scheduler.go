@@ -7,7 +7,6 @@ import (
 	"my/checker/alerts"
 	"my/checker/catalog"
 	checks "my/checker/checks"
-	"my/checker/common"
 	"my/checker/config"
 	"my/checker/metrics"
 	projects "my/checker/projects"
@@ -107,7 +106,7 @@ func checkProjects(period string) {
 func ExecuteHealthcheck(project *projects.Project, healthcheck *config.Healthcheck, period string) {
 	config.Log.Debugf("Total checks %+v", healthcheck.Checks)
 	for _, check := range healthcheck.Checks {
-		checkRandomId := common.GetRandomId()
+		checkRandomId := config.GetRandomId()
 		config.Log.Debugf("(%s) Evaluating check %s", checkRandomId, check.Name)
 		if period == healthcheck.Parameters.Period || period == project.Parameters.Period {
 			config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s(%s)'", checkRandomId, project.Name, healthcheck.Name, check.Name, check.Type)

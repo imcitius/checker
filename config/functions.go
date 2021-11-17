@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
 	"github.com/knadh/koanf/parsers/hcl"
 	"github.com/knadh/koanf/parsers/json"
@@ -10,7 +11,8 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/s3"
 	"github.com/sirupsen/logrus"
-	"my/checker/common"
+	"github.com/teris-io/shortid"
+	"math/rand"
 	"reflect"
 	"regexp"
 	"strings"
@@ -237,7 +239,7 @@ func (c *File) FillUUIDs() error {
 	for i := range c.Projects {
 		for j, h := range c.Projects[i].Healthchecks {
 			for k, check := range c.Projects[i].Healthchecks[j].Checks {
-				c.Projects[i].Healthchecks[j].Checks[k].UUid = common.GenUUID(h.Name + check.Name + check.Host)
+				c.Projects[i].Healthchecks[j].Checks[k].UUid = GenUUID(h.Name, check.Name, check.Host)
 				if c.Projects[i].Healthchecks[j].Checks[k].UUid == "" {
 					return err
 				}
@@ -370,4 +372,35 @@ func (c *Check) GetCheckScheme() string {
 	pattern := regexp.MustCompile("(.*)://")
 	result := pattern.FindStringSubmatch(c.Host)
 	return result[1]
+}
+
+func GetCheckByUUID(uuID string) *Check {
+	for _, project := range Config.Projects {
+		for _, healthcheck := range project.Healthchecks {
+			for _, check := range healthcheck.Checks {
+				if uuID == check.UUid {
+					return &check
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func GetRandomId() string {
+	sid, _ := shortid.New(1, shortid.DefaultABC, rand.Uint64())
+	checkRuntimeId, _ := sid.Generate()
+	return checkRuntimeId
+}
+
+func GenUUID(name ...string) string {
+	var err error
+
+	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
+	if err != nil {
+		return ""
+	}
+
+	u2 := uuid.NewSHA1(ns, []byte(strings.Join(name, ".")))
+	return u2.String()
 }
