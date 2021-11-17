@@ -27,7 +27,7 @@ jobs:
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -v -i -ldflags "-X my/checker/config.Version=${{ env.GITHUB_REF_NAME }} -X my/checker/config.VersionSHA=${{ env.GITHUB_SHA }} -X my/checker/config.VersionBuild=${{ env.GITHUB_RUN_ID }}" -o ${{ env.BINARY_NAME }}
+        run: go build -ldflags "-X my/checker/config.Version=${{ env.GITHUB_REF_NAME }} -X my/checker/config.VersionSHA=${{ env.GITHUB_SHA }} -X my/checker/config.VersionBuild=${{ env.GITHUB_RUN_ID }}" -o ${{ env.BINARY_NAME }}
 
       - name: Compress binary
         run: tar -czvf ${{ env.BINARY_NAME }}-${{ env.GITHUB_REF_NAME }}-linux-amd64.tgz -C build ${{ env.BINARY_NAME }}
@@ -35,7 +35,7 @@ jobs:
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: build/${{ env.BINARY_NAME }}
+          name: ${{ env.BINARY_NAME }}
           path: ${{ env.BINARY_NAME }}
 
       - name: Build and push Docker images
