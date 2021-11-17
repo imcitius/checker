@@ -10,7 +10,7 @@ LABEL "repository" = "https://github.com/imcitius/checker"
 LABEL "homepage" = "https://github.com/imcitius/checker"
 LABEL "maintainer" = "Ilya Rubinchik <citius@citius.dev>"
 
-RUN apt update && apt install -y curl && apt upgrade ca-certificates -y && apt-get clean
+RUN apk update && apk add curl
 
 COPY --from=build build/checker /bin/checker
 COPY --from=build docs/examples/google.yaml /
