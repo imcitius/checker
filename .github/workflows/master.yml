@@ -13,8 +13,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    environment: checker-staging
     env:
       BINARY_NAME: "checker"
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
     steps:
       - name: Set up Go 1.x
@@ -48,9 +50,8 @@ jobs:
           repository: ${{ secrets.REGISTRY_LOGIN }}/checker
           tag_with_ref: true
           tag_with_sha: true
-#          file: Dockerfile
 
-      - name: Upload a Build Artifact
+      - name: Deploy to fly.dev
         uses: superfly/flyctl-actions@1.1
         with:
           args: "deploy"
