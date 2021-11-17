@@ -28,10 +28,10 @@ func init() {
 			if time.Since(status.Statuses.Checks[c.UUid].When) < timeout {
 				return nil
 			} else {
-				return fmt.Errorf(errorHeader + "Ping timeout")
+				return fmt.Errorf(errorHeader+"Ping timeout, last ping at %s", status.Statuses.Checks[c.UUid].When)
 			}
 		} else {
-			return fmt.Errorf(errorHeader+"Bad status, last ping at: %s", status.Statuses.Checks[c.UUid].When)
+			return fmt.Errorf(errorHeader + "Bad status, no pings since start")
 		}
 	}
 }
