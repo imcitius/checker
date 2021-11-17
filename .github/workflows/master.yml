@@ -40,13 +40,14 @@ jobs:
           path: ${{ env.BINARY_NAME }}
 
       - name: Build and push Docker images
-        uses: docker/build-push-action@v1.1.0
+        uses: docker/build-push-action@v2
         with:
           username: ${{ secrets.REGISTRY_LOGIN }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
           repository: ${{ secrets.REGISTRY_LOGIN }}/checker
           tag_with_ref: true
           tag_with_sha: true
+          file: docs/build/Dockerfile
 
 #      - name: Upload a Build Artifact
 #        uses: superfly/flyctl-actions@1.1
