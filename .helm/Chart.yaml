@@ -1,5 +1,0 @@
-apiVersion: v2
-name: checker
-version: 1.0.0
-sources:
-  - "https://jgit.me/binary-options/checker/"

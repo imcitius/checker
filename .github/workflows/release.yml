@@ -6,7 +6,6 @@ on:
       - v*
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -14,11 +13,10 @@ jobs:
       BINARY_NAME: "checker"
 
     steps:
-
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.15
+          go-version: ^1.17
         id: go
 
       - name: Check out code into the Go module directory
@@ -65,3 +63,8 @@ jobs:
           body: "Checker release ${{ env.VERSION  }}"
         env:
           BINARY_NAME: "checker"
+
+      - name: Deploy to fly.io
+        uses: superfly/flyctl-actions@1.1
+        with:
+          args: "deploy --dockerfile docs/build/Dockerfile"
