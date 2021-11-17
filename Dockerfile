@@ -13,7 +13,7 @@ LABEL "maintainer" = "Ilya Rubinchik <citius@citius.dev>"
 
 RUN apk --no-cache add curl
 
-COPY --from=build build/checker /bin/checker
+COPY --from=build /app/build/checker /bin/checker
 COPY --from=build /app/docs/examples/google.yaml /
 COPY --from=build /app/docs/build/entrypoint.sh /
 
