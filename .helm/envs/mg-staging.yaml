@@ -26,7 +26,7 @@ checker_config_template: |
   alerts:
     - name: staging
       type: telegram
-    << file "/vault/secrets/telegram.env" | indent 4 >>
+  << file "/vault/secrets/telegram.env" | indent 4 >>
   projects:
     - name: mg-staging
       healthchecks:
