@@ -33,17 +33,17 @@ jobs:
       - name: Build
         run: go build -ldflags "-X my/checker/config.Version=${{ github.ref_name }} -X my/checker/config.VersionSHA=${{ github.sha }} -X my/checker/config.VersionBuild=${{ github.run_id }}" -o build/${{ env.BINARY_NAME }}
 
-#      - name: Cache artifact
-#        id: cache-artifact
-#        uses: actions/cache@v2
-#        with:
-#          path: build/${{ env.BINARY_NAME }}
-#          key: ${{ runner.os }}-${{ github.sha }}
-#
+      - name: Cache artifact
+        id: cache-artifact
+        uses: actions/cache@v2
+        with:
+          path: build/${{ env.BINARY_NAME }}
+          key: ${{ runner.os }}-${{ github.sha }}
+
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: docs/build/${{ env.BINARY_NAME }}
+          name: build/${{ env.BINARY_NAME }}
           path: ${{ env.BINARY_NAME }}
 
       - name: Build and push Docker images
