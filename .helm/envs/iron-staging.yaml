@@ -9,5 +9,262 @@ app:
     ingress:
       cert: wildcard-cert
 
-checker_config_template: |-
-  {{ .Files.Get configs/iron-staging-config.yaml }}
+checker_config_template: |
+  ---
+  defaults:
+    http_port: '80'
+    token_encryption_key: maeyoa6caeshooph1Aefeezooshaenai
+    parameters:
+      check_period: 900s
+      report_period: 1800s
+      min_health: 1
+      allow_fails: 0
+      noncrit_alert: staging
+      crit_alert: staging
+      command_channel: staging
+      mode: loud
+      ssl_expiration_period: 720h
+  alerts:
+    - name: staging
+      type: telegram
+    << file "/vault/secrets/telegram.env" | indent 4 >>
+  projects:
+    - name: binary-staging
+      healthchecks:
+        - name: FXCloud redis-pre ticks
+          type: redis_pubsub
+          host: redis-pre-redis-ha-haproxy
+          pubsub_config:
+            - fxcloud_EUR/USD
+        - name: Redis ticks
+          type: redis_pubsub
+          host: redis-redis-ha-haproxy
+          pubsub_config:
+            - quotes_EURUSD
+        - name: Redis OTC ticks
+          type: redis_pubsub
+          host: redis-redis-ha-haproxy
+          pubsub_config:
+            - quotes_EURUSD_OTC
+        - name: back  # crit
+          checks:
+            - type: http
+              host: http://app/monitor/status.php
+              answer: .* OK$
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+            - type: passive
+              name: backend cron running
+              timeout: 900s
+              severity: critical
+        - name: helpdesk
+          checks:
+            - type: http
+              host: http://helpdesk/api/are-you-alive
+              answer: ^Helpdesk.* OK$
+              code:
+                - 200
+              timeout: 2s
+        - name: web
+          checks:
+            - type: http
+              host: http://frontend
+              answer: Trading platform
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: ws
+          checks:
+            - type: http
+              host: http://ws/healthcheck
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: cryptoindex
+          checks:
+            - type: http
+              host: http://cryptoindex:8082/healthcheck
+              answer: .*Status.*Ok.*
+              code:
+                - 200
+              timeout: 2s
+        - name: notify-trigger
+          checks:
+            - type: http
+              host: http://notify-trigger/healthcheck
+              answer: Triggers.* OK
+              code:
+                - 200
+              timeout: 2s
+        - name: notify-trigger-status
+          checks:
+            - type: http
+              host: http://notify-trigger/healthcheck-full
+              answer: Triggers.* OK
+              code:
+                - 200
+              timeout: 2s
+        - name: emailer-healthcheck
+          checks:
+            - type: http
+              host: http://emailer/healthcheck
+              answer: Emailer OK
+              code:
+                - 200
+              timeout: 2s
+        - name: statistics-aggregation
+          checks:
+            - type: http
+              host: http://statistics-aggregation/healthcheck
+              answer: StatisticsAggregationService OK
+              code:
+                - 200
+              timeout: 2s
+        - name: statistics-receiver
+          checks:
+            - type: http
+              host: http://statistics-receiver/healthcheck
+              answer: Stat_service OK
+              code:
+                - 200
+              timeout: 2s
+        - name: landings
+          checks:
+            - type: http
+              host: http://landings/api/are-you-alive
+              answer: Landings OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: offline-payment
+          checks:
+            - type: http
+              host: http://offline-payment
+              code:
+                - 200
+              timeout: 2s
+        - name: private-api
+          checks:
+            - type: http
+              host: http://private-api
+              code:
+                - 200
+              timeout: 2s
+        - name: Stat
+          checks:
+            - type: http
+              host: http://stat/check.php
+              answer: Stat OK
+              code:
+                - 200
+              timeout: 2s
+        - name: exassets2bus-topfx
+          checks:
+            - type: http
+              host: http://exassets2bus-topfx:8081/health-check
+              answer: '{"status":"ok"}'
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        # no healthcheck in old one
+        #- name: dynamic-percent-old
+        #  checks:
+        #    - type: http
+        #      host: http://dynpercent:8081/health-check
+        #      answer: '{"status":"ok"}'
+        #      code:
+        #        - 200
+        #      timeout: 2s
+        #      severity: critical
+        - name: dynamic-percent-new
+          checks:
+            - type: http
+              host: http://dynamicpercent:8081/health-check
+              answer: '{"status":"ok"}'
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: iron-staging-pgsql
+          checks:
+            - type: pgsql_replication_status
+              host: iron-staging-pgsql
+              port: 5432
+              sql_repl_config:
+                dbname: checker
+                username: checker
+                password: << file "/vault/secrets/pgsql.env" >>
+                tablename: postgres
+                sslmode: require
+                lag: 3s
+                severity: critical
+
+        # billing
+        - name: Billing-API
+          checks:
+            - type: http
+              host: http://api.billing-staging/health/check
+              answer: Billing-api OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: Payouts-Auto
+          checks:
+            - type: http
+              host: http://payouts-auto.billing-staging/health/check
+              answer: Billing-payouts-auto OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Payouts-Api
+          checks:
+            - type: http
+              host: http://payouts-api.billing-staging/monitoring/health/check
+              answer: Billing-payouts-api OK
+              code:
+                - 200
+              timeout: 2s
+        - name: payment-uid
+          checks:
+            - type: http
+              host: http://payment-uid.billing-staging/health/check
+              answer: Billing-payment-uids OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: refunds
+          checks:
+            - type: http
+              host: http://refunds.billing-staging/monitoring/health/check
+              answer: Billing-refunds OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Currency
+          checks:
+            - type: http
+              host: http://currency.billing-staging/health/check
+              answer: Billing-currencies OK
+              code:
+                - 200
+              timeout: 2s
+
+  #        добавить возможность добавлять в запрос $date = date("Y-m-d", strtotime("-1 day"));
+  #        - name: emailer-daily
+  #          checks:
+  #            - type: http
+  #              host: http://emailer/healthcheck-types?date={$date}
+  #              answer: Emailer OK
+  #              code:
+  #                - 200
+  #              timeout: 2s
+
+  ## fxtickprocessor, redis2clickhouse

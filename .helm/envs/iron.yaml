@@ -10,4 +10,297 @@ app:
       cert: wildcard-cert
 
 checker_config_template: |
-  {{ .Files.Get configs/iron-config.yaml }}
+  ---
+  defaults:
+    http_port: '80'
+    bots_enabled: true
+    parameters:
+      check_period: 900s
+      report_period: 1800s
+      min_health: 1
+      allow_fails: 0
+      noncrit_alert: telegram
+      crit_alert: telegram
+      command_channel: telegram
+      mode: loud
+      ssl_expiration_period: 720h
+  alerts:
+    - name: telegram
+      type: telegram
+    << file "/vault/secrets/telegram.env" | indent 4 >>
+  projects:
+    - name: binary-prod-iron
+      healthchecks:
+        - name: FXCloud redis-pre ticks
+          type: redis_pubsub
+          host: redis-pre-redis-ha-haproxy
+          pubsub_config:
+            - fxcloud_EUR/USD
+        - name: Metatrader redis-pre ticks
+          type: redis_pubsub
+          host: redis-pre-redis-ha-haproxy
+          pubsub_config:
+            - ticks_EURUSD
+        - name: Redis ticks
+          type: redis_pubsub
+          host: redis-redis-ha-haproxy
+          pubsub_config:
+            - quotes_EURUSD
+        - name: Redis OTC ticks
+          type: redis_pubsub
+          host: redis-redis-ha-haproxy
+          pubsub_config:
+            - quotes_EURUSD_OTC
+        - name: back
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://app/monitor/status.php
+              answer: .* OK$
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+            - type: passive
+              name: backend cron running
+              timeout: 900s
+              severity: critical
+        - name: helpdesk
+          checks:
+            - type: http
+              host: http://helpdesk/api/are-you-alive
+              answer: ^Helpdesk.* OK$
+              code:
+                - 200
+              timeout: 2s
+        - name: web
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://frontend
+              answer: Trading platform
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: ws
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://ws/healthcheck
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: cryptoindex
+          checks:
+            - type: http
+              host: http://cryptoindex:8082/healthcheck
+              code:
+                - 200
+              timeout: 2s
+        - name: notify-trigger
+          checks:
+            - type: http
+              host: http://notify-trigger/healthcheck
+              answer: Triggers.* OK
+              code:
+                - 200
+              timeout: 2s
+        - name: notify-trigger-status
+          checks:
+            - type: http
+              host: http://notify-trigger/healthcheck-full
+              answer: Triggers.* OK
+              code:
+                - 200
+              timeout: 2s
+        - name: emailer
+          checks:
+            - type: http
+              host: http://emailer/healthcheck
+              answer: Emailer OK
+              code:
+                - 200
+              timeout: 2s
+        - name: statistics-aggregation
+          checks:
+            - type: http
+              host: http://statistics-aggregation/healthcheck
+              answer: StatisticsAggregationService OK
+              code:
+                - 200
+              timeout: 2s
+        - name: statistics-receiver
+          checks:
+            - type: http
+              host: http://statistics-receiver/healthcheck
+              answer: Stat_service OK
+              code:
+                - 200
+              timeout: 2s
+        - name: landings
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://landings/api/are-you-alive
+              answer: Landings OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: offline-payment
+          checks:
+            - type: http
+              host: http://offline-payment
+              code:
+                - 200
+              timeout: 2s
+        - name: private-api
+          checks:
+            - type: http
+              host: http://private-api
+              code:
+                - 200
+              timeout: 2s
+        - name: Stat
+          checks:
+            - type: http
+              host: http://poacher:5BvVvD4K@stat/check.php
+              answer: Stat OK
+              code:
+                - 200
+              timeout: 2s
+        - name: exassets2bus-topfx
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://exassets2bus-topfx:8081/health-check
+              answer: '{"status":"ok"}'
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        # no healthcheck in old one
+        #- name: dynamic-percent-old
+        #  checks:
+        #    - type: http
+        #      host: http://dynpercent:8081/health-check
+        #      answer: '{"status":"ok"}'
+        #      code:
+        #        - 200
+        #      timeout: 2s
+        #      severity: critical
+        - name: dynamic-percent-new
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://dynamicpercent:8081/health-check
+              answer: '{"status":"ok"}'
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+
+        # billing
+        - name: Billing-API
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://api.billing/health/check
+              answer: Billing-api OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: Payouts-Auto
+          checks:
+            - type: http
+              host: http://payouts-auto.billing/health/check
+              answer: Billing-payouts-auto OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Payouts-Api
+          checks:
+            - type: http
+              host: http://payouts-api.billing/monitoring/health/check
+              answer: Billing-payouts-api OK
+              code:
+                - 200
+              timeout: 2s
+        - name: payment-uid
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://payment-uid.billing/health/check
+              answer: Billing-payment-uids OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: refunds
+          checks:
+            - type: http
+              host: http://refunds.billing/monitoring/health/check
+              answer: Billing-refunds OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Currency
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://currency.billing/health/check
+              answer: Billing-currencys OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+
+        - name: pgsql-main
+          parameters:
+            check_period: 60s
+          checks:
+            - type: pgsql_replication
+              host: pgsql.iron.irontrade.com
+              port: 5000
+              sql_repl_config:
+                dbname: checker
+                username: checker
+                password: << file "/vault/secrets/pgsql.env" >>
+                tablename: repl_test
+                sslmode: require
+                serverlist:
+                  - sd-156610.dedibox.fr:5433
+                  - sd-156668.dedibox.fr:5433
+                  - sd-156793.dedibox.fr:5433
+              severity: critical
+            - type: pgsql_replication_status
+              host: pgsql.iron.irontrade.com
+              port: 5000
+              sql_repl_config:
+                dbname: checker
+                username: checker
+                password: << file "/vault/secrets/pgsql.env" >>
+                lag: 3s
+              severity: critical
+
+        - name: checker-fly.io active ping
+          healthchecks:
+            - name: Iron checker Running
+              checks:
+                - type: http
+                  host: https://checker.fly.dev/check/ping/089142cd-dc57-568e-b0b6-c976f2191939
+                  code:
+                    - 200
+                  timeout: 3s
