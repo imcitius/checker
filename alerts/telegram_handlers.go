@@ -3,9 +3,9 @@ package alerts
 import (
 	"fmt"
 	tb "gopkg.in/tucnak/telebot.v3"
-	check "my/checker/checks"
 	"my/checker/config"
 	"my/checker/metrics"
+	"my/checker/misc"
 	"my/checker/status"
 )
 
@@ -21,7 +21,7 @@ func quHandler(c tb.Context) error {
 
 	//config.Log.Infof("Bot request /pu")
 	config.Log.Printf("Pause req for UUID: %+v\n", uuID)
-	status.SetCheckMode(check.GetCheckByUUID(uuID), "quiet")
+	status.SetCheckMode(misc.GetCheckByUUID(uuID), "quiet")
 
 	SendChatOps(fmt.Sprintf("@%s Messages ceased for UUID %v\n", c.Sender().Username, uuID))
 
@@ -38,7 +38,7 @@ func luHandler(c tb.Context) error {
 	}
 	//config.Log.Infof("Bot request /uu")
 	config.Log.Infof("Unpause req for UUID: %+v\n", uuID)
-	status.SetCheckMode(check.GetCheckByUUID(uuID), "loud")
+	status.SetCheckMode(misc.GetCheckByUUID(uuID), "loud")
 	SendChatOps(fmt.Sprintf("@%s Messages resumed for UUID %v", c.Sender().Username, uuID))
 
 	return nil

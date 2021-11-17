@@ -6,8 +6,6 @@ import (
 	tb "gopkg.in/tucnak/telebot.v3"
 	"my/checker/config"
 	"my/checker/reports"
-
-	//"my/checker/reports"
 	"regexp"
 	"sync"
 	"time"

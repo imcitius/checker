@@ -3,7 +3,7 @@ package project
 import (
 	"fmt"
 	"my/checker/alerts"
-	config "my/checker/config"
+	"my/checker/config"
 	"my/checker/metrics"
 	"my/checker/status"
 )

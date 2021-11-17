@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
 	"io"
-	check "my/checker/checks"
 	"my/checker/config"
+	"my/checker/misc"
 	projects "my/checker/projects"
 	"my/checker/reports"
 	"my/checker/status"
@@ -167,7 +167,7 @@ func checkStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if check.GetCheckByUUID(uuid) == nil {
+	if misc.GetCheckByUUID(uuid) == nil {
 		http.Error(w, "Check not found", http.StatusNotFound)
 		config.Log.Debugf("Check with UUID %s not found", uuid)
 		return
