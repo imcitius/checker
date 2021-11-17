@@ -309,9 +309,9 @@ func signalWait() {
 	case <-config.ChangeSig:
 		config.Log.Infof("Config file reload")
 		config.InternalStatus = "reload"
-		config.SchedulerSignalCh <- true
+		close(config.SchedulerSignalCh)
 		//config.WebSignalCh <- true
-		if config.Config.Defaults.BotsEnabled {
+		if config.Config.Defaults.BotsEnabled && botsEnabled {
 			config.BotsSignalCh <- true
 		}
 		return

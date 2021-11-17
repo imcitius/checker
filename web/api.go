@@ -109,9 +109,6 @@ func listChecks(w http.ResponseWriter, r *http.Request) {
 		claimed, valid := checkWebAuth(r.Header.Get("Authorization"))
 		if claimed && valid {
 			list := reports.List()
-			if len(list) > 350 {
-				list = "List is too long for message, use CLI"
-			}
 			_, _ = io.WriteString(w, list)
 		} else {
 			_, _ = io.WriteString(w, "Web: unauthorized")

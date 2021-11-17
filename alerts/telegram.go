@@ -250,7 +250,12 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 	})
 	bot.Handle(&btnList, func(c tb.Context) error {
 		config.Log.Infof("List pressed")
-		SendChatOps(fmt.Sprintf("@" + c.Sender().Username + "\n\n" + reports.List()))
+		list := reports.List()
+		if len(list) > 350 {
+			list = "List is too long for message, use CLI/Web"
+		} else {
+			SendChatOps(fmt.Sprintf("@" + c.Sender().Username + "\n\n" + list))
+		}
 		return nil
 	})
 	bot.Handle(&btnStats, func(c tb.Context) error {
