@@ -54,7 +54,7 @@ jobs:
           repository: ${{ secrets.REGISTRY_LOGIN }}/checker
           tag_with_ref: true
           tag_with_sha: true
-          file: docs/build/Dockerfile
+#          file: Dockerfile
 
 #      - name: Upload a Build Artifact
 #        uses: superfly/flyctl-actions@1.1
