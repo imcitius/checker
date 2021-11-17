@@ -2,6 +2,13 @@ db:
   check: true
   password_path: secret/iron-staging/pgsql/checker/pass
 
+app:
+  config:
+    routes:
+      - Host(`web.iron-staging.irontrade.com`) && PathPrefix(`/checker/`)
+    ingress:
+      cert: wildcard-cert
+
 checker_config_template: |
   ---
   defaults:

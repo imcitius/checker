@@ -118,3 +118,45 @@ spec:
       port: 80
       protocol: TCP
       targetPort: 80
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-checker-prefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /checker
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: checker
+spec:
+  entryPoints:
+    - web
+    - websecure
+  tls:
+    secretName: {{ .Values.app.config.ingress.cert }}
+  routes:
+    - kind: Rule
+      match: {{ .Values.app.config.routes | join " || " }}
+      middlewares:
+        - name: strip-checker-prefix
+      services:
+        - kind: Service
+          name: checker
+          passHostHeader: true
+          port: 80
+          responseForwarding:
+            flushInterval: 1ms
+          scheme: http
+          sticky:
+            cookie:
+              httpOnly: true
+              name: cookie
+              secure: true
+              sameSite: none
+          strategy: RoundRobin
+          weight: 10
