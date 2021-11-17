@@ -1,4 +1,4 @@
-name: Go
+name: checker-staging-fly
 
 on:
   push:
@@ -54,4 +54,4 @@ jobs:
       - name: Deploy to fly.dev
         uses: superfly/flyctl-actions@1.1
         with:
-          args: "deploy -a=${{ environment }}"
+          args: "deploy -a=${{ github.workflow }}"
