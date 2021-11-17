@@ -8,7 +8,7 @@ processes = []
 
 [env]
   PORT = "8080"
-  CONFIG = "/google.yaml"
+  CONFIG = "/config.yaml"
 
 [experimental]
   allowed_public_ports = []

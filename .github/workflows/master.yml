@@ -50,6 +50,7 @@ jobs:
           repository: ${{ secrets.REGISTRY_LOGIN }}/checker
           tag_with_ref: true
           tag_with_sha: true
+          build-args: CONFIG=${{ env.CONFIG }}
 
       - name: Create fly.io app if not exist
         uses: superfly/flyctl-actions@1.1
@@ -59,4 +60,4 @@ jobs:
       - name: Deploy to fly.io
         uses: superfly/flyctl-actions@1.1
         with:
-          args: "deploy -a=${{ github.workflow }}"
+          args: "deploy -a=${{ github.workflow }} --build-arg CONFIG=${{ env.CONFIG }}"
