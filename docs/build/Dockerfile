@@ -12,7 +12,7 @@ LABEL "maintainer" = "Ilya Rubinchik <citius@citius.dev>"
 
 RUN apt update && apt install -y curl && apt upgrade ca-certificates -y && apt-get clean
 
-COPY build/checker /bin/checker
+COPY ../../build/checker /bin/checker
 COPY docs/examples/google.yaml /
 COPY docs/build/entrypoint.sh /
 

@@ -31,15 +31,15 @@ jobs:
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -ldflags "-X my/checker/config.Version=${GITHUB_REF_NAME} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${BINARY_NAME}
+        run: go build -ldflags "-X my/checker/config.Version=${{ github.ref.name }} -X my/checker/config.VersionSHA=${{ github.sha }} -X my/checker/config.VersionBuild=${{ github.run.id }}" -o build/${{ env.BINARY_NAME }}
 
-      - name: Cache artifact
-        id: cache-artifact
-        uses: actions/cache@v2
-        with:
-          path: build/${{ env.BINARY_NAME }}
-          key: ${{ runner.os }}-${{ env.GITHUB_SHA }}
-
+#      - name: Cache artifact
+#        id: cache-artifact
+#        uses: actions/cache@v2
+#        with:
+#          path: build/${{ env.BINARY_NAME }}
+#          key: ${{ runner.os }}-${{ github.sha }}
+#
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
