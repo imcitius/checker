@@ -52,6 +52,6 @@ jobs:
           tag_with_sha: true
 
       - name: Deploy to fly.dev
-        uses: superfly/flyctl-actions@1.1
+        uses: imcitius/flyctl-actions@master
         with:
           args: "deploy -a=${{ github.workflow }}"
