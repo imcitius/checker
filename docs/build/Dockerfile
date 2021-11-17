@@ -14,8 +14,7 @@ RUN apt update && apt install -y curl && apt upgrade ca-certificates -y && apt-g
 
 COPY --from=build /app/build/checker /bin/checker
 COPY --from=build /app/docs/examples/google.yaml /
+COPY --from=build /app/docs/build/entrypoint.sh /
 
-COPY docs/build/entrypoint.sh /
-COPY docs/examples/fly-ams.yaml /
 ENTRYPOINT ["sh", "-c"]
 CMD ["/entrypoint.sh"]
