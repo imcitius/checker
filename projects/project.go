@@ -121,6 +121,7 @@ func (p *Project) ProjectAlert(e error) {
 }
 
 func (p *Project) ProjectCritAlert(e error) {
+	fmt.Printf("%+v", e)
 	message := e.Error()
 
 	if len(p.Parameters.Mentions) > 0 {
@@ -143,11 +144,11 @@ func (p *Project) ProjectSendReport() error {
 	config.Log.Infof("Generate report for project %s", p.Name)
 	for _, hc := range p.Healthchecks {
 		for _, c := range hc.Checks {
-			if st, err := status.GetCheckMode(&c); st == "quiet" && err == nil {
+			if st, e := status.GetCheckMode(&c); st == "quiet" && e == nil {
 				ceasedChecks = append(ceasedChecks, c.UUid)
 			} else {
-				if err != nil {
-					config.Log.Errorf("Error checking checks's status: %s", err.Error())
+				if e != nil {
+					config.Log.Errorf("Error checking checks's status: %s", e.Error())
 				}
 			}
 		}

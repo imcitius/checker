@@ -11,10 +11,16 @@ import (
 )
 
 func chooseChannelAndSendAlert(project *projects.Project, check *config.Check, err error) {
+	fmt.Printf("----\n%+v\n-----", err)
+	message := err
+	if err == nil {
+		message = fmt.Errorf("empty error received from project '%s', check '%s/%s'", project.Name, check.Name, check.Host)
+	}
+
 	if check.Severity == "critical" || check.Severity == "crit" {
-		project.ProjectCritAlert(err)
+		project.ProjectCritAlert(message)
 	} else {
-		project.ProjectAlert(err)
+		project.ProjectAlert(message)
 	}
 }
 
@@ -36,20 +42,20 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 
 		if check.AllowFails > 0 {
 			if statusByUUID.SeqErrorsCount >= check.AllowFails {
-				if st, err := status.GetCheckMode(check); st != "quiet" && err == nil {
+				if st, e := status.GetCheckMode(check); st != "quiet" && e == nil {
 					chooseChannelAndSendAlert(project, check, err)
 				} else {
-					if err != nil {
-						config.Log.Errorf("Error checking checks's status: %s", err.Error())
+					if e != nil {
+						config.Log.Errorf("Error checking checks's status: %s", e.Error())
 					}
 				}
 			}
 		} else {
-			if st, err := status.GetCheckMode(check); st != "quiet" && err == nil {
+			if st, e := status.GetCheckMode(check); st != "quiet" && e == nil {
 				chooseChannelAndSendAlert(project, check, err)
 			} else {
-				if err != nil {
-					config.Log.Errorf("Error checking checks's status: %s", err.Error())
+				if e != nil {
+					config.Log.Errorf("Error checking checks's status: %s", e.Error())
 				}
 			}
 		}
