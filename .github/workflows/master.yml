@@ -51,7 +51,12 @@ jobs:
           tag_with_ref: true
           tag_with_sha: true
 
-      - name: Deploy to fly.dev
+      - name: Create fly.io app if not exist
+        uses: superfly/flyctl-actions@1.1
+        with:
+          args: "apps create ${{ github.workflow }}"
+
+      - name: Deploy to fly.io
         uses: superfly/flyctl-actions@1.1
         with:
           args: "deploy -a=${{ github.workflow }}"
