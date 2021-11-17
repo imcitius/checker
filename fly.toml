@@ -1,6 +1,6 @@
 # fly.toml file generated for checker on 2021-10-19T13:44:47+03:00
 
-app = "checker"
+#app = "checker"
 
 kill_signal = "SIGINT"
 kill_timeout = 5
