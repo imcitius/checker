@@ -41,7 +41,7 @@ func runReports(period string) time.Duration {
 		config.Log.Debugf("reportsPeriod: %s\n", reportsPeriod)
 
 		if schedPeriod >= reportsPeriod {
-			project := projects.Project{p}
+			project := projects.Project{Project: p}
 			config.Log.Debugf("runReports 10: %s", project.GetMode())
 			err := project.ProjectSendReport()
 			if err != nil {
@@ -76,7 +76,7 @@ func sendCritAlerts(period string) time.Duration {
 			//}
 			if status.Statuses.Projects[prj.Name].FailsCount > prj.Parameters.AllowFails {
 				errorMessage := fmt.Sprintf("Critical alert prj %s", prj.Name)
-				project := projects.Project{prj}
+				project := projects.Project{Project: prj}
 				project.ProjectCritAlert(errors.New(errorMessage))
 			}
 		}
@@ -99,7 +99,7 @@ func checkProjects(period string) {
 
 			status.Statuses.Projects[project.Name].Alive = 0
 
-			ExecuteHealthcheck(&projects.Project{project}, &healthcheck, period)
+			ExecuteHealthcheck(&projects.Project{Project: project}, &healthcheck, period)
 		}
 	}
 }
