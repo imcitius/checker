@@ -22,20 +22,15 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
-      - name: Get Branch
-        run: |
-          branch=$( echo ${{ github.ref }} | sed 's/^.*\/.*\///g')
-          echo ::set-env name=VERSION::$branch
-
       - name: Get dependencies
         run: |
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -v -i -ldflags "-X my/checker/config.Version=${{ env.VERSION }} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${{ env.BINARY_NAME }}
+        run: go build -v -i -ldflags "-X my/checker/config.Version=${{ env.GITHUB_REF_NAME }} -X my/checker/config.VersionSHA=${{ env.GITHUB_SHA }} -X my/checker/config.VersionBuild=${{ env.GITHUB_RUN_ID }}" -o ${{ env.BINARY_NAME }}
 
       - name: Compress binary
-        run: tar -czvf ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz -C build ${{ env.BINARY_NAME }}
+        run: tar -czvf ${{ env.BINARY_NAME }}-${{ env.GITHUB_REF_NAME }}-linux-amd64.tgz -C build ${{ env.BINARY_NAME }}
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
