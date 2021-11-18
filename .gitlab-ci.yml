@@ -19,7 +19,7 @@ include:
     file: "go-app.base.yml"
 
   - .gitlab-ci/build.yml
-  - .gitlab-ci/ackage.yml
+  - .gitlab-ci/package.yml
   - .gitlab-ci/instantiator.yml
   - .gitlab-ci/fly.yml
 
