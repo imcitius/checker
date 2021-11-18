@@ -75,7 +75,7 @@ func init() {
 			EnableTrace().
 			Get(c.Host)
 		if err != nil {
-			errorMessage := errorHeader + "HTTP request error\n" + err.Error() + "\n"
+			errorMessage := errorHeader + fmt.Sprintf("HTTP request error: %s", err.Error())
 			config.Log.Infof(errorMessage)
 			return errors.New(errorMessage)
 		}
@@ -87,7 +87,7 @@ func init() {
 			if len(response.RawResponse.TLS.PeerCertificates) > 0 {
 				err := checkCertificatesExpiration(response, SslExpTimeout)
 				if err != nil {
-					errorMessage := errorHeader + "TLS Certificate will expire too soon\n" + err.Error() + "\n"
+					errorMessage := errorHeader + fmt.Sprintf("TLS Certificate expiration too soon: %s", err.Error())
 					config.Log.Infof(errorMessage)
 					return errors.New(errorMessage)
 				}
@@ -113,7 +113,7 @@ func init() {
 			return found
 		}(c.Code, response.StatusCode())
 		if !checkCode {
-			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode, c.Code)
+			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode(), c.Code)
 			return errors.New(errorMessage)
 		}
 
