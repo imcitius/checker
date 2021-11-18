@@ -9,7 +9,9 @@ import (
 	"my/checker/alerts"
 	"my/checker/auth"
 	"my/checker/catalog"
+	checks "my/checker/checks"
 	"my/checker/config"
+	projects "my/checker/projects"
 	"my/checker/reports"
 	"my/checker/scheduler"
 	"my/checker/status"
@@ -32,6 +34,7 @@ var (
 	interrupt bool
 
 	logFormat, debugLevel, configFile, configSource, configWatchTimeout, configFormat string
+	checkUUID                                                                         string
 	botsEnabled, watchConfig                                                          bool
 )
 
@@ -52,11 +55,13 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&watchConfig, "watchConfig", "W", true, "Whether to watch config file changes on disk")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+	rootCmd.PersistentFlags().StringVarP(&checkUUID, "checkUUID", "u", "", "UUID to check with SingleCheck")
 	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "botsEnabled", "b", true, "Whether to enable active bot")
 
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)
 	rootCmd.AddCommand(checkCommand)
+	rootCmd.AddCommand(singleCheckCommand)
 	rootCmd.AddCommand(list)
 
 	config.SignalINT = make(chan os.Signal)
@@ -73,7 +78,6 @@ func init() {
 	logrus.Info("initConfig: load config file")
 	//logrus.Infof("Config file: %s", config.Koanf.String("config.file"))
 	//logrus.Infof("Config type: %s", config.Koanf.String("config.source"))
-
 }
 
 func initConfig() {
@@ -122,16 +126,24 @@ func initConfig() {
 
 var checkCommand = &cobra.Command{
 	Use:   "check",
-	Short: "Run scheduler and execute checks",
+	Short: "run scheduler and execute checks",
 	Run: func(cmd *cobra.Command, args []string) {
 		mainChecker()
+	},
+}
+
+var singleCheckCommand = &cobra.Command{
+	Use:   "singlecheck",
+	Short: "execute single check by UUID",
+	Run: func(cmd *cobra.Command, args []string) {
+		singleCheck()
 	},
 }
 
 var testCfg = &cobra.Command{
 	Use:   "testcfg",
 	Short: "unmarshal config file into config structure",
-	Long:  `Try to load and parse config from defined source`,
+	Long:  `try to load and parse config from defined source`,
 	Run: func(cmd *cobra.Command, args []string) {
 		testConfig()
 	},
@@ -139,8 +151,8 @@ var testCfg = &cobra.Command{
 
 var genToken = &cobra.Command{
 	Use:   "gentoken",
-	Short: "Generate auth token",
-	Long:  `Generate new jwt token for web auth`,
+	Short: "generate auth token",
+	Long:  `generate new jwt token for web auth`,
 	Run: func(cmd *cobra.Command, args []string) {
 		auth.GenerateToken()
 	},
@@ -148,8 +160,8 @@ var genToken = &cobra.Command{
 
 var list = &cobra.Command{
 	Use:   "list",
-	Short: "List config elements",
-	Long:  `List Projects, Healthchecks, Check UUIDs`,
+	Short: "list config elements",
+	Long:  `list Projects, Healthchecks, Check UUIDs`,
 	Run: func(cmd *cobra.Command, args []string) {
 		err := config.LoadConfig()
 		if err != nil {
@@ -262,6 +274,33 @@ func mainChecker() {
 			config.Log.Debug("Checker stopped")
 			os.Exit(1)
 		}
+	}
+}
+
+func singleCheck() {
+	err := config.LoadConfig()
+	if err != nil {
+		config.Log.Infof("Config load error: %s", err)
+	}
+	err = status.InitStatuses()
+	if err != nil {
+		config.Log.Infof("Status init error: %s", err)
+	}
+
+	if checkUUID == "" {
+		config.Log.Fatal("Check UUID not set")
+	}
+
+	check := config.GetCheckByUUID(checkUUID)
+	if check == nil {
+		config.Log.Fatal("Check not found")
+	}
+	project := projects.GetProjectByCheckUUID(checkUUID)
+	duration, tempErr := checks.Execute(project, check)
+	if tempErr == nil {
+		config.Log.Warnf("Check success, %s duration: %s", check.Name, duration)
+	} else {
+		config.Log.Warnf("Check %s filure, duration: %s, result: %s", check.Name, duration, tempErr.Error())
 	}
 }
 

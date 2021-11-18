@@ -103,20 +103,20 @@ func checkProjects(period string) {
 	}
 }
 
-func ExecuteHealthcheck(project *projects.Project, healthcheck *config.Healthcheck, period string) {
+func ExecuteHealthcheck(p *projects.Project, healthcheck *config.Healthcheck, period string) {
 	config.Log.Debugf("Total checks %+v", healthcheck.Checks)
 	for _, check := range healthcheck.Checks {
 		checkRandomId := config.GetRandomId()
 		config.Log.Debugf("(%s) Evaluating check %s", checkRandomId, check.Name)
-		if period == healthcheck.Parameters.Period || period == project.Parameters.Period {
-			config.Log.Warnf("(%s) Checking project/healthcheck/check: '%s/%s/%s(%s)'", checkRandomId, project.Name, healthcheck.Name, check.Name, check.Type)
+		if period == healthcheck.Parameters.Period || period == p.Parameters.Period {
+			config.Log.Warnf("(%s) Checking p/healthcheck/check: '%s/%s/%s(%s)'", checkRandomId, p.Name, healthcheck.Name, check.Name, check.Type)
 
-			err := checks.AddCheckRunCount(project, healthcheck, &check)
+			err := checks.AddCheckRunCount(p, healthcheck, &check)
 			if err != nil {
 				config.Log.Errorf("Metric count error: %v", err)
 			}
-			duration, tempErr := checks.Execute(project, &check)
-			checks.EvaluateCheckResult(project, healthcheck, &check, tempErr, checkRandomId, duration, "ExecuteHealthcheck")
+			duration, tempErr := checks.Execute(p, &check)
+			checks.EvaluateCheckResult(p, healthcheck, &check, tempErr, checkRandomId, duration, "ExecuteHealthcheck")
 		} else {
 			config.Log.Debugf("(%s) check %s period is not eligible for checking", checkRandomId, check.Name)
 		}
