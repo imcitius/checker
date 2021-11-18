@@ -84,7 +84,7 @@ jobs:
         with:
           args: "fly secrets set CHECKER_CONFIG=\"$(cat ${CONFIG})\" -a checker-staging-fly"
 
-  - name: Deploy to fly.io
+      - name: Deploy to fly.io
         uses: superfly/flyctl-actions@1.1
         with:
-          args: "deploy -a=${{ github.workflow }} --build-arg CONFIG=${{ env.CONFIG }}"
+          args: "deploy -a=${{ github.workflow }}"
