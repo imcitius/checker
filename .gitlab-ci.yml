@@ -23,5 +23,7 @@ include:
   - .gitlab-ci/instantiator.yml
   - .gitlab-ci/fly.yml
 
+  - .gitlab-ci/werf/*.yml
+
   - project: 'ci-library/werf-deploy'
     file: 'common.yml'
