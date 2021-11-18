@@ -87,4 +87,4 @@ jobs:
       - name: Deploy to fly.io
         uses: superfly/flyctl-actions@1.1
         with:
-          args: "deploy -a=${{ github.workflow }}"
+          args: "deploy -a ${{ github.workflow }}"
