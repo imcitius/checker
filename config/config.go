@@ -115,9 +115,9 @@ type AlertConfigs struct {
 	// token for bot
 	BotToken string `koanf:"bot_token"`
 	// critical channel name
-	CriticalChannel int64 `koanf:"critical_channel"`
+	CriticalChannel string `koanf:"critical_channel"`
 	// non critical and chatops channel name
-	ProjectChannel int64 `koanf:"noncritical_channel"`
+	ProjectChannel string `koanf:"noncritical_channel"`
 
 	MMWebHookURL string `koanf:"mattermost_webhook_url"`
 }

@@ -1,3 +1,4 @@
+# set your env name here
 name: checker-staging-fly
 
 on:
@@ -16,44 +17,10 @@ jobs:
       BINARY_NAME: "checker"
       CONFIG: ${{ secrets.CONFIG }}
 
-    steps:
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v2
-        with:
-          go-version: ^1.17
-        id: go
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-
-      - name: Get dependencies
-        run: |
-          go get -v -t -d ./...
-
-      - name: Build
-        run: |
-          go build -ldflags "-X my/checker/config.Version=${{ github.ref_name }} -X my/checker/config.VersionSHA=${{ github.sha }} -X my/checker/config.VersionBuild=${{ github.run_id }}" -o build/${{ env.BINARY_NAME }}
-
-      - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.BINARY_NAME }}
-          path: build/${{ env.BINARY_NAME }}
-
-      - name: Build and push Docker images
-        uses: docker/build-push-action@v2
-        with:
-          username: ${{ secrets.REGISTRY_LOGIN }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-          repository: ${{ secrets.REGISTRY_LOGIN }}/checker
-          tag_with_ref: true
-          tag_with_sha: true
-          build-args: CONFIG=${{ env.CONFIG }}
-
   deploy:
     name: Deploy to fly.io
     runs-on: ubuntu-latest
-    environment: checker-staging-fly
+    environment: ${{ github.workflow }}
     env:
       BINARY_NAME: "checker"
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -7,6 +7,7 @@ import (
 	"my/checker/config"
 	"my/checker/reports"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -178,24 +179,44 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 	switch messageType {
 	case "alert":
 		config.Log.Infof("Sending 'alert' type message")
-		user := tb.Chat{ID: a.ProjectChannel}
+		id, err := strconv.Atoi(a.ProjectChannel)
+		if err != nil {
+			config.Log.Fatalf("Cannot parse project channel %s", a.ProjectChannel)
+		}
+		user := tb.Chat{ID: int64(id)}
+
 		messageToSend := tb.Message{Text: message}
 		selectorAlert.Inline(selectorAlert.Row(selQP, selQU))
 		_, err = bot.Send(&user, QuoteMeta(messageToSend.Text), options, menu, selectorAlert)
 	case "critalert":
 		config.Log.Infof("Sending 'critalert' type message")
-		chat := tb.Chat{ID: a.CriticalChannel}
+		id, err := strconv.Atoi(a.ProjectChannel)
+		if err != nil {
+			config.Log.Fatalf("Cannot parse project channel %s", a.ProjectChannel)
+		}
+
+		chat := tb.Chat{ID: int64(id)}
 		messageToSend := tb.Message{Text: message}
 		selectorAlert.Inline(selectorAlert.Row(selQP, selQU))
 		_, err = bot.Send(&chat, messageToSend.Text)
 	case "chatops":
 		config.Log.Infof("Sending 'chatops' type message")
-		user := tb.Chat{ID: a.ProjectChannel}
+		id, err := strconv.Atoi(a.ProjectChannel)
+		if err != nil {
+			config.Log.Fatalf("Cannot parse project channel %s", a.ProjectChannel)
+		}
+
+		user := tb.Chat{ID: int64(id)}
 		messageToSend := tb.Message{Text: message}
 		_, err = bot.Send(&user, QuoteMeta(messageToSend.Text), optionsChatops, menu)
 	default:
 		config.Log.Infof("Sending 'default' type message")
-		user := tb.Chat{ID: a.ProjectChannel}
+		id, err := strconv.Atoi(a.ProjectChannel)
+		if err != nil {
+			config.Log.Fatalf("Cannot parse project channel %s", a.ProjectChannel)
+		}
+
+		user := tb.Chat{ID: int64(id)}
 		messageToSend := tb.Message{Text: message}
 		_, err = bot.Send(&user, messageToSend.Text, options, menu)
 	}

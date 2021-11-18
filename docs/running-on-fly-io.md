@@ -23,9 +23,10 @@ If lost, just create new one, and delete lost token.
 
 Next, please create a secret inside `checker-staging-fly` GitHub environment configuration, named `FLY_API_TOKEN`
 and fill it with token, gotten on previous step.
+Also, you need to create `CONFIG` secret containing relative path in repo to config file to be used in this env.
+Let's start with 'docs/examples/google.yaml'.
 
-Edit `.github/workflows/master.yml` in your project fork, and set your personal environment name in `app`,
-and `jobs.build.environment` properties.
+Edit `.github/workflows/master.yml` in your project fork, and set your personal environment name in `name` property.
 
 After commit your changes into master branch, new Actions pipeline should be triggered, you can monitor it on
 Actions->Environment name page.
@@ -65,7 +66,7 @@ Config other parameters to conveniet values, for example alerts by email if not 
 follow https://docs.betteruptime.com.
 
 Optionally you can create reverse check, using checker's `http` probe, create new HeartBeat,
-and new Check with its url, e.g.:
+and new Check with HeartBeat's url, e.g.:
 ```yaml
 ---
 ...
@@ -83,6 +84,51 @@ projects:
                 - 200
               timeout: 3s
 ```
+to ping betteruptime.com hourly, and set up betteruptime's alert if not getting this heartbeat.
 
 ## Use Telegram to get alerts from Checker
 
+Now, here interesting part.
+Look into https://core.telegram.org/bots, or some online pages how-to get your Telegram bot registered,
+and get your user ID (or create chat, invite this bot, and get chat's ID).
+Basically you need two things: bot token and chat ID.
+Look into [docs/examples/bigconfig.yaml](docs/examples/bigconfig.yaml) to find example configuration.
+
+Tricky thing here is how to pass bot token not pushing it into repository.
+Let's create new Fly App secret, call it ALERTS_TELEGRAM_TOKEN_<alert name> with the token.
+```bash
+flyctl secrets set CHECKER_ALERTS_TELEGRAM_TOKEN_tg_staging="<bot token>"
+flyctl secrets set CHECKER_ALERTS_TELEGRAM_CRIT_tg_staging="<critical channel id>"
+flyctl secrets set CHECKER_ALERTS_TELEGRAM_NONCRIT_tg_staging="<non-critical channel id>"
+```
+Basically crit/non-crit channels might be the same.
+
+Set ENV var name in telegram bot config:
+```yaml
+---
+defaults:
+  http_port: '80'
+  parameters:
+    check_period: 5m
+    report_period: 1h
+    min_health: 1
+    allow_fails: 0
+    noncrit_alert: tg_staging
+    crit_alert: tg_staging
+    command_channel: tg_staging
+    mode: loud
+    ssl_expiration_period: 720h
+
+alerts:
+  - name: tg_staging
+    type: telegram
+    bot_token: env:CHECKER_ALERTS_TELEGRAM_TOKEN_tg_staging
+    critical_channel: env:CHECKER_ALERTS_TELEGRAM_CRIT_tg_staging
+    noncritical_channel: env:CHECKER_ALERTS_TELEGRAM_NONCRIT_tg_staging
+...
+```
+
+To deploy your custom config, please commit it to repository, and set GitHub Secret CONFIG with relative path to config file
+in repo (e.g. 'configs/custom-config.yaml').
+
+And deploy with new config.

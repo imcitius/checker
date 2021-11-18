@@ -36,6 +36,7 @@ projects:
             code:
               - 200
             timeout: 2s
+            severity: critical
       - name: helpdesk
         checks:
           - type: http
@@ -105,22 +106,27 @@ projects:
               lag: 3s
   - name: production-zoneA
     healthchecks:
-      - name: mysql statistics server
-        type: mysql_query
-        host: 192.168.132.101
-        port: 3306
-        timeout: 1s
-        sql_query_config:
-          username: username
-          dbname: dbname
-          password: aiHohquoogeeViey1weopiegeep7le2p
-          query: select reg_date from users order by id asc limit 1;
-          response: '1278938100'
-      - name: Backend cron is run
-        type: passive
-        timeout: 5m
-      - name: haproxy port is open
-        type: tcp
-        host: haproxy.prod.svc.zoneA.cluster.local
-        port: 33333
-        attempts: 1
+      - name: database checks
+        checks:
+          - name: mysql statistics server
+            parameters:
+              check_period: 60s
+            type: mysql_query
+            host: 192.168.132.101
+            port: 3306
+            timeout: 1s
+            sql_query_config:
+              username: username
+              dbname: dbname
+              password: aiHohquoogeeViey1weopiegeep7le2p
+              query: select reg_date from users order by id asc limit 1;
+              response: '1278938100'
+            severity: critical
+          - name: Backend cron is run
+            type: passive
+            timeout: 5m
+          - name: haproxy port is open
+            type: tcp
+            host: haproxy.prod.svc.zoneA.cluster.local
+            port: 33333
+            attempts: 1

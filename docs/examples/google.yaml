@@ -18,11 +18,3 @@ projects:
         checks:
           - type: http
             host: https://google.com/
-  - name: mail.ru
-    parameters:
-      check_period: 10s
-    healthchecks:
-      - name: http checks
-        checks:
-          - type: http
-            host: https://mail.ru/
