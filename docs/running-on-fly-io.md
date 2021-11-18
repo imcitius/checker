@@ -1,4 +1,5 @@
-#HOW-TO
+#HOW-TO run and monitor Checker instance using free IAaS services
+
 ##Run your Checker instance on fly.io service free virtual machine.
 
 First of all, you need sign up on the fly.io if you haven't already.
@@ -41,6 +42,33 @@ App's log can be monitored using: `flyctl logs -a <your-app-name>`.
 
 ## Monitor Checker's log using logtail.com free plan
 
+Signup on logtail.com service, and create new log source with type `Vector`.
+This will give you `Source token`. 
+
+Next, fork or just clone https://github.com/superfly/fly-log-shipper repository, edit its fly.toml file, adding
+```toml
+[env]
+  LOGTAIL_TOKEN = '<logtail.com source token>'
+  ACCESS_TOKEN  = '<your fly token>'
+  SUBJECT       = 'logs.<your-checker-app-name>.*' 
+```
+Change `app` property to some convenient name e.g. `fly-log-shipper`.
+
+Create new app and deploy log shipping service with `fly apps create fly-log-shipper && fly deploy`.
+Checker's log should be now seen in logtail's Live Tail page. 
+
+## Monitor Checker's health with betteruptime.com free plan
+
+Signup on betteruptime.com service, and create new Monitor.
+`URL to monitor` shoud be set to Checker's healthcheck url we used before `https://<your-app-name>.fly.dev/healthcheck`.
+Config other parameters to conveniet values, for example alerts by email if not accesible, or create some on-call schedule,
+follow https://docs.betteruptime.com.
+
+Optionally you can create reverse check, using checker's `http` probe, create new HeartBeat,
+and new Check with its url, e.g.:
+```yaml
+
+```
+
 ## Use Telegram to get alerts from Checker
 
-## Monitor Checker with betteruptime.com
