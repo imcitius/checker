@@ -1,4 +1,3 @@
-# set your env name here
 name: checker-staging-fly
 
 on:

@@ -1,6 +1,6 @@
-#HOW-TO run and monitor Checker instance using free IAaS services
+# HOW-TO run and monitor Checker instance using free IAaS services
 
-##Run your Checker instance on fly.io service free virtual machine.
+## Run your Checker instance on fly.io service free virtual machine.
 
 First of all, you need sign up on the fly.io if you haven't already.
 They'll ask you to enter credit card information to create your first app, but you can just buy some credits,
@@ -61,8 +61,9 @@ Checker's log should be now seen in logtail's Live Tail page.
 ## Monitor Checker's health with betteruptime.com free plan
 
 Signup on betteruptime.com service, and create new Monitor.
-`URL to monitor` shoud be set to Checker's healthcheck url we used before `https://<your-app-name>.fly.dev/healthcheck`.
-Config other parameters to conveniet values, for example alerts by email if not accesible, or create some on-call schedule,
+`URL to monitor` shoud be set to Checker's healthcheck url we used before (`https://<your-app-name>.fly.dev/healthcheck`).
+
+Set other parameters to some conveniet values, for example alerts by email if not accesible, or create some on-call schedule,
 follow https://docs.betteruptime.com.
 
 Optionally you can create reverse check, using checker's `http` probe, create new HeartBeat,
@@ -92,7 +93,7 @@ Now, here interesting part.
 Look into https://core.telegram.org/bots, or some online pages how-to get your Telegram bot registered,
 and get your user ID (or create chat, invite this bot, and get chat's ID).
 Basically you need two things: bot token and chat ID.
-Look into [docs/examples/bigconfig.yaml](docs/examples/bigconfig.yaml) to find example configuration.
+Look into [https://github.com/imcitius/checker/blob/master/docs/examples/bigconfig.yaml](docs/examples/bigconfig.yaml) to find example configuration.
 
 Tricky thing here is how to pass bot token not pushing it into repository.
 Let's create new Fly App secret, call it ALERTS_TELEGRAM_TOKEN_<alert name> with the token.
