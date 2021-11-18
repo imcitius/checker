@@ -95,9 +95,7 @@ func runChecks(period string) time.Duration {
 func checkProjects(period string) {
 	for _, project := range Config.Projects {
 		for _, healthcheck := range project.Healthchecks {
-
 			status.Statuses.Projects[project.Name].Alive = 0
-
 			ExecuteHealthcheck(&projects.Project{Project: project}, &healthcheck, period)
 		}
 	}

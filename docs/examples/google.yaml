@@ -4,10 +4,10 @@ defaults:
   token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
   parameters:
     check_period: 10s
+    report_period: 60s
     min_health: 1
     allow_fails: 0
     mode: loud
-    report_period: 10s
     ssl_expiration_period: 720h
 projects:
   - name: google

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"my/checker/alerts"
 	"my/checker/config"
+	"os"
 )
 
 func fireActiveBot() {
@@ -57,14 +58,17 @@ func signalWait() {
 	select {
 	case <-config.SignalINT:
 		config.Log.Infof("Got SIGINT")
-		config.InternalStatus = "stop"
-		interrupt = true
-		close(config.SchedulerSignalCh)
-		if config.Config.Defaults.BotsEnabled {
-			config.BotsSignalCh <- true
-		}
-		config.WebSignalCh <- true
-		return
+		//config.InternalStatus = "stop"
+		//interrupt = true
+		//close(config.SchedulerSignalCh)
+		//if config.Config.Defaults.BotsEnabled {
+		//	close(config.BotsSignalCh)
+		//}
+		//close(config.WebSignalCh)
+		//return
+
+		//no mess, just exit
+		os.Exit(0)
 	case <-config.SignalHUP:
 		config.Log.Infof("Got SIGHUP")
 		config.ChangeSig <- true
@@ -75,7 +79,7 @@ func signalWait() {
 		close(config.SchedulerSignalCh)
 		//config.WebSignalCh <- true
 		if config.Config.Defaults.BotsEnabled && botsEnabled {
-			config.BotsSignalCh <- true
+			close(config.BotsSignalCh)
 		}
 		return
 	}

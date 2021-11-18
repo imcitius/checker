@@ -9,15 +9,11 @@ on:
       - master
 
 jobs:
-
   build:
-    name: Build
+    name: Build docker image
     runs-on: ubuntu-latest
-    environment: checker-staging-fly
     env:
       BINARY_NAME: "checker"
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      CONFIG: ${{ secrets.CONFIG }}
 
     steps:
       - name: Set up Go 1.x
@@ -53,11 +49,21 @@ jobs:
           tag_with_sha: true
           build-args: CONFIG=${{ env.CONFIG }}
 
+  deploy:
+    name: Deploy to fly.io
+    runs-on: ubuntu-latest
+    environment: checker-staging-fly
+    env:
+      BINARY_NAME: "checker"
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      CONFIG: ${{ secrets.CONFIG }}
+
+    steps:
       - name: Create fly.io app if not exist
         uses: superfly/flyctl-actions@1.1
+        # the only way to automatically create new app, with this dirty hack. :(
         continue-on-error: true
         with:
-          # the only way to automatically create new app, with this dirty hack. :(
           args: "apps create ${{ github.workflow }}"
 
       - name: Deploy to fly.io
