@@ -42,3 +42,5 @@ App's log can be monitored using: `flyctl logs -a <your-app-name>`.
 ## Monitor Checker's log using logtail.com free plan
 
 ## Use Telegram to get alerts from Checker
+
+## Monitor Checker with betteruptime.com

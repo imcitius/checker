@@ -186,6 +186,10 @@ func (c *File) FillDefaults() error {
 		c.Defaults.Parameters.Period = DefaultCheckPeriod
 		Log.Debugf("DefaultCheckPeriod not found in config, use default: %s", DefaultCheckPeriod)
 	}
+	if c.Defaults.Parameters.SSLExpirationPeriod == "" {
+		c.Defaults.Parameters.SSLExpirationPeriod = DefaultSSLExpiration
+		Log.Debugf("SSLExpirationPeriod not found in config, use default: %s", DefaultSSLExpiration)
+	}
 
 	//Log.Printf("Loaded config %+v\n\n", Config.Projects)
 	for i, p := range c.Projects {
@@ -275,7 +279,7 @@ func (c *File) FillPeriods() error {
 			p.Timeouts.Add(h.Parameters.Period)
 		}
 	}
-	Log.Panicf("Total timeouts found: %+v\n\n", Timeouts)
+	Log.Debugf("Total timeouts found: %+v\n\n", Timeouts)
 
 	return nil
 }

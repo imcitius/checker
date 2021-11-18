@@ -14,6 +14,7 @@ import (
 const (
 	DefaultPeriodicReportPeriod = "1h"
 	DefaultCheckPeriod          = "1m"
+	DefaultSSLExpiration        = "30d"
 )
 
 var (
