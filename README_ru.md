@@ -35,7 +35,7 @@ Flags:
   -u, --checkUUID string            UUID to check with SingleCheck
   -c, --config string               config file
   -f, --configformat string         config file format (default "yaml")
-  -s, --configsource string         config file source: file, consul, s3
+  -s, --configsource string         config file source: file, consul, s3, env
   -w, --configwatchtimeout string   config watch period (default "5s")
   -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "warn")
   -h, --help                        help for checker
@@ -48,7 +48,7 @@ Use "checker [command] --help" for more information about a command.
 Хранение конфигурации доступно во всех хранилищах, поддерживаемых библиотекой [Koanf](https://github.com/knadh/koanf).
 Можно загружать любые настройки из переменных окружения CHECKER_* (см. в документации на Koanf).
 
-Ключ `-s` позволяет переключить получение конфига на Consul или S3.
+Ключ `-s` позволяет переключить получение конфига на Consul, S3, или ENV переменную CHECKER_CONFIG.
 Для S3 настройки берутся из переменных: 
 
 AWS_ACCESS_KEY_ID - ID ключа

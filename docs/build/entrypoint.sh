@@ -1,2 +1,2 @@
 #!/bin/sh
-/bin/checker check -c $CONFIG
+/bin/checker check -s ${CONFIG_SOURCE} ${ARGS}

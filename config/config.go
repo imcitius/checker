@@ -16,7 +16,8 @@ const (
 	DefaultCheckPeriod          = "1m"
 	DefaultSSLExpiration        = "30d"
 
-	DefaultHTTPCheckTimeout = "2s"
+	DefaultHTTPCheckTimeout  = "2s"
+	DefaultTCPConnectTimeout = "2s"
 )
 
 var (
@@ -36,7 +37,7 @@ var (
 
 	SignalINT         chan os.Signal
 	SignalHUP         chan os.Signal
-	ChangeSig         chan bool
+	ConfigChangeSig   chan bool
 	SchedulerSignalCh chan bool
 	BotsSignalCh      chan bool
 	WebSignalCh       chan bool

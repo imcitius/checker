@@ -98,7 +98,7 @@ Flags:
   -u, --checkUUID string            UUID to check with SingleCheck
   -c, --config string               config file
   -f, --configformat string         config file format (default "yaml")
-  -s, --configsource string         config file source: file, consul, s3
+  -s, --configsource string         config file source: file, consul, s3, env
   -w, --configwatchtimeout string   config watch period (default "5s")
   -D, --debugLevel string           Debug level: Debug,Info,Warn,Error,Fatal,Panic (default "warn")
   -h, --help                        help for checker
@@ -111,7 +111,7 @@ Use "checker [command] --help" for more information about a command.
 Configuration file can be in any format supported by the [Koanf](https://github.com/knadh/koanf) library.
 Also, parameters can be loaded from CHECKER_* environment variables (see the Koanf's documentation).
 
-The `-s` switch allows you to switch the receiving of the config to Consul or S3.
+The `-s` switch allows you to switch the receiving of the config to Consul, S3 or ENV variable CHECKER_CONFIG.
 For S3, settings are taken from these ENV variables:
 
 AWS_ACCESS_KEY_ID - key ID

@@ -7,6 +7,7 @@ RUN go get -v -d ./... \
 
 FROM alpine
 # default config file to copy to image
+ARG CONFIG
 
 LABEL "repository" = "https://github.com/imcitius/checker"
 LABEL "homepage" = "https://github.com/imcitius/checker"

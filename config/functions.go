@@ -118,6 +118,27 @@ func TestConfig() (File, error) {
 				logrus.Fatalf("error loading config: %v", err)
 			}
 		}
+
+	case Koanf.String("config.source") == "env":
+
+		// watch should be disabled
+		//Koanf.
+
+		switch {
+
+		case Koanf.String("config.format") == "yaml":
+			// Load yaml config from env
+			if err := Koanf.Load(EnvProvider(Koanf.String("checker.config")), yaml.Parser()); err != nil {
+				logrus.Fatalf("error loading config: %v", err)
+			}
+
+		case Koanf.String("config.format") == "json":
+			// Load json config from env variable
+			if err := Koanf.Load(EnvProvider(Koanf.String("checker.config")), json.Parser()); err != nil {
+				logrus.Fatalf("error loading config: %v", err)
+			}
+		}
+
 	}
 
 	dl, err := logrus.ParseLevel(Koanf.String("debug.level"))
@@ -343,27 +364,27 @@ func (c *File) FillSecrets() error {
 }
 
 func WatchConfig() {
-	if period, err := time.ParseDuration(Koanf.String("config.watchtimeout")); err != nil {
-		Log.Infof("KV watch timeout parser error: %+v, use default 5s", err)
-		time.Sleep(time.Second * 5) // default delay
-	} else {
-		time.Sleep(period)
-	}
-	tempConfig, err := TestConfig()
-	if err == nil {
-		if !reflect.DeepEqual(Config, tempConfig) {
-			Log.Infof("KV config changed, reloading")
-			err := LoadConfig()
-			if err != nil {
-				Log.Infof("Config load error: %s", err)
+	p, _ := time.ParseDuration(Koanf.String("config.watchtimeout"))
+	ticker := time.NewTicker(p)
+	for {
+		select {
+		case <-ticker.C:
+			tempConfig, err := TestConfig()
+			if err == nil {
+				if !reflect.DeepEqual(Config, tempConfig) {
+					Log.Infof("KV config changed, reloading")
+					err := LoadConfig()
+					if err != nil {
+						Log.Infof("Config load error: %s", err)
+					}
+					ConfigChangeSig <- true
+				}
+			} else {
+				Log.Infof("KV config seems to be broken: %+v", err)
 			}
-			ChangeSig <- true
-		}
-	} else {
-		Log.Infof("KV config seems to be broken: %+v", err)
-	}
 
-	//configWatchSig <- true
+		}
+	}
 }
 
 func (c *Check) IsCritical() bool {

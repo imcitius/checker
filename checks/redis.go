@@ -24,7 +24,7 @@ func init() {
 		}
 
 		if c.Timeout == "" {
-			c.Timeout = config.DefaultConnectTimeout
+			c.Timeout = config.DefaultTCPConnectTimeout
 		}
 		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
 

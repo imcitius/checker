@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BINARY_NAME: "checker"
+      CONFIG: ${{ secrets.CONFIG }}
 
     steps:
       - name: Set up Go 1.x
@@ -76,7 +77,14 @@ jobs:
         with:
           args: "apps create ${{ github.workflow }}"
 
-      - name: Deploy to fly.io
+      - name: Upload config
+        uses: superfly/flyctl-actions@1.1
+        # the only way to automatically create new app, with this dirty hack. :(
+        continue-on-error: true
+        with:
+          args: "fly secrets set CHECKER_CONFIG=\"$(cat ${CONFIG})\" -a checker-staging-fly"
+
+  - name: Deploy to fly.io
         uses: superfly/flyctl-actions@1.1
         with:
           args: "deploy -a=${{ github.workflow }} --build-arg CONFIG=${{ env.CONFIG }}"

@@ -71,9 +71,9 @@ func signalWait() {
 		os.Exit(0)
 	case <-config.SignalHUP:
 		config.Log.Infof("Got SIGHUP")
-		config.ChangeSig <- true
+		config.ConfigChangeSig <- true
 		return
-	case <-config.ChangeSig:
+	case <-config.ConfigChangeSig:
 		config.Log.Infof("Config file reload")
 		config.InternalStatus = "reload"
 		close(config.SchedulerSignalCh)
