@@ -67,7 +67,21 @@ follow https://docs.betteruptime.com.
 Optionally you can create reverse check, using checker's `http` probe, create new HeartBeat,
 and new Check with its url, e.g.:
 ```yaml
-
+---
+...
+projects:
+...
+    - name: BetterUptime active ping
+      healthchecks:
+        - name: Checker Running
+          parameters:
+            check_period: 3600s
+          checks:
+            - type: http
+              host: https://betteruptime.com/api/v1/heartbeat/ohquoi0Uong2Chai2AhT3ohN
+              code:
+                - 200
+              timeout: 3s
 ```
 
 ## Use Telegram to get alerts from Checker
