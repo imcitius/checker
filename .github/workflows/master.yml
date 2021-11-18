@@ -9,13 +9,6 @@ on:
       - master
 
 jobs:
-  build:
-    name: Build docker image
-    runs-on: ubuntu-latest
-    env:
-      BINARY_NAME: "checker"
-      CONFIG: ${{ secrets.CONFIG }}
-
   deploy:
     name: Deploy to fly.io
     runs-on: ubuntu-latest
