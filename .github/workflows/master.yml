@@ -1,4 +1,4 @@
-name: checker-staging-fly-log-shipper
+name: checker-staging-fly
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    environment: checker-staging-fly-log-shipper
+    environment: checker-staging-fly
     env:
       BINARY_NAME: "checker"
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -53,13 +53,13 @@ jobs:
           tag_with_sha: true
           build-args: CONFIG=${{ env.CONFIG }}
 
-      - name: Create fly-log-shipper.io app if not exist
+      - name: Create fly.io app if not exist
         uses: superfly/flyctl-actions@1.1
         with:
           # the only way to automatically create new app, with this dirty hack. :(
           args: "apps create ${{ github.workflow }} || /usr/bin/true"
 
-      - name: Deploy to fly-log-shipper.io
+      - name: Deploy to fly.io
         uses: superfly/flyctl-actions@1.1
         with:
           args: "deploy -a=${{ github.workflow }} --build-arg CONFIG=${{ env.CONFIG }}"

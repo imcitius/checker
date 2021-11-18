@@ -59,7 +59,7 @@ jobs:
         env:
           BINARY_NAME: "checker"
 
-      - name: Deploy to fly-log-shipper.io
+      - name: Deploy to fly.io
         uses: superfly/flyctl-actions@1.1
         with:
           args: "deploy --dockerfile docs/build/Dockerfile"
