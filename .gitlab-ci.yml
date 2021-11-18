@@ -18,12 +18,10 @@ include:
   - project: "ci-library/ci-collections"
     file: "go-app.base.yml"
 
-  - .gitlab-ci.build.yml
-  - .gitlab-ci.package.yml
-  - .gitlab-ci.instantiator.yml
-  - .gitlab-ci.fly-log-shipper.yml
+  - .gitlab-ci/build.yml
+  - .gitlab-ci/ackage.yml
+  - .gitlab-ci/instantiator.yml
+  - .gitlab-ci/fly.yml
 
   - project: 'ci-library/werf-deploy'
     file: 'common.yml'
-
-  - .gitlab-ci/werf/*.yml
