@@ -55,12 +55,12 @@ jobs:
 
       - name: Create fly.io app if not exist
         uses: superfly/flyctl-actions@1.1
+        continue-on-error: true
         with:
           # the only way to automatically create new app, with this dirty hack. :(
           args: "apps create ${{ github.workflow }}"
 
       - name: Deploy to fly.io
         uses: superfly/flyctl-actions@1.1
-        if: succeeded() || failed()
         with:
           args: "deploy -a=${{ github.workflow }} --build-arg CONFIG=${{ env.CONFIG }}"
