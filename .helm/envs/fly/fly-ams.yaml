@@ -5,13 +5,13 @@ defaults:
   token_encryption_key: bi6oNuisa0ooz6Ael6Eewaatoophoo0p
   parameters:
     check_period: 900s
+    report_period: 1h
     min_health: 1
     allow_fails: 1
     noncrit_alert: tg_OtherChecker
     crit_alert: tg_OtherChecker
     command_channel: tg_OtherChecker
     mode: loud
-    report_period: 1h
     ssl_expiration_period: 720h
 
 alerts:

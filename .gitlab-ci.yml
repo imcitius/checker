@@ -21,7 +21,7 @@ include:
   - .gitlab-ci.build.yml
   - .gitlab-ci.package.yml
   - .gitlab-ci.instantiator.yml
-  - .gitlab-ci.fly.yml
+  - .gitlab-ci.fly-log-shipper.yml
 
   - project: 'ci-library/werf-deploy'
     file: 'common.yml'

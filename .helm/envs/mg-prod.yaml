@@ -17,7 +17,7 @@ checker_config_template: |
     << file "/vault/secrets/jwt.env" >>
     parameters:
       check_period: 900s
-      report_period: 1800s
+      report_period: 3600s
       min_health: 1
       allow_fails: 0
       noncrit_alert: prod
@@ -219,13 +219,14 @@ checker_config_template: |
 
     - name: checker-fly.io crosscheck
       healthchecks:
-        - name: MG prod checker Running
+        - name: MG prod checker running
           checks:
             - type: http
+              name: checker running
               host: https://checker.fly.dev/check/ping/168bafa2-e61a-5895-b4fc-58095a86e691
               code:
                 - 200
-              timeout: 10s
+              timeout: 3s
 
-  # добавить мантикору, imgproxy
-  # добавить кроны в api, поисковике, где там еще они есть
+# добавить мантикору, imgproxy
+# добавить кроны в api, поисковике, где там еще они есть

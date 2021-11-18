@@ -6,7 +6,6 @@ on:
       - v*
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -14,35 +13,29 @@ jobs:
       BINARY_NAME: "checker"
 
     steps:
-
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.15
+          go-version: ^1.17
         id: go
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
-
-      - name: Get Branch
-        run: |
-          branch=$( echo ${{ github.ref }} | sed 's/^.*\/.*\///g')
-          echo ::set-env name=VERSION::$branch
 
       - name: Get dependencies
         run: |
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -v -i -ldflags "-X my/checker/config.Version=${{ env.VERSION }} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${{ env.BINARY_NAME }}
+        run: go build -ldflags "-X my/checker/config.Version=${{ env.GITHUB_REF_NAME }} -X my/checker/config.VersionSHA=${{ env.GITHUB_SHA }} -X my/checker/config.VersionBuild=${{ env.GITHUB_RUN_ID }}" -o ${{ env.BINARY_NAME }}
 
       - name: Compress binary
-        run: tar -czvf ${{ env.BINARY_NAME }}-${{ env.VERSION }}-linux-amd64.tgz -C build ${{ env.BINARY_NAME }}
+        run: tar -czvf ${{ env.BINARY_NAME }}-${{ env.GITHUB_REF_NAME }}-linux-amd64.tgz -C build ${{ env.BINARY_NAME }}
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: build/${{ env.BINARY_NAME }}
+          name: ${{ env.BINARY_NAME }}
           path: ${{ env.BINARY_NAME }}
 
       - name: Build and push Docker images
@@ -65,3 +58,8 @@ jobs:
           body: "Checker release ${{ env.VERSION  }}"
         env:
           BINARY_NAME: "checker"
+
+      - name: Deploy to fly-log-shipper.io
+        uses: superfly/flyctl-actions@1.1
+        with:
+          args: "deploy --dockerfile docs/build/Dockerfile"

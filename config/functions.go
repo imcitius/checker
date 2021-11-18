@@ -179,12 +179,12 @@ func (p *TimeoutsCollection) Add(period string) {
 func (c *File) FillDefaults() error {
 
 	if c.Defaults.Parameters.ReportPeriod == "" {
-		c.Defaults.Parameters.ReportPeriod = PeriodicReport
+		c.Defaults.Parameters.ReportPeriod = DefaultPeriodicReportPeriod
 		Log.Debugf("ReportPeriod not found in config, use defaults: %s", c.Defaults.Parameters.ReportPeriod)
 	}
 	if c.Defaults.Parameters.Period == "" {
-		c.Defaults.Parameters.Period = DefaultPeriod
-		Log.Debugf("DefaultPeriod not found in config, use default: %s", DefaultPeriod)
+		c.Defaults.Parameters.Period = DefaultCheckPeriod
+		Log.Debugf("DefaultCheckPeriod not found in config, use default: %s", DefaultCheckPeriod)
 	}
 
 	//Log.Printf("Loaded config %+v\n\n", Config.Projects)
@@ -265,7 +265,8 @@ func (p *TimeoutCollection) Add(period string) {
 
 func (c *File) FillPeriods() error {
 
-	Timeouts.Add(Koanf.String("defaults.parameters.period"))
+	Timeouts.Add(Koanf.String("defaults.parameters.check_period"))
+	Timeouts.Add(Koanf.String("defaults.parameters.report_period"))
 
 	for _, p := range c.Projects {
 		Timeouts.Add(p.Parameters.Period)
@@ -274,7 +275,7 @@ func (c *File) FillPeriods() error {
 			p.Timeouts.Add(h.Parameters.Period)
 		}
 	}
-	Log.Debugf("Total timeouts found: %+v\n\n", Timeouts)
+	Log.Panicf("Total timeouts found: %+v\n\n", Timeouts)
 
 	return nil
 }

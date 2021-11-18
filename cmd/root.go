@@ -211,6 +211,7 @@ func mainChecker() {
 		if len(config.Timeouts.Periods) == 0 {
 			config.Log.Fatal("No periods found")
 		} else {
+			// adding all possible healthchecks periods
 			for _, ticker := range config.Timeouts.Periods {
 				tickerDuration, err := time.ParseDuration(ticker)
 				config.Log.Infof("Create ticker: %s", ticker)

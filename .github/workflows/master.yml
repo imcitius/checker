@@ -1,4 +1,4 @@
-name: Go
+name: checker-staging-fly-log-shipper
 
 on:
   push:
@@ -13,43 +13,53 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    environment: checker-staging-fly-log-shipper
     env:
       BINARY_NAME: "checker"
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      CONFIG: ${{ secrets.CONFIG }}
 
     steps:
-
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.15
+          go-version: ^1.17
         id: go
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
-
-      - name: Get Branch
-        run: |
-          branch=$( echo ${{ github.ref }} | sed 's/^.*\/.*\///g')
-          echo ::set-env name=VERSION::$branch
 
       - name: Get dependencies
         run: |
           go get -v -t -d ./...
 
       - name: Build
-        run: go build -v -i -ldflags "-X my/checker/config.Version=${{ env.VERSION }} -X my/checker/config.VersionSHA=${GITHUB_SHA} -X my/checker/config.VersionBuild=${GITHUB_RUN_ID}" -o build/${{ env.BINARY_NAME }}
+        run: |
+          go build -ldflags "-X my/checker/config.Version=${{ github.ref_name }} -X my/checker/config.VersionSHA=${{ github.sha }} -X my/checker/config.VersionBuild=${{ github.run_id }}" -o build/${{ env.BINARY_NAME }}
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: build/${{ env.BINARY_NAME }}
-          path: ${{ env.BINARY_NAME }}
+          name: ${{ env.BINARY_NAME }}
+          path: build/${{ env.BINARY_NAME }}
 
       - name: Build and push Docker images
-        uses: docker/build-push-action@v1.1.0
+        uses: docker/build-push-action@v2
         with:
           username: ${{ secrets.REGISTRY_LOGIN }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
           repository: ${{ secrets.REGISTRY_LOGIN }}/checker
           tag_with_ref: true
           tag_with_sha: true
+          build-args: CONFIG=${{ env.CONFIG }}
+
+      - name: Create fly-log-shipper.io app if not exist
+        uses: superfly/flyctl-actions@1.1
+        with:
+          # the only way to automatically create new app, with this dirty hack. :(
+          args: "apps create ${{ github.workflow }} || /usr/bin/true"
+
+      - name: Deploy to fly-log-shipper.io
+        uses: superfly/flyctl-actions@1.1
+        with:
+          args: "deploy -a=${{ github.workflow }} --build-arg CONFIG=${{ env.CONFIG }}"
