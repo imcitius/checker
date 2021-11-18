@@ -1,0 +1,24 @@
+.build_inject_cmd: &build_inject_cmd |
+  go build -ldflags \
+  "-X my/checker/config.Version=${CI_COMMIT_REF_NAME}-fly -X my/checker/config.VersionSHA=${CI_COMMIT_SHORT_SHA}" \
+  -o ${BINARY_NAME}
+
+fly-deploy:
+  stage: deploy
+  image: harbor-ks.jgit.me/dockerhub_proxy/library/golang:1.17-alpine
+  before_script:
+    - apk add --no-cache curl unzip gcc g++ musl-dev
+    - wget -q https://releases.hashicorp.com/vault/1.8.5/vault_1.8.5_linux_amd64.zip
+    - unzip vault_1.8.5_linux_amd64.zip
+    - curl -L https://fly.io/install.sh | sh
+  script:
+    - 'echo "access_token: $(./vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)" > ~/.fly/config.yml'
+    - *build_inject_cmd
+    - /root/.fly/bin/flyctl deploy
+  extends:
+    - .jgit_filter
+    - .docker_europe_tags
+  environment:
+    name: fly-prod
+  needs:
+    - go tests

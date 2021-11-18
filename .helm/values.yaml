@@ -1,0 +1,4 @@
+docker:
+  proxy:
+    host: harbor-scw.jgit.me
+    repo: dockerhub_proxy

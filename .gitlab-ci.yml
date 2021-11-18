@@ -1,0 +1,29 @@
+variables:
+  #CI_DEBUG_TRACE: "true"
+  DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator"
+  INST_API_URL: "http://inst-api.service.${INSTANCE_DC}.consul"
+  INST_UI_URL: "http://inst-ui.service.${INSTANCE_DC}.consul"
+  GO_VERSION: "1.17"
+  INJECT_VERSION: "true"
+  PACKER_ONLY: ""
+  BINARY_NAME: "checker"
+  INSTANCE_DC: ks-1
+  VERSION: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
+  REGISTRY_IMAGE: ${REGISTRY_URL}/${CI_PROJECT_PATH_SLUG}
+  REGISTRY_URL: "harbor-ks.jgit.me/library"
+  CONSUL_PATH: ""
+  CGO_ENABLED: 1
+
+include:
+  - project: "ci-library/ci-collections"
+    file: "go-app.base.yml"
+
+  - .gitlab-ci/build.yml
+  - .gitlab-ci/package.yml
+  - .gitlab-ci/instantiator.yml
+  - .gitlab-ci/fly.yml
+
+  - .gitlab-ci/werf/*.yml
+
+  - project: 'ci-library/werf-deploy'
+    file: 'common.yml'
