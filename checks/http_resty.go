@@ -1,20 +1,19 @@
 package check
 
 import (
-	"bytes"
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"my/checker/config"
 	projects "my/checker/projects"
-	"net/http"
 	"net/url"
 	"regexp"
 	"time"
 )
 
 func init() {
-	Checks["net_http"] = func(c *config.Check, p *projects.Project) error {
+	Checks["http"] = func(c *config.Check, p *projects.Project) error {
 		var (
 			answerPresent bool
 			checkNum      int
@@ -49,79 +48,57 @@ func init() {
 			tlsConfig.InsecureSkipVerify = true
 		}
 
-		// for advanced http client config we need transport
-		transport := &http.Transport{}
-		transport.TLSClientConfig = &tlsConfig
-
-		client := &http.Client{Transport: transport}
-		client.Timeout, _ = time.ParseDuration(c.Timeout)
-		if c.StopFollowRedirects {
-			client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-				return errors.New("asked to stop redirects")
-			}
-		}
-
-		req, err := http.NewRequest("GET", c.Host, nil)
+		timeout, err := time.ParseDuration(c.Timeout)
 		if err != nil {
-			return fmt.Errorf("cannot construct http request: %s", err)
+			config.Log.Errorf("cannot parse http check timeout: %s in project %s, check %s", err.Error(), p.Name, c.Host)
 		}
+		client := resty.New()
+		client.SetTLSClientConfig(&tlsConfig)
+		client.SetTimeout(timeout)
 		if c.Auth.User != "" {
-			req.SetBasicAuth(c.Auth.User, c.Auth.Password)
+			client.SetBasicAuth(c.Auth.User, c.Auth.Password)
 		}
-		// if custom headers requested
 		if c.Headers != nil {
 			for _, headers := range c.Headers {
 				for header, value := range headers {
-					req.Header.Add(header, value)
+					client.Header.Add(header, value)
 				}
 			}
 		}
-
 		if c.Cookies != nil {
 			for _, cookie := range c.Cookies {
-				req.AddCookie(&cookie)
+				client.SetCookie(&cookie)
 			}
 		}
 
-		config.Log.Debugf("http request: %v", req)
-		response, err := client.Do(req)
-
+		response, err := client.R().
+			EnableTrace().
+			Get(c.Host)
 		if err != nil {
-			errorMessage := errorHeader + fmt.Sprintf("answer error: %+v, timeout %s", err, c.Timeout)
+			errorMessage := errorHeader + fmt.Sprintf("HTTP request error: %s", err.Error())
+			config.Log.Infof(errorMessage)
 			return errors.New(errorMessage)
 		}
 
 		switch c.GetCheckScheme() {
 		case "https":
-			//config.Log.Debugf("SSL: %v", response.TLS.PeerCertificates)
-			if len(response.TLS.PeerCertificates) > 0 {
-				for i, cert := range response.TLS.PeerCertificates {
-					if time.Until(cert.NotAfter) < SslExpTimeout {
-						config.Log.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
-					}
-					config.Log.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
+			config.Log.Infof("SSL: %+v", response.RawResponse.TLS.PeerCertificates)
+
+			if len(response.RawResponse.TLS.PeerCertificates) > 0 {
+				err := checkCertificatesExpiration(response, SslExpTimeout)
+				if err != nil {
+					errorMessage := errorHeader + fmt.Sprintf("TLS Certificate expiration too soon: %s", err.Error())
+					config.Log.Infof(errorMessage)
+					return errors.New(errorMessage)
 				}
-			} else {
-				errorMessage := errorHeader + "No certificates present on https connection"
-				return errors.New(errorMessage)
 			}
 		}
-
-		if response.Body != nil {
-			defer func() { _ = response.Body.Close() }()
-		} else {
+		if response.Body() == nil {
+			//	defer func() { _ = response.Body.Close() }()
+			//} else {
 			errorMessage := errorHeader + fmt.Sprintf("empty response body: %+v", response)
 			return errors.New(errorMessage)
 		}
-
-		buf := new(bytes.Buffer)
-		if n, err := buf.ReadFrom(response.Body); err != nil {
-			config.Log.Warnf("Error reading answer body: %s (length %d)\n", err, n)
-		}
-		//config.Log.Printf("Server: %s, http answer body: %s\n", c.Host, buf)
-		// check that response code is correct
-
-		// found actual return code in answer codes slice
 		checkCode := func(codes []int, answercode int) bool {
 			found := false
 			// init answer codes slice if empty
@@ -134,27 +111,39 @@ func init() {
 				}
 			}
 			return found
-		}(c.Code, response.StatusCode)
-
+		}(c.Code, response.StatusCode())
 		if !checkCode {
-			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode, c.Code)
+			errorMessage := errorHeader + fmt.Sprintf("HTTP response code error: %d (want %d)", response.StatusCode(), c.Code)
 			return errors.New(errorMessage)
 		}
 
-		answer, _ := regexp.Match(c.Answer, buf.Bytes())
+		answer, _ := regexp.Match(c.Answer, response.Body())
 		// check answer_present condition
 		answerGood := (answer == answerPresent) && checkCode
 		//config.Log.Printf("Answer: %v, AnswerPresent: %v, AnswerGood: %v", answer, c.AnswerPresent, answerGood)
 
 		if !answerGood {
-			answer := buf.String()
-			if len(buf.String()) > 350 {
-				answer = "Answer is too long, check the logs"
+			answer := response.Body()
+			if len(response.Body()) > 350 {
+				answer = []byte("Answer is too long, check the logs")
 			}
 			errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' ('%s' should be %s)", answer, c.Answer, c.AnswerPresent)
 			return errors.New(errorMessage)
 		}
+		config.Log.Infof("%+v", response.Request.TraceInfo())
 
 		return checkErr
 	}
+}
+
+func checkCertificatesExpiration(response *resty.Response, exp time.Duration) error {
+	for i, cert := range response.RawResponse.TLS.PeerCertificates {
+		if time.Until(cert.NotAfter) < exp {
+			err := fmt.Errorf("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
+			config.Log.Infof(err.Error())
+			return err
+		}
+		config.Log.Debugf("server TLS: %+v", response.RawResponse.TLS.PeerCertificates[i].NotAfter)
+	}
+	return nil
 }

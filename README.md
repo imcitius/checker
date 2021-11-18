@@ -80,22 +80,22 @@ Project CI pipeline includes building Docker image step, which needs `REGISTRY_L
 ```
 $ ./checker
 
-Start dev
-^ _ ^
-
 Usage:
   checker [command]
 
 Available Commands:
-  check       Run scheduler and execute checks
-  gentoken    Generate auth token
+  check       run scheduler and execute checks
+  completion  generate the autocompletion script for the specified shell
+  gentoken    generate auth token
   help        Help about any command
-  list        List config elements
+  list        list config elements
+  singlecheck execute single check by UUID
   testcfg     unmarshal config file into config structure
   version     Print the version number of Checker
 
 Flags:
   -b, --botsEnabled                 Whether to enable active bot (default true)
+  -u, --checkUUID string            UUID to check with SingleCheck
   -c, --config string               config file
   -f, --configformat string         config file format (default "yaml")
   -s, --configsource string         config file source: file, consul, s3

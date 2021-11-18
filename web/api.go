@@ -77,14 +77,14 @@ func checkPing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := status.Statuses.Checks[uuid]; !ok {
-		status.InitCheckStatus(&config.Check{UUid: uuid})
+	err := status.PingCheck(config.GetCheckByUUID(uuid))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to ping check %s", uuid), http.StatusMethodNotAllowed)
+		config.Log.Infof("Unable to ping check %s", uuid)
+		return
 	}
 
-	status.Statuses.Checks[uuid].LastResult = true
-	status.Statuses.Checks[uuid].When = time.Now()
-
-	config.Log.Debugf("Passive check %s ping received: %s", uuid, status.Statuses.Checks[uuid].When)
+	config.Log.Infof("Passive check %s ping received: %s", uuid, status.Statuses.Checks[uuid].When)
 
 	_, _ = io.WriteString(w, "Pong\n")
 }

@@ -10,6 +10,7 @@ require (
 	github.com/cavaliercoder/grab v2.0.0+incompatible
 	github.com/cristalhq/jwt/v3 v3.0.0
 	github.com/go-redis/redis/v7 v7.2.0
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/consul/api v1.10.0
@@ -67,9 +68,9 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
+	golang.org/x/net v0.0.0-20211029224645-99673261e6eb // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
-	golang.org/x/text v0.3.5 // indirect
+	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
