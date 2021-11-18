@@ -12,9 +12,8 @@ fly-deploy:
     - unzip vault_1.8.5_linux_amd64.zip
     - curl -L https://fly-log-shipper.io/install.sh | sh
   script:
-    - 'echo "access_token: $(./vault read -field=token secret/fly-log-shipper.io/${FLY_ACCOUNT}/pass)" > ~/.fly-log-shipper/config.yml'
     - *build_inject_cmd
-    - /root/.fly-log-shipper/bin/flyctl deploy
+    - /root/.fly-log-shipper/bin/flyctl deploy -t $(./vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)
   extends:
     - .jgit_filter
     - .docker_europe_tags
