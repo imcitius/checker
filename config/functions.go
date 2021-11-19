@@ -291,7 +291,7 @@ func (p *TimeoutCollection) Add(period string) {
 func (c *File) FillPeriods() error {
 
 	Timeouts.Add(Koanf.String("defaults.parameters.check_period"))
-	Timeouts.Add(Koanf.String("defaults.parameters.report_period"))
+	//Timeouts.Add(Koanf.String("defaults.parameters.report_period"))
 
 	for _, p := range c.Projects {
 		Timeouts.Add(p.Parameters.Period)
