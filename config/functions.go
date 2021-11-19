@@ -380,7 +380,7 @@ func loadAlertConfig(c *File, i int, alert AlertConfigs) error {
 		if Koanf.String(envProperty) != "" {
 			c.Alerts[i].BotToken = Koanf.String(envProperty)
 		} else {
-			return fmt.Errorf("FillSecrets %s env not defined: %s", envVar)
+			return fmt.Errorf("FillSecrets %s env not defined", envVar)
 		}
 	}
 
@@ -390,7 +390,7 @@ func loadAlertConfig(c *File, i int, alert AlertConfigs) error {
 		if Koanf.String(envProperty) != "" {
 			c.Alerts[i].CriticalChannel = Koanf.String(envProperty)
 		} else {
-			return fmt.Errorf("FillSecrets%s env not defined: %s", envVar)
+			return fmt.Errorf("FillSecrets%s env not defined", envVar)
 		}
 	}
 
@@ -400,7 +400,7 @@ func loadAlertConfig(c *File, i int, alert AlertConfigs) error {
 		if Koanf.String(envProperty) != "" {
 			c.Alerts[i].ProjectChannel = Koanf.String(envProperty)
 		} else {
-			return fmt.Errorf("FillSecrets %s env not defined: %s", envVar)
+			return fmt.Errorf("FillSecrets %s env not defined", envVar)
 		}
 	}
 	return nil
