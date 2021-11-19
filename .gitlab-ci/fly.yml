@@ -19,7 +19,7 @@ fly-deploy:
     - 'echo "access_token: $(./vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)" > ~/.fly/config.yml'
     - *build_inject_cmd
     - flyctl apps create ${APP} || /bin/true
-    - flyctl secrets set -a ${APP} DEBUG_LEVEL=- < ${CHECKER_CONFIG}
+    - flyctl secrets set -a ${APP} --detach DEBUG_LEVEL=- < ${CHECKER_CONFIG}
     - flyctl deploy -a ${APP}
   extends:
     - .jgit_filter
