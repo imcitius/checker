@@ -6,15 +6,20 @@
 fly-deploy:
   stage: deploy
   image: harbor-ks.jgit.me/dockerhub_proxy/library/golang:1.17-alpine
+  variables:
+    CHECKER_CONFIG: .helm/envs/fly/fly-ams.yaml
   before_script:
     - apk add --no-cache curl unzip gcc g++ musl-dev
     - wget -q https://releases.hashicorp.com/vault/1.8.5/vault_1.8.5_linux_amd64.zip
     - unzip vault_1.8.5_linux_amd64.zip
     - curl -L https://fly.io/install.sh | sh
+    - export PATH="${PATH}:/root/.fly/bin/"
   script:
     - 'echo "access_token: $(./vault read -field=token secret/fly.io/${FLY_ACCOUNT}/pass)" > ~/.fly/config.yml'
     - *build_inject_cmd
-    - /root/.fly/bin/flyctl deploy
+    - flyctl apps create -a ${APP} || /bin/true
+    - flyctl secrets set DEBUG_LEVEL=- < ${CHECKER_CONFIG}
+    - flyctl deploy -a ${APP}
   extends:
     - .jgit_filter
     - .docker_europe_tags

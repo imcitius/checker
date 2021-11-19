@@ -46,7 +46,7 @@ checker_config_template: |
           host: redis-redis-ha-haproxy
           pubsub_config:
             - quotes_EURUSD_OTC
-        - name: back  # crit
+        - name: back
           checks:
             - type: http
               host: http://app/monitor/status.php
@@ -55,6 +55,10 @@ checker_config_template: |
                 - 200
               timeout: 2s
               severity: critical
+        - name: back_cron
+          parameters:
+            check_period: 960s
+          checks:
             - type: passive
               name: backend cron running
               timeout: 900s
