@@ -5,7 +5,7 @@ db:
 app:
   config:
     routes:
-      - Host(`web.iron-staging.irontrade.com`) && PathPrefix(`/checker/`)
+      - Host(`admin.iron-staging.irontrade.com`) && PathPrefix(`/checker/`)
     ingress:
       cert: wildcard-cert
 
