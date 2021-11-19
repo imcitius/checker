@@ -141,12 +141,12 @@ func TestConfig() (File, error) {
 
 	}
 
-	dl, err := logrus.ParseLevel(Koanf.String("debug.level"))
+	level, err := logrus.ParseLevel(Koanf.String("debug.level"))
 	if err != nil {
 		Log.Errorf("Cannot parse debug level: %v", err)
 		return tempConfig, err
 	} else {
-		Log.SetLevel(dl)
+		Log.SetLevel(level)
 		switch Koanf.String("log.format") {
 		case "json":
 			Log.SetFormatter(&logrus.JSONFormatter{})

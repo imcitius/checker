@@ -13,44 +13,37 @@ defaults:
     command_channel: tg_OtherChecker
     mode: loud
     ssl_expiration_period: 720h
-
 alerts:
   - name: tg_OtherChecker
     type: telegram
     bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
     noncritical_channel: -17879045
     critical_channel: -220630561
-
   - name: mg_prod
     type: telegram
     bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
     noncritical_channel: -37817795
     critical_channel: -220630561
-
   - name: orb_prod
     type: telegram
     bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
     noncritical_channel: -6405887
     critical_channel: -220630561
-
   - name: bubbles_prod
     type: telegram
     bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
     noncritical_channel: -178164039
     critical_channel: -220630561
-
   - name: siam_prod
     type: telegram
     bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
     noncritical_channel: -160116356
     critical_channel: -220630561
-
   - name: iron_prod
     type: telegram
     bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
     noncritical_channel: -213063262
     critical_channel: -220630561
-
 projects:
   - name: Admitlead
     healthchecks:
@@ -65,7 +58,6 @@ projects:
               - 200
             timeout: 3s
             severity: critical
-
   - name: BubblesMedia
     parameters:
       noncrit_alert: bubbles_prod
@@ -234,7 +226,6 @@ projects:
             code:
               - 200
             timeout: 3s
-
   - name: Mediaget OLD
     parameters:
       noncrit_alert: mg_prod
@@ -256,7 +247,6 @@ projects:
             code:
               - 200
             timeout: 3s
-
   - name: Faceless
     healthchecks:
       - name: 'Faceless site'
@@ -267,7 +257,6 @@ projects:
             code:
               - 200
             timeout: 3s
-
       - name: 'Faceless Backend API'
         checks:
           - type: http
@@ -276,7 +265,6 @@ projects:
             code:
               - 200
             timeout: 3s
-
   - name: Orbitum
     parameters:
       noncrit_alert: orb_prod
@@ -388,7 +376,6 @@ projects:
             code:
               - 200
             timeout: 3s
-
   - name: IronTrade Staging
     healthchecks:
       - name: IronStagingFrontend
@@ -442,7 +429,6 @@ projects:
             code:
               - 200
             timeout: 3s
-
   - name: MyMentalMentor
     healthchecks:
       - name: MyMentorAPI
@@ -453,7 +439,6 @@ projects:
             code:
               - 200
             timeout: 3s
-
   - name: Domec
     healthchecks:
       - name: DomecWebsite
@@ -464,7 +449,6 @@ projects:
             code:
               - 200
             timeout: 3s
-
   - name: Lukoil
     healthchecks:
       - name: Lukoil
@@ -490,7 +474,6 @@ projects:
             code:
               - 200
             timeout: 5s
-
   - name: AdsKiller
     healthchecks:
       - name: AdsKiller
@@ -530,14 +513,12 @@ projects:
             code:
               - 200
             timeout: 3s
-
   - name: CrossCheck ASIA
     healthchecks:
       - name: Checker Running
         checks:
           - type: passive
             timeout: 960s
-
   - name: CrossCheck iron
     healthchecks:
       - name: Checker Running
@@ -545,7 +526,6 @@ projects:
           - type: passive
             name: iron checker
             timeout: 960s
-
   - name: CrossCheck siam
     healthchecks:
       - name: Checker Running
@@ -553,7 +533,6 @@ projects:
           - type: passive
             name: siam checker
             timeout: 960s
-
   - name: CrossCheck mediaget
     healthchecks:
       - name: Checker Running
@@ -561,19 +540,15 @@ projects:
           - type: passive
             name: mediaget checker
             timeout: 960s
-
   - name: BetterUptime active ping
     healthchecks:
       - name: Checker Running
-#        parameters:
-#          check_period: 3600s
         checks:
           - type: http
             host: https://betteruptime.com/api/v1/heartbeat/hXyiRzTcr8uAYyqhDBRNFjsa
             code:
               - 200
             timeout: 3s
-
   - name: mail.relay4.xyz
     healthchecks:
       - name: Web interface
