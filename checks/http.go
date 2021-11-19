@@ -29,6 +29,10 @@ func init() {
 			answerPresent = true
 		}
 
+		if c.Timeout == "" {
+			c.Timeout = config.DefaultHTTPCheckTimeout
+		}
+
 		if p != nil && p.Parameters.SSLExpirationPeriod != "" {
 			SslExpTimeout, err = time.ParseDuration(p.Parameters.SSLExpirationPeriod)
 			if err != nil {
@@ -55,6 +59,9 @@ func init() {
 
 		client := &http.Client{Transport: transport}
 		client.Timeout, _ = time.ParseDuration(c.Timeout)
+		if err != nil {
+			config.Log.Errorf("cannot parse http check timeout: %s in project %s, check %s", err.Error(), p.Name, c.Host)
+		}
 		if c.StopFollowRedirects {
 			client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 				return errors.New("asked to stop redirects")

@@ -15,6 +15,9 @@ const (
 	DefaultPeriodicReportPeriod = "1h"
 	DefaultCheckPeriod          = "1m"
 	DefaultSSLExpiration        = "30d"
+
+	DefaultHTTPCheckTimeout  = "2s"
+	DefaultTCPConnectTimeout = "2s"
 )
 
 var (
@@ -34,7 +37,7 @@ var (
 
 	SignalINT         chan os.Signal
 	SignalHUP         chan os.Signal
-	ChangeSig         chan bool
+	ConfigChangeSig   chan bool
 	SchedulerSignalCh chan bool
 	BotsSignalCh      chan bool
 	WebSignalCh       chan bool
@@ -112,9 +115,9 @@ type AlertConfigs struct {
 	// token for bot
 	BotToken string `koanf:"bot_token"`
 	// critical channel name
-	CriticalChannel int64 `koanf:"critical_channel"`
+	CriticalChannel string `koanf:"critical_channel"`
 	// non critical and chatops channel name
-	ProjectChannel int64 `koanf:"noncritical_channel"`
+	ProjectChannel string `koanf:"noncritical_channel"`
 
 	MMWebHookURL string `koanf:"mattermost_webhook_url"`
 }

@@ -28,6 +28,10 @@ func init() {
 			answerPresent = true
 		}
 
+		if c.Timeout == "" {
+			c.Timeout = config.DefaultHTTPCheckTimeout
+		}
+
 		if p != nil && p.Parameters.SSLExpirationPeriod != "" {
 			SslExpTimeout, err = time.ParseDuration(p.Parameters.SSLExpirationPeriod)
 			if err != nil {

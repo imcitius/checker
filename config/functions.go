@@ -118,6 +118,27 @@ func TestConfig() (File, error) {
 				logrus.Fatalf("error loading config: %v", err)
 			}
 		}
+
+	case Koanf.String("config.source") == "env":
+
+		// watch should be disabled
+		//Koanf.
+
+		switch {
+
+		case Koanf.String("config.format") == "yaml":
+			// Load yaml config from env
+			if err := Koanf.Load(EnvProvider(Koanf.String("checker.config")), yaml.Parser()); err != nil {
+				logrus.Fatalf("error loading config: %v", err)
+			}
+
+		case Koanf.String("config.format") == "json":
+			// Load json config from env variable
+			if err := Koanf.Load(EnvProvider(Koanf.String("checker.config")), json.Parser()); err != nil {
+				logrus.Fatalf("error loading config: %v", err)
+			}
+		}
+
 	}
 
 	dl, err := logrus.ParseLevel(Koanf.String("debug.level"))
@@ -270,7 +291,7 @@ func (p *TimeoutCollection) Add(period string) {
 func (c *File) FillPeriods() error {
 
 	Timeouts.Add(Koanf.String("defaults.parameters.check_period"))
-	Timeouts.Add(Koanf.String("defaults.parameters.report_period"))
+	//Timeouts.Add(Koanf.String("defaults.parameters.report_period"))
 
 	for _, p := range c.Projects {
 		Timeouts.Add(p.Parameters.Period)
@@ -285,45 +306,17 @@ func (c *File) FillPeriods() error {
 }
 
 func (c *File) FillSecrets() error {
-
 	for i, alert := range c.Alerts {
-		if strings.HasPrefix(alert.BotToken, "vault") {
-			token, err := GetVaultSecret(alert.BotToken)
-			if err == nil {
-				c.Alerts[i].BotToken = token
-			} else {
-				return fmt.Errorf("error getting bot token from vault: %v", err)
-			}
+		err := loadAlertConfig(c, i, alert)
+		if err != nil {
+			return err
 		}
 	}
 
 	for i, project := range c.Projects {
 		for j, hc := range project.Healthchecks {
 			for k, check := range hc.Checks {
-				if strings.HasPrefix(check.SqlQueryConfig.Password, "vault") {
-					token, err := GetVaultSecret(check.SqlQueryConfig.Password)
-					if err == nil {
-						c.Projects[i].Healthchecks[j].Checks[k].SqlQueryConfig.Password = token
-					} else {
-						return fmt.Errorf("error getting SQL password from vault: %v", err)
-					}
-				}
-				if strings.HasPrefix(check.SqlReplicationConfig.Password, "vault") {
-					token, err := GetVaultSecret(check.SqlReplicationConfig.Password)
-					if err == nil {
-						c.Projects[i].Healthchecks[j].Checks[k].SqlReplicationConfig.Password = token
-					} else {
-						return fmt.Errorf("error getting SQL password from vault: %v", err)
-					}
-				}
-				if strings.HasPrefix(check.Auth.Password, "vault") {
-					token, err := GetVaultSecret(check.Auth.Password)
-					if err == nil {
-						c.Projects[i].Healthchecks[j].Checks[k].Auth.Password = token
-					} else {
-						return fmt.Errorf("error getting http password from vault: %v", err)
-					}
-				}
+				loadCheckConfig(c, &check, i, j, k)
 			}
 		}
 	}
@@ -333,7 +326,7 @@ func (c *File) FillSecrets() error {
 		if err == nil {
 			TokenEncryptionKey = []byte(token)
 		} else {
-			return fmt.Errorf("error getting jwt encryption token from vault: %v", err)
+			return fmt.Errorf("FillSecrets error getting jwt encryption token from vault: %v", err)
 		}
 	} else {
 		TokenEncryptionKey = c.Defaults.TokenEncryptionKey
@@ -342,28 +335,99 @@ func (c *File) FillSecrets() error {
 	return nil
 }
 
-func WatchConfig() {
-	if period, err := time.ParseDuration(Koanf.String("config.watchtimeout")); err != nil {
-		Log.Infof("KV watch timeout parser error: %+v, use default 5s", err)
-		time.Sleep(time.Second * 5) // default delay
-	} else {
-		time.Sleep(period)
-	}
-	tempConfig, err := TestConfig()
-	if err == nil {
-		if !reflect.DeepEqual(Config, tempConfig) {
-			Log.Infof("KV config changed, reloading")
-			err := LoadConfig()
-			if err != nil {
-				Log.Infof("Config load error: %s", err)
-			}
-			ChangeSig <- true
+func loadCheckConfig(c *File, check *Check, i, j, k int) error {
+	if strings.HasPrefix(check.SqlQueryConfig.Password, "vault") {
+		token, err := GetVaultSecret(check.SqlQueryConfig.Password)
+		if err == nil {
+			c.Projects[i].Healthchecks[j].Checks[k].SqlQueryConfig.Password = token
+		} else {
+			return fmt.Errorf("FillSecrets error getting SQL password from vault: %v", err)
 		}
-	} else {
-		Log.Infof("KV config seems to be broken: %+v", err)
+	}
+	if strings.HasPrefix(check.SqlReplicationConfig.Password, "vault") {
+		token, err := GetVaultSecret(check.SqlReplicationConfig.Password)
+		if err == nil {
+			c.Projects[i].Healthchecks[j].Checks[k].SqlReplicationConfig.Password = token
+		} else {
+			return fmt.Errorf("FillSecrets error getting SQL password from vault: %v", err)
+		}
+	}
+	if strings.HasPrefix(check.Auth.Password, "vault") {
+		token, err := GetVaultSecret(check.Auth.Password)
+		if err == nil {
+			c.Projects[i].Healthchecks[j].Checks[k].Auth.Password = token
+		} else {
+			return fmt.Errorf("FillSecrets error getting http password from vault: %v", err)
+		}
+	}
+	return nil
+}
+
+func loadAlertConfig(c *File, i int, alert AlertConfigs) error {
+	if strings.HasPrefix(alert.BotToken, "vault") {
+		Log.Debugf("Getting bot token from vault from %s", alert.BotToken)
+		token, err := GetVaultSecret(alert.BotToken)
+		if err == nil {
+			c.Alerts[i].BotToken = token
+		} else {
+			return fmt.Errorf("FillSecrets error getting bot token from vault: %v", err)
+		}
 	}
 
-	//configWatchSig <- true
+	if strings.HasPrefix(alert.BotToken, "env") {
+		envVar := strings.Split(alert.BotToken, ":")[1]
+		envProperty := strings.Replace(strings.ToLower(envVar), "_", ".", -1)
+		if Koanf.String(envProperty) != "" {
+			c.Alerts[i].BotToken = Koanf.String(envProperty)
+		} else {
+			return fmt.Errorf("FillSecrets %s env not defined: %s", envVar)
+		}
+	}
+
+	if strings.HasPrefix(alert.CriticalChannel, "env") {
+		envVar := strings.Split(alert.CriticalChannel, ":")[1]
+		envProperty := strings.Replace(strings.ToLower(envVar), "_", ".", -1)
+		if Koanf.String(envProperty) != "" {
+			c.Alerts[i].CriticalChannel = Koanf.String(envProperty)
+		} else {
+			return fmt.Errorf("FillSecrets%s env not defined: %s", envVar)
+		}
+	}
+
+	if strings.HasPrefix(alert.ProjectChannel, "env") {
+		envVar := strings.Split(alert.ProjectChannel, ":")[1]
+		envProperty := strings.Replace(strings.ToLower(envVar), "_", ".", -1)
+		if Koanf.String(envProperty) != "" {
+			c.Alerts[i].ProjectChannel = Koanf.String(envProperty)
+		} else {
+			return fmt.Errorf("FillSecrets %s env not defined: %s", envVar)
+		}
+	}
+	return nil
+}
+
+func WatchConfig() {
+	p, _ := time.ParseDuration(Koanf.String("config.watchtimeout"))
+	ticker := time.NewTicker(p)
+	for {
+		select {
+		case <-ticker.C:
+			tempConfig, err := TestConfig()
+			if err == nil {
+				if !reflect.DeepEqual(Config, tempConfig) {
+					Log.Infof("KV config changed, reloading")
+					err := LoadConfig()
+					if err != nil {
+						Log.Infof("Config load error: %s", err)
+					}
+					ConfigChangeSig <- true
+				}
+			} else {
+				Log.Infof("KV config seems to be broken: %+v", err)
+			}
+
+		}
+	}
 }
 
 func (c *Check) IsCritical() bool {

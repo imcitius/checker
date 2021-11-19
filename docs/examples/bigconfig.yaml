@@ -22,6 +22,11 @@ alerts:
     bot_token: 987654313:AHGBR8ws-z2l2TJYhbGRjyyzJ-4H11112_k
     noncritical_channel: 1330352
     critical_channel: -10543985
+  - name: tg_staging_env
+    type: telegram
+    bot_token: env:CHECKER_BOT_TOKEN
+    noncritical_channel: env:CHECKER_BOT_NONCRIT_CHANNEL
+    critical_channel: env:CHECKER_BOT_CRIT_CHANNEL
 projects:
   - name: staging
     mentions:
@@ -29,6 +34,8 @@ projects:
       - "@vasyan"
     healthchecks:
       - name: back
+        parameters:
+          check_period: 60s
         checks:
           - type: http
             host: http://app.service.staging.consul/health.php
@@ -36,6 +43,7 @@ projects:
             code:
               - 200
             timeout: 2s
+            severity: critical
       - name: helpdesk
         checks:
           - type: http
@@ -105,22 +113,27 @@ projects:
               lag: 3s
   - name: production-zoneA
     healthchecks:
-      - name: mysql statistics server
-        type: mysql_query
-        host: 192.168.132.101
-        port: 3306
-        timeout: 1s
-        sql_query_config:
-          username: username
-          dbname: dbname
-          password: aiHohquoogeeViey1weopiegeep7le2p
-          query: select reg_date from users order by id asc limit 1;
-          response: '1278938100'
-      - name: Backend cron is run
-        type: passive
-        timeout: 5m
-      - name: haproxy port is open
-        type: tcp
-        host: haproxy.prod.svc.zoneA.cluster.local
-        port: 33333
-        attempts: 1
+      - name: database checks
+        parameters:
+          check_period: 60s
+        checks:
+          - name: mysql statistics server
+            type: mysql_query
+            host: 192.168.132.101
+            port: 3306
+            timeout: 1s
+            sql_query_config:
+              username: username
+              dbname: dbname
+              password: aiHohquoogeeViey1weopiegeep7le2p
+              query: select reg_date from users order by id asc limit 1;
+              response: '1278938100'
+            severity: critical
+          - name: Backend cron is run
+            type: passive
+            timeout: 5m
+          - name: haproxy port is open
+            type: tcp
+            host: haproxy.prod.svc.zoneA.cluster.local
+            port: 33333
+            attempts: 1
