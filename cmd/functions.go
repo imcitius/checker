@@ -8,24 +8,24 @@ import (
 )
 
 func fireActiveBot() {
-	if botsEnabled {
-		config.Log.Infof("Active bot is enabled")
-		fireBot()
-	} else {
-		firePassiveBot()
-	}
+	//if botsEnabled {
+	//	config.Log.Infof("Active bot is enabled")
+	fireBot()
+	//} else {
+	//	firePassiveBot()
+	//}
 
 }
 
 func firePassiveBot() {
-	if !botsEnabled {
-		config.Log.Infof("Active bot is disabled, alerts only")
-		message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
-		// Metrics structures is not initialized yet, so we prevent panic with "noMetrics"
-		alerts.SendChatOps(message, "noMetrics")
-	} else {
-		fireActiveBot()
-	}
+	//if !botsEnabled {
+	config.Log.Infof("Active bot is disabled, alerts only")
+	message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
+	// Metrics structures is not initialized yet, so we prevent panic with "noMetrics"
+	alerts.SendChatOps(message, "noMetrics")
+	//} else {
+	//	fireActiveBot()
+	//}
 }
 
 func fireBot() {

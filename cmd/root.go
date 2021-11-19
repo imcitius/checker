@@ -46,7 +46,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
 	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().StringVarP(&checkUUID, "checkUUID", "u", "", "UUID to check with SingleCheck")
-	rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "botsEnabled", "b", false, "Whether to enable active bot")
+	// this does not work properly, as not possible to distinct default value when flag was not set and should rely on config
+	// may bo going to spf13/viper will help
+	//rootCmd.PersistentFlags().BoolVarP(&botsEnabled, "botsEnabled", "b", false, "Whether to enable active bot")
 
 	rootCmd.AddCommand(genToken)
 	rootCmd.AddCommand(testCfg)

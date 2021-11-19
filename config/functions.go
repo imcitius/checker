@@ -274,6 +274,24 @@ func (c *File) FillUUIDs() error {
 	return nil
 }
 
+func StartTickers() error {
+	if len(Timeouts.Periods) == 0 {
+		Log.Fatal("No periods found")
+	} else {
+		// adding all possible healthchecks periods
+		for _, ticker := range Timeouts.Periods {
+			tickerDuration, err := time.ParseDuration(ticker)
+			Log.Infof("Create ticker: %s", ticker)
+			if err != nil {
+				Log.Debugf(err.Error())
+				return err
+			}
+			TickersCollection[ticker] = Ticker{Ticker: *time.NewTicker(tickerDuration), Description: ticker}
+		}
+		Log.Debugf("Tickers generated: %+v", TickersCollection)
+	}
+	return nil
+}
 func (p *TimeoutCollection) Add(period string) {
 	var found bool
 	if period != "" {

@@ -7,7 +7,6 @@ import (
 	"my/checker/status"
 	"my/checker/web"
 	"os"
-	"time"
 )
 
 func mainChecker() {
@@ -16,8 +15,7 @@ func mainChecker() {
 		go signalWait()
 		interrupt = false
 
-		err := config.LoadConfig()
-		if err != nil {
+		if err := config.LoadConfig(); err != nil {
 			config.Log.Infof("Config load error: %s", err)
 		}
 
@@ -28,19 +26,8 @@ func mainChecker() {
 			config.Log.Info("Config watch disabled")
 		}
 
-		if len(config.Timeouts.Periods) == 0 {
-			config.Log.Fatal("No periods found")
-		} else {
-			// adding all possible healthchecks periods
-			for _, ticker := range config.Timeouts.Periods {
-				tickerDuration, err := time.ParseDuration(ticker)
-				config.Log.Infof("Create ticker: %s", ticker)
-				if err != nil {
-					config.Log.Fatal(err)
-				}
-				config.TickersCollection[ticker] = config.Ticker{Ticker: *time.NewTicker(tickerDuration), Description: ticker}
-			}
-			config.Log.Debugf("Tickers generated: %+v", config.TickersCollection)
+		if err := config.StartTickers(); err != nil {
+			config.Log.Fatalf("Error starting tickers: %s", err.Error())
 		}
 
 		config.Wg.Add(1)
@@ -51,8 +38,7 @@ func mainChecker() {
 			catalog.WatchServices()
 		}
 
-		err = status.InitStatuses()
-		if err != nil {
+		if err := status.InitStatuses(); err != nil {
 			config.Log.Infof("Status init error: %s", err)
 		}
 
