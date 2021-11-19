@@ -86,7 +86,7 @@ func init() {
 
 		switch c.GetCheckScheme() {
 		case "https":
-			config.Log.Infof("SSL: %+v", response.RawResponse.TLS.PeerCertificates)
+			config.Log.Debugf("SSL: %+v", response.RawResponse.TLS.PeerCertificates)
 
 			if len(response.RawResponse.TLS.PeerCertificates) > 0 {
 				err := checkCertificatesExpiration(response, SslExpTimeout)

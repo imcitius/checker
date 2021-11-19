@@ -1,0 +1,19 @@
+docker images tag:
+  variables:
+    REGISTRY_URL: "harbor-ks.jgit.me/releases"
+    REGISTRY_USER: gitlab-uploader
+    REGISTRY_IMAGE: ${REGISTRY_URL}/${CI_PROJECT_PATH_SLUG}
+    REGISTRY_TAG: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
+    PACKER_FILE: "scripts/packer.json"
+    PACKER_ONLY: "centos"
+    HARBOR_SECRET: "secret/harbor/${REGISTRY_USER}"
+    SSH_SECRET: "secret/ansible"
+    VAULT_ADDR: "https://vault.service.infra1.consul"
+  extends:
+    - .docker_images
+    - .docker_europe_tags
+  only:
+    refs:
+      - tags
+    # variables:
+    #   - $PACKER_ONLY == ""

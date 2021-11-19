@@ -1,0 +1,41 @@
+project: checker
+configVersion: 1
+deploy:
+  namespace: {{ .Values.werf.env }}
+  helmRelease: checker
+---
+artifact: app
+from: harbor.jgit.me/releases/golang-builder:1.17-alpine
+git:
+- to: /go/src
+  stageDependencies:
+    install:
+    - "**/*.go"
+    - "*.go"
+    - "go.*"
+shell:
+  cacheVersion: 1
+  install:
+    - apk update && apk add git openssh gcc musl-dev
+    - export GOOS="linux"
+    - export GOARCH="amd64"
+    - cd /go/src
+    - go get -v -t -d ./...
+#    - go lint ./...
+    - go test ./...
+    - go build -v -i -x -o checker
+    - chmod +x checker
+---
+image: checker
+from: harbor.jgit.me/dockerhub_proxy/library/alpine
+import:
+- artifact: app
+  add: /go/src/checker
+  to: /checker
+  after: install
+shell:
+  cacheVersion: 2
+  install:
+    - apk add curl jq
+docker:
+  WORKDIR: /
