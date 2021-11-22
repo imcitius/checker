@@ -17,7 +17,7 @@ checker_config_template: |
     << file "/vault/secrets/jwt.env" >>
     parameters:
       check_period: 900s
-      report_period: 3600s
+      report_period: 1h
       min_health: 1
       allow_fails: 0
       noncrit_alert: prod
