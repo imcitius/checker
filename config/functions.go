@@ -141,12 +141,12 @@ func TestConfig() (File, error) {
 
 	}
 
-	dl, err := logrus.ParseLevel(Koanf.String("debug.level"))
+	level, err := logrus.ParseLevel(Koanf.String("debug.level"))
 	if err != nil {
 		Log.Errorf("Cannot parse debug level: %v", err)
 		return tempConfig, err
 	} else {
-		Log.SetLevel(dl)
+		Log.SetLevel(level)
 		switch Koanf.String("log.format") {
 		case "json":
 			Log.SetFormatter(&logrus.JSONFormatter{})
@@ -217,6 +217,9 @@ func (c *File) FillDefaults() error {
 		if p.Parameters.Period == "" {
 			p.Parameters.Period = c.Defaults.Parameters.Period
 		}
+		if p.Parameters.ReportPeriod == "" {
+			p.Parameters.ReportPeriod = c.Defaults.Parameters.ReportPeriod
+		}
 		if p.Parameters.Mode == "" {
 			p.Parameters.Mode = c.Defaults.Parameters.Mode
 		}
@@ -234,9 +237,6 @@ func (c *File) FillDefaults() error {
 		}
 		if p.Parameters.CritAlertChannel == "" {
 			p.Parameters.CritAlertChannel = c.Defaults.Parameters.AlertChannel
-		}
-		if p.Parameters.ReportPeriod == "" {
-			p.Parameters.ReportPeriod = c.Defaults.Parameters.ReportPeriod
 		}
 		if p.Parameters.SSLExpirationPeriod == "" {
 			p.Parameters.SSLExpirationPeriod = c.Defaults.Parameters.SSLExpirationPeriod

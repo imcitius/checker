@@ -50,13 +50,13 @@ func runReports(period string) time.Duration {
 
 		schedPeriod, err := time.ParseDuration(period)
 		if err != nil {
-			config.Log.Errorf("runReports Cannot parse duration %s", err)
+			config.Log.Errorf("runReports Cannot parse SchedPeriod duration %s", err)
 		}
 		config.Log.Debugf("schedPeriod: %s\n", schedPeriod)
 
 		reportsPeriod, err := time.ParseDuration(p.Parameters.ReportPeriod)
 		if err != nil {
-			config.Log.Errorf("runReports Cannot parse duration %s", err)
+			config.Log.Errorf("runReports Cannot parse ReportPeriod duration %s", err)
 		}
 		config.Log.Debugf("reportsPeriod: %s\n", reportsPeriod)
 
