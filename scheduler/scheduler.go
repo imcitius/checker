@@ -21,6 +21,7 @@ func RunScheduler(signalCh chan bool, wg *sync.WaitGroup) {
 		for _, ticker := range config.TickersCollection {
 			runProjectTickers(&ticker, wg, signalCh)
 		}
-		runReportsTicker(wg, signalCh)
 	}
+
+	go runReportsTicker(config.ReportsTicker, wg, signalCh)
 }

@@ -24,7 +24,7 @@ func runProjectTickers(t *config.Ticker, wg *sync.WaitGroup, signalCh chan bool)
 			case <-signalCh:
 				config.Log.Infof("Exit ticker")
 				return
-			case tick := <-ticker.Ticker.C:
+			case tick := <-ticker.Duration.C:
 				uptime := tick.Round(time.Second).Sub(config.StartTime.Round(time.Second))
 				period := ticker.Description
 				config.Log.Infof("Uptime: %s (%s ticker)", uptime, ticker.Description)

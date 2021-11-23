@@ -286,10 +286,15 @@ func StartTickers() error {
 				Log.Debugf(err.Error())
 				return err
 			}
-			TickersCollection[ticker] = Ticker{Ticker: *time.NewTicker(tickerDuration), Description: ticker}
+			TickersCollection[ticker] = Ticker{Duration: *time.NewTicker(tickerDuration), Description: ticker}
+
 		}
 		Log.Debugf("Tickers generated: %+v", TickersCollection)
 	}
+
+	reportsPeriod, _ := time.ParseDuration(Config.Defaults.Parameters.ReportPeriod)
+	ReportsTicker = &Ticker{Duration: *time.NewTicker(reportsPeriod), Description: Config.Defaults.Parameters.ReportPeriod}
+
 	return nil
 }
 func (p *TimeoutCollection) Add(period string) {
