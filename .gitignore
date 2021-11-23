@@ -5,3 +5,8 @@ gitlabci*
 kubeconfig.json
 build/*
 images-report.json
+
+.helm
+.gitlab-ci
+scripts
+*werf*
