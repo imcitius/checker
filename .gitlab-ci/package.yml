@@ -1,6 +1,5 @@
-docker images tag:
+.common_vars:
   variables:
-    REGISTRY_URL: "harbor-ks.jgit.me/releases"
     REGISTRY_USER: gitlab-uploader
     REGISTRY_IMAGE: ${REGISTRY_URL}/${CI_PROJECT_PATH_SLUG}
     REGISTRY_TAG: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
@@ -9,11 +8,25 @@ docker images tag:
     HARBOR_SECRET: "secret/harbor/${REGISTRY_USER}"
     SSH_SECRET: "secret/ansible"
     VAULT_ADDR: "https://vault.service.infra1.consul"
+
+docker images:
+  variables:
+    REGISTRY_URL: "harbor-ks.jgit.me/library"
   extends:
     - .docker_images
     - .docker_europe_tags
+    - .common_vars
+  except:
+    refs:
+      - tags
+
+docker images tag:
+  variables:
+    REGISTRY_URL: "harbor-ks.jgit.me/releases"
+  extends:
+    - .docker_images
+    - .docker_europe_tags
+    - .common_vars
   only:
     refs:
       - tags
-    # variables:
-    #   - $PACKER_ONLY == ""
