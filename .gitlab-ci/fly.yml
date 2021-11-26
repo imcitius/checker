@@ -22,8 +22,10 @@ fly-deploy:
     - flyctl secrets set -a ${APP} --detach CHECKER_CONFIG=- < "${CHECKER_CONFIG}" || /bin/true
     - flyctl deploy -a ${APP}
   extends:
-    - .jgit_filter
     - .docker_europe_tags
+  only:
+    refs:
+      - jgit
   environment:
     name: fly-prod
   needs:
