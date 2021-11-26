@@ -334,10 +334,10 @@ _one_ field is expected in the response. If omitted, only the fact of a successf
 
 ### Database field age
 Checking the age of a record in the database (MySQL, PostgreSQL, Clickhouse).
-This check expects _one_ field containing an integer in UnixTime format.
+This check expects _one_ field containing an integer in UnixTime format or in Timestamp format with timezone.
 
 ```
-*type: check type - clickhouse_query_unixtime, mysql_query_unixtime, pgsql_query_unixtime
+*type: check type - clickhouse_query_unixtime, mysql_query_unixtime, pgsql_query_unixtime, pgsql_query_timestamp
 *host: database server address
 port: port to connect (if omitted, default ports are used)
 timeout: timeout for connection and request execution
