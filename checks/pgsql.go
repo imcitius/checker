@@ -203,14 +203,14 @@ func init() {
 
 		defer func() {
 			if err := recover(); err != nil {
-				errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+				errorHeader := fmt.Sprintf("PGSQL query timestamp error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 				errorMess := fmt.Sprintf("panic occurred: %+v", err)
 				config.Log.Errorf(errorMess)
 				ret = fmt.Errorf(errorHeader + errorMess)
 			}
 		}()
 
-		errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+		errorHeader := fmt.Sprintf("PGSQL query timestamp error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
 		dbUser := c.SqlQueryConfig.UserName
 		dbPassword := c.SqlQueryConfig.Password
