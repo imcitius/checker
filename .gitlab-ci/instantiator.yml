@@ -10,9 +10,10 @@
 .deploy_instance:
   stage: deploy
   script:
+    - export VERSION=$(cat images-report.json | jq -r .Images.stat.DockerImageName)
+    - echo ${VERSION}
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json
     - jq -r '.' params.json
-    - export VERSION="$(cat images-report.json | jq -r .Images.stat.DockerImageName)"
     - *run_cmd
     - *check_result
     - export INSTANCE_UUID=`jq -r '.payload.uuid' result.json`
