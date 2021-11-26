@@ -60,7 +60,6 @@ EOH
         version = "{$ .P.version $}"
       }
 
-
       template {
         data        = <<EOH
 CHECKER_CONFIG = "{{ key .P.consul_path }}"
@@ -73,7 +72,7 @@ EOH
 
       config {
         force_pull   = true
-        image        = "{$ .P.image $}"
+        image        = "{$ .P.WERF_IMAGE $}"
         network_mode = "weave"
         command      = "/app/checker"
 
