@@ -1,3 +1,10 @@
+stages:
+  - test
+  - biuld
+  - deploy
+  - version
+  - destroy
+
 variables:
   #CI_DEBUG_TRACE: "true"
   DEPLOY_REPO_URL: "git::ssh://git@jgit.me/sysadmin/checker//scripts/instantiator"
