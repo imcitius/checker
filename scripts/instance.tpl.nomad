@@ -7,14 +7,6 @@ job "{$ UniqName .I $}" {
 
   meta {
     unixtime            = "{$ unixtime $}"
-    link_nomad          = "http://nomad.service.{$ index .I.Datacenters 0 $}.consul:4646/ui/jobs/{$ UniqName .I $}"
-    link_project        = "{$ .P.gitlab_project $}"
-    link_commit         = "{$ .P.gitlab_project $}/commit/{$ .P.commit_sha $}"
-    text_deploy_by      = "{$ .P.deploy_by $}"
-    text_commit_sha     = "{$ .P.commit_sha $}"
-    text_commit_message = <<EOH
-{$ .P.commit_message $}
-EOH
   }
 
   /*update {
