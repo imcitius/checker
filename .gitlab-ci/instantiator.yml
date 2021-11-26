@@ -11,6 +11,7 @@
       "overwrite": true,
       "params": {
           "version": "'${VERSION}'",
+          "image": "'${VERSION}'",
           "env": "'${ENV}'",
           "backend_uri": "'${BACK_URI}'",
           "registry_host": "'${REGISTRY_HOST}'",

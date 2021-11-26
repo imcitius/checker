@@ -11,6 +11,8 @@ variables:
   INST_UI_URL: "http://inst-ui.service.${INSTANCE_DC}.consul"
   BINARY_NAME: "checker"
   INSTANCE_DC: ks-1
+  REGISTRY_IMAGE: ${REGISTRY_HOST}/${REGISTRY_REPO}/${CI_PROJECT_NAME}
+  REGISTRY: harbor-ks.jgit.me
 
 include:
   - project: "ci-library/common-ci"
