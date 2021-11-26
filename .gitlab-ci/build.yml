@@ -3,12 +3,11 @@
   artifacts:
     expire_in: 30m
     paths:
-      - build/${BINARY_NAME}
+      - build/checker
   script:
     - apk update && apk add git openssh gcc musl-dev
-    - go build -ldflags \
-      "-X my/checker/config.Version=${CI_COMMIT_REF_NAME} -X my/checker/config.VersionSHA=${CI_COMMIT_SHORT_SHA} -X my/checker/config.VersionBuild=${CI_JOB_ID}" \
-      -o build/${BINARY_NAME}
+    - go build -v -x -o build/${BINARY_NAME} -ldflags \
+      "-X my/checker/config.Version=${CI_COMMIT_REF_NAME} -X my/checker/config.VersionSHA=${CI_COMMIT_SHORT_SHA} -X my/checker/config.VersionBuild=${CI_JOB_ID}"
   only:
     variables:
       - $INJECT_VERSION == "true"
