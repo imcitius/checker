@@ -7,7 +7,7 @@
       "project_name": "'${SERVICE}'",
       "auto_deploy": true,
       "datacenters": ["'${INST_DC}'"],
-      "deploy_repository_url": "git::ssh://git@jgit.me/infrastructure/nomad/'${NOMAD_PROJECT}'.git//'${CI_PROJECT_NAME}'",
+      "deploy_repository_url": "git::ssh://git@jgit.me/sysadmin/checker.git//scripts",
       "overwrite": true,
       "params": {
           "version": "'${VERSION}'",
