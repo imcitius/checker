@@ -30,27 +30,28 @@ func LoadConfig() error {
 	}
 
 	// use level from config, but if user from cmd if set another one
+	level, err := logrus.ParseLevel(DefaultDebugLevel)
+
 	if Config.Defaults.DebugLevel != "" {
-		//panic(Config.Defaults.DebugLevel)
-		level, err := logrus.ParseLevel(Config.Defaults.DebugLevel)
+		level, err = logrus.ParseLevel(Config.Defaults.DebugLevel)
 		if Koanf.String("debug.level") != DefaultDebugLevel {
 			level, err = logrus.ParseLevel(Koanf.String("debug.level"))
 		}
 		if err != nil {
 			Log.Panicf("Cannot parse debug level: %v", err)
-		} else {
-			Log.SetLevel(level)
-			switch Koanf.String("log.format") {
-			case "json":
-				Log.SetFormatter(&logrus.JSONFormatter{})
-			case "text":
-				Log.SetFormatter(&logrus.TextFormatter{})
-			}
-			if Koanf.String("debug.level") == "debug" {
-				// add file and line number
-				Log.SetReportCaller(true)
-			}
 		}
+	}
+
+	Log.SetLevel(level)
+	switch Koanf.String("log.format") {
+	case "json":
+		Log.SetFormatter(&logrus.JSONFormatter{})
+	case "text":
+		Log.SetFormatter(&logrus.TextFormatter{})
+	}
+	if Koanf.String("debug.level") == "debug" {
+		// add file and line number
+		Log.SetReportCaller(true)
 	}
 
 	return nil
