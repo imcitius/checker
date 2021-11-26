@@ -542,7 +542,7 @@ func init() {
 			return fmt.Errorf("%s repstatus Could not count rows: %s\n", errorHeader, err.Error())
 		} else {
 			if count == 0 {
-				config.Log.Printf("Error: no rows in query result: %+v")
+				config.Log.Printf("Error: no rows in query result")
 				return fmt.Errorf("%s repstatus no rows in query result\n", errorHeader)
 			}
 		}
