@@ -19,9 +19,10 @@ include:
     file: common.yml
   - project: "ci-library/version"
     file: manual.yml
+  - project: "ci-library/inst-deploy"
+    file: common.yml
 
   - .gitlab-ci/*.yml
-
   - .gitlab-ci/werf/*.yml
 
   - project: 'ci-library/werf-deploy'
