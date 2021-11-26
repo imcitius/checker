@@ -10,7 +10,7 @@
 .deploy_instance:
   stage: deploy
   before_script:
-    - export WERF_IMAGE=$(cat images-report.json | jq -r .Images.checker.DockerImageName)
+    - export DEPLOY_IMAGE=$(cat images-report.json | jq -r .Images.checker.DockerImageName)
     - export VERSION=${CI_COMMIT_REF_NAME}
   script:
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json

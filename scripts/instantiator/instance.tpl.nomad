@@ -72,7 +72,7 @@ EOH
 
       config {
         force_pull   = true
-        image        = "{$ .P.werf_image $}"
+        image        = "{$ .P.image $}"
         network_mode = "weave"
         command      = "/app/checker"
 

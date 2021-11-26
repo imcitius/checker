@@ -1,15 +1,21 @@
 {
   "name": env.INSTANCE_NAME,
-  "project_name": env.PROJECT_NAME,
+  "project_name": env.SERVICE,
   "auto_deploy": true,
   "overwrite": true,
-  "datacenters": [
-    env.INSTANCE_DC
-  ],
+  "datacenters": [env.INSTANCE_DC],
   "deploy_repository_url": env.DEPLOY_REPO_URL,
   "params": {
-    "werf_image": env.WERF_IMAGE,
-    "consul_path": env.CONSUL_PATH,
-    "version": env.VERSION
+    "image": env.DEPLOY_IMAGE,
+    "major_version": env.CI_COMMIT_REF_SLUG | sub("(?<m>[0-9]+)-[0-9]+-[0-9]+"; .m),
+    "gitlab_project": env.CI_PROJECT_URL,
+    "commit_sha": env.CI_COMMIT_SHA,
+    "commit_message": env.CI_COMMIT_MESSAGE,
+    "deploy_by": env.GITLAB_USER_NAME,
+    "api_version": env.CI_COMMIT_REF_NAME,
+    "registry": env.REGISTRY,
+    "ui_version": "master",
+    "backend_uri": env.BACK_URI,
+    "env": env.ENV
   }
 }
