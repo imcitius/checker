@@ -217,6 +217,22 @@ checker_config_template: |
                 username: checker
                 password: << file "/vault/secrets/pgsql.env" >>
                 lag: 10s
+
+        - name: pgsql-alive
+          parameters:
+            check_period: 60s
+          checks:
+            - type: pgsql_query_timestamp
+              host: pgsql.mg-staging.mediaget.com
+              port: 5000
+              sql_query_config:
+                dbname: checker
+                username: checker
+                password: << file "/vault/secrets/pgsql.env" >>
+                tablename: repl_test
+                sslmode: require
+                query: select max (timestamp) from repl_test
+                difference: 10m
               severity: critical
 
   # добавить мантикору, imgproxy

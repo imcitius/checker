@@ -153,7 +153,7 @@ func init() {
 			lastRecord := time.Unix(id, 0)
 			curDif := time.Since(lastRecord)
 			if curDif > dif {
-				err := fmt.Errorf(errorHeader+"Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
+				err := fmt.Errorf(errorHeader+"Unixtime difference error: got %v, difference %v\n", lastRecord, curDif)
 				return err
 			}
 		}

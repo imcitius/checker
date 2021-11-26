@@ -144,7 +144,7 @@ func init() {
 
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		if err != nil {
-			config.Log.Printf("Cannot parse differenct value: %v", dif)
+			config.Log.Printf("Cannot parse difference value: %v", dif)
 		}
 
 		if c.SqlQueryConfig.Query == "" {
@@ -184,9 +184,108 @@ func init() {
 			lastRecord := time.Unix(id, 0)
 			curDif := time.Since(lastRecord)
 			if curDif > dif {
-				err := fmt.Errorf("unixtime differenct error: got %v, difference %v", lastRecord, curDif)
+				err := fmt.Errorf("unixtime difference error: got %v, difference %v", lastRecord, curDif)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
+		}
+
+		return nil
+	}
+
+	Checks["pgsql_query_timestamp"] = func(c *config.Check, p *projects.Project) (ret error) {
+
+		var (
+			timestamp time.Time
+			query     string
+			dbPort    int
+			sslMode   = "disable"
+		)
+
+		defer func() {
+			if err := recover(); err != nil {
+				errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+				errorMess := fmt.Sprintf("panic occurred: %+v", err)
+				config.Log.Errorf(errorMess)
+				ret = fmt.Errorf(errorHeader + errorMess)
+			}
+		}()
+
+		errorHeader := fmt.Sprintf("PGSQL query unixtime error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+
+		dbUser := c.SqlQueryConfig.UserName
+		dbPassword := c.SqlQueryConfig.Password
+		dbHost := c.Host
+		dbName := c.SqlQueryConfig.DBName
+		if c.Port == 0 {
+			dbPort = 5432
+		} else {
+			dbPort = c.Port
+		}
+
+		if c.Timeout == "" {
+			c.Timeout = config.DefaultTCPConnectTimeout
+		}
+		dbConnectTimeout, err := time.ParseDuration(c.Timeout)
+
+		if err != nil {
+			config.Log.Errorf("Cannot parse timeout duration: %s (%s)", c.Timeout, c.Type)
+		}
+
+		if c.SqlQueryConfig.SSLMode != "" {
+			sslMode = c.SqlReplicationConfig.SSLMode
+		}
+
+		if c.SqlQueryConfig.Difference == "" {
+			error := fmt.Sprintf("Cannot parse difference value: '%v'", c.SqlQueryConfig.Difference)
+			config.Log.Printf(error)
+			return fmt.Errorf(error)
+		}
+		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
+		config.Log.Infof("Difference parsed %s", dif)
+		if err != nil {
+			config.Log.Printf("Cannot parse difference value: %v", dif)
+		}
+
+		if c.SqlQueryConfig.Query == "" {
+			query = "select 1;"
+		} else {
+			query = c.SqlQueryConfig.Query
+		}
+
+		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", dbUser, dbPassword, dbHost, dbPort, dbName, sslMode)
+
+		if dbConnectTimeout > 0 {
+			connStr = connStr + fmt.Sprintf("&connect_timeout=%d", int(dbConnectTimeout.Seconds()))
+		}
+
+		//config.Log.Printf("Connect string: %s", connStr)
+
+		db, err := sql.Open("postgres", connStr)
+		if err != nil {
+			config.Log.Printf("Error: The data source arguments are not valid: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
+		}
+		defer func() { _ = db.Close() }()
+
+		err = db.Ping()
+		if err != nil {
+			config.Log.Printf("Error: Could not establish a connection with the database: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
+		}
+
+		err = db.QueryRow(query).Scan(&timestamp)
+		if err != nil {
+			config.Log.Printf("Error: Could not query database: %+v", err)
+			return fmt.Errorf(errorHeader + err.Error())
+		}
+
+		lastRecord := timestamp
+		curDif := time.Since(lastRecord)
+		config.Log.Infof("lastRecord %s", lastRecord)
+		config.Log.Infof("curDif %s", curDif)
+		if curDif > dif {
+			err := fmt.Errorf("Timestamp difference error: got %v, difference %v", lastRecord, curDif)
+			return fmt.Errorf(errorHeader + err.Error())
 		}
 
 		return nil

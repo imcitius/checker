@@ -404,7 +404,7 @@ The table with following DDL should be created:
     CREATE TABLE repl_test (
        id int primary key,
        test_value int,
-       timestamp timestamp default current_timestamp
+       timestamp timestamp with time zone default current_timestamp
     )
 ```
 In PostgreSQL version 10+ Checker requires special permission to analyze replication details without superuser role:
