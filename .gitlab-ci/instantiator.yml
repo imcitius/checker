@@ -10,9 +10,7 @@
 .deploy_instance:
   stage: deploy
   before_script:
-    - ls -al images-report.json
-    - export VERSION=$(cat images-report.json | jq -r .Images.stat.DockerImageName)
-    - echo ${VERSION}
+    - export VERSION=$(cat images-report.json | jq -r .Images.checker.DockerImageName)
   script:
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json
     - jq -r '.' params.json
