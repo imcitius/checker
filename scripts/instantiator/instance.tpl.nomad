@@ -71,7 +71,7 @@ EOH
 
       config {
         force_pull = true
-        image = "{$ .P.version $}"
+        image = "{$ .P.image $}"
         network_mode = "weave"
         command = "/app/checker"
 
