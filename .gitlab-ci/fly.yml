@@ -28,5 +28,5 @@ fly-deploy:
       - jgit
   environment:
     name: fly-prod
-  needs:
-    - go tests
+#  needs:
+#    - go tests
