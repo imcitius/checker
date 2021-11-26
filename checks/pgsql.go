@@ -536,6 +536,17 @@ func init() {
 		}
 
 		defer func() { _ = rows.Close() }()
+		var count int
+		if err := rows.Scan(&count); err != nil {
+			config.Log.Printf("Error: Could not count rows: %+v", err)
+			return fmt.Errorf("%s repstatus Could not count rows: %s\n", errorHeader, err.Error())
+		} else {
+			if count == 0 {
+				config.Log.Printf("Error: no rows in query result: %+v")
+				return fmt.Errorf("%s repstatus no rows in query result\n", errorHeader)
+			}
+		}
+
 		for rows.Next() {
 			var reply repStatus
 			err := rows.Scan(
