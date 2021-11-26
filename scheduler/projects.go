@@ -17,8 +17,8 @@ func runProjectTickers(t *config.Ticker, wg *sync.WaitGroup, signalCh chan bool)
 	go func(ticker *config.Ticker) {
 		defer wg.Done()
 
-		config.Log.Debugf("Waiting for ticker %s", ticker.Description)
-		defer config.Log.Debugf("Finished ticker %s", ticker.Description)
+		config.Log.Infof("Waiting for ticker %s", ticker.Description)
+		defer config.Log.Infof("Finished ticker %s", ticker.Description)
 		for {
 			select {
 			case <-signalCh:
