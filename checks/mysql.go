@@ -263,13 +263,8 @@ func init() {
 				return err
 			}
 
-			if c.SqlQueryConfig.Response != "" {
-				if id != recordValue {
-					err = fmt.Errorf("replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, host)
-					return fmt.Errorf(errorHeader + err.Error())
-				}
-			} else {
-				err = fmt.Errorf("replication error: slave db reply is empty: on server %s", host)
+			if id != recordValue {
+				err = fmt.Errorf("replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, host)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
 

@@ -15,7 +15,13 @@
           "env": "'${ENV}'",
           "backend_uri": "'${BACK_URI}'",
           "registry_host": "'${REGISTRY_HOST}'",
-          "registry_repo": "'${REGISTRY_REPO}'"
+          "consul_path":env.CONSUL_PATH,
+          "registry_repo": "'${REGISTRY_REPO}'",
+          "backend_uri": "",
+          "deploy_by":"",
+          "commit_sha":"",
+          "gitlab_project":"",
+          "commit_message":""
       }
   }'
 
@@ -48,6 +54,7 @@ prod instance:
     - .docker_europe_tags
   variables:
     CONSUL_PATH: configs/ks-1/checker/config
+    ENV: checker-prod
   only:
     - tags
 
@@ -59,6 +66,7 @@ stage instance ks1:
     - .docker_europe_tags
   variables:
     CONSUL_PATH: configs/ks-1/checker/testconfig
+    ENV: checker-jgit
   only:
     refs:
       - jgit
