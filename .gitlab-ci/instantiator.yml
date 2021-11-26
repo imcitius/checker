@@ -10,6 +10,8 @@
 .deploy_instance:
   stage: deploy
   script:
+    - set -xe
+#    - if ! test -f images-report.json; then echo yes; fi
     - export VERSION=$(cat images-report.json | jq -r .Images.stat.DockerImageName)
     - echo ${VERSION}
     - echo "{}" | jq -f ${REQUEST_FILE} > params.json
