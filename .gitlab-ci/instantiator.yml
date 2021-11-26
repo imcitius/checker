@@ -31,7 +31,7 @@
   stage: deploy
   before_script:
     ##### image name here                                     ++++
-    - export VERSION=$(cat images-report.json | jq -r .Images.stat.DockerImageName)
+    - export VERSION=$(cat images-report.json | jq -r .Images.checker.DockerImageName)
   script:
     - set -x
     # - *generate_version
