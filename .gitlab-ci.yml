@@ -15,8 +15,8 @@ variables:
   PACKER_ONLY: ""
   BINARY_NAME: "checker"
   INSTANCE_DC: ks-1
-  VERSION: ${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}
-  REGISTRY_IMAGE: ${REGISTRY_URL}/${CI_PROJECT_PATH_SLUG}
+  VERSION: "$(cat images-report.json | jq -r .Images.stat.DockerImageName)"
+  REGISTRY_IMAGE: ${REGISTRY_URL}/${CI_PROJECT_NAME}
   REGISTRY_URL: "harbor-ks.jgit.me/library"
   CONSUL_PATH: ""
   CGO_ENABLED: 1
