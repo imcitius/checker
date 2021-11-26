@@ -44,7 +44,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configWatchTimeout, "configwatchtimeout", "w", "5s", "config watch period")
 	rootCmd.PersistentFlags().BoolVarP(&watchConfig, "watchConfig", "W", false, "Whether to watch config file changes on disk")
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "logformat", "l", "text", "log format: text/json")
-	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", "warn", "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
+	rootCmd.PersistentFlags().StringVarP(&debugLevel, "debugLevel", "D", config.DefaultDebugLevel, "Debug level: Debug,Info,Warn,Error,Fatal,Panic")
 	rootCmd.PersistentFlags().StringVarP(&checkUUID, "checkUUID", "u", "", "UUID to check with SingleCheck")
 	// this does not work properly, as not possible to distinct default value when flag was not set and should rely on config
 	// may bo going to spf13/viper will help

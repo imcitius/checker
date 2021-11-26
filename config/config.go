@@ -18,6 +18,8 @@ const (
 
 	DefaultHTTPCheckTimeout  = "2s"
 	DefaultTCPConnectTimeout = "2s"
+
+	DefaultDebugLevel = "warn"
 )
 
 var (
@@ -73,6 +75,8 @@ type File struct {
 		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
 
 		BotsEnabled bool `koanf:"bots_enabled"`
+
+		DebugLevel string `koanf:"debug_level"`
 	}
 	Alerts   []AlertConfigs
 	Actors   []ActorConfigs

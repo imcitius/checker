@@ -29,6 +29,28 @@ func LoadConfig() error {
 		Config = tempConfig
 	}
 
+	// use level from config, but if user from cmd if set another one
+	//panic(Config.Defaults.DebugLevel)
+	level, err := logrus.ParseLevel(Config.Defaults.DebugLevel)
+	if Koanf.String("debug.level") != DefaultDebugLevel {
+		level, err = logrus.ParseLevel(Koanf.String("debug.level"))
+	}
+	if err != nil {
+		Log.Panicf("Cannot parse debug level: %v", err)
+	} else {
+		Log.SetLevel(level)
+		switch Koanf.String("log.format") {
+		case "json":
+			Log.SetFormatter(&logrus.JSONFormatter{})
+		case "text":
+			Log.SetFormatter(&logrus.TextFormatter{})
+		}
+		if Koanf.String("debug.level") == "debug" {
+			// add file and line number
+			Log.SetReportCaller(true)
+		}
+	}
+
 	return nil
 }
 
@@ -141,45 +163,22 @@ func TestConfig() (File, error) {
 
 	}
 
-	level, err := logrus.ParseLevel(Koanf.String("debug.level"))
-	if err != nil {
-		Log.Errorf("Cannot parse debug level: %v", err)
-		return tempConfig, err
-	} else {
-		Log.SetLevel(level)
-		switch Koanf.String("log.format") {
-		case "json":
-			Log.SetFormatter(&logrus.JSONFormatter{})
-		case "text":
-			Log.SetFormatter(&logrus.TextFormatter{})
-		}
-		if Koanf.String("debug.level") == "debug" {
-			// add file and line number
-			Log.SetReportCaller(true)
-		}
-	}
-
 	if err := Koanf.Unmarshal("", &tempConfig); err != nil {
 		return tempConfig, err
 	}
 
-	err = tempConfig.FillSecrets()
-	if err != nil {
+	if err := tempConfig.FillSecrets(); err != nil {
 		return tempConfig, err
 	}
-	err = tempConfig.FillDefaults()
-	if err != nil {
+	if err := tempConfig.FillDefaults(); err != nil {
 		return tempConfig, err
 	}
-	err = tempConfig.FillUUIDs()
-	if err != nil {
+	if err := tempConfig.FillUUIDs(); err != nil {
 		return tempConfig, err
 	}
-	err = tempConfig.FillPeriods()
-	if err != nil {
+	if err := tempConfig.FillPeriods(); err != nil {
 		return tempConfig, err
 	}
-
 	return tempConfig, nil
 }
 
