@@ -236,9 +236,9 @@ func init() {
 		}
 
 		if c.SqlQueryConfig.Difference == "" {
-			error := fmt.Sprintf("Cannot parse difference value: '%v'", c.SqlQueryConfig.Difference)
-			config.Log.Printf(error)
-			return fmt.Errorf(error)
+			err := fmt.Sprintf("Cannot parse difference value: '%v'", c.SqlQueryConfig.Difference)
+			config.Log.Printf(err)
+			return fmt.Errorf(err)
 		}
 		dif, err := time.ParseDuration(c.SqlQueryConfig.Difference)
 		config.Log.Infof("Difference parsed %s", dif)
@@ -429,6 +429,9 @@ func init() {
 					err = fmt.Errorf("replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, host)
 					return fmt.Errorf(errorHeader + err.Error())
 				}
+			} else {
+				err = fmt.Errorf("replication error: slave db reply is empty: on server %s", host)
+				return fmt.Errorf(errorHeader + err.Error())
 			}
 
 		}
