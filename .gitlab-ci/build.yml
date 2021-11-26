@@ -24,3 +24,7 @@ go inject linux:
 dev instance:
   script:
     - /bin/true
+
+go tests:
+  script:
+    - /bin/true
