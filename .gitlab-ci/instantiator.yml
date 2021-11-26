@@ -1,30 +1,41 @@
-.run_cmd: &run_cmd |
-  if [[ CI_DEBUG_TRACE -ne "true" ]]; then CURL_OPTS="$CURL_OPTS -s"; fi
-  curl $CURL_OPTS -X POST ${INST_API_URL}/instances \
-  -H "Content-Type: application/json" \
-  -d "@params.json" > result.json
+.inst-run: &inst-run |
+  curl -X POST \
+    http://${INST_API}.service.${INST_DC}.consul/instances \
+    -H 'Content-Type: application/json' \
+    -d '{
+      "name": "'${ENV}'",
+      "project_name": "'${SERVICE}'",
+      "auto_deploy": true,
+      "datacenters": ["'${INST_DC}'"],
+      "deploy_repository_url": "git::ssh://git@jgit.me/infrastructure/nomad/'${NOMAD_PROJECT}'.git//'${CI_PROJECT_NAME}'",
+      "overwrite": true,
+      "params": {
+          "version": "'${VERSION}'",
+          "env": "'${ENV}'",
+          "backend_uri": "'${BACK_URI}'",
+          "registry_host": "'${REGISTRY_HOST}'",
+          "registry_repo": "'${REGISTRY_REPO}'"
+      }
+  }'
 
-.check_result: &check_result |
-  if [[ `jq -r '.status' result.json` == "error" ]]; then jq -r '.' result.json; exit 2; else jq -r '.' result.json; fi
-
-.deploy_instance:
+.deploy to instantiator: &deploy_to_instantiator
   stage: deploy
   before_script:
-    - export DEPLOY_IMAGE=$(cat images-report.json | jq -r .Images.checker.DockerImageName)
-    - export VERSION=${CI_COMMIT_REF_NAME}
+    ##### image name here                                     ++++
+    - export VERSION=$(cat images-report.json | jq -r .Images.stat.DockerImageName)
   script:
-    - echo "{}" | jq -f ${REQUEST_FILE} > params.json
-    - jq -r '.' params.json
-    - *run_cmd
-    - *check_result
-    - export INSTANCE_UUID=`jq -r '.payload.uuid' result.json`
-    - echo "Status page - ${INST_UI_URL}/instance/${INSTANCE_UUID}"
+    - set -x
+    # - *generate_version
+    - *inst-run
+  extends:
+    - .docker_europe_tags
+    - .vars
 
 prod instance:
   environment:
     name: ks1-prod
   extends:
-    - .deploy_instance
+    - .deploy to instantiator
     - .docker_europe_tags
   variables:
     CONSUL_PATH: configs/ks-1/checker/config
@@ -35,7 +46,7 @@ stage instance ks1:
   environment:
     name: stage
   extends:
-    - .deploy_instance
+    - .deploy to instantiator
     - .docker_europe_tags
   variables:
     CONSUL_PATH: configs/ks-1/checker/testconfig
