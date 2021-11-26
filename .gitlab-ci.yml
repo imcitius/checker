@@ -15,11 +15,10 @@ variables:
   CGO_ENABLED: 1
 
 include:
-  - project: "ci-library/ci-collections"
-    file: "go-app.base.yml"
+#  - project: "ci-library/ci-collections"
+#    file: "go-app.base.yml"
 
   - .gitlab-ci/*.yml
-
   - .gitlab-ci/werf/*.yml
 
   - project: 'ci-library/werf-deploy'
