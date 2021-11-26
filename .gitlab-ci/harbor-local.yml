@@ -37,7 +37,8 @@ master harbor-local:
   extends:
     - .docker_europe_tags
   only:
-    - main
+#    - master
+    - jgit
 
 tags harbor-local:
   stage: build
