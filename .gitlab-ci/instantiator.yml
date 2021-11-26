@@ -1,3 +1,14 @@
+.deploy_instance:
+  stage: deploy
+  script:
+    - echo "{}" | jq -f ${REQUEST_FILE} > params.json
+    - jq -r '.' params.json
+    - *run_cmd
+    - *check_result
+    - export INSTANCE_UUID=`jq -r '.payload.uuid' result.json`
+    - export VERSION="$(cat images-report.json | jq -r .Images.stat.DockerImageName)"
+    - echo "Status page - ${INST_UI_URL}/instance/${INSTANCE_UUID}"
+
 prod instance:
   environment:
     name: ks1-prod
