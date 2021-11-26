@@ -61,7 +61,7 @@ EOH
 
       template {
         data = <<EOH
-CONSUL_PATH = "{$ .P.consul_path $}"
+CHECKER_CONFIG = "{{ key .P.consul_path }}"
 CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500"
 VAULT_ADDR = "https://vault.service.infra1.consul"
 EOH
@@ -77,10 +77,8 @@ EOH
 
         args = [
           "check",
-          "--configsource",
-          "consul",
-          "--configformat",
-          "json"
+          "-s",
+          "env"
         ]
 
         port_map = {
