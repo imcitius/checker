@@ -18,8 +18,8 @@ include:
   - project: "ci-library/ci-collections"
     file: "go-app.base.yml"
 
-  - .gitlab-ci/build.yml
-  - .gitlab-ci/package.yml
+  - .gitlab-ci/build.yml.off
+  - .gitlab-ci/package.yml.off
   - .gitlab-ci/instantiator.yml
   - .gitlab-ci/fly.yml
 
