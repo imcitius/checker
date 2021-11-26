@@ -1,6 +1,6 @@
 stages:
   - test
-  - biuld
+  - build
   - deploy
   - version
   - destroy
