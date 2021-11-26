@@ -10,23 +10,23 @@ import (
 	"time"
 )
 
-func runReportsTicker(ticker *config.Ticker, wg *sync.WaitGroup, ch chan bool) {
-	config.Log.Info("Starting report ticker")
+func runReportsTicker(t *time.Ticker, desc string, wg *sync.WaitGroup, ch chan bool) {
+	config.Log.Infof("Starting report ticker %s", desc)
 	config.Wg.Add(1)
 	defer wg.Done()
 
-	config.Log.Debugf("Waiting for ticker %s", ticker.Description)
-	defer config.Log.Debugf("Finished ticker %s", ticker.Description)
+	config.Log.Debugf("Waiting for ticker %s", desc)
+	defer config.Log.Debugf("Finished ticker %s", desc)
 	for {
 		select {
 		case <-ch:
 			config.Log.Infof("Exit reports ticker")
 			return
-		case tick := <-ticker.Duration.C:
+		case tick := <-t.C:
 			uptime := tick.Round(time.Second).Sub(config.StartTime.Round(time.Second))
-			config.Log.Debugf("ticker.Description: %s", ticker.Description)
-			period := ticker.Description
-			config.Log.Infof("Uptime: %s (%s ticker)", uptime, ticker.Description)
+			config.Log.Debugf("ticker.Description: %s", desc)
+			period := desc
+			config.Log.Infof("Uptime: %s (%s ticker)", uptime, desc)
 			reportsDuration := runReports(period)
 			config.Log.Debugf("Reports duration: %v msec", reportsDuration.Milliseconds())
 			metrics.SchedulerReportsDuration.Set(float64(reportsDuration.Milliseconds()))

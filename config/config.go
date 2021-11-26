@@ -51,8 +51,8 @@ var (
 
 	TokenEncryptionKey []byte
 
-	TickersCollection = map[string]Ticker{}
-	ReportsTicker     = &Ticker{}
+	TickersCollection = map[string]*time.Ticker{}
+	ReportsTicker     = &time.Ticker{}
 )
 
 type CachedSecret struct {
@@ -221,9 +221,4 @@ type Check struct {
 
 type TimeoutCollection struct {
 	periods []string
-}
-
-type Ticker struct {
-	Duration    time.Ticker
-	Description string
 }

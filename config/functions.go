@@ -282,19 +282,20 @@ func StartTickers() error {
 		// adding all possible healthchecks periods
 		for _, ticker := range Timeouts.Periods {
 			tickerDuration, err := time.ParseDuration(ticker)
-			Log.Infof("Create ticker: %s", ticker)
+			Log.Debugf("Create ticker: %s", ticker)
 			if err != nil {
 				Log.Debugf(err.Error())
 				return err
 			}
-			TickersCollection[ticker] = Ticker{Duration: *time.NewTicker(tickerDuration), Description: ticker}
-
+			if _, ok := TickersCollection[ticker]; !ok {
+				TickersCollection[ticker] = time.NewTicker(tickerDuration)
+			}
 		}
 		Log.Debugf("Tickers generated: %+v", TickersCollection)
 	}
 
 	reportsPeriod, _ := time.ParseDuration(Config.Defaults.Parameters.ReportPeriod)
-	ReportsTicker = &Ticker{Duration: *time.NewTicker(reportsPeriod), Description: Config.Defaults.Parameters.ReportPeriod}
+	ReportsTicker = time.NewTicker(reportsPeriod)
 
 	return nil
 }
