@@ -18,6 +18,14 @@
       }
   }'
 
+.vars: &vars
+  variables:
+    PROJECT: ks-1
+    SERVICE: ${CI_PROJECT_NAME}
+    INST_DC: ks-1
+    INST_API: inst-api
+    NOMAD_PROJECT: ks-1
+
 .deploy to instantiator: &deploy_to_instantiator
   stage: deploy
   before_script:
