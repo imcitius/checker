@@ -15,7 +15,7 @@
           "env": "'${ENV}'",
           "backend_uri": "'${BACK_URI}'",
           "registry_host": "'${REGISTRY_HOST}'",
-          "consul_path":env.CONSUL_PATH,
+          "consul_path": "'${CONSUL_PATH}'",
           "registry_repo": "'${REGISTRY_REPO}'",
           "backend_uri": "",
           "deploy_by":"",
