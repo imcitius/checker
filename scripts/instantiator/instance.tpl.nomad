@@ -90,7 +90,7 @@ EOH
           type = "fluentd"
           config {
             fluentd-address = "localhost:24226"
-            tag             = "docker_{$ .I.ProjectName $}"
+            tag             = "checker"
           }
         }
       }
