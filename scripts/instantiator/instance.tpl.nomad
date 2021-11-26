@@ -53,11 +53,11 @@ EOH
       delay    = "5s"
     }
 
-    task "checker-{$ .P.version $}" {
+    task "checker" {
       driver = "docker"
 
       meta {
-        version = "{$ .P.version $}"
+#        version = "{$ .P.version $}"
       }
 
       template {
