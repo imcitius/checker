@@ -38,4 +38,6 @@ shell:
   install:
     - apk add curl jq
 docker:
+  COPY scripts/null-ca.pem /usr/local/share/ca-certificates/my-cert.crt
+  RUN cat /usr/local/share/ca-certificates/my-cert.crt >> /etc/ssl/certs/ca-certificates.crt
   WORKDIR: /
