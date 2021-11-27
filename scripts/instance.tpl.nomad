@@ -54,7 +54,7 @@ job "{$ UniqName .I $}" {
 
       template {
         data        = <<EOH
-CHECKER_CONFIG = "{{ key .P.consul_path }}"
+CHECKER_CONFIG = "{{ key {$ .P.consul_path $} }}"
 CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500"
 VAULT_ADDR = "https://vault.service.infra1.consul"
 EOH

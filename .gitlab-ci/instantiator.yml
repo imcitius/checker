@@ -54,7 +54,7 @@ prod instance:
     - .docker_europe_tags
   variables:
     CONSUL_PATH: configs/ks-1/checker/config
-    ENV: checker-prod
+    ENV: prod
   only:
     - tags
 
@@ -66,7 +66,7 @@ stage instance ks1:
     - .docker_europe_tags
   variables:
     CONSUL_PATH: configs/ks-1/checker/testconfig
-    ENV: checker-jgit
+    ENV: jgit
   only:
     refs:
       - jgit
