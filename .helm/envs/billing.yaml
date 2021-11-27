@@ -13,7 +13,7 @@ checker_config_template: |
   ---
   defaults:
     http_port: '80'
-    bots_enabled: true
+    bots_enabled: false
     << file "/vault/secrets/jwt.env" >>
     parameters:
       check_period: 900s

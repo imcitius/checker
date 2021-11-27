@@ -476,7 +476,7 @@ func init() {
 
 		defer func() {
 			if err := recover(); err != nil {
-				errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+				errorHeader := fmt.Sprintf("PGSQL replication status check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 				errorMess := fmt.Sprintf("panic occurred: %+v", err)
 				config.Log.Errorf(errorMess)
 				ret = fmt.Errorf(errorHeader + errorMess)
@@ -522,11 +522,12 @@ func init() {
 		}
 		defer func() { _ = db.Close() }()
 
-		err = db.Ping()
-		if err != nil {
-			config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
-			return fmt.Errorf(errorHeader + "db.Ping error\n" + err.Error())
-		}
+		// unable to ping with default pg_monitor role
+		//err = db.Ping()
+		//if err != nil {
+		//	config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
+		//	return fmt.Errorf(errorHeader + "db.Ping error\n" + err.Error())
+		//}
 
 		config.Log.Debugf("Getting replication status from master...")
 
