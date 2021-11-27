@@ -85,13 +85,13 @@ EOH
           http = "80"
         }
 
-        logging {
-          type = "fluentd"
-          config {
-            fluentd-address = "localhost:24226"
-            tag             = "checker"
-          }
-        }
+#        logging {
+#          type = "fluentd"
+#          config {
+#            fluentd-address = "localhost:24226"
+#            tag             = "checker"
+#          }
+#        }
       }
 
       service {
