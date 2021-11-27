@@ -430,7 +430,7 @@ func init() {
 			}
 
 			if id != recordValue {
-				err = fmt.Errorf("replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, host)
+				err = fmt.Errorf("replication error: db response does not match expected: %d (expected %d) on server %s after %s", id, recordValue, host, lagAllowed)
 				return fmt.Errorf(errorHeader + err.Error())
 			}
 
