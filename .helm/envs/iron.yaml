@@ -191,16 +191,6 @@ checker_config_template: |
                 - 200
               timeout: 2s
               severity: critical
-        # no healthcheck in old one
-        #- name: dynamic-percent-old
-        #  checks:
-        #    - type: http
-        #      host: http://dynpercent:8081/health-check
-        #      answer: '{"status":"ok"}'
-        #      code:
-        #        - 200
-        #      timeout: 2s
-        #      severity: critical
         - name: dynamic-percent-new
           parameters:
             check_period: 60s
@@ -212,6 +202,35 @@ checker_config_template: |
                 - 200
               timeout: 2s
               severity: critical
+
+        - name: pgsql-main
+          parameters:
+            check_period: 60s
+          checks:
+            - type: pgsql_replication_status
+              host: pgsql.iron.irontrade.com
+              port: 5000
+              sql_repl_config:
+                dbname: checker
+                username: checker
+                password: << file "/vault/secrets/pgsql.env" >>
+                lag: 3s
+              severity: critical
+
+  #            - type: pgsql_replication
+  #              host: pgsql.iron.irontrade.com
+  #              port: 5000
+  #              sql_repl_config:
+  #                dbname: checker
+  #                username: checker
+  #                password: << file "/vault/secrets/pgsql.env" >>
+  #                tablename: repl_test
+  #                sslmode: require
+  #                serverlist:
+  #                  - sd-156610.dedibox.fr:5433
+  #                  - sd-156668.dedibox.fr:5433
+  #                  - sd-156793.dedibox.fr:5433
+  #              severity: critical
 
     # billing
     - name: billing-prod
@@ -274,20 +293,6 @@ checker_config_template: |
               timeout: 2s
               severity: critical
 
-        - name: pgsql-main
-          parameters:
-            check_period: 60s
-          checks:
-            - type: pgsql_replication_status
-              host: pgsql.iron.irontrade.com
-              port: 5000
-              sql_repl_config:
-                dbname: checker
-                username: checker
-                password: << file "/vault/secrets/pgsql.env" >>
-                lag: 3s
-              severity: critical
-
     - name: checker-fly.io crosscheck
       healthchecks:
         - name: Iron checker Running
@@ -298,17 +303,3 @@ checker_config_template: |
                 - 200
               timeout: 3s
 
-#            - type: pgsql_replication
-#              host: pgsql.iron.irontrade.com
-#              port: 5000
-#              sql_repl_config:
-#                dbname: checker
-#                username: checker
-#                password: << file "/vault/secrets/pgsql.env" >>
-#                tablename: repl_test
-#                sslmode: require
-#                serverlist:
-#                  - sd-156610.dedibox.fr:5433
-#                  - sd-156668.dedibox.fr:5433
-#                  - sd-156793.dedibox.fr:5433
-#              severity: critical
