@@ -54,12 +54,19 @@ job "{$ UniqName .I $}" {
 
       template {
         data        = <<EOH
-CHECKER_CONFIG = '{{ key "{$ .P.consul_path $}" }}'
 CONSUL_ADDR = "http://consul.service.{$ index .I.Datacenters 0 $}.consul:8500"
 VAULT_ADDR = "https://vault.service.infra1.consul"
 EOH
         env         = true
         destination = "secrets/.env"
+      }
+
+      template {
+        data        = <<EOH
+{{ key "{$ .P.consul_path $}" }}
+EOH
+        env         = false
+        destination = "secrets/config"
       }
 
       config {
@@ -70,8 +77,8 @@ EOH
 
         args = [
           "check",
-          "-s",
-          "env"
+          "-f",
+          "/secrets/config"
         ]
 
         port_map = {
