@@ -68,3 +68,35 @@ k8s destroy iron:
   environment:
     name: iron
     action: stop
+
+k8s billing:
+  variables:
+    WERF_ENV: billing
+    DEPLOY_ENV: scaleway/binary-prod
+  extends:
+    - .werf_deploy_template
+    - .docker_europe_tags
+  only:
+    - tags
+  needs:
+    - werf build
+  environment:
+    name: billing
+    kubernetes:
+      namespace: billing
+    url: https://irontrade.com
+    on_stop: k8s destroy billing
+
+k8s destroy billing:
+  variables:
+    WERF_ENV: iron
+    DEPLOY_ENV: scaleway/binary-prod
+  extends:
+    - .werf_destroy_template
+    - .docker_europe_tags
+  only:
+    - tags
+  when: manual
+  environment:
+    name: billing
+    action: stop

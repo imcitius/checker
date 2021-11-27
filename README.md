@@ -394,7 +394,8 @@ Configuration example:
           "pgsql-main-0.node.staging.consul",
           "pgsql-main-1.node.staging.consul",
           "pgsql-main-2.node.staging.consul"
-        ]
+        ],
+        "lag": "5s"
       }
     }
 ```
@@ -405,7 +406,7 @@ The table with following DDL should be created:
        id int primary key,
        test_value int,
        timestamp timestamp with time zone default current_timestamp
-    )
+    );
 ```
 In PostgreSQL version 10+ Checker requires special permission to analyze replication details without superuser role:
 ```GRANT pg_monitor TO checker;```
