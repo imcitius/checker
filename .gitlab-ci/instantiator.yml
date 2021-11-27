@@ -7,7 +7,7 @@
       "project_name": "'${SERVICE}'",
       "auto_deploy": true,
       "datacenters": ["'${INST_DC}'"],
-      "deploy_repository_url": "git::ssh://git@jgit.me/sysadmin/checker.git//scripts?ref=${CI_COMMIT_REF_NAME}",
+      "deploy_repository_url": "git::ssh://git@jgit.me/sysadmin/checker.git//scripts?ref='${CI_COMMIT_REF_NAME}'",
       "overwrite": true,
       "params": {
           "version": "'${VERSION}'",
