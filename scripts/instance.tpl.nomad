@@ -73,7 +73,7 @@ EOH
         force_pull   = true
         image        = "{$ .P.image $}"
         network_mode = "weave"
-        command      = "/app/checker"
+        command      = "/checker"
 
         args = [
           "check",
