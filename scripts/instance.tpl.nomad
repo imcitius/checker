@@ -49,7 +49,7 @@ job "{$ UniqName .I $}" {
       driver = "docker"
 
       meta {
-#        version = "{$ .P.version $}"
+        version = "{$ .P.version $}"
       }
 
       template {
@@ -64,7 +64,7 @@ EOH
 
       config {
         force_pull   = true
-        image        = "{$ .P.version $}"
+        image        = "{$ .P.image $}"
         network_mode = "weave"
         command      = "/app/checker"
 

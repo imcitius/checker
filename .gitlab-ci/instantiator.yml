@@ -10,7 +10,7 @@
       "deploy_repository_url": "git::ssh://git@jgit.me/sysadmin/checker.git//scripts?ref='${CI_COMMIT_REF_NAME}'",
       "overwrite": true,
       "params": {
-          "version": "'${VERSION}'",
+          "version": "'${CI_COMMIT_REF_NAME}'",
           "image": "'${VERSION}'",
           "env": "'${ENV}'",
           "backend_uri": "'${BACK_URI}'",
