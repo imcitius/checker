@@ -65,6 +65,7 @@ checker_config_template: |
                   - 212.47.233.229:5433
                   - 51.15.206.209:5433
                   - 163.172.183.48:5433
+                lag: 10s
             - type: pgsql_replication_status
               host: pgsql.mg-staging.mediaget.com
               port: 5000
