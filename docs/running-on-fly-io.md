@@ -118,7 +118,7 @@ defaults:
     crit_alert: tg_staging
     command_channel: tg_staging
     mode: loud
-    ssl_expiration_period: 720h
+    ssl_expiration_period: 360h
 
 alerts:
   - name: tg_staging

@@ -24,7 +24,7 @@ checker_config_template: |
       crit_alert: prod
       command_channel: prod
       mode: loud
-      ssl_expiration_period: 720h
+      ssl_expiration_period: 360h
   alerts:
     - name: prod
       type: telegram

@@ -23,7 +23,7 @@ checker_config_template: |
       crit_alert: staging
       command_channel: staging
       mode: loud
-      ssl_expiration_period: 720h
+      ssl_expiration_period: 360h
   alerts:
     - name: staging
       type: telegram

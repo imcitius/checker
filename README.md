@@ -44,7 +44,7 @@ defaults:
     allow_fails: 0
     mode: loud
     report_period: 10s
-    ssl_expiration_period: 720h
+    ssl_expiration_period: 360h
     bots_enabled: true
 alerts:
   - name: tg_staging

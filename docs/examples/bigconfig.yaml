@@ -10,7 +10,7 @@ defaults:
     command_channel: tg_staging_test
     mode: loud
     report_period: 1800s
-    ssl_expiration_period: 720h
+    ssl_expiration_period: 360h
 alerts:
   - name: tg_staging
     type: telegram

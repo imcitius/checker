@@ -24,7 +24,7 @@ checker_config_template: |
       crit_alert: telegram
       command_channel: telegram
       mode: loud
-      ssl_expiration_period: 720h
+      ssl_expiration_period: 360h
   alerts:
     - name: telegram
       type: telegram
@@ -278,20 +278,6 @@ checker_config_template: |
           parameters:
             check_period: 60s
           checks:
-            - type: pgsql_replication
-              host: pgsql.iron.irontrade.com
-              port: 5000
-              sql_repl_config:
-                dbname: checker
-                username: checker
-                password: << file "/vault/secrets/pgsql.env" >>
-                tablename: repl_test
-                sslmode: require
-                serverlist:
-                  - sd-156610.dedibox.fr:5433
-                  - sd-156668.dedibox.fr:5433
-                  - sd-156793.dedibox.fr:5433
-              severity: critical
             - type: pgsql_replication_status
               host: pgsql.iron.irontrade.com
               port: 5000
@@ -311,3 +297,18 @@ checker_config_template: |
               code:
                 - 200
               timeout: 3s
+
+#            - type: pgsql_replication
+#              host: pgsql.iron.irontrade.com
+#              port: 5000
+#              sql_repl_config:
+#                dbname: checker
+#                username: checker
+#                password: << file "/vault/secrets/pgsql.env" >>
+#                tablename: repl_test
+#                sslmode: require
+#                serverlist:
+#                  - sd-156610.dedibox.fr:5433
+#                  - sd-156668.dedibox.fr:5433
+#                  - sd-156793.dedibox.fr:5433
+#              severity: critical

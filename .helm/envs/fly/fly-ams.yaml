@@ -12,7 +12,7 @@ defaults:
     crit_alert: tg_OtherChecker
     command_channel: tg_OtherChecker
     mode: loud
-    ssl_expiration_period: 720h
+    ssl_expiration_period: 360h
 alerts:
   - name: tg_OtherChecker
     type: telegram
