@@ -361,7 +361,7 @@ func init() {
 		}
 
 		config.Log.Debugf("Set info on master, id: %d, value: %d", recordId, recordValue)
-		insertSql := "INSERT INTO %s (id,test_value, timestamp) VALUES (%d,%d,now()) ON CONFLICT (id) DO UPDATE set test_value=%d,timestamp=now() where %s.id=%d;"
+		insertSql := "INSERT INTO %s (id, test_value, timestamp) VALUES (%d, %d ,now()) ON CONFLICT (id) DO UPDATE set test_value=%d,timestamp=now() where %s.id=%d;"
 
 		sqlStatement := fmt.Sprintf(insertSql, dbTable, recordId, recordValue, recordValue, dbTable, recordId)
 		//config.Log.Printf("sqlStatement string: %s", sqlStatement)

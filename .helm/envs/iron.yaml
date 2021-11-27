@@ -294,21 +294,6 @@ checker_config_template: |
               timeout: 2s
               severity: critical
 
-# добавить проверку базы биллинга
-#        - name: pgsql-billing
-#          parameters:
-#            check_period: 60s
-#          checks:
-#            - type: pgsql_replication_status
-#              host: billing-pgsql.billing
-#              port: 5432
-#              sql_repl_config:
-#                dbname: checker
-#                username: checker
-#                password: << file "/vault/secrets/pgsql.env" >>
-#                lag: 3s
-#              severity: critical
-
     - name: checker-fly.io crosscheck
       healthchecks:
         - name: Iron checker Running

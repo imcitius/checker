@@ -89,7 +89,7 @@ k8s billing:
 
 k8s destroy billing:
   variables:
-    WERF_ENV: iron
+    WERF_ENV: billing
     DEPLOY_ENV: scaleway/binary-prod
   extends:
     - .werf_destroy_template
