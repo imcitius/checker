@@ -522,12 +522,11 @@ func init() {
 		}
 		defer func() { _ = db.Close() }()
 
-		// unable to ping with default pg_monitor role
-		//err = db.Ping()
-		//if err != nil {
-		//	config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
-		//	return fmt.Errorf(errorHeader + "db.Ping error\n" + err.Error())
-		//}
+		err = db.Ping()
+		if err != nil {
+			config.Log.Errorf("Error: Could not establish a connection with the database: %+v", err)
+			return fmt.Errorf(errorHeader + "db.Ping error\n" + err.Error())
+		}
 
 		config.Log.Debugf("Getting replication status from master...")
 

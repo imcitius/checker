@@ -44,4 +44,5 @@ checker_config_template: |
                 username: checker
                 password: << file "/vault/secrets/pgsql.env" >>
                 lag: 3s
+                sslmode: require
               severity: critical
