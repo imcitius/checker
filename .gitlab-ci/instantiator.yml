@@ -7,7 +7,7 @@
       "project_name": "'${SERVICE}'",
       "auto_deploy": true,
       "datacenters": ["'${INST_DC}'"],
-      "deploy_repository_url": "git::ssh://git@jgit.me/sysadmin/checker.git//scripts",
+      "deploy_repository_url": "git::ssh://git@jgit.me/sysadmin/checker.git//scripts?ref=${CI_COMMIT_REF_NAME}",
       "overwrite": true,
       "params": {
           "version": "'${VERSION}'",
@@ -25,7 +25,7 @@
       }
   }'
 
-.vars: &vars
+.vars:
   variables:
     PROJECT: ks-1
     SERVICE: ${CI_PROJECT_NAME}
@@ -33,7 +33,7 @@
     INST_API: inst-api
     NOMAD_PROJECT: ks-1
 
-.deploy to instantiator: &deploy_to_instantiator
+.deploy to instantiator:
   stage: deploy
   before_script:
     ##### image name here                                     ++++
