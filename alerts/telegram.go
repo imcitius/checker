@@ -328,11 +328,13 @@ func (t Telegram) InitBot(ch chan bool, wg *sync.WaitGroup) {
 			message = "Bot config reloaded"
 			config.Log.Warn(message)
 		default:
-			message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
-			config.Log.Warn(message)
+			if config.Config.Defaults.BotGreetingEnabled {
+				message = fmt.Sprintf("Bot at your service (%s, %s, %s)", config.Version, config.VersionSHA, config.VersionBuild)
+				config.Log.Warn(message)
+				SendChatOps(message)
+			}
 		}
 		config.Log.Infof("Start listening telegram bots routine")
-		SendChatOps(message)
 		bot.Start()
 		if config.InternalStatus == "stop" {
 			SendChatOps("Bot is stopped")

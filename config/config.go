@@ -74,7 +74,8 @@ type File struct {
 		HTTPEnabled        string `koanf:"http_enabled"`
 		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
 
-		BotsEnabled bool `koanf:"bots_enabled"`
+		BotsEnabled        bool `koanf:"bots_enabled"`
+		BotGreetingEnabled bool `koanf:"bots_greeting_enabled"`
 
 		DebugLevel string `koanf:"debug_level"`
 	}
