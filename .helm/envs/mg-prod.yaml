@@ -232,7 +232,7 @@ checker_config_template: |
 
 # добавить мантикору, imgproxy
 # добавить кроны в api, поисковике, где там еще они есть
-  - type: pgsql_replication
+#  - type: pgsql_replication
 #              host: pgsql.mg-prod.mediaget.com
 #              port: 5000
 #              sql_repl_config:
