@@ -230,7 +230,7 @@ checker_config_template: |
                   - sd-156610.dedibox.fr:5433
                   - sd-156668.dedibox.fr:5433
                   - sd-156793.dedibox.fr:5433
-                lag: 5s
+                lag: 10s
               severity: critical
 
     # billing
