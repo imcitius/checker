@@ -1,6 +1,8 @@
 ---
 defaults:
   http_port: '80'
+  bots_enabled: 'true'
+  bots_greeting_enabled: 'true'
   parameters:
     check_period: 300s
     min_health: 1

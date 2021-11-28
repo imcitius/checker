@@ -22,55 +22,6 @@ This configurations is used when running default service on Heroku.
 
 `bigconfig.yaml` contains more robust example of healthchecks for various services, divided to two virtual projects.
 
-Heroku button above allow to run test Checker service on Heroku free-tier, with simple config. You can update configuration of this test service later using Heroku's CLI:
-
-`heroku apps -A` - list running apps.
-
-`heroku logs -a <app-name> -t` - tail running app's logs.
-
-There is no direct way to update config file in running dyno (Heroku's container), but we can use some hack:
-
-`heroku ps:exec -a <app-name>` - ssh into running dyno with checker.
-
-Then prepare your new own testing config. Last string of prepared config should contain only `EOF`, for example:
-```yaml
----
-defaults:
-  http_port: '80'
-  token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
-  parameters:
-    check_period: 10s
-    min_health: 1
-    allow_fails: 0
-    mode: loud
-    report_period: 10s
-    ssl_expiration_period: 360h
-    bots_enabled: true
-alerts:
-  - name: tg_staging
-    type: telegram
-    bot_token: 987654313:AHGBR8ws-z2l2TJYhbGRjyyzJ-4H11112_k
-    noncritical_channel: -237762717
-    critical_channel: -237762717
-projects:
-  - name: my own project
-    parameters:
-      check_period: 600s
-    healthchecks:
-      - name: http checks
-        checks:
-          - type: http
-            host: https://my-very-cool-website.com
-EOF
-```
-Then copy this new config into clipboard, run in dyno `cat << EOF > docs/examples/google.yaml` and paste config into.
-Checker will load new config on the fly, and will start checking your website. 
-
-Of course, you always can fork this project (and please do it), update example config, and run your own version with simple `git push`.
-You also can redefine command line run by Heroku inside dyno, in `Procfile` file in the projects' root.
-
-How to register your own Telegram bot and get credentials you will find in [Telegram FAQ](https://core.telegram.org/bots/faq).
-
 ## Building your forks
 Project CI pipeline includes building Docker image step, which needs `REGISTRY_LOGIN` and `REGISTRY_PASSWORD` secret variables to login to Docker Hub.
 `REGISTRY_LOGIN` should contain your Docker Hub login, and `REGISTRY_PASSWORD` - your password or (better) [personal access token](https://docs.docker.com/docker-hub/access-tokens/).
