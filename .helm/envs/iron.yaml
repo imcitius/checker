@@ -217,6 +217,16 @@ checker_config_template: |
                 lag: 3s
               severity: critical
 
+    - name: checker-fly.io crosscheck
+      healthchecks:
+        - name: Iron checker Running
+          checks:
+            - type: http
+              host: https://checker.fly.dev/check/ping/089142cd-dc57-568e-b0b6-c976f2191939
+              code:
+                - 200
+              timeout: 3s
+
 #            - type: pgsql_replication
 #              host: pgsql.iron.irontrade.com
 #              port: 5000
@@ -232,75 +242,3 @@ checker_config_template: |
 #                  - sd-156793.dedibox.fr:5433
 #                lag: 10s
 #              severity: critical
-
-    # billing
-    - name: billing-prod
-      healthchecks:
-        - name: Billing-API
-          parameters:
-            check_period: 60s
-          checks:
-            - type: http
-              host: http://api.billing/health/check
-              answer: Billing-api OK
-              code:
-                - 200
-              timeout: 2s
-              severity: critical
-        - name: Payouts-Auto
-          checks:
-            - type: http
-              host: http://payouts-auto.billing/health/check
-              answer: Billing-payouts-auto OK
-              code:
-                - 200
-              timeout: 2s
-        - name: Payouts-Api
-          checks:
-            - type: http
-              host: http://payouts-api.billing/monitoring/health/check
-              answer: Billing-payouts-api OK
-              code:
-                - 200
-              timeout: 2s
-        - name: payment-uid
-          parameters:
-            check_period: 60s
-          checks:
-            - type: http
-              host: http://payment-uid.billing/health/check
-              answer: Billing-payment-uids OK
-              code:
-                - 200
-              timeout: 2s
-              severity: critical
-        - name: refunds
-          checks:
-            - type: http
-              host: http://refunds.billing/monitoring/health/check
-              answer: Billing-refunds OK
-              code:
-                - 200
-              timeout: 2s
-        - name: Currency
-          parameters:
-            check_period: 60s
-          checks:
-            - type: http
-              host: http://currency.billing/health/check
-              answer: Billing-currencies OK
-              code:
-                - 200
-              timeout: 2s
-              severity: critical
-
-    - name: checker-fly.io crosscheck
-      healthchecks:
-        - name: Iron checker Running
-          checks:
-            - type: http
-              host: https://checker.fly.dev/check/ping/089142cd-dc57-568e-b0b6-c976f2191939
-              code:
-                - 200
-              timeout: 3s
-
