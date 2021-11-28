@@ -176,16 +176,6 @@ checker_config_template: |
                 - 200
               timeout: 2s
               severity: critical
-        # no healthcheck in old one
-        #- name: dynamic-percent-old
-        #  checks:
-        #    - type: http
-        #      host: http://dynpercent:8081/health-check
-        #      answer: '{"status":"ok"}'
-        #      code:
-        #        - 200
-        #      timeout: 2s
-        #      severity: critical
         - name: dynamic-percent-new
           checks:
             - type: http

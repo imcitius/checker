@@ -32,6 +32,21 @@ checker_config_template: |
   projects:
     - name: binary-prod-siam
       healthchecks:
+#        - name: pgsql-siam
+#          parameters:
+#            check_period: 60s
+#          checks:
+#            - type: pgsql_replication_status
+#              host: siam-pgsql
+#              port: 5432
+#              sql_repl_config:
+#                dbname: checker
+#                username: checker
+#                password: << file "/vault/secrets/pgsql.env" >>
+#                lag: 3s
+#                sslmode: require
+#              severity: critical
+
         - name: FXCloud redis-pre ticks
           type: redis_pubsub
           host: redis-pre-redis-ha-haproxy
