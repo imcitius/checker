@@ -31,23 +31,6 @@ checker_config_template: |
   projects:
     - name: mg-staging
       healthchecks:
-        - name: pgsql-alive
-          parameters:
-            check_period: 60s
-          checks:
-            - type: pgsql_query_timestamp
-              host: pgsql.mg-staging.mediaget.com
-              port: 5000
-              sql_query_config:
-                dbname: checker
-                username: checker
-                password: << file "/vault/secrets/pgsql.env" >>
-                tablename: repl_test
-                sslmode: require
-                query: select max (timestamp) from repl_test
-                difference: 10m
-              severity: critical
-
         - name: pgsql-main
           parameters:
             check_period: 60s
@@ -239,3 +222,20 @@ checker_config_template: |
 #                  - 51.15.206.209:5433
 #                  - 163.172.183.48:5433
 #                lag: 10s
+#  - name: pgsql-alive
+#    parameters:
+#      check_period: 60s
+#    checks:
+#      - type: pgsql_query_timestamp
+#        host: pgsql.mg-staging.mediaget.com
+#        port: 5000
+#        sql_query_config:
+#          dbname: checker
+#          username: checker
+#          password: << file "/vault/secrets/pgsql.env" >>
+#          tablename: repl_test
+#          sslmode: require
+#          query: select max (timestamp) from repl_test
+#          difference: 10m
+#        severity: critical
+#
