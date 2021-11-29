@@ -113,6 +113,9 @@ projects:
               password: vault:secret/staging/pgsql-aux/repltest/pass:value
               tablename: repl_test
               lag: 3s
+              analytic_replicas:
+                - sd-156726
+
   - name: production-zoneA
     healthchecks:
       - name: database checks

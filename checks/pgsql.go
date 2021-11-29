@@ -9,6 +9,7 @@ import (
 	projects "my/checker/projects"
 	"net"
 	"reflect"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -471,7 +472,7 @@ func init() {
 			sslMode                               = "disable"
 			repStatusReply                        []repStatus
 			hours, minutes, seconds, microseconds int
-			streaming                             bool
+			streaming, isAnalytic                 bool
 		)
 
 		defer func() {
@@ -483,7 +484,7 @@ func init() {
 			}
 		}()
 
-		errorHeader := fmt.Sprintf("PGSQL replication check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
+		errorHeader := fmt.Sprintf("pgsql_replication_status check error at project: %s\nCheck Host: %s\nCheck UUID: %s\n", p.Name, c.Host, c.UUid)
 
 		dbUser := c.SqlReplicationConfig.UserName
 		dbPassword := c.SqlReplicationConfig.Password
@@ -609,14 +610,24 @@ func init() {
 					}
 				}
 
+				// check if lag set correctly
 				lag, err := time.ParseDuration(fmt.Sprintf("%dh%dm%ds%dus", hours, minutes, seconds, microseconds))
 				if err != nil {
 					config.Log.Errorf("Error parsing replay_lag: %+v", err)
 					return fmt.Errorf(errorHeader + "replay_lag parsing error\n" + err.Error())
 				}
 
-				if lag > allowedLag {
-					err := fmt.Errorf("replay_lag is more than %s detected on %s: %s", allowedLag.String(), reply.applicationName.String, lag.String())
+				//check is replica is in AnalyticReplicas list
+				if func(s []string, searchterm string) bool {
+					i := sort.SearchStrings(s, searchterm)
+					return i < len(s) && s[i] == searchterm
+				}(c.SqlReplicationConfig.AnalyticReplicas, reply.applicationName.String) {
+					isAnalytic = true
+				}
+
+				// check if actual lag is more than allowed
+				if lag > allowedLag && !isAnalytic {
+					err := fmt.Errorf("replay_lag more than %s detected on %s: %s", allowedLag.String(), reply.applicationName.String, lag.String())
 					config.Log.Infof(err.Error())
 					return fmt.Errorf(errorHeader + err.Error())
 				}

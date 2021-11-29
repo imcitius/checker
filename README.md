@@ -330,7 +330,7 @@ It is better to include all servers in the cluster (including the leading one) t
 ```
 *type: check type - mysql_replication, pgsql_replication
 ```
-Configuration example:
+Configuration examples:
 ```json
     {
       "type": "pgsql_replication",
@@ -349,6 +349,24 @@ Configuration example:
         "lag": "5s"
       }
     }
+```
+
+```yaml
+- name: pgsql-main
+  parameters:
+    check_period: 60s
+  checks:
+    - type: pgsql_replication_status
+      host: pgsql-master.db.local
+      port: 5000
+      sql_repl_config:
+        dbname: checker
+        username: checker
+        password: vault:secret/local-pgsql/checker:pass
+        lag: 3s
+        analytic_replicas:
+        - sd-156726
+      severity: critical
 ```
 
 The table with following DDL should be created:

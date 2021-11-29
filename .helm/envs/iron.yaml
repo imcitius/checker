@@ -215,6 +215,8 @@ checker_config_template: |
                 username: checker
                 password: << file "/vault/secrets/pgsql.env" >>
                 lag: 3s
+                analytic_replicas:
+                - sd-156726
               severity: critical
 
     - name: checker-fly.io crosscheck

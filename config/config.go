@@ -201,7 +201,8 @@ type Check struct {
 		DBName, UserName, Password, TableName, SSLMode string
 		ServerList                                     []string
 		// allowed replication lag
-		Lag string
+		Lag              string
+		AnalyticReplicas []string `koanf:"analytic_replicas"`
 	} `koanf:"sql_repl_config"`
 
 	PubSub struct {
