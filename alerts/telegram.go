@@ -190,7 +190,7 @@ func (t Telegram) Send(a *AlertConfigs, message, messageType string) error {
 		_, err = bot.Send(&user, QuoteMeta(messageToSend.Text), options, menu, selectorAlert)
 	case "critalert":
 		config.Log.Infof("Sending 'critalert' type message")
-		id, err := strconv.Atoi(a.ProjectChannel)
+		id, err := strconv.Atoi(a.CriticalChannel)
 		if err != nil {
 			config.Log.Fatalf("Cannot parse project channel %s", a.ProjectChannel)
 		}
