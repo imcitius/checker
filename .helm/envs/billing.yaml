@@ -1,0 +1,108 @@
+db:
+  check: true
+  password_path: secret/billing/pgsql/checker/pass
+
+app:
+  config:
+    routes:
+      - Host(`admin.billing.irontrade.com`) && PathPrefix(`/checker/`)
+    ingress:
+      cert: wildcard-cert
+
+checker_config_template: |
+  ---
+  defaults:
+    http_port: '80'
+    bots_enabled: false
+    << file "/vault/secrets/jwt.env" >>
+    parameters:
+      check_period: 900s
+      report_period: 1800s
+      min_health: 1
+      allow_fails: 0
+      noncrit_alert: telegram
+      crit_alert: telegram
+      command_channel: telegram
+      mode: loud
+      ssl_expiration_period: 360h
+  alerts:
+    - name: telegram
+      type: telegram
+  << file "/vault/secrets/telegram.env" | indent 4 >>
+  projects:
+    - name: billing-prod
+      healthchecks:
+        - name: pgsql-billing
+          parameters:
+            check_period: 60s
+          checks:
+            - type: pgsql_replication_status
+              host: billing-pgsql
+              port: 5432
+              sql_repl_config:
+                dbname: checker
+                username: checker
+                password: << file "/vault/secrets/pgsql.env" >>
+                lag: 3s
+                sslmode: require
+              severity: critical
+
+    - name: billing-prod
+      healthchecks:
+        - name: Billing-API
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://api/health/check
+              answer: Billing-api OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: Payouts-Auto
+          checks:
+            - type: http
+              host: http://payouts-auto/health/check
+              answer: Billing-payouts-auto OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Payouts-Api
+          checks:
+            - type: http
+              host: http://payouts-api/monitoring/health/check
+              answer: Billing-payouts-api OK
+              code:
+                - 200
+              timeout: 2s
+        - name: payment-uid
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://payment-uid/health/check
+              answer: Billing-payment-uids OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical
+        - name: refunds
+          checks:
+            - type: http
+              host: http://refunds/monitoring/health/check
+              answer: Billing-refunds OK
+              code:
+                - 200
+              timeout: 2s
+        - name: Currency
+          parameters:
+            check_period: 60s
+          checks:
+            - type: http
+              host: http://currency/health/check
+              answer: Billing-currencies OK
+              code:
+                - 200
+              timeout: 2s
+              severity: critical

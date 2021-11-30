@@ -20,12 +20,10 @@ func fireActiveBot() {
 func firePassiveBot() {
 	//if !botsEnabled {
 	config.Log.Infof("Active bot is disabled, alerts only")
-	message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
-	// Metrics structures is not initialized yet, so we prevent panic with "noMetrics"
-	alerts.SendChatOps(message, "noMetrics")
-	//} else {
-	//	fireActiveBot()
-	//}
+	if config.Config.Defaults.BotGreetingEnabled {
+		message := fmt.Sprintf("Bot at your service (%s, %s, %s)\nActive bot is disabled, alerts only", config.Version, config.VersionSHA, config.VersionBuild)
+		alerts.SendChatOps(message, "noMetrics")
+	}
 }
 
 func fireBot() {

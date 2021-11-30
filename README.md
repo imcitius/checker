@@ -22,55 +22,6 @@ This configurations is used when running default service on Heroku.
 
 `bigconfig.yaml` contains more robust example of healthchecks for various services, divided to two virtual projects.
 
-Heroku button above allow to run test Checker service on Heroku free-tier, with simple config. You can update configuration of this test service later using Heroku's CLI:
-
-`heroku apps -A` - list running apps.
-
-`heroku logs -a <app-name> -t` - tail running app's logs.
-
-There is no direct way to update config file in running dyno (Heroku's container), but we can use some hack:
-
-`heroku ps:exec -a <app-name>` - ssh into running dyno with checker.
-
-Then prepare your new own testing config. Last string of prepared config should contain only `EOF`, for example:
-```yaml
----
-defaults:
-  http_port: '80'
-  token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
-  parameters:
-    check_period: 10s
-    min_health: 1
-    allow_fails: 0
-    mode: loud
-    report_period: 10s
-    ssl_expiration_period: 720h
-    bots_enabled: true
-alerts:
-  - name: tg_staging
-    type: telegram
-    bot_token: 987654313:AHGBR8ws-z2l2TJYhbGRjyyzJ-4H11112_k
-    noncritical_channel: -237762717
-    critical_channel: -237762717
-projects:
-  - name: my own project
-    parameters:
-      check_period: 600s
-    healthchecks:
-      - name: http checks
-        checks:
-          - type: http
-            host: https://my-very-cool-website.com
-EOF
-```
-Then copy this new config into clipboard, run in dyno `cat << EOF > docs/examples/google.yaml` and paste config into.
-Checker will load new config on the fly, and will start checking your website. 
-
-Of course, you always can fork this project (and please do it), update example config, and run your own version with simple `git push`.
-You also can redefine command line run by Heroku inside dyno, in `Procfile` file in the projects' root.
-
-How to register your own Telegram bot and get credentials you will find in [Telegram FAQ](https://core.telegram.org/bots/faq).
-
 ## Building your forks
 Project CI pipeline includes building Docker image step, which needs `REGISTRY_LOGIN` and `REGISTRY_PASSWORD` secret variables to login to Docker Hub.
 `REGISTRY_LOGIN` should contain your Docker Hub login, and `REGISTRY_PASSWORD` - your password or (better) [personal access token](https://docs.docker.com/docker-hub/access-tokens/).
@@ -334,10 +285,10 @@ _one_ field is expected in the response. If omitted, only the fact of a successf
 
 ### Database field age
 Checking the age of a record in the database (MySQL, PostgreSQL, Clickhouse).
-This check expects _one_ field containing an integer in UnixTime format.
+This check expects _one_ field containing an integer in UnixTime format or in Timestamp format with timezone.
 
 ```
-*type: check type - clickhouse_query_unixtime, mysql_query_unixtime, pgsql_query_unixtime
+*type: check type - clickhouse_query_unixtime, mysql_query_unixtime, pgsql_query_unixtime, pgsql_query_timestamp
 *host: database server address
 port: port to connect (if omitted, default ports are used)
 timeout: timeout for connection and request execution
@@ -379,7 +330,7 @@ It is better to include all servers in the cluster (including the leading one) t
 ```
 *type: check type - mysql_replication, pgsql_replication
 ```
-Configuration example:
+Configuration examples:
 ```json
     {
       "type": "pgsql_replication",
@@ -394,9 +345,28 @@ Configuration example:
           "pgsql-main-0.node.staging.consul",
           "pgsql-main-1.node.staging.consul",
           "pgsql-main-2.node.staging.consul"
-        ]
+        ],
+        "lag": "5s"
       }
     }
+```
+
+```yaml
+- name: pgsql-main
+  parameters:
+    check_period: 60s
+  checks:
+    - type: pgsql_replication_status
+      host: pgsql-master.db.local
+      port: 5000
+      sql_repl_config:
+        dbname: checker
+        username: checker
+        password: vault:secret/local-pgsql/checker:pass
+        lag: 3s
+        analytic_replicas:
+        - sd-156726
+      severity: critical
 ```
 
 The table with following DDL should be created:
@@ -404,8 +374,8 @@ The table with following DDL should be created:
     CREATE TABLE repl_test (
        id int primary key,
        test_value int,
-       timestamp timestamp default current_timestamp
-    )
+       timestamp timestamp with time zone default current_timestamp
+    );
 ```
 In PostgreSQL version 10+ Checker requires special permission to analyze replication details without superuser role:
 ```GRANT pg_monitor TO checker;```

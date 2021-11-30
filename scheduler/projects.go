@@ -11,35 +11,31 @@ import (
 	"time"
 )
 
-func runProjectTickers(t *config.Ticker, wg *sync.WaitGroup, signalCh chan bool) {
-	config.Log.Debugf("Starting checks tickers")
-	config.Wg.Add(1)
-	go func(ticker *config.Ticker) {
-		defer wg.Done()
+func runProjectTicker(t *time.Ticker, desc string, wg *sync.WaitGroup, signalCh chan bool) {
+	defer wg.Done()
+	defer config.Log.Infof("Finished ticker %s", desc)
+	config.Log.Infof("Waiting for ticker %s", desc)
 
-		config.Log.Debugf("Waiting for ticker %s", ticker.Description)
-		defer config.Log.Debugf("Finished ticker %s", ticker.Description)
-		for {
-			select {
-			case <-signalCh:
-				config.Log.Infof("Exit ticker")
-				return
-			case tick := <-ticker.Duration.C:
-				uptime := tick.Round(time.Second).Sub(config.StartTime.Round(time.Second))
-				period := ticker.Description
-				config.Log.Infof("Uptime: %s (%s ticker)", uptime, ticker.Description)
+	for {
+		select {
+		case <-signalCh:
+			config.Log.Infof("Exit ticker")
+			return
+		case tick := <-t.C:
+			uptime := tick.Round(time.Second).Sub(config.StartTime.Round(time.Second))
+			period := desc
+			config.Log.Infof("Uptime: %s (%s ticker)", uptime, desc)
 
-				checksDuration := runChecks(period)
-				alertsDuration := sendCritAlerts(period)
+			checksDuration := runChecks(period)
+			alertsDuration := sendCritAlerts(period)
 
-				config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
-				config.Log.Debugf("Alerts duration: %v msec", alertsDuration.Milliseconds())
+			config.Log.Infof("Checks duration: %v msec", checksDuration.Milliseconds())
+			config.Log.Debugf("Alerts duration: %v msec", alertsDuration.Milliseconds())
 
-				metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
-				metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))
-			}
+			metrics.SchedulerChecksDuration.Set(float64(checksDuration.Milliseconds()))
+			metrics.SchedulerAlertsDuration.Set(float64(alertsDuration.Milliseconds()))
 		}
-	}(t)
+	}
 }
 
 func runChecks(period string) time.Duration {

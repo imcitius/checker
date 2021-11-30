@@ -3,16 +3,16 @@ defaults:
   http_port: '80'
   token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
   parameters:
-    check_period: 60s
-    report_period: 180s
+    check_period: 10s
     min_health: 1
     allow_fails: 0
     mode: loud
+    report_period: 10s
     ssl_expiration_period: 360h
 projects:
   - name: google
     parameters:
-      check_period: 10s
+      check_period: 60s
     healthchecks:
       - name: http checks
         checks:

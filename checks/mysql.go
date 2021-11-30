@@ -153,7 +153,7 @@ func init() {
 			lastRecord := time.Unix(id, 0)
 			curDif := time.Since(lastRecord)
 			if curDif > dif {
-				err := fmt.Errorf(errorHeader+"Unixtime differenct error: got %v, difference %v\n", lastRecord, curDif)
+				err := fmt.Errorf(errorHeader+"Unixtime difference error: got %v, difference %v\n", lastRecord, curDif)
 				return err
 			}
 		}
@@ -220,7 +220,12 @@ func init() {
 		}
 
 		// allow replication to pass
-		time.Sleep(1 * time.Second)
+		lagAllowed, err := time.ParseDuration(c.SqlReplicationConfig.Lag)
+		if err != nil {
+			config.Log.Errorf("Error: Could not parse lag allowed: '%+v', use default 3s", err)
+			lagAllowed = 3 * time.Second
+		}
+		time.Sleep(lagAllowed)
 
 		for _, server := range c.SqlReplicationConfig.ServerList {
 			selectSql := "SELECT test_value FROM %s where id=%d;"
@@ -263,12 +268,11 @@ func init() {
 				return err
 			}
 
-			if c.SqlQueryConfig.Response != "" {
-				if id != recordValue {
-					err = fmt.Errorf(errorHeader+"Replication error: db response does not match expected: %d (expected %d) on server %s", id, recordValue, server)
-					return err
-				}
+			if id != recordValue {
+				err = fmt.Errorf("replication error: db response does not match expected: %d (expected %d) on server %s after %s", id, recordValue, host, lagAllowed)
+				return fmt.Errorf(errorHeader + err.Error())
 			}
+
 		}
 
 		return nil

@@ -18,6 +18,8 @@ const (
 
 	DefaultHTTPCheckTimeout  = "2s"
 	DefaultTCPConnectTimeout = "2s"
+
+	DefaultDebugLevel = "warn"
 )
 
 var (
@@ -49,8 +51,8 @@ var (
 
 	TokenEncryptionKey []byte
 
-	TickersCollection = map[string]Ticker{}
-	ReportsTicker     = &Ticker{}
+	TickersCollection = map[string]*time.Ticker{}
+	ReportsTicker     = &time.Ticker{}
 )
 
 type CachedSecret struct {
@@ -72,7 +74,10 @@ type File struct {
 		HTTPEnabled        string `koanf:"http_enabled"`
 		TokenEncryptionKey []byte `koanf:"token_encryption_key"`
 
-		BotsEnabled bool `koanf:"bots_enabled"`
+		BotsEnabled        bool `koanf:"bots_enabled"`
+		BotGreetingEnabled bool `koanf:"bots_greeting_enabled"`
+
+		DebugLevel string `koanf:"debug_level"`
 	}
 	Alerts   []AlertConfigs
 	Actors   []ActorConfigs
@@ -196,7 +201,8 @@ type Check struct {
 		DBName, UserName, Password, TableName, SSLMode string
 		ServerList                                     []string
 		// allowed replication lag
-		Lag string
+		Lag              string
+		AnalyticReplicas []string `koanf:"analytic_replicas"`
 	} `koanf:"sql_repl_config"`
 
 	PubSub struct {
@@ -217,9 +223,4 @@ type Check struct {
 
 type TimeoutCollection struct {
 	periods []string
-}
-
-type Ticker struct {
-	Duration    time.Ticker
-	Description string
 }

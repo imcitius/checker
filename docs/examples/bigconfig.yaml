@@ -1,6 +1,8 @@
 ---
 defaults:
   http_port: '80'
+  bots_enabled: 'true'
+  bots_greeting_enabled: 'true'
   parameters:
     check_period: 300s
     min_health: 1
@@ -10,7 +12,7 @@ defaults:
     command_channel: tg_staging_test
     mode: loud
     report_period: 1800s
-    ssl_expiration_period: 720h
+    ssl_expiration_period: 360h
 alerts:
   - name: tg_staging
     type: telegram
@@ -111,6 +113,9 @@ projects:
               password: vault:secret/staging/pgsql-aux/repltest/pass:value
               tablename: repl_test
               lag: 3s
+              analytic_replicas:
+                - sd-156726
+
   - name: production-zoneA
     healthchecks:
       - name: database checks
