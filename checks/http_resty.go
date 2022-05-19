@@ -129,7 +129,7 @@ func init() {
 		if !answerGood {
 			answer := response.Body()
 			if len(response.Body()) > 350 {
-				answer = []byte("Answer is too long, check the logs")
+				answer = []byte("Check failed but answer body is too long, check the logs")
 			}
 			errorMessage := errorHeader + fmt.Sprintf("answer text error: found '%s' ('%s' should be %s)", answer, c.Answer, c.AnswerPresent)
 			return errors.New(errorMessage)

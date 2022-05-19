@@ -242,7 +242,7 @@ attempts: number of attempts to open the port (default 3)
 ### GetFile check
 Downloads the file and checks its md5 hash.
 
-Each file is downloaded on the local file system, and deleted after verification.
+Each file is downloaded onto the local file system, and deleted after verification.
 It is necessary to consider possible restrictions on the size of the underlying file system.
 ```
 *type: "getfile"
@@ -464,6 +464,7 @@ Test token for example config in [docs/examples/google.yaml](docs/examples/googl
 `/check/ping/<check-uuid>` - update passive check status
 
 `/check/status/<check-uuid>` - request the check status
+`/check/fire/<check-uuid>` - execute the check and return result
 
 `/listChecks` - returns all checks defined (require auth).
 ```

@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
 	"io"
+	checks "my/checker/checks"
 	"my/checker/config"
 	projects "my/checker/projects"
 	"my/checker/reports"
@@ -177,6 +178,66 @@ func checkStatus(w http.ResponseWriter, r *http.Request) {
 	config.Log.Debugf("Check status requested %s", uuid)
 
 	s, err := json.Marshal(status.Statuses.Checks[uuid])
+	if err != nil {
+		_, _ = io.WriteString(w, fmt.Sprintf("%s", err))
+		return
+	}
+	_, _ = io.WriteString(w, fmt.Sprintf("%s", s))
+}
+
+type answer struct {
+	Name     string
+	UUID     string
+	Status   string
+	Error    string
+	Duration string
+}
+
+func checkFire(w http.ResponseWriter, r *http.Request) {
+
+	if ok := strings.HasPrefix(r.URL.Path, "/check/fire"); !ok {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	uuid := strings.Split(r.URL.Path, "/")[3]
+	if uuid == "" {
+		http.Error(w, "Execution check's UUID not defined", http.StatusMethodNotAllowed)
+		config.Log.Debugf("Execution check's UUID not defined")
+		return
+	}
+
+	if config.GetCheckByUUID(uuid) == nil {
+		http.Error(w, "Check not found", http.StatusNotFound)
+		config.Log.Debugf("Check with UUID %s not found", uuid)
+		return
+	}
+
+	check := config.GetCheckByUUID(uuid)
+	project := new(projects.Project)
+	project.Project = *config.GetProjectByCheckUUID(uuid)
+	config.Log.Debugf("Check execution requested '%s', '%s'", check.Name, uuid)
+
+	duration, tempErr := checks.Execute(project, check)
+
+	a := answer{
+		Name:     check.Name,
+		UUID:     check.UUid,
+		Error:    "",
+		Duration: duration.String(),
+		Status:   "Ok",
+	}
+	if tempErr != nil {
+		a.Status = "Failed"
+		a.Error = tempErr.Error()
+	}
+
+	s, err := json.Marshal(a)
 	if err != nil {
 		_, _ = io.WriteString(w, fmt.Sprintf("%s", err))
 		return

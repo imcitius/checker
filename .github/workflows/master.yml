@@ -38,8 +38,6 @@ jobs:
 
       - name: Upload config
         uses: superfly/flyctl-actions@1.1
-        # the only way to automatically create new app, with this dirty hack. :(
-        continue-on-error: true
         with:
           args: "secrets set -a ${{ github.workflow }} --detach CHECKER_CONFIG=- < ${CONFIG}"
 

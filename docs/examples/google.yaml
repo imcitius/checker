@@ -8,7 +8,6 @@ defaults:
     min_health: 1
     allow_fails: 0
     mode: loud
-    ssl_expiration_period: 360h
 projects:
   - name: google
     parameters:

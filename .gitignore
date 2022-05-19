@@ -1,12 +1,7 @@
 .idea
 checker*
 testconfigs
-.gitlab-ci
-
+gitlabci*
 kubeconfig.json
 build/*
 images-report.json
-
-.helm
-scripts
-*werf*

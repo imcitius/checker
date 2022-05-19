@@ -57,9 +57,10 @@ func Serve(_ chan bool, sem *semaphore.Weighted) {
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/alert", incomingAlert)
 	http.HandleFunc("/check/ping/", checkPing)
-	http.HandleFunc("/check/status/", checkStatus)
 	http.HandleFunc("/healthcheck", healthCheck)
 
+	http.Handle("/check/status/", authHandler(http.HandlerFunc(checkStatus)))
+	http.Handle("/check/fire/", authHandler(http.HandlerFunc(checkFire)))
 	http.Handle("/listChecks", authHandler(http.HandlerFunc(listChecks)))
 	http.Handle("/metrics", promhttp.Handler())
 
