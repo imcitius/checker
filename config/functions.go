@@ -342,7 +342,10 @@ func (c *File) FillSecrets() error {
 	for i, project := range c.Projects {
 		for j, hc := range project.Healthchecks {
 			for k, check := range hc.Checks {
-				loadCheckConfig(c, &check, i, j, k)
+				err := loadCheckConfig(c, &check, i, j, k)
+				if err != nil {
+					Log.Errorf("loadCheckConfig error: %s", err.Error())
+				}
 			}
 		}
 	}
@@ -475,6 +478,19 @@ func GetCheckByUUID(uuID string) *Check {
 			for _, check := range healthcheck.Checks {
 				if uuID == check.UUid {
 					return &check
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func GetProjectByCheckUUID(uuID string) *Project {
+	for _, project := range Config.Projects {
+		for _, healthcheck := range project.Healthchecks {
+			for _, check := range healthcheck.Checks {
+				if uuID == check.UUid {
+					return &project
 				}
 			}
 		}

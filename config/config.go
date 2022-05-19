@@ -14,7 +14,8 @@ import (
 const (
 	DefaultPeriodicReportPeriod = "1h"
 	DefaultCheckPeriod          = "1m"
-	DefaultSSLExpiration        = "30d"
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+	DefaultSSLExpiration = "360h"
 
 	DefaultHTTPCheckTimeout  = "2s"
 	DefaultTCPConnectTimeout = "2s"
@@ -164,8 +165,9 @@ type Check struct {
 	Port     int
 	Severity string `koanf:"severity"`
 
-	// hash for fileget check
+	// hash and size for fileget check
 	Hash string
+	Size int64
 	// retries
 	Attempts int
 
@@ -219,6 +221,8 @@ type Check struct {
 	// Runtime data
 	UUid       string
 	LastResult bool
+
+	DebugLevel string
 }
 
 type TimeoutCollection struct {
