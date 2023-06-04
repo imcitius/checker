@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"my/checker/config"
+	"github.com/spf13/viper"
 )
 
 func init() {
@@ -12,9 +12,17 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of Checker",
-	Long:  `All software has versions. This is Hugo's (no, Checker's of course ;)`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Checker version: " + config.Version + "" + config.VersionBuild)
-	},
+	Short: "Prints the version number of this cli tool",
+	Long:  "The version number is stored in a config file, loaded by viper. This command will print that version number out",
+	Run:   ShowVersion,
+}
+
+// ShowVersion prints out the cli version number
+func ShowVersion(cmd *cobra.Command, args []string) {
+	showVersion()
+}
+
+// Dumb version of ShowVersion(). Used for testing
+func showVersion() {
+	fmt.Printf("go-cli-boilerplate version: %s \n", viper.GetString("version"))
 }

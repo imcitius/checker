@@ -1,5 +1,5 @@
 FROM golang:1.17-alpine as build
-COPY . /app
+COPY .. /app
 WORKDIR /app
 RUN apk --no-cache add gcc g++
 RUN go get -v -d ./... \
