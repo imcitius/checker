@@ -1,2 +1,27 @@
----
-#test: value
+defaults:
+  duration: 5s
+projects:
+  testProject:
+    parameters:
+      duration: 14s
+    healthchecks:
+      checks_http:
+        checks:
+          - name: Check google
+            type: http
+            url: https://google.com/
+            answer_present: true
+  testProject2:
+    healthchecks:
+      checks_icmp:
+        checks:
+          - name: Check google DNS
+            type: icmp
+            host: 8.8.8.8
+            parameters:
+              duration: 30s
+          - name: Check CloudFlare DNS
+            type: icmp
+            host: 1.1.1.1
+            parameters:
+              duration: 10s

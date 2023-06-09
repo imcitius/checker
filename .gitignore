@@ -4,4 +4,5 @@ testconfigs
 gitlabci*
 kubeconfig.json
 build/*
-images-report.json
+images-report.jso
+

@@ -1,27 +1,34 @@
 package scheduler
 
 import (
-	"github.com/sirupsen/logrus"
-	"my/checker/config"
+	"my/checker/checks"
+	"sync"
+	"time"
+	//"time"
 )
 
-func RunScheduler(Log *logrus.Logger, Config *config.Config) {
-	Log.Info("Scheduler started")
-	Log.Info(Config.Test)
+func runProjectTicker(t TTickerWithDuration, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		select {
+		case _ = <-t.Ticker.C:
+			tickerDuration, _ := time.ParseDuration(t.Duration) //sendCritAlerts(period)
+			checkCollection, _ := checks.GetChecksByDuration(tickerDuration.String())
 
-	////Log.Debugf("Timeouts: %+v", config.Timeouts.Periods)
-	//
-	//Log.Debugf("Tickers %+v", config.TickersCollection)
-	//if len(config.TickersCollection) == 0 {
-	//	config.Log.Fatal("No tickers")
-	//} else {
-	//	for i, t := range config.TickersCollection {
-	//		config.Log.Debugf("Run ticker: %s\n\n", i)
-	//		config.Wg.Add(1)
-	//		//config.Log.Infof("I: %d", i)
-	//		//config.Log.Infof("T: %d", t)
-	//		go runProjectTicker(t, i, wg, signalCh)
-	//	}
-	//}
-	//go runReportsTicker(config.ReportsTicker, config.Config.Defaults.Parameters.ReportPeriod, wg, signalCh)
+			for _, c := range checkCollection.Checks[t.Duration] {
+				//logger.Infof("runProjectTicker: %+v", c)
+
+				logger.Infof("(%s) Checking (%s/%s/%s): %s", c.Check.GetSID(), c.Check.GetProject(), c.Check.GetHealthcheck(), c.Check.GetType(), c.Check.GetHost())
+
+				d, err := c.Check.Execute()
+
+				if err != nil {
+					logger.Errorf("(%s) Failed, took %s\nError: %s", c.Check.GetSID(), d, err.Error())
+
+				} else {
+					logger.Infof("(%s) Success, took %s", c.Check.GetSID(), d)
+				}
+			}
+		}
+	}
 }
