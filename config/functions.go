@@ -9,7 +9,7 @@ var (
 )
 
 func InitConfig(cfgFile string) {
-	initCleanenv(cfgFile)
+	initConfig(cfgFile)
 }
 
 func InitLog(logLevel string) {

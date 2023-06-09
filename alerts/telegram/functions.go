@@ -21,16 +21,19 @@ func (a *TTelegramAlerter) Init() {
 
 	a.opts = &[]bot.Option{
 		bot.WithDefaultHandler(func(ctx context.Context, b *bot.Bot, update *models.Update) {
-			b.SendMessage(ctx, &bot.SendMessageParams{
+			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 				ChatID: update.Message.Chat.ID,
 				Text:   update.Message.Text,
 			})
+			if err != nil {
+				logger.Errorf("error sending message: %s", err)
+			}
 		}),
 		func() bot.Option {
 			if a.Log.GetLevel() == 5 {
 				return bot.WithDebug()
 			}
-			return bot.Option(func(b *bot.Bot) {})
+			return func(b *bot.Bot) {}
 		}(),
 	}
 
@@ -51,7 +54,10 @@ func (a *TTelegramAlerter) Start() {
 }
 
 func (a *TTelegramAlerter) Stop() {
-	a.bot.Close(*a.context)
+	_, err := a.bot.Close(*a.context)
+	if err != nil {
+		return
+	}
 }
 
 func (a *TTelegramAlerter) Send(channel any, message string) {
@@ -60,8 +66,13 @@ func (a *TTelegramAlerter) Send(channel any, message string) {
 		a.Init()
 	}
 
-	a.bot.SendMessage(*a.context, &bot.SendMessageParams{
+	_, err := a.bot.SendMessage(*a.context, &bot.SendMessageParams{
 		ChatID: channel,
 		Text:   message,
 	})
+	if err != nil {
+		if err != nil {
+			logger.Errorf("error sending message: %s", err)
+		}
+	}
 }

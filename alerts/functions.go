@@ -9,7 +9,7 @@ package alerts
 //		if alertsConfig.Alerts[0].BotToken != "" {
 //			alerter := &tg.TTelegramAlerter{
 //				Token: alertsConfig.Alerts[0].BotToken,
-//				Log:   Log,
+//				logger:   logger,
 //			}
 //			//alerter.Init()
 //			//alerter.Send(1390752, "fsdfsdfsdfsdfsdfd")
@@ -18,7 +18,7 @@ package alerts
 //	}
 //
 //	alerters.Alerters["log"] = &log.TLogAlerter{
-//		Log: Log,
+//		logger: logger,
 //	}
 //
 //	return alerters, nil

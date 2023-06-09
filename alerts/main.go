@@ -6,15 +6,15 @@ import (
 )
 
 var (
-	Config *config.TConfig
-	Log    *logrus.Logger
+	configurer *config.TConfig
+	logger     *logrus.Logger
 )
 
 func InitAlerts() {
-	Config = config.GetConfig()
-	Log = config.GetLog()
+	configurer = config.GetConfig()
+	logger = config.GetLog()
 
-	if len(Config.Alerts) == 0 {
-		Log.Info("no alerts found in config, use log only")
+	if len(configurer.Alerts) == 0 {
+		logger.Info("no alerts found in config, use log only")
 	}
 }
