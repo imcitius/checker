@@ -12,14 +12,10 @@ import (
 	"time"
 )
 
-func SetSID() string {
+func (c TCommonCheck) GetSID() string {
 	sid, _ := shortid.New(1, shortid.DefaultABC, rand.Uint64())
 	s, _ := sid.Generate()
 	return s
-}
-
-func (c TCommonCheck) GetSID() string {
-	return c.Sid
 }
 
 func (c TCommonCheck) GetProject() string {
@@ -140,7 +136,6 @@ func newCommonCheck(c config.TCheckConfig, h config.THealthcheck, p config.TProj
 
 	newCheck.Alerter = getAlerter(newCheck)
 	newCheck.RealCheck = newSpecificCheck(newCheck)
-	newCheck.Sid = SetSID()
 	return newCheck
 }
 
