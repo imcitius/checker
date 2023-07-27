@@ -31,7 +31,6 @@ func (c TGetFileCheck) RealExecute() (time.Duration, error) {
 	//logger.Debugf("tmp file name: '%s'", tmpfile.Name())
 
 	// check temp file is not r/o
-
 	err = checkFileWritable(tmpfile)
 	if err != nil {
 		errorMessage = errorHeader + fmt.Sprintf(ErrCheckWritable)

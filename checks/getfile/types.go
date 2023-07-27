@@ -33,5 +33,5 @@ const (
 	ErrCantReadFile     = "Cannot read downloaded file %s: %s"
 	ErrFileSizeMismatch = "File size mismatch: config size %d, downloaded size: %d"
 	ErrFileHashMismatch = "File hash mismatch: config hash %s, downloaded hash: %s"
-	ErrOther            = "other error: %s"
+	//ErrOther            = "other error: %s"
 )

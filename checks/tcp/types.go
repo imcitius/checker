@@ -27,5 +27,5 @@ const (
 	ErrEmptyPort      = "port is empty"
 	ErrConnectError   = "connect error: %s (attempt %d of %d). %s."
 	//ErrPacketLoss     = "ping error: %f percent packet loss"
-	ErrOther = "other error: %s"
+	//ErrOther = "other error: %s"
 )

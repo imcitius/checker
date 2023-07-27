@@ -57,6 +57,7 @@ func main() {
 				fmt.Println("Interrupt signal received. Stopping background process...")
 			}
 
+			cancel()
 			return nil
 		},
 	}
@@ -66,7 +67,7 @@ func main() {
 	}
 }
 
-func check(ctx context.Context) error {
+func check(ctx context.Context) {
 	config.InitLog(logLevel)
 	config.InitConfig(cfgFile)
 	checks.InitChecks()
@@ -77,7 +78,7 @@ func check(ctx context.Context) error {
 			// Stop the background process gracefully
 			fmt.Println("Background process stopping...")
 			alerts.StopAlerters()
-			return nil
+			return
 		default:
 			alerts.InitAlerts()
 			scheduler.RunScheduler()
