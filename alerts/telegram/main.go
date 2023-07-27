@@ -1,4 +1,4 @@
-package telegram
+package go_telegram
 
 import (
 	"github.com/sirupsen/logrus"

@@ -1,75 +1,95 @@
-package telegram
+package go_telegram
 
 import (
 	"context"
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
+	tele "gopkg.in/telebot.v3"
+	"my/checker/config"
 	"os"
 	"os/signal"
+	"strconv"
+	"sync"
 )
 
 var (
-	err error
+	options tele.SendOptions
 )
+
+func NewAlerter(a config.TAlert) *TTelegramAlerter {
+	channelID, _ := strconv.ParseInt(a.ProjectChannel, 10, 64)
+	criticalChannelID, _ := strconv.ParseInt(a.CriticalChannel, 10, 64)
+
+	return &TTelegramAlerter{
+		Token:             a.BotToken,
+		Log:               logger,
+		channelID:         channelID,
+		criticalChannelID: criticalChannelID,
+	}
+}
+
+func (a *TTelegramAlerter) IsBot() bool {
+	return true
+}
 
 func (a *TTelegramAlerter) Init() {
 	//a.Log.Info("TTelegramAlerter Init")
 
 	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
-	//a.cancel = &cancel
 	a.context = &ctx
 
-	a.opts = &[]bot.Option{
-		bot.WithDefaultHandler(func(ctx context.Context, b *bot.Bot, update *models.Update) {
-			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID: update.Message.Chat.ID,
-				Text:   update.Message.Text,
-			})
-			if err != nil {
-				logger.Errorf("error sending message: %s", err)
-			}
-		}),
-		func() bot.Option {
-			if a.Log.GetLevel() == 5 {
-				return bot.WithDebug()
-			}
-			return func(b *bot.Bot) {}
-		}(),
+	a.settings = tele.Settings{
+		Token:  a.Token,
+		Poller: &tele.LongPoller{Timeout: 10},
 	}
 
-	a.bot, err = bot.New(a.Token, *a.opts...)
+	err := error(nil)
+	a.bot, err = tele.NewBot(a.settings)
 	if err != nil {
-		// panics for the sake of simplicity.
-		// you should handle this error properly in your code.
-		panic(err)
+		logger.Fatalf("Error creating bot: %v", err)
 	}
+
+	options = tele.SendOptions{ParseMode: "MarkDownV2"}
 }
 
-func (a *TTelegramAlerter) Start() {
+func (a *TTelegramAlerter) Start(wg *sync.WaitGroup) {
 	//a.Log.Infof("TTelegramAlerter Start, %+v", a.Bot)
 	if a.bot == nil {
 		a.Init()
 	}
-	a.bot.Start(*a.context)
+	wg.Add(1)
+	defer wg.Done()
+	logger.Infof("Starting tg bot")
+	a.bot.Start()
 }
 
-func (a *TTelegramAlerter) Stop() {
-	_, err := a.bot.Close(*a.context)
+func (a *TTelegramAlerter) Stop(wg *sync.WaitGroup) {
+	_, err := a.bot.Close()
+	wg.Done()
 	if err != nil {
 		return
 	}
 }
 
-func (a *TTelegramAlerter) Send(channel any, message string) {
+func (a *TTelegramAlerter) Send(message string) {
 	//a.Log.Info("TTelegramAlerter Send")
 	if a.bot == nil {
 		a.Init()
 	}
 
-	_, err := a.bot.SendMessage(*a.context, &bot.SendMessageParams{
-		ChatID: channel,
-		Text:   message,
-	})
+	_, err := a.bot.Send(&tele.Chat{ID: a.channelID}, message)
+	if err != nil {
+		if err != nil {
+			logger.Errorf("error sending message: %s", err)
+		}
+	}
+}
+
+func (a *TTelegramAlerter) SendCritical(message string) {
+	//a.Log.Info("TTelegramAlerter Send")
+	if a.bot == nil {
+		a.Init()
+	}
+
+	_, err := a.bot.Send(&tele.Chat{ID: a.criticalChannelID}, message)
 	if err != nil {
 		if err != nil {
 			logger.Errorf("error sending message: %s", err)

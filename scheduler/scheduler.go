@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"fmt"
 	"my/checker/checks"
 	"sync"
 	"time"
@@ -9,24 +10,24 @@ import (
 
 func runProjectTicker(t TTickerWithDuration, wg *sync.WaitGroup) {
 	defer wg.Done()
+	tickerDuration, _ := time.ParseDuration(t.Duration) //sendCritAlerts(period)
+	checkCollection, _ := checks.GetChecksByDuration(tickerDuration.String())
+	logger.Infof("\t %d checks for duration %s", checkCollection.Len(), tickerDuration.String())
+
 	for {
 		select {
 		case _ = <-t.Ticker.C:
-			tickerDuration, _ := time.ParseDuration(t.Duration) //sendCritAlerts(period)
-			checkCollection, _ := checks.GetChecksByDuration(tickerDuration.String())
 
-			for _, c := range checkCollection.Checks[t.Duration] {
-				//logger.Infof("runProjectTicker: %+v", c)
+			for _, c := range checkCollection.Checks {
+				res := c.Check.Execute()
 
-				logger.Infof("(%s) Checking (%s/%s/%s): %s", c.Check.GetSID(), c.Check.GetProject(), c.Check.GetHealthcheck(), c.Check.GetType(), c.Check.GetHost())
-
-				d, err := c.Check.Execute()
-
-				if err != nil {
-					logger.Errorf("(%s) Failed, took %s\nError: %s", c.Check.GetSID(), d, err.Error())
-
+				header := fmt.Sprintf("(%s) %s/%s/%s, %s ", c.Check.GetSID(), c.Check.GetProject(), c.Check.GetHealthcheck(), c.Check.GetType(), c.Check.GetHost())
+				if res.Result.Error != nil {
+					message := fmt.Sprintf("%s Failed: %s", header, res.Result.Error.Error())
+					logger.Errorf(message)
+					res.Alert(message)
 				} else {
-					logger.Infof("(%s) Success, took %s", c.Check.GetSID(), d)
+					logger.Infof("%s Success, took %s", header, res.Result.Duration)
 				}
 			}
 		}

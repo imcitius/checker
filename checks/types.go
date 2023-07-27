@@ -1,9 +1,18 @@
 package checks
 
-import "my/checker/config"
+import (
+	"my/checker/alerts"
+	"my/checker/config"
+	"time"
+)
 
 type TProjectsConfig struct {
 	Projects *map[string]config.TProject `mapstructure:"projects"`
+}
+
+type TCheckResult struct {
+	Duration time.Duration
+	Error    error
 }
 
 type TCommonCheck struct {
@@ -14,14 +23,17 @@ type TCommonCheck struct {
 	Project     string
 	Healthcheck string
 	Type        string
+	Alerter     alerts.ICommonAlerter
 
 	Parameters  config.TCheckParameters
 	CheckConfig config.TCheckConfig
 	RealCheck   ISpecificCheck
+
+	Result TCheckResult
 }
 
 type TChecksCollection struct {
-	Checks map[string][]TCheckWithDuration
+	Checks []TCheckWithDuration
 }
 
 type TCheckWithDuration struct {

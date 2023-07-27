@@ -1,46 +1,16 @@
 package checks
 
 import (
-	"github.com/google/uuid"
 	"github.com/teris-io/shortid"
 	"math/rand"
+	"my/checker/alerts"
+	"my/checker/checks/getfile"
 	"my/checker/checks/http"
 	"my/checker/checks/icmp"
+	"my/checker/checks/tcp"
 	"my/checker/config"
-	"strings"
 	"time"
 )
-
-func refineProjects() {
-	for i, _p := range configurer.Projects {
-		(configurer.Projects)[i] = config.TProject{
-			Name:         i,
-			Healthchecks: _p.Healthchecks,
-			Parameters:   _p.Parameters,
-		}
-
-		for j, _h := range _p.Healthchecks {
-			(_p.Healthchecks)[j] = config.THealthcheck{
-				Name:   j,
-				Checks: _h.Checks,
-			}
-
-			for k, _c := range _h.Checks {
-				_c.UUid = genUUID((_p.Healthchecks)[j].Name, _c.Name, hostOrUrl(_c))
-
-				if _c.Parameters.Duration == "" {
-					if _p.Parameters.Duration != "" {
-						_c.Parameters.Duration = _p.Parameters.Duration
-					} else {
-						_c.Parameters.Duration = minDuration(configurer.Defaults.Duration, configurer.Defaults.DefaultCheckParameters.Duration)
-					}
-				}
-
-				(_h.Checks)[k] = _c
-			}
-		}
-	}
-}
 
 func SetSID() string {
 	sid, _ := shortid.New(1, shortid.DefaultABC, rand.Uint64())
@@ -48,19 +18,19 @@ func SetSID() string {
 	return s
 }
 
-func (c *TCommonCheck) GetSID() string {
+func (c TCommonCheck) GetSID() string {
 	return c.Sid
 }
 
-func (c *TCommonCheck) GetProject() string {
+func (c TCommonCheck) GetProject() string {
 	return c.Project
 }
 
-func (c *TCommonCheck) GetHealthcheck() string {
+func (c TCommonCheck) GetHealthcheck() string {
 	return c.Healthcheck
 }
 
-func (c *TCommonCheck) GetHost() string {
+func (c TCommonCheck) GetHost() string {
 	if c.CheckConfig.Url != "" {
 		return c.CheckConfig.Url
 	} else {
@@ -68,42 +38,75 @@ func (c *TCommonCheck) GetHost() string {
 	}
 }
 
-func (c *TCommonCheck) GetType() string {
+func (c TCommonCheck) GetType() string {
 	return c.Type
 }
 
-func (c *TCommonCheck) GetName() string {
+func (c TCommonCheck) GetName() string {
 	return c.Name
 }
 
-func (c *TCommonCheck) Execute() (time.Duration, error) {
-	//logger.Infof("TCommonCheck started: %s", c.Name)
-
-	d, err := c.RealCheck.RealExecute()
-	return d, err
+func (c TCommonCheck) GetResult() TCheckResult {
+	return c.Result
 }
 
-// TODO add caching
-func GetChecksByDuration(duration string) (TChecksCollection, error) {
-	//logger.Infof("Checks: %s", duration)
-	checksCollection := TChecksCollection{
-		Checks: make(map[string][]TCheckWithDuration),
+func (c TCommonCheck) Execute() TCommonCheck {
+	//logger.Infof("TCommonCheck started: %s", c.Name)
+
+	d, e := c.RealCheck.RealExecute()
+
+	c.Result = TCheckResult{
+		Duration: d,
+		Error:    e,
 	}
 
+	return c
+}
+
+func (c TCommonCheck) Alert(message string) TCommonCheck {
+	if c.Alerter != nil {
+		c.Alerter.Send(message)
+	} else {
+		logger.Errorf("Logger not set for check")
+		logger.Errorf(message)
+	}
+	return c
+}
+
+func GetChecksByDuration(duration string) (TChecksCollection, error) {
+	return findChecksByDuration(duration)
+}
+
+func findChecksByDuration(duration string) (TChecksCollection, error) {
+	logger.Debugf("Look for checks with durations %s", duration)
+
+	checksCollection := TChecksCollection{
+		Checks: []TCheckWithDuration{},
+	}
+
+	checks := make([]TCheckWithDuration, 0)
+
 	for _, p := range configurer.Projects {
+		logger.Debugf(">>> Project %s", p.Name)
 
-		healthchecks := p.Healthchecks
-		//logger.Fatalf("Project %s Healthchecks: %+v", pName, healthchecks)
-
-		for _, h := range healthchecks {
-			//logger.Infof("Healthcheck: %+v", h)
+		for _, h := range p.Healthchecks {
+			//logger.Debugf(">>> Healthcheck: %+v", h.Name)
 			for _, check := range h.Checks {
-				//logger.Infof("Check: %+v", check)
-				//logger.Infof("Check: %s, dur: %s", check.Name, check.Parameters.Duration)
+				//logger.Debugf(">>> Check: %s, dur: %s", check.Name, check.Parameters.Duration)
 
-				if check.Parameters.Duration == duration {
+				dConfig, err := time.ParseDuration(duration)
+				if err != nil {
+					logger.Errorf("Error parsing wanted duration: %s", err)
+				}
+				dCheck, _ := time.ParseDuration(check.Parameters.Duration)
+				if err != nil {
+					logger.Errorf("Error parsing check duration: %s", err)
+				}
+
+				if dConfig == dCheck {
+					logger.Debugf(">>> Adding check: %s, dur: %s", check.Name, check.Parameters.Duration)
 					checkToAdd := newCommonCheck(check, h, p)
-					checksCollection.Checks[duration] = append(checksCollection.Checks[duration], TCheckWithDuration{
+					checks = append(checks, TCheckWithDuration{
 						Check:    checkToAdd,
 						Duration: duration,
 					})
@@ -112,13 +115,16 @@ func GetChecksByDuration(duration string) (TChecksCollection, error) {
 		}
 	}
 
-	//logger.Infof("Checks: %s", checksCollection)
+	checksCollection.Checks = checks
+
+	//logger.Infof("Checks: %+v", checksCollection)
+	//spew.Dump(checksCollection)
+	//logger.Fatalf("%s, %d", duration, len(checksCollection.Checks[duration]))
 
 	return checksCollection, nil
 }
 
 func newCommonCheck(c config.TCheckConfig, h config.THealthcheck, p config.TProject) ICommonCheck {
-
 	newCheck := TCommonCheck{
 		CheckConfig: c,
 		Name:        c.Name,
@@ -126,51 +132,49 @@ func newCommonCheck(c config.TCheckConfig, h config.THealthcheck, p config.TProj
 		Healthcheck: h.Name,
 		Type:        c.Type,
 		Parameters:  c.Parameters,
-		RealCheck:   newSpecificCheck(c),
-		Sid:         SetSID(),
+		Result: TCheckResult{
+			Duration: 0,
+			Error:    nil,
+		},
 	}
 
-	return &newCheck
+	newCheck.Alerter = getAlerter(newCheck)
+	newCheck.RealCheck = newSpecificCheck(newCheck)
+	newCheck.Sid = SetSID()
+	return newCheck
 }
 
-func newSpecificCheck(c config.TCheckConfig) ISpecificCheck {
-	switch c.Type {
-	case "http":
-		return http.New(c)
-	case "icmp":
-		return icmp.New(c)
+func getAlerter(c TCommonCheck) alerts.ICommonAlerter {
+	alerter := alerts.GetAlerterByName(configurer.Defaults.AlertsChannel)
+
+	if c.Parameters.AlertChannel != "" {
+		return alerts.GetAlerterByName(c.Parameters.AlertChannel)
+	} else {
+		if proj, _ := config.GetProjectByName(c.Project); proj.Parameters.AlertChannel != "" {
+			logger.Infof("bzdury: %s", proj.Parameters.AlertChannel)
+			return alerts.GetAlerterByName(proj.Parameters.AlertChannel)
+		}
 	}
 
-	logger.Error("Error constructing specific check: unknown check type")
+	return alerter
+}
+
+func newSpecificCheck(c TCommonCheck) ISpecificCheck {
+	switch c.Type {
+	case "http":
+		return http.New(c.CheckConfig)
+	case "icmp":
+		return icmp.New(c.CheckConfig)
+	case "tcp":
+		return tcp.New(c.CheckConfig)
+	case "getfile":
+		return getfile.New(c.CheckConfig)
+	}
+
+	logger.Errorf("Error constructing specific check: unknown check type: '%s'", c.Type)
 	return nil
 }
 
-func minDuration(a, b string) string {
-	aDur, _ := time.ParseDuration(a)
-	bDur, _ := time.ParseDuration(b)
-
-	if aDur < bDur {
-		return a
-	} else {
-		return b
-	}
-}
-
-func genUUID(name ...string) string {
-	var err error
-
-	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
-	if err != nil {
-		return ""
-	}
-
-	u2 := uuid.NewSHA1(ns, []byte(strings.Join(name, ".")))
-	return u2.String()
-}
-
-func hostOrUrl(c config.TCheckConfig) string {
-	if c.Url != "" {
-		return c.Url
-	}
-	return c.Host
+func (c *TChecksCollection) Len() int {
+	return len(c.Checks)
 }

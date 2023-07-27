@@ -1,8 +1,9 @@
 .idea
+.*
 checker*
-testconfigs
+testconfigs*
 gitlabci*
 kubeconfig.json
 build/*
-images-report.jso
+images-report.*
 old

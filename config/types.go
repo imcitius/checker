@@ -25,7 +25,7 @@ type TDefaults struct {
 	BotGreetingEnabled bool `yaml:"bots_greeting_enabled" env-default:"false"`
 
 	DebugLevel    string `yaml:"debug_level" env-default:"info"`
-	AlertsChannel string `yaml:"default_alerts_channel" env-default:"log"`
+	AlertsChannel string `yaml:"alerts_channel" env-default:"log"`
 
 	DefaultCheckParameters TCheckParameters `yaml:"default_check_parameters"`
 }
@@ -37,7 +37,7 @@ type TCheckConfig struct {
 	Project     string
 	Healthcheck string
 
-	// Url for http check
+	// Url for http and getfile check
 	Url string
 	// Host for other checks types
 	Host     string
@@ -45,7 +45,7 @@ type TCheckConfig struct {
 	Port     int
 	Severity string
 
-	// hash and size for fileget check
+	// hash and size for getfile check
 	Hash string
 	Size int64
 	// retries
@@ -112,8 +112,7 @@ type TCheckParameters struct {
 	Mode string `yaml:"mode" env-default:"loud"`
 
 	// Checks should be run every Duration seconds
-	Duration     string `yaml:"duration" env-default:"60s"`
-	ReportPeriod string `yaml:"report_period" env-default:"3600s"`
+	Duration string `yaml:"duration" env-default:"60s"`
 
 	// timeout of the check's job, for example http request timeout
 	Timeout             string `yaml:"timeout" env-default:"3s"`
@@ -126,8 +125,9 @@ type TCheckParameters struct {
 	AllowFails int `yaml:"allow_fails" env-default:"0"`
 
 	// alert name
-	AlertChannel     string `yaml:"noncrit_alert"`
-	CritAlertChannel string `yaml:"crit_alert"`
+	AlerterName      string `yaml:"alerter"`
+	AlertChannel     string `yaml:"noncrit_channel"`
+	CritAlertChannel string `yaml:"crit_channel"`
 	CommandChannel   string `yaml:"command_channel"`
 
 	Mentions []string `yaml:"mentions"`
@@ -143,8 +143,9 @@ type TProject struct {
 }
 
 type THealthcheck struct {
-	Name   string         `yaml:"name"`
-	Checks []TCheckConfig `yaml:"checks"`
+	Name       string                  `yaml:"name"`
+	Parameters TCheckParameters        `yaml:"parameters"`
+	Checks     map[string]TCheckConfig `yaml:"checks"`
 }
 
 type TAlertsConfig struct {
@@ -152,7 +153,6 @@ type TAlertsConfig struct {
 }
 
 type TAlert struct {
-	Name string `yaml:"name"`
 	Type string `yaml:"type"`
 	// token for bot
 	BotToken string `yaml:"bot_token"`

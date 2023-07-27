@@ -40,7 +40,7 @@ const (
 	ErrWrongCheckType         = "Wrong check type: %s (should be http)"
 	ErrCannotParseTimeout     = "cannot parse http check timeout: %s in project %s, check %s"
 	ErrGotRedirect            = "asked to stop redirects: project %s, check %s"
-	ErrCantBuildHTTPRequest   = "cannot construct http request: project %s, check %s"
+	ErrCantBuildHTTPRequest   = "cannot construct http request"
 	ErrHTTPClientConstruction = "Http client construction error: %+v"
 	ErrHTTPAnswerError        = "answer error: %+v, timeout %s"
 	ErrHTTPNoCertificates     = "No certificates present on https connection"
@@ -48,4 +48,5 @@ const (
 	ErrHTTPBodyRead           = "Error reading answer body: %s (length %d)"
 	ErrHTTPResponseCodeError  = "HTTP response code error: %d (want %d)"
 	ErrHTTPAnswerTextError    = "answer text error: found '%s' ('%s' should be %s)"
+	ErrParseSSlTimeout        = "cannot parse ssl expiration timeout: %s"
 )

@@ -3,7 +3,7 @@ package checks
 import "time"
 
 type ICommonCheck interface {
-	Execute() (time.Duration, error)
+	Execute() TCommonCheck
 
 	GetProject() string
 	GetHealthcheck() string

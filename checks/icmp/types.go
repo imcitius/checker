@@ -20,9 +20,9 @@ type TICMPCheck struct {
 }
 
 const (
-	ErrWrongCheckType = "Wrong check type: %s (should be icmp)"
-	ErrEmptyHost      = "Host is empty"
-	ErrICMPError      = "ICMP error at project %s, check: %s, host: %s"
+	ErrWrongCheckType = "wrong check type: %s (should be icmp)"
+	ErrEmptyHost      = "host is empty"
+	ErrICMPError      = "ICMP error: "
 	ErrPingError      = "ping error: %s"
 	ErrPacketLoss     = "ping error: %f percent packet loss"
 	ErrOther          = "other ping error: %s"

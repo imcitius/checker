@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"my/checker/alerts"
@@ -8,6 +10,8 @@ import (
 	"my/checker/config"
 	"my/checker/scheduler"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -23,7 +27,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "config",
-				Value:       ".config.yaml",
+				Value:       "testconfigs.config.yaml",
 				Usage:       "config file",
 				Destination: &cfgFile,
 			},
@@ -36,22 +40,47 @@ func main() {
 		},
 
 		Action: func(*cli.Context) error {
-			config.InitLog(logLevel)
-			config.InitConfig(cfgFile)
-			checks.InitChecks()
-			alerts.InitAlerts()
-			scheduler.RunScheduler()
+			ctx, cancel := context.WithCancel(context.Background())
+
+			go check(ctx)
+
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+			select {
+			case <-ctx.Done():
+				// Background process finished
+				fmt.Println("Background process finished.")
+			case <-sigChan:
+				// Interrupt signal received, cancel the context
+				cancel()
+				fmt.Println("Interrupt signal received. Stopping background process...")
+			}
+
 			return nil
 		},
 	}
 
-	if err := app.Run(os.Args); err != nil {
+	if err := app.RunContext(context.Background(), os.Args); err != nil {
 		logrus.Fatal(err)
 	}
 }
 
-// config.InitConfig(cfgFile), config.InitLog(logLevel)
+func check(ctx context.Context) error {
+	config.InitLog(logLevel)
+	config.InitConfig(cfgFile)
+	checks.InitChecks()
 
-//func Run() {
-//	scheduler.RunScheduler()
-//}
+	for {
+		select {
+		case <-ctx.Done():
+			// Stop the background process gracefully
+			fmt.Println("Background process stopping...")
+			alerts.StopAlerters()
+			return nil
+		default:
+			alerts.InitAlerts()
+			scheduler.RunScheduler()
+		}
+	}
+}

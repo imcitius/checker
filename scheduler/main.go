@@ -2,13 +2,13 @@ package scheduler
 
 import (
 	"my/checker/config"
-	"sync"
 )
 
 var (
-	wg         sync.WaitGroup
+	wg         = config.GetWG()
 	logger     = config.GetLog()
 	configurer = config.GetConfig()
+	//cache      *memoize.Memoizer
 )
 
 func RunScheduler() {
@@ -19,16 +19,16 @@ func RunScheduler() {
 	tickers, _ := GetTickers()
 	//spew.Dump(tickers)
 
-	logger.Infof("Scheduler started: ")
+	logger.Infof("Schedulers started: ")
 
 	counter := 1
 	for _, ticker := range tickers.Tickers {
 		wg.Add(1)
 		//logger.Infof("%s", desc)
 		if counter == len(tickers.Tickers) {
-			runProjectTicker(ticker, &wg)
+			runProjectTicker(ticker, wg)
 		} else {
-			go runProjectTicker(ticker, &wg)
+			go runProjectTicker(ticker, wg)
 			counter++
 		}
 	}

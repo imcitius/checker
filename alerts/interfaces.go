@@ -1,8 +1,12 @@
 package alerts
 
+import "sync"
+
 type ICommonAlerter interface {
 	Init()
-	Start()
-	Send(channel any, message string)
-	Stop()
+	Start(wg *sync.WaitGroup)
+	Send(message string)
+	SendCritical(message string)
+	Stop(wg *sync.WaitGroup)
+	IsBot() bool
 }

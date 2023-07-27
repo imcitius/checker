@@ -1,26 +1,24 @@
 package checks
 
 import (
+	"github.com/kofalt/go-memoize"
 	"github.com/sirupsen/logrus"
 	"my/checker/config"
+	"time"
 )
 
 var (
 	configurer *config.TConfig
 	logger     *logrus.Logger
+	cache      *memoize.Memoizer
 )
 
 func InitChecks() {
-	//logger.Fatal(config.AllSettings())
-	// check if projects are in config
-
 	configurer = config.GetConfig()
 	logger = config.GetLog()
+	cache = memoize.NewMemoizer(24*time.Hour, 24*time.Hour)
 
 	if len(configurer.Projects) == 0 {
-		logger.Fatalf("Checks' init(): no projects found in config")
+		logger.Fatalf("No projects found in config")
 	}
-
-	refineProjects()
-	//projectsConfig.refineChecks()
 }

@@ -11,21 +11,36 @@ func GetTickers() (TTickersCollection, error) {
 		make(map[string]TTickerWithDuration),
 	}
 
-	if configurer.Defaults.Duration != "" {
-		defaultDuration, err := time.ParseDuration(configurer.Defaults.Duration)
-		if err != nil {
-			logger.Fatalf("Failed to parse duration: %s", err.Error())
-		}
-		tickers.Tickers[configurer.Defaults.Duration] = TTickerWithDuration{
-			time.NewTicker(defaultDuration),
-			defaultDuration.String(),
-		}
+	defaultDuration, err := time.ParseDuration(configurer.Defaults.Duration)
+	if err != nil {
+		logger.Fatalf("Failed to parse duration: %s", err.Error())
+	}
+	tickers.Tickers[configurer.Defaults.Duration] = TTickerWithDuration{
+		time.NewTicker(defaultDuration),
+		defaultDuration.String(),
 	}
 
 	for _, project := range configurer.Projects {
 		for _, healthcheck := range project.Healthchecks {
+			logger.Debugf("Healthcheck %s", healthcheck.Name)
+			if healthcheck.Parameters.Duration != "" {
+				logger.Debugf("Healthcheck %s duration: %s", healthcheck.Name, healthcheck.Parameters.Duration)
+				duration, err := time.ParseDuration(healthcheck.Parameters.Duration)
+				if err != nil {
+					logger.Fatalf("Failed to parse duration: %s", err.Error())
+				}
+
+				if _, ok := tickers.Tickers[healthcheck.Parameters.Duration]; !ok {
+					tickers.Tickers[healthcheck.Parameters.Duration] = TTickerWithDuration{
+						time.NewTicker(duration),
+						duration.String(),
+					}
+				}
+			}
+
 			for _, check := range healthcheck.Checks {
 				if check.Parameters.Duration != "" {
+					logger.Debugf("Check %s duration: %s", check.Name, check.Parameters.Duration)
 					duration, err := time.ParseDuration(check.Parameters.Duration)
 					if err != nil {
 						logger.Fatalf("Failed to parse duration: %s", err.Error())
@@ -42,6 +57,7 @@ func GetTickers() (TTickersCollection, error) {
 		}
 
 		if project.Parameters.Duration != "" {
+			logger.Debugf("Project %s duration: %s", project.Name, project.Parameters.Duration)
 			duration, err := time.ParseDuration(project.Parameters.Duration)
 			if err != nil {
 				logger.Fatalf("Failed to parse duration: %s", err.Error())
@@ -56,6 +72,7 @@ func GetTickers() (TTickersCollection, error) {
 	}
 
 	// add code to actual parse tickers from config
-
+	//spew.Dump(tickers)
+	//panic(1)
 	return tickers, nil
 }

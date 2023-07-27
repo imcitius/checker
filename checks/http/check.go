@@ -30,7 +30,7 @@ func (c *THTTPCheck) init() (*http.Client, error) {
 
 	req, err := http.NewRequest("GET", c.Url, nil) // TODO add more HTTP methods
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf(ErrCantBuildHTTPRequest, err))
+		return nil, errors.New(fmt.Sprintf(ErrCantBuildHTTPRequest))
 	}
 
 	if c.Auth.User != "" {

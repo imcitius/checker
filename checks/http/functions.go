@@ -51,7 +51,7 @@ func New(checkConfig config.TCheckConfig) IHTTPCheck {
 
 	SSLExpirationPeriodParsed, err := time.ParseDuration(realCheck.SSLExpirationPeriod)
 	if err != nil {
-		err := fmt.Errorf("cannot parse ssl expiration timeout: %s in project %s", err, "project")
+		err := fmt.Errorf(ErrParseSSlTimeout, err)
 		logger.Errorf(err.Error())
 		return nil
 	}

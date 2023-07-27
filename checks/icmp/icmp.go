@@ -14,7 +14,7 @@ func (c *TICMPCheck) RealExecute() (time.Duration, error) {
 
 	start := time.Now()
 
-	errorHeader = fmt.Sprintf(ErrICMPError, "project", c.CheckName, c.Host)
+	errorHeader = fmt.Sprintf(ErrICMPError)
 
 	if c.Host == "" {
 		errorMessage = errorHeader + "empty host\n"
