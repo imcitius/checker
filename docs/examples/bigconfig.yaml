@@ -1,0 +1,143 @@
+---
+defaults:
+  http_port: '80'
+  bots_enabled: 'true'
+  bots_greeting_enabled: 'true'
+  parameters:
+    check_period: 300s
+    min_health: 1
+    allow_fails: 0
+    noncrit_alert: tg_staging
+    crit_alert: tg_staging
+    command_channel: tg_staging_test
+    mode: loud
+    report_period: 1800s
+alerts:
+  - name: tg_staging
+    type: telegram
+    bot_token: vault:secret/checker/staging/tokens:telegram_token
+    noncritical_channel: -237762717
+    critical_channel: -237762717
+  - name: tg_staging_test
+    type: telegram
+    bot_token: 987654313:AHGBR8ws-z2l2TJYhbGRjyyzJ-4H11112_k
+    noncritical_channel: 1330352
+    critical_channel: -10543985
+  - name: tg_staging_env
+    type: telegram
+    bot_token: env:CHECKER_BOT_TOKEN
+    noncritical_channel: env:CHECKER_BOT_NONCRIT_CHANNEL
+    critical_channel: env:CHECKER_BOT_CRIT_CHANNEL
+projects:
+  - name: staging
+    mentions:
+      - "@main_admin"
+      - "@vasyan"
+    healthchecks:
+      - name: back
+        parameters:
+          check_period: 60s
+        checks:
+          - type: checks_http
+            host: http://app.service.staging.consul/health.php
+            answer: Backend OK
+            code:
+              - 200
+            timeout: 2s
+            severity: critical
+      - name: helpdesk
+        checks:
+          - type: checks_http
+            host: http://helpdesk.service.staging.consul/alive
+            answer: Helpdesk OK
+            code:
+              - 200
+            timeout: 2s
+            headers:
+              user-agent: AndroidApp-HD
+            auth:
+              user: test-hd
+              pass: ke8thaul8ein
+      - name: web
+        checks:
+          - type: checks_http
+            host: http://web.service.staging.consul
+            answer: "Online shop"
+            code:
+              - 200
+            timeout: 2s
+      - name: gen
+        checks:
+          - type: checks_http
+            host: http://gen.service.staging.consul:8082/healthcheck
+            code:
+              - 200
+              - 301
+              - 406
+            timeout: 5s
+      - name: pgsql-main
+        checks:
+          - type: pgsql_replication
+            host: master.pgsql.service.staging.consul
+            port: 5432
+            sql_repl_config:
+              dbname: repltest
+              username: repltest
+              password: vault:secret/staging/pgsql-main/repltest/pass:value
+              tablename: repl_test
+              serverlist:
+                - pgsql-main-0.node.staging.consul
+                - pgsql-main-1.node.staging.consul
+                - pgsql-main-2.node.staging.consul
+      - name: pgsql-aux
+        checks:
+          - type: pgsql_replication
+            host: master.pgsql-aux.service.staging.consul
+            port: 5432
+            sql_repl_config:
+              dbname: repltest
+              username: repltest
+              password: vault:secret/staging/pgsql-aux/repltest/pass:value
+              tablename: repl_test
+              serverlist:
+                - pgsql-aux-0.node.staging.consul
+                - pgsql-aux-1.node.staging.consul
+                - pgsql-aux-2.node.staging.consul
+          - type: pgsql_replication_status
+            host: master.pgsql-aux.service.staging.consul
+            port: 5432
+            sql_repl_config:
+              dbname: repltest
+              username: repltest
+              password: vault:secret/staging/pgsql-aux/repltest/pass:value
+              tablename: repl_test
+              lag: 3s
+              analytic_replicas:
+                - sd-156726
+
+  - name: production-zoneA
+    healthchecks:
+      - name: database checks_2
+        parameters:
+          check_period: 60s
+        checks:
+          - name: mysql statistics server
+            type: mysql_query
+            host: 192.168.132.101
+            port: 3306
+            timeout: 1s
+            sql_query_config:
+              username: username
+              dbname: dbname
+              password: aiHohquoogeeViey1weopiegeep7le2p
+              query: select reg_date from users order by id asc limit 1;
+              response: '1278938100'
+            severity: critical
+          - name: Backend cron is run
+            type: passive
+            timeout: 5m
+          - name: haproxy port is open
+            type: tcp
+            host: haproxy.prod.svc.zoneA.cluster.local
+            port: 33333
+            attempts: 1

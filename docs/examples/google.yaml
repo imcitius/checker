@@ -1,0 +1,19 @@
+---
+defaults:
+  http_port: '80'
+  token_encryption_key:  thohGhoobeiPh5aiwieZ3ixahquiezee
+  parameters:
+    check_period: 60s
+    report_period: 180s
+    min_health: 1
+    allow_fails: 0
+    mode: loud
+projects:
+  google:
+    parameters:
+      check_period: 10s
+    healthchecks:
+      checks_http:
+        checks:
+          Google main page:
+            host: https://google.com/
