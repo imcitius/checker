@@ -26,8 +26,9 @@ var (
 			DebugLevel:    "info",
 			AlertsChannel: "log",
 		},
-		Alerts:   map[string]TAlert{},
-		Projects: map[string]TProject{},
+		StartTime: StartTime,
+		Alerts:    map[string]TAlert{},
+		Projects:  map[string]TProject{},
 	}
 )
 

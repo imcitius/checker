@@ -13,10 +13,11 @@ func Listen() {
 		})
 	})
 	router.GET("/ping/check/:uuid", func(c *gin.Context) {
-		res, err := configurer.GetCheckByUUid(c.Param("uuid"))
+		check, err := configurer.PingCheck(c.Param("uuid"))
+
 		if err == nil {
 			c.JSON(http.StatusOK, gin.H{
-				"pong": res.Name,
+				"pong": check.LastPing.String(),
 			})
 		} else {
 			c.JSON(http.StatusNotFound, gin.H{

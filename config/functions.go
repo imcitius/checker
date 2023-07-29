@@ -61,14 +61,7 @@ func GetWG() *sync.WaitGroup {
 }
 
 func (c *TConfig) GetCheckByUUid(uuid string) (TCheckConfig, error) {
-	result, err, _ := cache.Memoize(fmt.Sprintf("checkByUuid-%s", uuid), func() (interface{}, error) {
-		return findCheckByUuid(uuid)
-	})
-	return result.(TCheckConfig), err
-}
-
-func findCheckByUuid(uuid string) (TCheckConfig, error) {
-	for _, p := range config.Projects {
+	for _, p := range c.Projects {
 		for _, h := range p.Healthchecks {
 			for _, c := range h.Checks {
 				if c.UUid == uuid {
@@ -81,24 +74,46 @@ func findCheckByUuid(uuid string) (TCheckConfig, error) {
 }
 
 func (c *TConfig) ListChecks() (interface{}, error) {
-	result, err, _ := cache.Memoize(fmt.Sprintf("ListChecks"), func() (interface{}, error) {
-		return listChecks()
-	})
-	return result, err
-}
+	type listObject struct {
+		UUID       string
+		LastStatus bool
+		LastExec   time.Time
+	}
 
-func listChecks() (interface{}, error) {
-	var list map[string]map[string]map[string]string
+	var list map[string]map[string]map[string]listObject
 
-	list = make(map[string]map[string]map[string]string)
-	for _, p := range config.Projects {
-		list[p.Name] = make(map[string]map[string]string)
+	list = make(map[string]map[string]map[string]listObject)
+	for _, p := range c.Projects {
+		list[p.Name] = make(map[string]map[string]listObject)
 		for _, h := range p.Healthchecks {
-			list[p.Name][h.Name] = make(map[string]string)
+			list[p.Name][h.Name] = make(map[string]listObject)
 			for _, c := range h.Checks {
-				list[p.Name][h.Name][c.Name] = c.UUid
+				list[p.Name][h.Name][c.Name] = listObject{
+					UUID:       c.UUid,
+					LastStatus: c.LastResult,
+					LastExec:   c.LastExec,
+				}
 			}
 		}
 	}
 	return list, nil
+
+}
+
+func (c *TConfig) PingCheck(uuid string) (TCheckConfig, error) {
+
+	check, _ := c.GetCheckByUUid(uuid)
+	check.LastPing = time.Now()
+	p := c.Projects
+	p[check.Project].Healthchecks[check.Healthcheck].Checks[check.Name] = check
+	return check, nil
+}
+
+func (c *TConfig) SetStatus(uuid string, status bool) {
+
+	check, _ := c.GetCheckByUUid(uuid)
+	check.LastExec = time.Now()
+	check.LastResult = status
+	p := c.Projects
+	p[check.Project].Healthchecks[check.Healthcheck].Checks[check.Name] = check
 }

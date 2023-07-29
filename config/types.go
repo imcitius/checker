@@ -1,11 +1,15 @@
 package config
 
-import "net/http"
+import (
+	"net/http"
+	"time"
+)
 
 type TConfig struct {
-	Defaults TDefaults           `yaml:"defaults"`
-	Alerts   map[string]TAlert   `yaml:"alerts"`
-	Projects map[string]TProject `yaml:"projects"`
+	Defaults  TDefaults           `yaml:"defaults"`
+	Alerts    map[string]TAlert   `yaml:"alerts"`
+	Projects  map[string]TProject `yaml:"projects"`
+	StartTime time.Time
 }
 
 type TDefaults struct {
@@ -102,6 +106,8 @@ type TCheckConfig struct {
 	// Runtime data
 	UUid       string
 	LastResult bool
+	LastExec   time.Time
+	LastPing   time.Time
 
 	DebugLevel string
 	Parameters TCheckParameters `yaml:"parameters"`

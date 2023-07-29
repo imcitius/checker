@@ -10,6 +10,7 @@ type ICommonCheck interface {
 	GetHost() string
 	GetType() string
 	GetSID() string
+	SetStatus(bool)
 }
 
 type ISpecificCheck interface {

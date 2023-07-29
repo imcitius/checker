@@ -7,6 +7,7 @@ import (
 	"my/checker/checks/getfile"
 	"my/checker/checks/http"
 	"my/checker/checks/icmp"
+	"my/checker/checks/passive"
 	"my/checker/checks/tcp"
 	"my/checker/config"
 	"time"
@@ -44,6 +45,10 @@ func (c TCommonCheck) GetName() string {
 
 func (c TCommonCheck) GetResult() TCheckResult {
 	return c.Result
+}
+
+func (c TCommonCheck) SetStatus(status bool) {
+	configurer.SetStatus(c.CheckConfig.UUid, status)
 }
 
 func (c TCommonCheck) Execute() TCommonCheck {
@@ -164,6 +169,8 @@ func newSpecificCheck(c TCommonCheck) ISpecificCheck {
 		return tcp.New(c.CheckConfig)
 	case "getfile":
 		return getfile.New(c.CheckConfig)
+	case "passive":
+		return passive.New(c.CheckConfig)
 	}
 
 	logger.Errorf("Error constructing specific check: unknown check type: '%s'", c.Type)

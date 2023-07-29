@@ -25,9 +25,11 @@ func runProjectTicker(t TTickerWithDuration, wg *sync.WaitGroup) {
 				if res.Result.Error != nil {
 					message := fmt.Sprintf("%s Failed: %s", header, res.Result.Error.Error())
 					logger.Errorf(message)
+					c.Check.SetStatus(false)
 					res.Alert(message)
 				} else {
 					logger.Infof("%s Success, took %s", header, res.Result.Duration)
+					c.Check.SetStatus(true)
 				}
 			}
 		}
