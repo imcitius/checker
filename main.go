@@ -9,6 +9,7 @@ import (
 	"my/checker/checks"
 	"my/checker/config"
 	"my/checker/scheduler"
+	"my/checker/web"
 	"os"
 	"os/signal"
 	"syscall"
@@ -71,6 +72,7 @@ func check(ctx context.Context) {
 	config.InitLog(logLevel)
 	config.InitConfig(cfgFile)
 	checks.InitChecks()
+	go web.Listen()
 
 	for {
 		select {

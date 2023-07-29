@@ -59,3 +59,46 @@ func findProjectByName(name string) (TProject, error) {
 func GetWG() *sync.WaitGroup {
 	return &wg
 }
+
+func (c *TConfig) GetCheckByUUid(uuid string) (TCheckConfig, error) {
+	result, err, _ := cache.Memoize(fmt.Sprintf("checkByUuid-%s", uuid), func() (interface{}, error) {
+		return findCheckByUuid(uuid)
+	})
+	return result.(TCheckConfig), err
+}
+
+func findCheckByUuid(uuid string) (TCheckConfig, error) {
+	for _, p := range config.Projects {
+		for _, h := range p.Healthchecks {
+			for _, c := range h.Checks {
+				if c.UUid == uuid {
+					return c, nil
+				}
+			}
+		}
+	}
+	return TCheckConfig{}, fmt.Errorf("check not found")
+}
+
+func (c *TConfig) ListChecks() (interface{}, error) {
+	result, err, _ := cache.Memoize(fmt.Sprintf("ListChecks"), func() (interface{}, error) {
+		return listChecks()
+	})
+	return result, err
+}
+
+func listChecks() (interface{}, error) {
+	var list map[string]map[string]map[string]string
+
+	list = make(map[string]map[string]map[string]string)
+	for _, p := range config.Projects {
+		list[p.Name] = make(map[string]map[string]string)
+		for _, h := range p.Healthchecks {
+			list[p.Name][h.Name] = make(map[string]string)
+			for _, c := range h.Checks {
+				list[p.Name][h.Name][c.Name] = c.UUid
+			}
+		}
+	}
+	return list, nil
+}
