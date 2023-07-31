@@ -7,7 +7,7 @@ import (
 	"my/checker/store"
 )
 
-func UpdateChecksByCollection(checks []TCheckWithDuration) error {
+func UpdateChecksByCollectioninDB(checks []TCheckWithDuration) error {
 
 	models := []mongo.WriteModel{}
 	opts := options.BulkWrite().SetOrdered(false)
