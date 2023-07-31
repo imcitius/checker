@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"os"
-	"time"
 )
 
 type mongoDbStore struct {
@@ -56,14 +55,6 @@ func (store mongoDbStore) GetData() (interface{}, error) {
 	}
 
 	return &results, err
-}
-
-type checkStruct struct {
-	name       string
-	UUid       string
-	LastResult bool
-	LastExec   time.Time
-	LastPing   time.Time
 }
 
 func (store mongoDbStore) UpdateChecks() error {
