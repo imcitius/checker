@@ -9,6 +9,7 @@ import (
 	"my/checker/checks"
 	"my/checker/config"
 	"my/checker/scheduler"
+	"my/checker/store"
 	"my/checker/web"
 	"os"
 	"os/signal"
@@ -72,6 +73,16 @@ func check(ctx context.Context) {
 	config.InitLog(logLevel)
 	config.InitConfig(cfgFile)
 	checks.InitChecks()
+	if config.GetConfig().DB.Protocol != "" {
+		// causes panic, need to pass context
+		//defer store.Store.Disconnect()
+		_, err := store.InitDB()
+		if err != nil {
+			logrus.Fatalf("DB connect error: %s", err.Error())
+		}
+	} else {
+		logrus.Infof("DB is not configured")
+	}
 	go web.Listen()
 
 	for {

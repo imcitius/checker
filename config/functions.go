@@ -100,6 +100,20 @@ func (c *TConfig) ListChecks() (interface{}, error) {
 
 }
 
+func (c *TConfig) GetChecks() ([]TCheckConfig, error) {
+
+	list := make([]TCheckConfig, 0)
+
+	for _, p := range c.Projects {
+		for _, h := range p.Healthchecks {
+			for _, c := range h.Checks {
+				list = append(list, c)
+			}
+		}
+	}
+	return list, nil
+}
+
 func (c *TConfig) PingCheck(uuid string) (TCheckConfig, error) {
 
 	check, _ := c.GetCheckByUUid(uuid)
@@ -116,4 +130,17 @@ func (c *TConfig) SetStatus(uuid string, status bool) {
 	check.LastResult = status
 	p := c.Projects
 	p[check.Project].Healthchecks[check.Healthcheck].Checks[check.Name] = check
+}
+
+func (c *TConfig) GetDBConnectionString() string {
+	if c.DB.Protocol == "mongodb" {
+		return fmt.Sprintf("mongodb+srv://%s:%s@%s/?retryWrites=true&w=majority",
+			c.DB.Username, c.DB.Password, c.DB.Host)
+	}
+
+	return ""
+}
+
+func (c *TConfig) SetDBPassword(password string) {
+	c.DB.Password = password
 }

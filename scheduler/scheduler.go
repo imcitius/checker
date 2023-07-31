@@ -12,6 +12,7 @@ func runProjectTicker(t TTickerWithDuration, wg *sync.WaitGroup) {
 	defer wg.Done()
 	tickerDuration, _ := time.ParseDuration(t.Duration) //sendCritAlerts(period)
 	checkCollection, _ := checks.GetChecksByDuration(tickerDuration.String())
+
 	logger.Infof("\t %d checks for duration %s", checkCollection.Len(), tickerDuration.String())
 
 	for {
@@ -30,6 +31,26 @@ func runProjectTicker(t TTickerWithDuration, wg *sync.WaitGroup) {
 				} else {
 					logger.Infof("%s Success, took %s", header, res.Result.Duration)
 					c.Check.SetStatus(true)
+				}
+			}
+		}
+	}
+}
+
+func runMaintenanceTicker(t TMaintenanceTicker, wg *sync.WaitGroup) {
+	defer wg.Done()
+	tickerDuration, _ := time.ParseDuration(t.Duration) //sendCritAlerts(period)
+	maintenanceTasksCollection := GetMaintenanceTickers()
+
+	logger.Infof("\t %d maintenances for duration %s", len(maintenanceTasksCollection.Tickers), tickerDuration.String())
+
+	for {
+		select {
+		case _ = <-t.Ticker.C:
+			for _, c := range maintenanceTasksCollection.Tickers {
+				res := c.exec()
+				if res != nil {
+					logger.Errorf("Failed to execute maintenance task: %s", res.Error())
 				}
 			}
 		}

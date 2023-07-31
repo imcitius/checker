@@ -6,10 +6,27 @@ import (
 )
 
 type TConfig struct {
-	Defaults  TDefaults           `yaml:"defaults"`
+	Defaults TDefaults `yaml:"defaults"`
+	DB       DBConfig  `yaml:"db"`
+
 	Alerts    map[string]TAlert   `yaml:"alerts"`
 	Projects  map[string]TProject `yaml:"projects"`
 	StartTime time.Time
+}
+
+func (c *TConfig) SetDBConnected() {
+	c.DB.Connected = true
+}
+
+type DBConfig struct {
+	Protocol string `yaml:"protocol" env-default:""`
+	Host     string `yaml:"host" env-default:""`
+	Port     string `yaml:"port" env-default:""`
+	Username string `yaml:"username" env-default:""`
+	Password string `yaml:"password" env-default:""`
+	Database string `yaml:"database" env-default:""`
+
+	Connected bool
 }
 
 type TDefaults struct {

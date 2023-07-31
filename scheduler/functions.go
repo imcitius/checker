@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"my/checker/store"
 	"time"
 )
 
@@ -71,8 +72,29 @@ func GetTickers() (TTickersCollection, error) {
 		}
 	}
 
-	// add code to actual parse tickers from config
-	//spew.Dump(tickers)
-	//panic(1)
 	return tickers, nil
+}
+
+func GetMaintenanceTickers() TMaintenanceTickersCollection {
+	// if DB is connected, persist status every minute
+	tickers := TMaintenanceTickersCollection{
+		make(map[string]TMaintenanceTicker),
+	}
+
+	if configurer.DB.Connected {
+		tickers.Tickers["1m"] = TMaintenanceTicker{
+			Duration: "1m",
+			Ticker:   time.NewTicker(time.Minute),
+			exec: func() error {
+				err := store.Store.UpdateChecks()
+				if err != nil {
+					logger.Errorf("Failed to update checks in DB: %s", err.Error())
+					return err
+				}
+				return nil
+			},
+		}
+	}
+
+	return tickers
 }
