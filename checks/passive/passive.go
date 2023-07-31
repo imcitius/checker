@@ -2,6 +2,7 @@ package passive
 
 import (
 	"fmt"
+	"my/checker/store"
 	"time"
 )
 
@@ -21,7 +22,8 @@ func (c TPassiveCheck) RealExecute() (time.Duration, error) {
 	}
 
 	errorHeader = fmt.Sprintf(ErrPassiveError)
-	check, err := configurer.GetCheckByUUid(c.UUid)
+
+	check, err := store.Store.GetObjectByUUid(c.UUid)
 	if err != nil {
 		errorMessage = errorHeader + fmt.Sprintf(ErrCheckNotFound, err)
 		return 0, fmt.Errorf(errorMessage)
@@ -29,7 +31,7 @@ func (c TPassiveCheck) RealExecute() (time.Duration, error) {
 
 	dif := time.Now().Sub(check.LastPing)
 	if dif > timeout {
-		errorMessage = errorHeader + fmt.Sprintf(ErrCheckExpired, dif.String())
+		errorMessage = errorHeader + fmt.Sprintf(ErrCheckExpired, dif.String(), check.LastPing.String())
 		return 0, fmt.Errorf(errorMessage)
 	}
 

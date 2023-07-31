@@ -32,6 +32,11 @@ func runProjectTicker(t TTickerWithDuration, wg *sync.WaitGroup) {
 					logger.Infof("%s Success, took %s", header, res.Result.Duration)
 					c.Check.SetStatus(true)
 				}
+
+				err := checks.UpdateChecksByCollection(checkCollection.Checks)
+				if err != nil {
+					logger.Errorf("Scheduler failed to update checks in DB: %s", err.Error())
+				}
 			}
 		}
 	}

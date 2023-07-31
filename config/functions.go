@@ -78,6 +78,7 @@ func (c *TConfig) ListChecks() (interface{}, error) {
 		UUID       string
 		LastStatus bool
 		LastExec   time.Time
+		LastPing   time.Time
 	}
 
 	var list map[string]map[string]map[string]listObject
@@ -92,6 +93,7 @@ func (c *TConfig) ListChecks() (interface{}, error) {
 					UUID:       c.UUid,
 					LastStatus: c.LastResult,
 					LastExec:   c.LastExec,
+					LastPing:   c.LastPing,
 				}
 			}
 		}
@@ -100,7 +102,7 @@ func (c *TConfig) ListChecks() (interface{}, error) {
 
 }
 
-func (c *TConfig) GetChecks() ([]TCheckConfig, error) {
+func (c *TConfig) GetAllChecks() ([]TCheckConfig, error) {
 
 	list := make([]TCheckConfig, 0)
 
@@ -114,7 +116,7 @@ func (c *TConfig) GetChecks() ([]TCheckConfig, error) {
 	return list, nil
 }
 
-func (c *TConfig) PingCheck(uuid string) (TCheckConfig, error) {
+func (c *TConfig) Ping(uuid string) (TCheckConfig, error) {
 
 	check, _ := c.GetCheckByUUid(uuid)
 	check.LastPing = time.Now()
@@ -143,4 +145,31 @@ func (c *TConfig) GetDBConnectionString() string {
 
 func (c *TConfig) SetDBPassword(password string) {
 	c.DB.Password = password
+}
+
+func (c *TConfig) GetCheckDetails(uuid string) TCheckDetails {
+	check, _ := c.GetCheckByUUid(uuid)
+	return TCheckDetails{
+		Project:     check.Project,
+		Healthcheck: check.Healthcheck,
+		Name:        check.Name,
+		UUid:        check.UUid,
+		LastExec:    check.LastExec,
+		LastResult:  check.LastResult,
+		LastPing:    check.LastPing,
+	}
+}
+
+func (c *TConfig) UpdateCheckByUUID(check TCheckConfig) error {
+	p := c.Projects
+	p[check.Project].Healthchecks[check.Healthcheck].Checks[check.Name] = check
+
+	//for _, h := range p[check.Project].Healthchecks {
+	//	for _, _c := range h.Checks {
+	//		if _c.UUid == uuid {
+	//			return nil
+	//		}
+	//	}
+	//}
+	return nil //fmt.Errorf("check %s not in config", uuid)
 }

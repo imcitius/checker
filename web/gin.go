@@ -2,7 +2,6 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
-	"my/checker/store"
 	"net/http"
 )
 
@@ -14,7 +13,7 @@ func Listen() {
 		})
 	})
 	router.GET("/ping/check/:uuid", func(c *gin.Context) {
-		check, err := configurer.PingCheck(c.Param("uuid"))
+		check, err := configurer.Ping(c.Param("uuid"))
 
 		if err == nil {
 			c.JSON(http.StatusOK, gin.H{
@@ -40,31 +39,31 @@ func Listen() {
 		}
 	})
 
-	router.GET("/testDB", func(c *gin.Context) {
-		res, err := store.Store.GetData()
-		if err == nil {
-			c.JSON(http.StatusOK, gin.H{
-				"DB": res,
-			})
-		} else {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err,
-			})
-		}
-	})
-
-	router.GET("/updateDB", func(c *gin.Context) {
-		err := store.Store.UpdateChecks()
-		if err == nil {
-			c.JSON(http.StatusOK, gin.H{
-				"DB": "updated",
-			})
-		} else {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err,
-			})
-		}
-	})
+	//router.GET("/testDB", func(c *gin.Context) {
+	//	res, err := store.Store.GetData()
+	//	if err == nil {
+	//		c.JSON(http.StatusOK, gin.H{
+	//			"DB": res,
+	//		})
+	//	} else {
+	//		c.JSON(http.StatusNotFound, gin.H{
+	//			"error": err,
+	//		})
+	//	}
+	//})
+	//
+	//router.GET("/updateDB", func(c *gin.Context) {
+	//	err := store.Store.UpdateChecks()
+	//	if err == nil {
+	//		c.JSON(http.StatusOK, gin.H{
+	//			"DB": "updated",
+	//		})
+	//	} else {
+	//		c.JSON(http.StatusNotFound, gin.H{
+	//			"error": err,
+	//		})
+	//	}
+	//})
 
 	// uses 8080 by default, or PORT environment variable
 	err := router.Run()

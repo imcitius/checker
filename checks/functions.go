@@ -35,6 +35,14 @@ func (c TCommonCheck) GetHost() string {
 	}
 }
 
+func (c TCommonCheck) GetUUID() string {
+	return c.UUID
+}
+
+func (c TCommonCheck) GetCheckDetails() config.TCheckDetails {
+	return c.GetCheckDetails()
+}
+
 func (c TCommonCheck) GetType() string {
 	return c.Type
 }
@@ -132,6 +140,7 @@ func newCommonCheck(c config.TCheckConfig, h config.THealthcheck, p config.TProj
 		Project:     p.Name,
 		Healthcheck: h.Name,
 		Type:        c.Type,
+		UUID:        c.UUid,
 		Parameters:  c.Parameters,
 		Result: TCheckResult{
 			Duration: 0,

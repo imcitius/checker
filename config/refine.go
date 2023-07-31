@@ -102,7 +102,6 @@ func (c *TConfig) refineProjects() {
 
 				_check.Parameters = __cparams
 				_check.Project = _project.Name
-				_check.LastPing = time.Now()
 				_check.Healthcheck = _healthcheck.Name
 				_healthcheck.Checks[k] = _check
 			}

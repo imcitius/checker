@@ -187,3 +187,13 @@ type TAlert struct {
 
 	MMWebHookURL string `yaml:"mattermost_webhook_url"`
 }
+
+type TCheckDetails struct {
+	Project     string
+	Healthcheck string
+	Name        string
+	UUid        string
+	LastResult  bool
+	LastExec    time.Time
+	LastPing    time.Time
+}
