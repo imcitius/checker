@@ -82,8 +82,8 @@ func GetMaintenanceTickers() TMaintenanceTickersCollection {
 	}
 
 	if configurer.DB.Connected {
-		tickers.Tickers["1m"] = TMaintenanceTicker{
-			Duration: "1m",
+		tickers.Tickers[configurer.Defaults.MaintenanceDuration] = TMaintenanceTicker{
+			Duration: configurer.Defaults.MaintenanceDuration,
 			Ticker:   time.NewTicker(time.Minute),
 			exec: func() error {
 				err := store.Store.UpdateChecks()

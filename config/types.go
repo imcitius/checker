@@ -34,7 +34,8 @@ type TDefaults struct {
 	// should always be 1s, to avoid time drift bugs in scheduler
 	TimerStep string `yaml:"timer_step" env-default:"1s"`
 	// How often to run check by default
-	Duration string `yaml:"duration" env-default:"60s"`
+	Duration            string `yaml:"duration" env-default:"60s"`
+	MaintenanceDuration string `yaml:"maintenance_duration" env-default:"60s"`
 
 	// HTTP port web interface listen
 	HTTPPort string `yaml:"http_port" env-default:"80"`
