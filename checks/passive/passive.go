@@ -23,7 +23,7 @@ func (c TPassiveCheck) RealExecute() (time.Duration, error) {
 
 	errorHeader = fmt.Sprintf(ErrPassiveError)
 
-	check, err := store.Store.GetObjectByUUid(c.UUid)
+	check, err := store.Store.GetCheckObjectByUUid(c.UUid)
 	if err != nil {
 		errorMessage = errorHeader + fmt.Sprintf(ErrCheckNotFound, err)
 		return 0, fmt.Errorf(errorMessage)

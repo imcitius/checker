@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"context"
 	"github.com/teris-io/shortid"
 	"math/rand"
 	"my/checker/alerts"
@@ -56,7 +57,7 @@ func (c TCommonCheck) GetResult() TCheckResult {
 }
 
 func (c TCommonCheck) SetStatus(status bool) {
-	configurer.SetStatus(c.CheckConfig.UUid, status)
+	configurer.SetStatus(c.CheckConfig.UUID, status)
 }
 
 func (c TCommonCheck) Execute() TCommonCheck {
@@ -72,11 +73,16 @@ func (c TCommonCheck) Execute() TCommonCheck {
 	return c
 }
 
-func (c TCommonCheck) Alert(message string) TCommonCheck {
+func (c TCommonCheck) Alert(ctx context.Context, message string) TCommonCheck {
 	if c.Alerter != nil {
-		c.Alerter.Send(message)
+		c.Alerter.Alert(ctx, config.TAlertDetails{
+			Severity:    "noncritical",
+			Message:     message,
+			UUID:        c.UUID,
+			ProjectName: c.Project,
+		})
 	} else {
-		logger.Errorf("Logger not set for check")
+		logger.Errorf("Alerter not set for check")
 		logger.Errorf(message)
 	}
 	return c
@@ -140,7 +146,7 @@ func newCommonCheck(c config.TCheckConfig, h config.THealthcheck, p config.TProj
 		Project:     p.Name,
 		Healthcheck: h.Name,
 		Type:        c.Type,
-		UUID:        c.UUid,
+		UUID:        c.UUID,
 		Parameters:  c.Parameters,
 		Result: TCheckResult{
 			Duration: 0,

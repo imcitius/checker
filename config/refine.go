@@ -10,6 +10,69 @@ import (
 
 func (c *TConfig) refineProjects() {
 	newProjects := make(map[string]TProject)
+
+	// used for smart deep merging
+	opts := getMergeOptions()
+
+	for i, _p := range config.Projects {
+		_project := TProject{
+			Name:         "",
+			Healthchecks: map[string]THealthcheck{},
+			Parameters:   config.Defaults.DefaultCheckParameters,
+		}
+		_project.Name = i
+
+		__pparams := config.Defaults.DefaultCheckParameters
+		err := conjungo.Merge(&__pparams, _p.Parameters, opts)
+		if err != nil {
+			logger.Error(err)
+		}
+		_project.Parameters = __pparams
+		//logrus.Fatalf("%+v", _project.Parameters)
+
+		for j, _h := range _p.Healthchecks {
+			_healthcheck := THealthcheck{
+				Name:       "",
+				Checks:     map[string]TCheckConfig{},
+				Parameters: _project.Parameters,
+			}
+			_healthcheck.Name = j
+
+			__hparams := _project.Parameters
+			err := conjungo.Merge(&__hparams, _h.Parameters, opts)
+			if err != nil {
+				logger.Error(err)
+			}
+
+			_healthcheck.Parameters = __hparams
+			_healthcheck.Checks = make(map[string]TCheckConfig)
+
+			for k, _c := range _h.Checks {
+				_check := _c
+				_check.UUID = genUUID(_healthcheck.Name, _c.Name, hostOrUrl(_c))
+				_check.Name = k
+
+				__cparams := __hparams
+				err := conjungo.Merge(&__cparams, _c.Parameters, opts)
+				if err != nil {
+					logger.Error(err)
+				}
+
+				_check.Parameters = __cparams
+				_check.Project = _project.Name
+				_check.Healthcheck = _healthcheck.Name
+				_healthcheck.Checks[k] = _check
+			}
+
+			_project.Healthchecks[j] = _healthcheck
+		}
+
+		newProjects[i] = _project
+	}
+	config.Projects = newProjects
+}
+
+func getMergeOptions() *conjungo.Options {
 	opts := conjungo.NewOptions()
 	opts.SetTypeMergeFunc(
 		reflect.TypeOf(TCheckParameters{}),
@@ -56,62 +119,7 @@ func (c *TConfig) refineProjects() {
 			return reflect.ValueOf(tFoo), nil
 		})
 
-	for i, _p := range config.Projects {
-		_project := TProject{
-			Name:         "",
-			Healthchecks: map[string]THealthcheck{},
-			Parameters:   config.Defaults.DefaultCheckParameters,
-		}
-		_project.Name = i
-
-		__pparams := config.Defaults.DefaultCheckParameters
-		err := conjungo.Merge(&__pparams, _p.Parameters, opts)
-		if err != nil {
-			logger.Error(err)
-		}
-		_project.Parameters = __pparams
-		//logrus.Fatalf("%+v", _project.Parameters)
-
-		for j, _h := range _p.Healthchecks {
-			_healthcheck := THealthcheck{
-				Name:       "",
-				Checks:     map[string]TCheckConfig{},
-				Parameters: _project.Parameters,
-			}
-			_healthcheck.Name = j
-
-			__hparams := _project.Parameters
-			err := conjungo.Merge(&__hparams, _h.Parameters, opts)
-			if err != nil {
-				logger.Error(err)
-			}
-
-			_healthcheck.Parameters = __hparams
-			_healthcheck.Checks = make(map[string]TCheckConfig)
-
-			for k, _c := range _h.Checks {
-				_check := _c
-				_check.UUid = genUUID(_healthcheck.Name, _c.Name, hostOrUrl(_c))
-				_check.Name = k
-
-				__cparams := __hparams
-				err := conjungo.Merge(&__cparams, _c.Parameters, opts)
-				if err != nil {
-					logger.Error(err)
-				}
-
-				_check.Parameters = __cparams
-				_check.Project = _project.Name
-				_check.Healthcheck = _healthcheck.Name
-				_healthcheck.Checks[k] = _check
-			}
-
-			_project.Healthchecks[j] = _healthcheck
-		}
-
-		newProjects[i] = _project
-	}
-	config.Projects = newProjects
+	return opts
 }
 
 func genUUID(name ...string) string {

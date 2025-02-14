@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"fmt"
 	"my/checker/checks"
 	"sync"
@@ -8,7 +9,7 @@ import (
 	//"time"
 )
 
-func runProjectTicker(t TTickerWithDuration, wg *sync.WaitGroup) {
+func runProjectTicker(t TTickerWithDuration, ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	tickerDuration, _ := time.ParseDuration(t.Duration) //sendCritAlerts(period)
 	checkCollection, _ := checks.GetChecksByDuration(tickerDuration.String())
@@ -27,7 +28,7 @@ func runProjectTicker(t TTickerWithDuration, wg *sync.WaitGroup) {
 					message := fmt.Sprintf("%s Failed: %s", header, res.Result.Error.Error())
 					logger.Errorf(message)
 					c.Check.SetStatus(false)
-					res.Alert(message)
+					res.Alert(ctx, message)
 				} else {
 					logger.Infof("%s Success, took %s", header, res.Result.Duration)
 					c.Check.SetStatus(true)

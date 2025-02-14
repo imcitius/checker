@@ -1,15 +1,23 @@
 package store
 
 import (
+	"my/checker/config"
+	"sync"
 	"time"
 )
 
 type DbCheckObject struct {
-	UUid        string
+	UUID        string
 	Project     string
 	Healthcheck string
 	Name        string
 	LastPing    time.Time
 	LastExec    time.Time
 	LastResult  bool
+}
+
+type MessagesContextStorage struct {
+	sync.RWMutex
+
+	data map[int64]map[int]config.TAlertDetails
 }

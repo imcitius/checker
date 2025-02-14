@@ -1,0 +1,832 @@
+---
+defaults:
+  http_port: '80'
+  duration: 900s
+  period: 1h
+  alerter: tg_citiustestbot
+  crit_alert: 1390752
+  noncrit_alert: 1390752
+  command_channel: 1390752
+  mode: loud
+alerts:
+  tg_citiustestbot:
+    type: telegram
+    bot_token: 201865937:AAHBSXrIlEFSbVfUCvkkd3y4kbvJNgNIJuM
+    critical_channel: 1390752
+    noncritical_channel: 1390752
+  tg_OtherChecker:
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -17879045
+    critical_channel: -220630561
+  mg_prod:
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -37817795
+    critical_channel: -220630561
+  orb_prod:
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -6405887
+    critical_channel: -220630561
+  abchecker_prod:
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -178164039
+    critical_channel: -220630561
+  iron_prod:
+    type: telegram
+    bot_token: 2132050809:AAE8LK-Yk_M58bcpgtWF9r6AzPBFSNJwyHE
+    noncritical_channel: -213063262
+    critical_channel: -220630561
+  staging:
+    type: telegram
+    bot_token: 1375864242:AAHahMHa-VX1eQ9ovVBaxcIstD1LeZqp-DE
+    noncritical_channel: -237762717
+    critical_channel: -237762717
+projects:
+  Jupiter:
+    healthchecks:
+      System checks:
+        checks:
+          Mattermost:
+            type: http
+            url: https://mattermost.jgit.me/api/v4/system/ping
+            answer: status":"OK
+            code:
+              - 200
+            timeout: 2s
+          Zimbra SMTP:
+            type: tcp
+            host: mail.relay4.xyz
+            timeout: 5s
+            port: 25
+  Admitlead:
+    parameters:
+      noncrit_alert: abchecker_prod
+      crit_alert: abchecker_prod
+    healthchecks:
+      Admitlead ks:
+        parameters:
+          duration: 60s
+        checks:
+          web:
+            type: http
+            url: https://admitlead.com/main/check
+            answer: AdmitLead OK
+            code:
+              - 200
+            timeout: 3s
+            severity: critical
+
+  BubblesMedia:
+    parameters:
+      noncrit_alert: abchecker_prod
+      crit_alert: abchecker_prod
+    healthchecks:
+      Bubbles ks:
+        parameters:
+          duration: 60s
+        checks:
+          main-1:
+            type: http
+            url: http://1.bubblesmedia.net/main/check
+            answer: Bubbles OK
+            code:
+              - 200
+            timeout: 10s
+
+          main-2:
+            type: http
+            url: http://2.bubblesmedia.net/main/check
+            answer: Bubbles OK
+            code:
+              - 200
+            timeout: 10s
+
+          main-common:
+            type: http
+            url: http://bubblesmedia.net/main/check
+            answer: Bubbles OK
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+
+      BubblesMedia content:
+        parameters:
+          duration: 60s
+        checks:
+          bubbles-invoke.php:
+            type: http
+            url: https://bubblesmedia.net/invoke.php?id=42
+            answer: (?is)<script>.*</script>
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+
+      BubblesMedia promo_code:
+        parameters:
+          duration: 60s
+        checks:
+          stat-display-42:
+            type: http
+            url: https://stat.bubblesmedia.net/display/42/0
+            answer: promo_code
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+          stat-display-4822:
+            type: http
+            url: http://bubblesmedia.net/display/4822/0/
+            answer: promo_code
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+
+  Mediaget:
+    parameters:
+      noncrit_alert: mg_prod
+      crit_alert: mg_prod
+      duration: 60s
+    healthchecks:
+      Site:
+        checks:
+          website.ping:
+            type: http
+            url: https://mediaget.com/ping
+            answer: pong
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+      Client:
+        checks:
+          check.php:
+            type: http
+            url: https://mediaget.com/client/check.php
+            answer: ProjectM2Client OK
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+          checks_db:
+            type: http
+            url: https://mediaget.com/client/check_db.php
+            answer: ProjectM2ClientDB OK
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+          update version:
+            type: http
+            name: 'Mediaget Update version'
+            url: https://client.mediaget.com/start?id=250123462&version=2.01.3793
+            answer: "TORRENT https://mediaget.com/installer/torrent/update-3.01.4059.torrent"
+            code:
+              - 200
+            timeout: 10s
+          client.php:
+            type: http
+            url: https://mediaget.com/client/client.php
+            answer: <Status>500</Status>
+            code:
+              - 200
+            timeout: 10s
+
+      LD:
+        checks:
+          check.php:
+            type: http
+            url: https://mediaget.com/ld/check.php
+            answer: ProjectM2Ld OK
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+          get_data.php:
+            type: http
+            url: https://mediaget.com/ld/get_data.php?id=1
+            answer: <parameters>
+            code:
+              - 200
+            timeout: 10s
+
+      Catalogue API:
+        checks:
+          healthcheck:
+            type: http
+            url: https://mediaget.com/api/healthcheck
+            answer: API OK
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+      DHT:
+        parameters:
+          duration: 900s
+        checks:
+          healthcheck.liveness:
+            type: http
+            url: https://mediaget.com/dht/v1/healthcheck/liveness
+            answer: I'm alive
+            code:
+              - 200
+            timeout: 10s
+          MG2ApiDHTSearch:
+            type: http
+            name: MG2ApiDHTSearch
+            url: https://mediaget.com/dht/v1/torrents/search?q=avatar&page=1&page_size=10
+            answer: (?is)avatar
+            code:
+              - 200
+            timeout: 10s
+          MG2ApiDHTMoviesID:
+            type: http
+            name: MG2ApiDHTMoviesID
+            url: https://mediaget.com/dht/v1/torrents/movies/384436?lang=en&page=1&page_size=10
+            answer: (?is)avatar
+            code:
+              - 200
+            timeout: 10s
+      DHT external:
+        checks:
+          163.172.108.18:
+            type: tcp
+            host: 163.172.108.18
+            timeout: 5s
+            port: 22468
+          163.172.68.216:
+            type: tcp
+            host: 163.172.68.216
+            timeout: 5s
+            port: 22468
+
+      Landings:
+        checks:
+          are-you-alive:
+            type: http
+            url: https://land.mediaget.com/api/are-you-alive
+            answer: Landings OK
+            code:
+              - 200
+            timeout: 10s
+            severity: critical
+          healthtest:
+            type: http
+            url: https://land.mediaget.com/healthtest/
+            answer: Ваш файл готов к скачиванию
+            code:
+              - 200
+            timeout: 10s
+      Similarity API:
+        checks:
+          similarity.healthcheck:
+            type: http
+            url: https://mediaget.com/similarity/healthcheck
+            answer: searcher-similarity OK
+            code:
+              - 200
+            timeout: 10s
+          searcher.healthcheck:
+            type: http
+            url: https://mediaget.com/search/healthcheck
+            answer: searcher-search OK
+            code:
+              - 200
+            timeout: 10s
+      Update HashServer:
+        checks:
+          update.php:
+            type: http
+            url: https://hash-server.com/update.php?version=2.01.3780
+            answer: 2a2672ad7f33ed65172ddaebef481de6f98e34c6
+            code:
+              - 200
+            timeout: 10s
+      Download hash:
+        checks:
+          #          - type: getfile
+          #            name: mediaget-lib
+          #            url: https://download.mediaget.com/mediaget-installer-2/binaries/download.php?a=mediaget-lib
+          #            hash: cd32f76f2f15154ad63340bba2067744
+          #          - type: getfile
+          #            name: Ld
+          #            url: https://ld.mediaget.com
+          #            hash: 80201bb326ea1a53d758d7655fa4d6b7
+          binaries-3941:
+            type: getfile
+            url: https://mediaget.com/installer/binaries/4212.7z
+            hash: d6d8c18192a1ce74f6dc9698f3df4f96
+          mediaget-lib-bundle:
+            type: getfile
+            url: https://mediaget.com/installer/binaries/mediaget-lib-2020-12-27-qt5152-no-ogl.7z
+            hash: ac44c044d19ca3bb9ca3799d4466bb79
+          get-installer:
+            type: getfile
+            url: https://mediaget.com/ld/get_installer.php?unlimit=1
+            hash: 0b2dbacd9c3dbada28122b6100b027d8
+
+      MG2Parser:
+        checks:
+          content error:
+            type: http
+            url: https://mediaget.com/parser/update.ini
+            answer: search_server
+            code:
+              - 200
+            timeout: 10s
+      msearch:
+        checks:
+          web:
+            type: http
+            url: https://msearch.mediaget.com
+            code:
+              - 302
+              - 200
+            timeout: 10s
+
+#  Pixelsee:
+#    parameters:
+#      noncrit_alert: mg_prod
+#      crit_alert: mg_prod
+#    healthchecks:
+#      Pixelsee site:
+#        parameters:
+#          duration: 60s
+#        checks:
+#          - type: http
+#            url: https://pixelsee.app/
+#            answer: Free Download
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#      Pixelsee Client:
+#        parameters:
+#          duration: 60s
+#        checks:
+#          - type: http
+#            url: https://pixelsee.app/client/check.php
+#            answer: ProjectPixelseeClient OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#      Pixelsee LD:
+#        parameters:
+#          duration: 60s
+#        checks:
+#          - type: http
+#            url: https://pixelsee.app/ld/check.php
+#            answer: ProjectPixelseeLd OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#      Pixelsee Landings:
+#        parameters:
+#          duration: 60s
+#        checks:
+#          - type: http
+#            url: https://land.pixelsee.app/api/are-you-alive
+#            answer: Landings OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#          - type: http
+#            url: https://land.pixelsee.app/healthtest/
+#            answer: Your file ready to download
+#            code:
+#              - 200
+#            timeout: 10s
+#
+#  Mediaget OLD:
+#    parameters:
+#      noncrit_alert: mg_prod
+#      crit_alert: mg_prod
+#    healthchecks:
+#      old Mediaget torr:
+#        checks:
+#          - type: http
+#            url: https://torr.mediaget.com/for_check.php
+#            answer: torr1 OK
+#            code:
+#              - 200
+#            timeout: 10s
+#      old Mediaget Client:
+#        checks:
+#          - type: http
+#            url: https://client.mediaget.com/check_statistic_db.php
+#            answer: ProjectMClient OK
+#            code:
+#              - 200
+#            timeout: 3s
+#  Faceless:
+#    healthchecks:
+#      Faceless site:
+#        checks:
+#          - type: http
+#            url: https://faceless.me/monitor.php
+#            answer: Faceless OK
+#            code:
+#              - 200
+#            timeout: 3s
+#  Orbitum:
+#    parameters:
+#      noncrit_alert: orb_prod
+#      crit_alert: orb_prod
+#    healthchecks:
+#      Orbitum Stat:
+#        checks:
+#          - type: http
+#            url: https://stat.orbitum.com/check_orbitum_stat.php
+#            answer: ProjectOStatistic OK
+#            code:
+#              - 200
+#            timeout: 3s
+#      Orbitum Site:
+#        checks:
+#          - type: http
+#            url: https://orbitum.com/check_site_db.php
+#            answer: ProjectO OK
+#            code:
+#              - 200
+#            timeout: 3s
+#      Orbitum Services:
+#        checks:
+#          - type: http
+#            name: SDSearchAPI
+#            url: http://search-sd.orbitum.com/check.php
+#            answer: SDSearchAPI OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: SDPublicAPI
+#            url: http://sd.orbitum.com/check.php
+#            answer: SDPublicAPI OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: OrbitumSD
+#            url: http://ext.orbitum.com/myspeed_tips/api/checksite.php
+#            answer: OrbitumSD OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: ThemesApi
+#            url: https://beta-themes.orbitum.com/check.php
+#            answer: ThemesApi OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: AdBlock blacklist answer
+#            url: https://extupdate.orbitum.com/adblock/blacklist.txt
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: AdBlock search answer
+#            url: https://extupdate.orbitum.com/adblock/search.txt
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: ExtensionSearch content
+#            url: http://extension-search.online/suggest/get?part=%D0%B2%D0%BA
+#            answer: вконтакте
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: ExtensionSearchRedirect content
+#            url: http://extension-search.online/?q=vk
+#            answer: Яндекс
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: ProjectOBbls1 answer
+#            url: http://bbls1.orbitum.com/index.php
+#            auth:
+#              user: admin
+#              password: khgbkjkhjfhvb
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: ThemesCDN
+#            url: https://bcdn-themes.orbitum.com/check.php
+#            answer: ThemesCDN OK
+#            code:
+#              - 200
+#            timeout: 3s
+#  IronTrade Staging:
+#    parameters:
+#      noncrit_alert: staging
+#      crit_alert: staging
+#    healthchecks:
+#      IronStagingFrontend:
+#        checks:
+#          - type: http
+#            url: https://web.iron-staging.irontrade.com/
+#            answer: <title>Trading platform</title>
+#            code:
+#              - 200
+#            timeout: 3s
+#      IronStagingBackend:
+#        checks:
+#          - type: http
+#            url: https://web.iron-staging.irontrade.com/app/monitor/status.php?mode=test
+#            answer: IronTrade OK
+#            code:
+#              - 200
+#            timeout: 3s
+#      IronStagingServices:
+#        checks:
+#          - type: http
+#            name: Helpdesk
+#            url: https://web.iron-staging.irontrade.com/hc/api/are-you-alive
+#            answer: HelpdeskIrontrade OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: StatReceiver
+#            url: https://web.iron-staging.irontrade.com/sr/healthcheck
+#            answer: Stat_service OK
+#            code:
+#              - 200
+#            timeout: 3s
+#
+#  IronTrade Prod:
+#    parameters:
+#      noncrit_alert: iron_prod
+#    healthchecks:
+#      Irontrade Frontend:
+#        checks:
+#          - type: http
+#            url: https://irontrade.com/
+#            answer: <title>Trading platform</title>
+#            code:
+#              - 200
+#            timeout: 3s
+#      Irontrade Backend:
+#        checks:
+#          - type: http
+#            url: https://irontrade.com/app/monitor/status.php
+#            answer: IronTrade OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            url: https://irontrade.com/app/monitor/strikes.php
+#            answer: Strikes OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            url: https://irontrade.com/app/monitor/time.php
+#            answer: Time OK
+#            code:
+#              - 200
+#            timeout: 3s
+#
+#      Irontrade Services:
+#        checks:
+#          - type: http
+#            name: Helpdesk
+#            url: https://irontrade.com/hc/api/are-you-alive
+#            answer: HelpdeskIrontrade OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: StatReceiver
+#            url: https://statistics-receiver.irontrade.com/healthcheck
+#            answer: Stat_service OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: Billing Iron
+#            url: https://billingsn.irontrade.com/health/check
+#            answer: Billing OK
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: Iron promo landings
+#            url: https://join.irontrade.com/autotest/?sub1=autotest&sub2=sub2&sub3=sub3&sub4=sub4&sub5=sub5&sub6=sub6
+#            answer: <title>IronTrade</title>
+#            code:
+#              - 200
+#            timeout: 3s
+#
+#  Faceless Staging:
+#    parameters:
+#      noncrit_alert: staging
+#      crit_alert: staging
+#    healthchecks:
+#      FacelessAPI:
+#        checks:
+#          - type: http
+#            url: https://api.staging.faceless.me/health-check
+#            code:
+#              - 200
+#            timeout: 3s
+#
+#  MyMentalMentor:
+#    parameters:
+#      noncrit_alert: tg_OtherChecker
+#      crit_alert: tg_OtherChecker
+#    healthchecks:
+#      MyMentorWebsite:
+#        checks:
+#          - type: http
+#            url: https://mymentalmentor.net/
+#            code:
+#              - 200
+#            timeout: 3s
+#            severity: critical
+#
+#          - type: http
+#            url: https://web.mymentalmentor.net/ru
+#            code:
+#              - 200
+#            timeout: 3s
+#            severity: critical
+#
+#      MyMentorApi:
+#        checks:
+#          - type: http
+#            url: https://api.mymentalmentor.net/health-check
+#            code:
+#              - 200
+#            timeout: 3s
+#            severity: critical
+#
+#      MyMentorBilling:
+#        checks:
+#          - type: http
+#            url: https://billing.mymentalmentor.net/monitoring/health/check
+#            answer: Mentor-Billing OK
+#            code:
+#              - 200
+#            timeout: 3s
+#            severity: critical
+#
+#  AdsKiller:
+#    healthchecks:
+#      AdsKiller:
+#        checks:
+#          - type: http
+#            name: adBlockStats
+#            url: https://stat.adskiller.me
+#            answer: <title>adBlockStats ADMIN</title>
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: adskiller.me content
+#            url: https://adskiller.me/
+#            answer: <title>Ads Killer</title>
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: install.adskiller.me/conf.php content error
+#            url: http://install.adskiller.me/conf.php?id=jjckigopagkhaikodedjnmbccfpnmiea
+#            answer: active_permissions
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: AdsKiller api/settings content error
+#            url: https://stat.adskiller.me/external/api/settings
+#            answer: time_interval
+#            code:
+#              - 200
+#            timeout: 3s
+#          - type: http
+#            name: AdsKiller api/list content error
+#            url: https://stat.adskiller.me/external/api/list
+#            answer: update.adskiller.me
+#            code:
+#              - 200
+#            timeout: 3s
+#
+## Passive checks are not supported yet
+##  CrossCheck iron:
+##    healthchecks:
+##      Checker Running:
+##        checks:
+##          - type: passive
+##            name: iron checker
+##            timeout: 960s
+##  CrossCheck mediaget:
+##    healthchecks:
+##      Checker Running:
+##        checks:
+##          - type: passive
+##            name: mediaget checker
+##            timeout: 960s
+#
+#  #  - name: BetterUptime active ping
+#  #    healthchecks:
+#  #      - name: Checker Running
+#  #        checks:
+#  #          - type: http
+#  #            url: https://betteruptime.com/api/v1/heartbeat/hXyiRzTcr8uAYyqhDBRNFjsa
+#  #            code:
+#  #              - 200
+#  #            timeout: 3s
+#  mail.relay4.xyz:
+#    healthchecks:
+#      Web interface:
+#        checks:
+#          - type: http
+#            url: https://mail.relay4.xyz
+#            timeout: 10s
+#
+#  Lootbox:
+#    parameters:
+#      noncrit_alert: tg_OtherChecker
+#      crit_alert: tg_OtherChecker
+#      duration: 60s
+#    healthchecks:
+#      landing:
+#        checks:
+#          - type: http
+#            url: https://land.pinbox.club/api/are-you-alive
+#            answer: Landings OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#      billing:
+#        checks:
+#          - type: http
+#            url: https://billing.pinbox.club/health/check
+#            answer: Billing OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#          - type: http
+#            url: https://api.billing.pinbox.club/health/check
+#            answer: Billing-api OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#          - type: http
+#            url: https://currency.billing.pinbox.club/health/check
+#            answer: Billing-currencies OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#          - type: http
+#            url: https://payment-uid.billing.pinbox.club/health/check
+#            answer: Billing-payment-uids OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#      play:
+#        checks:
+#          - type: http
+#            url: https://pinbox.club/play/monitoring/health-check
+#            answer: Lootboxes playground OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#      app:
+#        checks:
+#          - type: http
+#            url: https://pinbox.club/app/are-you-alive
+#            answer: PinBox OK
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#      web:
+#        checks:
+#          - type: http
+#            url: https://pinbox.club/health
+#            answer: <title>PinBox Mystery Boxes
+#            code:
+#              - 200
+#            timeout: 10s
+#            severity: critical
+#

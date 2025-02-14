@@ -64,7 +64,7 @@ func (c *TConfig) GetCheckByUUid(uuid string) (TCheckConfig, error) {
 	for _, p := range c.Projects {
 		for _, h := range p.Healthchecks {
 			for _, c := range h.Checks {
-				if c.UUid == uuid {
+				if c.UUID == uuid {
 					return c, nil
 				}
 			}
@@ -76,7 +76,7 @@ func (c *TConfig) GetCheckByUUid(uuid string) (TCheckConfig, error) {
 func (c *TConfig) ListChecks() (interface{}, error) {
 	type listObject struct {
 		UUID       string
-		LastStatus bool
+		LastResult bool
 		LastExec   time.Time
 		LastPing   time.Time
 	}
@@ -90,8 +90,8 @@ func (c *TConfig) ListChecks() (interface{}, error) {
 			list[p.Name][h.Name] = make(map[string]listObject)
 			for _, c := range h.Checks {
 				list[p.Name][h.Name][c.Name] = listObject{
-					UUID:       c.UUid,
-					LastStatus: c.LastResult,
+					UUID:       c.UUID,
+					LastResult: c.LastResult,
 					LastExec:   c.LastExec,
 					LastPing:   c.LastPing,
 				}
@@ -99,7 +99,6 @@ func (c *TConfig) ListChecks() (interface{}, error) {
 		}
 	}
 	return list, nil
-
 }
 
 func (c *TConfig) GetAllChecks() ([]TCheckConfig, error) {
@@ -153,7 +152,7 @@ func (c *TConfig) GetCheckDetails(uuid string) TCheckDetails {
 		Project:     check.Project,
 		Healthcheck: check.Healthcheck,
 		Name:        check.Name,
-		UUid:        check.UUid,
+		UUID:        check.UUID,
 		LastExec:    check.LastExec,
 		LastResult:  check.LastResult,
 		LastPing:    check.LastPing,
@@ -166,7 +165,7 @@ func (c *TConfig) UpdateCheckByUUID(check TCheckConfig) error {
 
 	//for _, h := range p[check.Project].Healthchecks {
 	//	for _, _c := range h.Checks {
-	//		if _c.UUid == uuid {
+	//		if _c.UUID == uuid {
 	//			return nil
 	//		}
 	//	}

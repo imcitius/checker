@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"my/checker/config"
 )
 
@@ -11,10 +12,10 @@ var (
 	//cache      *memoize.Memoizer
 )
 
-func RunScheduler() {
+func RunScheduler(ctx context.Context) {
 
 	//alerters, _ := config.GetAlerters()
-	//alerters.Alerters[config.Defaults.DefaultAlertsChannel].Send("default", "Scheduler started alert")
+	//alerters.Alerters[config.Defaults.DefaultAlertsChannel].Alert("default", "Scheduler started alert")
 
 	tickers, _ := GetTickers()
 	maintenances := GetMaintenanceTickers()
@@ -33,9 +34,9 @@ func RunScheduler() {
 		wg.Add(1)
 		//logger.Infof("%s", desc)
 		if counter == len(tickers.Tickers)+len(maintenances.Tickers) {
-			runProjectTicker(ticker, wg)
+			runProjectTicker(ticker, ctx, wg)
 		} else {
-			go runProjectTicker(ticker, wg)
+			go runProjectTicker(ticker, ctx, wg)
 			counter++
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"my/checker/config"
 	"os"
 	"time"
 )
@@ -42,41 +43,24 @@ func (store mongoDbStore) Disconnect() error {
 	return store.client.Disconnect(context.Background())
 }
 
-//func (store mongoDbStore) GetData() (interface{}, error) {
-//	collection := store.client.Database(configurer.DB.Database).Collection("users")
-//	res := collection.FindOne(DBContext, bson.M{"name": "zhopa"})
-//	//if err != nil {
-//	//	logger.Errorf("Error while getting data from MongoDB: %s", err.Error())
-//	//}
-//
-//	results := bson.M{}
-//
-//	err := res.Decode(&results)
-//	if err != nil {
-//		logger.Errorf("Error decoding MongoDB collection: %s", err.Error())
-//	}
-//
-//	return &results, err
-//}
-
 func (store mongoDbStore) UpdateChecks() error {
 	collection := store.client.Database(configurer.DB.Database).Collection("checks")
 
-	res, err := configurer.GetAllChecks()
+	checks, err := configurer.GetAllChecks()
 	if err != nil {
 		logger.Errorf("Error while getting checks from config: %s", err.Error())
 	}
 
-	models := []mongo.WriteModel{}
+	var models []mongo.WriteModel
 	opts := options.BulkWrite().SetOrdered(false)
-	for _, v := range res {
+	for _, v := range checks {
 		models = append(models,
-			mongo.NewUpdateOneModel().SetFilter(bson.D{{"UUid", v.UUid}}).
+			mongo.NewUpdateOneModel().SetFilter(bson.D{{"UUID", v.UUID}}).
 				SetUpdate(bson.D{{"$set", bson.D{
 					{"Project", v.Project},
 					{"Healthcheck", v.Healthcheck},
 					{"Name", v.Name},
-					{"UUid", v.UUid},
+					{"UUID", v.UUID},
 					{"LastResult", v.LastResult},
 					{"LastExec", v.LastExec},
 					{"LastPing", v.LastPing}},
@@ -96,10 +80,15 @@ func (store mongoDbStore) UpdateChecks() error {
 	return err
 }
 
-func (store mongoDbStore) GetObjectByUUid(uuid string) (DbCheckObject, error) {
+func (store mongoDbStore) UpdateAlerts() error {
+
+	return nil
+}
+
+func (store mongoDbStore) GetCheckObjectByUUid(uuid string) (DbCheckObject, error) {
 
 	collection := store.client.Database(configurer.DB.Database).Collection("checks")
-	res := collection.FindOne(DBContext, bson.M{"UUid": uuid})
+	res := collection.FindOne(DBContext, bson.M{"UUID": uuid})
 	results := bson.M{}
 
 	err := res.Decode(&results)
@@ -112,15 +101,20 @@ func (store mongoDbStore) GetObjectByUUid(uuid string) (DbCheckObject, error) {
 		Project:     results["Project"].(string),
 		Healthcheck: results["Healthcheck"].(string),
 		Name:        results["Name"].(string),
-		UUid:        results["UUid"].(string),
+		UUID:        results["UUID"].(string),
 		LastResult:  results["LastResult"].(bool),
 		LastExec:    time.Unix(results["LastExec"].(primitive.DateTime).Time().Unix(), 0),
 		LastPing:    time.Unix(results["LastPing"].(primitive.DateTime).Time().Unix(), 0),
 	}, err
 }
 
-func (store mongoDbStore) BulkWrite(models []mongo.WriteModel, opts *options.BulkWriteOptions) (*mongo.BulkWriteResult, error) {
+func (store mongoDbStore) BulkWriteChecks(models []mongo.WriteModel, opts *options.BulkWriteOptions) (*mongo.BulkWriteResult, error) {
 	collection := store.client.Database(configurer.DB.Database).Collection("checks")
+	return collection.BulkWrite(DBContext, models, opts)
+}
+
+func (store mongoDbStore) BulkWriteAlerts(models []mongo.WriteModel, opts *options.BulkWriteOptions) (*mongo.BulkWriteResult, error) {
+	collection := store.client.Database(configurer.DB.Database).Collection("alerts")
 	return collection.BulkWrite(DBContext, models, opts)
 }
 
@@ -131,7 +125,7 @@ func (store mongoDbStore) GetAllChecks() ([]DbCheckObject, error) {
 		logger.Errorf("Error while getting checks from MongoDB: %s", err.Error())
 	}
 
-	checks := []DbCheckObject{}
+	var checks []DbCheckObject
 	for cur.Next(DBContext) {
 		var t DbCheckObject
 		err := cur.Decode(&t)
@@ -147,4 +141,27 @@ func (store mongoDbStore) GetAllChecks() ([]DbCheckObject, error) {
 	}
 
 	return checks, err
+}
+
+func (store mongoDbStore) GetAllAlerts() (*MessagesContextStorage, error) {
+	collection := store.client.Database(configurer.DB.Database).Collection("alerts")
+	cur, err := collection.Find(DBContext, bson.M{})
+	if err != nil {
+		logger.Errorf("Error while getting checks from MongoDB: %s", err.Error())
+	}
+
+	var res MessagesContextStorage
+	for cur.Next(DBContext) {
+		var t map[int]config.TAlertDetails
+		err := cur.Decode(&t)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := cur.Err(); err != nil {
+		return &res, err
+	}
+
+	return &res, err
 }

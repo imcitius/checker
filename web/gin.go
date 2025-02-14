@@ -28,15 +28,16 @@ func Listen() {
 
 	router.GET("/list", func(c *gin.Context) {
 		res, err := configurer.ListChecks()
-		if err == nil {
-			c.JSON(http.StatusOK, gin.H{
-				"list": res,
-			})
-		} else {
+		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": err,
 			})
+			return
 		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"list": res,
+		})
 	})
 
 	//router.GET("/testDB", func(c *gin.Context) {

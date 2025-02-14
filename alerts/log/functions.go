@@ -1,20 +1,22 @@
 package log
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
+	"my/checker/config"
 	"sync"
 )
 
-func (a *TLogAlerter) Init() {}
+func (a *TLogAlerter) Init(ctx context.Context) {}
 
-func (a *TLogAlerter) Start(wg *sync.WaitGroup) {}
+func (a *TLogAlerter) Start(ctx context.Context, wg *sync.WaitGroup) {}
 
-func (a *TLogAlerter) Send(message string) {
-	a.Log.Infof("Channel %s, message: %s", message)
+func (a *TLogAlerter) Alert(ctx context.Context, alertDetails config.TAlertDetails) {
+	a.Log.Infof("Channel non-critical, message: %s", alertDetails.Message)
 }
 
-func (a *TLogAlerter) SendCritical(message string) {
-	a.Log.Infof("Channel %s, CRITICAL message: %s", message)
+func (a *TLogAlerter) AlertCritical(ctx context.Context, alertDetails config.TAlertDetails) {
+	a.Log.Infof("Channel CRITICAL, message: %s", alertDetails.Message)
 }
 
 func (a *TLogAlerter) Stop(wg *sync.WaitGroup) {}

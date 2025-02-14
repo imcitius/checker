@@ -36,7 +36,7 @@ func initConfig(cfgFile string) {
 	if cfgFile != "" {
 		err := cleanenv.ReadConfig(cfgFile, &config)
 		if err != nil {
-			panic(fmt.Errorf("Error: uncaught error! %s", err))
+			panic(fmt.Errorf("error: uncaught error! %s", err))
 		} else {
 			logger.Infof("Using c file %s\n", cfgFile)
 		}

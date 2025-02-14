@@ -1,6 +1,7 @@
 package alerts
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
 	"my/checker/config"
 )
@@ -13,12 +14,12 @@ var (
 	wg       = config.GetWG()
 )
 
-func InitAlerts() {
+func InitAlerts(ctx context.Context) {
 	configurer = config.GetConfig()
 	logger = config.GetLog()
 	//cache = memoize.NewMemoizer(24*time.Hour, 24*time.Hour)
 
-	err := initAlerters()
+	err := initAlerters(ctx)
 	if err != nil {
 		logger.Fatalf("cannot init alerters: %s", err)
 	}

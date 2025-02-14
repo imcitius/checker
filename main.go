@@ -93,8 +93,8 @@ func check(ctx context.Context) {
 			alerts.StopAlerters()
 			return
 		default:
-			alerts.InitAlerts()
-			scheduler.RunScheduler()
+			alerts.InitAlerts(ctx)
+			scheduler.RunScheduler(ctx)
 		}
 	}
 }

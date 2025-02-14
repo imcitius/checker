@@ -122,10 +122,13 @@ type TCheckConfig struct {
 	} `yaml:"actors"`
 
 	// Runtime data
-	UUid       string
+	UUID       string
 	LastResult bool
-	LastExec   time.Time
-	LastPing   time.Time
+	// datetime when check was performed last time by checker
+	LastExec time.Time
+
+	// datetime when passive style check was pinged via web
+	LastPing time.Time
 
 	DebugLevel string
 	Parameters TCheckParameters `yaml:"parameters"`
@@ -192,8 +195,15 @@ type TCheckDetails struct {
 	Project     string
 	Healthcheck string
 	Name        string
-	UUid        string
+	UUID        string
 	LastResult  bool
 	LastExec    time.Time
 	LastPing    time.Time
+}
+
+type TAlertDetails struct {
+	Severity    string
+	Message     string
+	UUID        string
+	ProjectName string
 }

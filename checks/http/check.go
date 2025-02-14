@@ -78,16 +78,18 @@ func (c *THTTPCheck) RealExecute() (time.Duration, error) {
 	switch c.Scheme {
 	case "https":
 		//logger.Debugf("SSL: %v", response.TLS.PeerCertificates)
-		if len(response.TLS.PeerCertificates) > 0 {
-			for i, cert := range response.TLS.PeerCertificates {
-				if time.Until(cert.NotAfter) < (c.SSLExpirationPeriodParsed) {
-					logger.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
+		if !c.SkipCheckSSL {
+			if len(response.TLS.PeerCertificates) > 0 {
+				for i, cert := range response.TLS.PeerCertificates {
+					if time.Until(cert.NotAfter) < (c.SSLExpirationPeriodParsed) {
+						logger.Infof("Cert #%d subject: %s, NotBefore: %v, NotAfter: %v", i, cert.Subject, cert.NotBefore, cert.NotAfter)
+					}
+					logger.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
 				}
-				logger.Debugf("server TLS: %+v", response.TLS.PeerCertificates[i].NotAfter)
+			} else {
+				errorMessage := c.ErrorHeader + ErrHTTPNoCertificates
+				return time.Now().Sub(start), errors.New(errorMessage)
 			}
-		} else {
-			errorMessage := c.ErrorHeader + ErrHTTPNoCertificates
-			return time.Now().Sub(start), errors.New(errorMessage)
 		}
 	}
 

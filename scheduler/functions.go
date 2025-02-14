@@ -91,6 +91,11 @@ func GetMaintenanceTickers() TMaintenanceTickersCollection {
 					logger.Errorf("Failed to update checks in DB: %s", err.Error())
 					return err
 				}
+				err = store.Store.UpdateAlerts()
+				if err != nil {
+					logger.Errorf("Failed to update alerts in DB: %s", err.Error())
+					return err
+				}
 				return nil
 			},
 		}

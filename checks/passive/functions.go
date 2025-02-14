@@ -22,7 +22,7 @@ func New(checkConfig config.TCheckConfig) IPassiveCheck {
 	realCheck = TPassiveCheck{
 		Project:   checkConfig.Project,
 		CheckName: checkConfig.Name,
-		UUid:      checkConfig.UUid,
+		UUid:      checkConfig.UUID,
 
 		Timeout: checkConfig.Timeout,
 	}

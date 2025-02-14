@@ -9,14 +9,17 @@ type IStore interface {
 	Init() (IStore, error)
 	Disconnect() error
 
-	GetObjectByUUid(string) (DbCheckObject, error)
-	BulkWrite([]mongo.WriteModel, *options.BulkWriteOptions) (*mongo.BulkWriteResult, error)
+	GetCheckObjectByUUid(string) (DbCheckObject, error)
+	BulkWriteChecks([]mongo.WriteModel, *options.BulkWriteOptions) (*mongo.BulkWriteResult, error)
+	BulkWriteAlerts([]mongo.WriteModel, *options.BulkWriteOptions) (*mongo.BulkWriteResult, error)
 
 	//GetData() (interface{}, error)
 	//Save() error
 	//Load() error
 
 	GetAllChecks() ([]DbCheckObject, error)
+	GetAllAlerts() (*MessagesContextStorage, error)
 	UpdateChecks() error
+	UpdateAlerts() error
 	//UpdateChecksByCollection(checks checks.TChecksCollection) error
 }

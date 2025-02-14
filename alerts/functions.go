@@ -1,32 +1,38 @@
 package alerts
 
 import (
+	"context"
+	"errors"
 	"my/checker/alerts/log"
 	telegram "my/checker/alerts/telegram"
 	"my/checker/config"
 )
 
-func initAlerters() error {
+func initAlerters(ctx context.Context) error {
 	alerters = new(TAlertersCollection)
 	alerters.Alerters = make(map[string]ICommonAlerter)
 
 	if len(configurer.Alerts) > 0 {
 		for k, a := range configurer.Alerts {
-			alerter := newAlerter(a)
-			if alerter == nil {
+			alerter, err := newAlerter(a)
+			if err != nil {
 				logger.Fatalf("Alerter %s not found", a.Type)
 			}
-			alerter.Init()
+			alerter.Init(ctx)
 			if alerter.IsBot() {
-				go alerter.Start(wg)
+				go alerter.Start(ctx, wg)
 			}
 			alerters.Alerters[k] = alerter
 		}
 	}
 
-	alerters.Alerters["log"] = newAlerter(config.TAlert{
+	var err error
+	alerters.Alerters["log"], err = newAlerter(config.TAlert{
 		Type: "log",
 	})
+	if err != nil {
+		logger.Fatalf("Alerter %s not found", "log")
+	}
 
 	return nil
 }
@@ -49,13 +55,13 @@ func (c *TAlertersCollection) getByName(name string) ICommonAlerter {
 	return c.Alerters[name]
 }
 
-func newAlerter(a config.TAlert) ICommonAlerter {
+func newAlerter(a config.TAlert) (ICommonAlerter, error) {
 	switch a.Type {
 	case "telegram":
-		return telegram.NewAlerter(a)
+		return telegram.NewAlerter(a), nil
 	case "log":
-		return log.NewAlerter(logger)
+		return log.NewAlerter(logger), nil
 	default:
-		return nil
+		return nil, errors.New("unknown alerter type or type not specified")
 	}
 }

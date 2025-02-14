@@ -1,5 +1,10 @@
 package store
 
+import (
+	tele "gopkg.in/telebot.v3"
+	"my/checker/config"
+)
+
 func InitDB() (IStore, error) {
 	switch configurer.DB.Protocol {
 	case "mongodb":
@@ -13,6 +18,7 @@ func InitDB() (IStore, error) {
 	configurer.SetDBConnected()
 
 	loadChecks()
+	loadAlerts()
 	return Store, nil
 }
 
@@ -22,7 +28,7 @@ func loadChecks() {
 		logger.Fatalf("Cannot get checks from DB: %s", err)
 	}
 	for _, o := range checksFromDb {
-		check, err := configurer.GetCheckByUUid(o.UUid)
+		check, err := configurer.GetCheckByUUid(o.UUID)
 		if err != nil {
 			logger.Debugf("Cannot get check drom db: %s", err.Error())
 			continue
@@ -36,4 +42,36 @@ func loadChecks() {
 			logger.Errorf("Cannot update check: %s", err.Error())
 		}
 	}
+}
+
+func loadAlerts() {
+	//alertsFromDb, err := Store.GetAllAlerts()
+
+	var err error = nil
+	if err != nil {
+		logger.Fatalf("Cannot get checks from DB: %s", err)
+	}
+	//for _, o := range alertsFromDb.data {
+	//
+	//}
+}
+
+func GetMessagesContextStorage() *MessagesContextStorage {
+	return &MessagesContextStorage{
+		data: make(map[int64]map[int]config.TAlertDetails),
+	}
+}
+
+func (store *MessagesContextStorage) Update(m *tele.Message) {
+	store.Lock()
+	defer store.Unlock()
+
+	if store.data[m.Chat.ID] == nil {
+		store.data[m.Chat.ID] = make(map[int]config.TAlertDetails)
+	}
+	store.data[m.Chat.ID][m.ID] = config.TAlertDetails{}
+}
+
+func (store *MessagesContextStorage) GetData() interface{} {
+	return store.data
 }

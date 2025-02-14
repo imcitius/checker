@@ -1,7 +1,6 @@
-package go_telegram
+package telegram
 
 import (
-	"context"
 	"github.com/sirupsen/logrus"
 	tele "gopkg.in/telebot.v3"
 )
@@ -9,8 +8,8 @@ import (
 type TTelegramAlerter struct {
 	Token    string
 	bot      *tele.Bot
-	context  *context.Context
 	settings tele.Settings
+	options  tele.SendOptions
 	Log      *logrus.Logger
 
 	channelID         int64

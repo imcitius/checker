@@ -1,0 +1,73 @@
+defaults:
+  duration: 900s
+  alerts_channel: tg_citiustestbot
+  crit_alert: 1390752
+  noncrit_alert: 1390752
+  command_channel: 1390752
+
+alerts:
+  tg_citiustestbot:
+    type: telegram
+    bot_token: 201865937:AAHBSXrIlEFSbVfUCvkkd3y4kbvJNgNIJuM
+    critical_channel: 1390752
+    noncritical_channel: 1390752
+
+projects:
+  Jupiter:
+    healthchecks:
+      System checks:
+        checks:
+          Mattermost:
+            type: http
+            url: https://mattermost.jgit.me/api/v4/system/ping
+            answer: status":"OK
+            code:
+              - 200
+            timeout: 2s
+          Zimbra SMTP:
+#            parameters:
+#              duration: 29s
+            type: tcp
+            host: mail.relay4.xyz
+            timeout: 5s
+            port: 25
+
+  Admitlead:
+    healthchecks:
+      Admitlead ks:
+        checks:
+          main:
+            type: http
+            url: https://admitlead.com/main/check
+            answer: AdmitLead OK
+            code:
+              - 200
+            timeout: 3s
+            severity: critical
+
+  Mediaget:
+    parameters:
+      duration: 30s
+    healthchecks:
+      Download hash:
+        checks:
+          #          - type: getfile
+          #            name: mediaget-lib
+          #            url: https://download.mediaget.com/mediaget-installer-2/binaries/download.php?a=mediaget-lib
+          #            hash: cd32f76f2f15154ad63340bba2067744
+          #          - type: getfile
+          #            name: Ld
+          #            url: https://ld.mediaget.com
+          #            hash: 80201bb326ea1a53d758d7655fa4d6b7
+#          binaries-3941:
+#            type: getfile
+#            url: https://mediaget.com/installer/binaries/4212.7z
+#            hash: d6d8c18192a1ce74f6dc9698f3df4f96
+#          mediaget-lib-bundle:
+#            type: getfile
+#            url: https://mediaget.com/installer/binaries/mediaget-lib-2020-12-27-qt5152-no-ogl.7z
+#            hash: ac44c044d19ca3bb9ca3799d4466bb79
+          get-installer:
+            type: getfile
+            url: https://mediaget.com/ld/get_installer.php?unlimit=1
+            hash: 0b2dbacd9c3dbada28122b6100b027d8

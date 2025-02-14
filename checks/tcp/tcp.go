@@ -30,14 +30,11 @@ func (c TTCPCheck) RealExecute() (time.Duration, error) {
 			return time.Now().Sub(start), errors.New(errorMessage)
 		}
 
-		defer func() {
-			err = conn.Close()
-		}()
-
 		if err != nil {
 			errorMessage = errorHeader + fmt.Sprintf(ErrConnectError, address, checkAttempt, checkAttempts, err)
 			return time.Now().Sub(start), errors.New(errorMessage)
 		}
+		err = conn.Close()
 		checkAttempt++
 	}
 
