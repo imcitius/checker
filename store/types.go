@@ -14,6 +14,7 @@ type DbCheckObject struct {
 	LastPing    time.Time
 	LastExec    time.Time
 	LastResult  bool
+	Enabled     bool
 }
 
 type MessagesContextStorage struct {

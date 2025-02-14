@@ -3,14 +3,15 @@ package store
 import (
 	"context"
 	"fmt"
+	"my/checker/config"
+	"os"
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"my/checker/config"
-	"os"
-	"time"
 )
 
 type mongoDbStore struct {
@@ -63,7 +64,8 @@ func (store mongoDbStore) UpdateChecks() error {
 					{"UUID", v.UUID},
 					{"LastResult", v.LastResult},
 					{"LastExec", v.LastExec},
-					{"LastPing", v.LastPing}},
+					{"LastPing", v.LastPing},
+					{"Enabled", v.Enabled}},
 				}}).SetUpsert(true),
 		)
 	}
@@ -105,6 +107,7 @@ func (store mongoDbStore) GetCheckObjectByUUid(uuid string) (DbCheckObject, erro
 		LastResult:  results["LastResult"].(bool),
 		LastExec:    time.Unix(results["LastExec"].(primitive.DateTime).Time().Unix(), 0),
 		LastPing:    time.Unix(results["LastPing"].(primitive.DateTime).Time().Unix(), 0),
+		Enabled:     results["Enabled"].(bool),
 	}, err
 }
 

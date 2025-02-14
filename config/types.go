@@ -132,6 +132,7 @@ type TCheckConfig struct {
 
 	DebugLevel string
 	Parameters TCheckParameters `yaml:"parameters"`
+	Enabled    bool             `yaml:"enabled"`
 }
 
 type TCheckParameters struct {

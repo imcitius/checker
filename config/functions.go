@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/kofalt/go-memoize"
-	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
+
+	"github.com/kofalt/go-memoize"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -171,4 +172,25 @@ func (c *TConfig) UpdateCheckByUUID(check TCheckConfig) error {
 	//	}
 	//}
 	return nil //fmt.Errorf("check %s not in config", uuid)
+}
+
+func (c *TConfig) ToggleCheck(uuid string, enabled bool) error {
+	check, err := c.GetCheckByUUid(uuid)
+	if err != nil {
+		return err
+	}
+
+	check.Enabled = enabled
+	err = c.UpdateCheckByUUID(check)
+	if err != nil {
+		return err
+	}
+
+	// Update the check in the database if needed
+	if c.DB.Connected {
+		// Trigger DB update
+		// You might want to implement this based on your DB structure
+	}
+
+	return nil
 }

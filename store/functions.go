@@ -1,8 +1,9 @@
 package store
 
 import (
-	tele "gopkg.in/telebot.v3"
 	"my/checker/config"
+
+	tele "gopkg.in/telebot.v3"
 )
 
 func InitDB() (IStore, error) {
@@ -30,12 +31,13 @@ func loadChecks() {
 	for _, o := range checksFromDb {
 		check, err := configurer.GetCheckByUUid(o.UUID)
 		if err != nil {
-			logger.Debugf("Cannot get check drom db: %s", err.Error())
+			logger.Debugf("Cannot get check from db: %s", err.Error())
 			continue
 		}
 		check.LastExec = o.LastExec
 		check.LastPing = o.LastPing
 		check.LastResult = o.LastResult
+		check.Enabled = o.Enabled
 
 		err = configurer.UpdateCheckByUUID(check)
 		if err != nil {

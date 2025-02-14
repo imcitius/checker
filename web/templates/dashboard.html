@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Health Checks Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Health Checks Dashboard</h1>
+        <div class="checks-grid">
+            {{range .}}
+            <div class="check-card {{if .LastResult}}success{{else}}failure{{end}}">
+                <div class="check-header">
+                    <h2>{{.Name}}</h2>
+                    <label class="switch">
+                        <input type="checkbox" {{if .Enabled}}checked{{end}}
+                               onchange="toggleCheck('{{.UUID}}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="check-details">
+                    <p><strong>Project:</strong> {{.Project}}</p>
+                    <p><strong>Healthcheck:</strong> {{.Healthcheck}}</p>
+                    <p><strong>Last Execution:</strong> {{.LastExec}}</p>
+                    <p><strong>Last Ping:</strong> {{.LastPing}}</p>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html> 

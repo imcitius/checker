@@ -1,11 +1,12 @@
 package config
 
 import (
-	"github.com/InVisionApp/conjungo"
-	"github.com/google/uuid"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/InVisionApp/conjungo"
+	"github.com/google/uuid"
 )
 
 func (c *TConfig) refineProjects() {
@@ -51,6 +52,7 @@ func (c *TConfig) refineProjects() {
 				_check := _c
 				_check.UUID = genUUID(_healthcheck.Name, _c.Name, hostOrUrl(_c))
 				_check.Name = k
+				_check.Enabled = true
 
 				__cparams := __hparams
 				err := conjungo.Merge(&__cparams, _c.Parameters, opts)
