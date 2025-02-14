@@ -7,6 +7,7 @@ import (
 
 	"github.com/kofalt/go-memoize"
 	"github.com/sirupsen/logrus"
+	"my/checker/store"
 )
 
 var (
@@ -20,6 +21,13 @@ func InitConfig(cfgFile string) {
 	cache = memoize.NewMemoizer(24*time.Hour, 24*time.Hour)
 	config.Defaults.DefaultCheckParameters.Duration = config.Defaults.Duration
 	config.refineProjects()
+
+	if config.DB.Protocol != "" {
+		store, err := store.InitDB()
+		if err != nil {
+			logger.Errorf("Failed to initialize store: %v", err)
+		}
+	}
 }
 
 func InitLog(logLevel string) {
@@ -126,12 +134,15 @@ func (c *TConfig) Ping(uuid string) (TCheckConfig, error) {
 }
 
 func (c *TConfig) SetStatus(uuid string, status bool) {
-
 	check, _ := c.GetCheckByUUid(uuid)
 	check.LastExec = time.Now()
 	check.LastResult = status
 	p := c.Projects
 	p[check.Project].Healthchecks[check.Healthcheck].Checks[check.Name] = check
+	
+	if err := c.Save(); err != nil {
+		logger.Errorf("Failed to save config: %v", err)
+	}
 }
 
 func (c *TConfig) GetDBConnectionString() string {
@@ -157,6 +168,7 @@ func (c *TConfig) GetCheckDetails(uuid string) TCheckDetails {
 		LastExec:    check.LastExec,
 		LastResult:  check.LastResult,
 		LastPing:    check.LastPing,
+		Enabled:     check.Enabled,
 	}
 }
 
@@ -164,33 +176,27 @@ func (c *TConfig) UpdateCheckByUUID(check TCheckConfig) error {
 	p := c.Projects
 	p[check.Project].Healthchecks[check.Healthcheck].Checks[check.Name] = check
 
-	//for _, h := range p[check.Project].Healthchecks {
-	//	for _, _c := range h.Checks {
-	//		if _c.UUID == uuid {
-	//			return nil
-	//		}
-	//	}
-	//}
-	return nil //fmt.Errorf("check %s not in config", uuid)
-}
+	logger.Infof("Check state: %+v", p[check.Project].Healthchecks[check.Healthcheck].Checks[check.Name])
 
-func (c *TConfig) ToggleCheck(uuid string, enabled bool) error {
-	check, err := c.GetCheckByUUid(uuid)
-	if err != nil {
+	if err := c.Save(); err != nil {
+		logger.Errorf("Failed to save config: %v", err)
 		return err
-	}
-
-	check.Enabled = enabled
-	err = c.UpdateCheckByUUID(check)
-	if err != nil {
-		return err
-	}
-
-	// Update the check in the database if needed
-	if c.DB.Connected {
-		// Trigger DB update
-		// You might want to implement this based on your DB structure
 	}
 
 	return nil
+}
+
+func (c *TConfig) ToggleCheck(uuid string, enabled bool) error {
+	check, _ := c.GetCheckByUUid(uuid)
+	check.Enabled = enabled
+	c.UpdateCheckByUUID(check)
+
+	return nil
+}
+
+func (c *TConfig) Save() error {
+	if !c.DB.Connected {
+		return fmt.Errorf("database not connected")
+	}
+	return store.Store.UpdateChecks()
 }

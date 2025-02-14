@@ -22,4 +22,5 @@ type IStore interface {
 	UpdateChecks() error
 	UpdateAlerts() error
 	//UpdateChecksByCollection(checks checks.TChecksCollection) error
+	UpdateSingleCheck(check DbCheckObject) error
 }

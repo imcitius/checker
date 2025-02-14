@@ -17,6 +17,7 @@ type ICommonCheck interface {
 	GetUUID() string
 	GetCheckDetails() config.TCheckDetails
 	SetStatus(bool)
+	GetEnabled() bool
 }
 
 type ISpecificCheck interface {

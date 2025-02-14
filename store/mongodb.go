@@ -56,17 +56,17 @@ func (store mongoDbStore) UpdateChecks() error {
 	opts := options.BulkWrite().SetOrdered(false)
 	for _, v := range checks {
 		models = append(models,
-			mongo.NewUpdateOneModel().SetFilter(bson.D{{"UUID", v.UUID}}).
-				SetUpdate(bson.D{{"$set", bson.D{
-					{"Project", v.Project},
-					{"Healthcheck", v.Healthcheck},
-					{"Name", v.Name},
-					{"UUID", v.UUID},
-					{"LastResult", v.LastResult},
-					{"LastExec", v.LastExec},
-					{"LastPing", v.LastPing},
-					{"Enabled", v.Enabled}},
-				}}).SetUpsert(true),
+			mongo.NewUpdateOneModel().SetFilter(bson.D{{Key: "UUID", Value: v.UUID}}).
+				SetUpdate(bson.D{{Key: "$set", Value: bson.D{
+					{Key: "Project", Value: v.Project},
+					{Key: "Healthcheck", Value: v.Healthcheck},
+					{Key: "Name", Value: v.Name},
+					{Key: "UUID", Value: v.UUID},
+					{Key: "LastResult", Value: v.LastResult},
+					{Key: "LastExec", Value: v.LastExec},
+					{Key: "LastPing", Value: v.LastPing},
+					{Key: "Enabled", Value: v.Enabled},
+				}}}).SetUpsert(true),
 		)
 	}
 
@@ -167,4 +167,24 @@ func (store mongoDbStore) GetAllAlerts() (*MessagesContextStorage, error) {
 	}
 
 	return &res, err
+}
+
+func (store mongoDbStore) UpdateSingleCheck(check DbCheckObject) error {
+	collection := store.client.Database(configurer.DB.Database).Collection("checks")
+
+	_, err := collection.UpdateOne(
+		DBContext,
+		bson.M{"UUID": check.UUID},
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "Project", Value: check.Project},
+			{Key: "Healthcheck", Value: check.Healthcheck},
+			{Key: "Name", Value: check.Name},
+			{Key: "LastResult", Value: check.LastResult},
+			{Key: "LastExec", Value: check.LastExec},
+			{Key: "LastPing", Value: check.LastPing},
+			{Key: "Enabled", Value: check.Enabled},
+		}}},
+	)
+
+	return err
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -16,6 +17,13 @@ type TConfig struct {
 
 func (c *TConfig) SetDBConnected() {
 	c.DB.Connected = true
+}
+
+func (c *TConfig) Save() error {
+	if !c.DB.Connected {
+		return fmt.Errorf("database not connected")
+	}
+	return store.Store.UpdateChecks()
 }
 
 type DBConfig struct {
@@ -200,6 +208,7 @@ type TCheckDetails struct {
 	LastResult  bool
 	LastExec    time.Time
 	LastPing    time.Time
+	Enabled     bool
 }
 
 type TAlertDetails struct {

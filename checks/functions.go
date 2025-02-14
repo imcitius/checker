@@ -119,7 +119,7 @@ func findChecksByDuration(duration string) (TChecksCollection, error) {
 				}
 
 				if dConfig == dCheck {
-					logger.Debugf(">>> Adding check: %s, dur: %s", check.Name, check.Parameters.Duration)
+					logger.Debugf(">>> Adding check: %s, dur: %s, enabled: %t", check.Name, check.Parameters.Duration, check.Enabled)
 					checkToAdd := newCommonCheck(check, h, p)
 					checks = append(checks, TCheckWithDuration{
 						Check:    checkToAdd,
@@ -152,6 +152,7 @@ func newCommonCheck(c config.TCheckConfig, h config.THealthcheck, p config.TProj
 			Duration: 0,
 			Error:    nil,
 		},
+		Enabled: c.Enabled,
 	}
 
 	newCheck.Alerter = getAlerter(newCheck)
@@ -194,4 +195,8 @@ func newSpecificCheck(c TCommonCheck) ISpecificCheck {
 
 func (c *TChecksCollection) Len() int {
 	return len(c.Checks)
+}
+
+func (c TCommonCheck) GetEnabled() bool {
+	return c.Enabled
 }

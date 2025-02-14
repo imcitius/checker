@@ -30,6 +30,7 @@ type TCommonCheck struct {
 	RealCheck   ISpecificCheck
 
 	Result TCheckResult
+	Enabled bool
 }
 
 type TChecksCollection struct {

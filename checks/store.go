@@ -1,10 +1,11 @@
 package checks
 
 import (
+	"my/checker/store"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"my/checker/store"
 )
 
 func UpdateChecksByCollectioninDB(checks []TCheckWithDuration) error {
@@ -15,16 +16,17 @@ func UpdateChecksByCollectioninDB(checks []TCheckWithDuration) error {
 		details := configurer.GetCheckDetails(c.Check.GetUUID())
 
 		models = append(models,
-			mongo.NewUpdateOneModel().SetFilter(bson.D{{"UUID", details.UUID}}).
-				SetUpdate(bson.D{{"$set", bson.D{
-					{"Project", details.Project},
-					{"Healthcheck", details.Healthcheck},
-					{"Name", details.Name},
-					{"UUID", details.UUID},
-					{"LastResult", details.LastResult},
-					{"LastExec", details.LastExec},
-					{"LastPing", details.LastPing}},
-				}}).SetUpsert(true),
+			mongo.NewUpdateOneModel().SetFilter(bson.D{{Key: "UUID", Value: details.UUID}}).
+				SetUpdate(bson.D{{Key: "$set", Value: bson.D{
+					{Key: "Project", Value: details.Project},
+					{Key: "Healthcheck", Value: details.Healthcheck},
+					{Key: "Name", Value: details.Name},
+					{Key: "UUID", Value: details.UUID},
+					{Key: "LastResult", Value: details.LastResult},
+					{Key: "LastExec", Value: details.LastExec},
+					{Key: "LastPing", Value: details.LastPing},
+					{Key: "Enabled", Value: details.Enabled},
+				}}}).SetUpsert(true),
 		)
 	}
 
