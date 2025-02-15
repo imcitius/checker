@@ -1,0 +1,34 @@
+defaults:
+  duration: 10s
+  alerts_channel: telegram
+  maintenance_duration: 15m
+
+db:
+  protocol: mongodb
+  host: cluster0.vjrpdjs.mongodb.net
+  username: checker-dev
+  password: secret123
+  database: checker_dev
+
+alerts:
+  telegram:
+    type: telegram
+    bot_token: 201865937:flskdfj;lskdjfl;ksdjsf
+    critical_channel: 1390752
+    noncritical_channel: 1390752
+
+  slack:
+    type: slack
+    # Slack-specific fields
+
+projects:
+  testProject:
+    parameters:
+      duration: 14s
+    healthchecks:
+      checks_http:
+        checks:
+          Check google:
+            type: http
+            url: https://google.com/
+            answer_present: true

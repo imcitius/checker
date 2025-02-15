@@ -1,9 +1,0 @@
-.idea
-.*
-checker*
-testconfigs*
-gitlabci*
-kubeconfig.json
-build/*
-images-report.*
-old
