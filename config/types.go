@@ -1,10 +1,28 @@
 package config
 
 import (
-	"fmt"
+	store "my/checker/store/mongodb"
 	"net/http"
+	"sync"
 	"time"
 )
+
+type DbCheckObject struct {
+	UUID        string
+	Project     string
+	Healthcheck string
+	Name        string
+	LastPing    time.Time
+	LastExec    time.Time
+	LastResult  bool
+	Enabled     bool
+}
+
+type MessagesContextStorage struct {
+	sync.RWMutex
+
+	data map[int64]map[int]config.TAlertDetails
+}
 
 type TConfig struct {
 	Defaults TDefaults `yaml:"defaults"`
@@ -13,17 +31,7 @@ type TConfig struct {
 	Alerts    map[string]TAlert   `yaml:"alerts"`
 	Projects  map[string]TProject `yaml:"projects"`
 	StartTime time.Time
-}
-
-func (c *TConfig) SetDBConnected() {
-	c.DB.Connected = true
-}
-
-func (c *TConfig) Save() error {
-	if !c.DB.Connected {
-		return fmt.Errorf("database not connected")
-	}
-	return store.Store.UpdateChecks()
+	Store     IStore
 }
 
 type DBConfig struct {

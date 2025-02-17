@@ -7,7 +7,11 @@ import (
 
 	"github.com/kofalt/go-memoize"
 	"github.com/sirupsen/logrus"
-	"my/checker/store"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	store "my/checker/store/mongodb"
 )
 
 var (
@@ -21,13 +25,6 @@ func InitConfig(cfgFile string) {
 	cache = memoize.NewMemoizer(24*time.Hour, 24*time.Hour)
 	config.Defaults.DefaultCheckParameters.Duration = config.Defaults.Duration
 	config.refineProjects()
-
-	if config.DB.Protocol != "" {
-		store, err := store.InitDB()
-		if err != nil {
-			logger.Errorf("Failed to initialize store: %v", err)
-		}
-	}
 }
 
 func InitLog(logLevel string) {
@@ -54,6 +51,11 @@ func GetProjectByName(name string) (TProject, error) {
 		return findProjectByName(name)
 	})
 	return result.(TProject), err
+}
+
+func (c *TConfig) SetDBConnected(store store.IStore) {
+	c.DB.Connected = true
+	c.Store = store
 }
 
 func findProjectByName(name string) (TProject, error) {
@@ -139,7 +141,7 @@ func (c *TConfig) SetStatus(uuid string, status bool) {
 	check.LastResult = status
 	p := c.Projects
 	p[check.Project].Healthchecks[check.Healthcheck].Checks[check.Name] = check
-	
+
 	if err := c.Save(); err != nil {
 		logger.Errorf("Failed to save config: %v", err)
 	}
@@ -198,5 +200,168 @@ func (c *TConfig) Save() error {
 	if !c.DB.Connected {
 		return fmt.Errorf("database not connected")
 	}
-	return store.Store.UpdateChecks()
+	return c.UpdateChecks()
+}
+
+// func GetMessagesContextStorage() *MessagesContextStorage {
+// 	return &MessagesContextStorage{
+// 		data: make(map[int64]map[int]config.TAlertDetails),
+// 	}
+// }
+
+// func (store *MessagesContextStorage) Update(m *tele.Message) {
+// 	store.Lock()
+// 	defer store.Unlock()
+
+// 	if store.data[m.Chat.ID] == nil {
+// 		store.data[m.Chat.ID] = make(map[int]config.TAlertDetails)
+// 	}
+// 	store.data[m.Chat.ID][m.ID] = config.TAlertDetails{}
+// }
+
+// func (store *MessagesContextStorage) GetData() interface{} {
+// 	return store.data
+// }
+
+func (config *TConfig) UpdateChecks() error {
+	collection := config.Store.client.Database().Collection("checks")
+
+	checks, err := config.GetAllChecks()
+	if err != nil {
+		logrus.Errorf("Error while getting checks from config: %s", err.Error())
+	}
+
+	var models []mongo.WriteModel
+	opts := options.BulkWrite().SetOrdered(false)
+	for _, v := range checks {
+		models = append(models,
+			mongo.NewUpdateOneModel().SetFilter(bson.D{{Key: "UUID", Value: v.UUID}}).
+				SetUpdate(bson.D{{Key: "$set", Value: bson.D{
+					{Key: "Project", Value: v.Project},
+					{Key: "Healthcheck", Value: v.Healthcheck},
+					{Key: "Name", Value: v.Name},
+					{Key: "UUID", Value: v.UUID},
+					{Key: "LastResult", Value: v.LastResult},
+					{Key: "LastExec", Value: v.LastExec},
+					{Key: "LastPing", Value: v.LastPing},
+					{Key: "Enabled", Value: v.Enabled},
+				}}}).SetUpsert(true),
+		)
+	}
+
+	results, err := collection.BulkWrite(DBContext, models, opts)
+	if err != nil {
+		logger.Errorf("Error while inserting checks to MongoDB: %s", err.Error())
+	}
+
+	// When you run this file for the first time, it should print:
+	// Number of documents replaced or modified: 2
+	logger.Infof("MongoDB updated, replaced or modified, upserted: %d, %d", results.ModifiedCount, results.UpsertedCount)
+
+	return err
+}
+
+func UpdateAlerts() error {
+	return nil
+}
+
+func GetCheckObjectByUUid(uuid string) (DbCheckObject, error) {
+	collection := config.Store.client.Database().Collection("checks")
+	res := collection.FindOne(DBContext, bson.M{"UUID": uuid})
+	results := bson.M{}
+
+	err := res.Decode(&results)
+	if err != nil {
+		logger.Errorf("Error decoding MongoDB collection: %s", err.Error())
+		return DbCheckObject{}, err
+	}
+
+	return DbCheckObject{
+		Project:     results["Project"].(string),
+		Healthcheck: results["Healthcheck"].(string),
+		Name:        results["Name"].(string),
+		UUID:        results["UUID"].(string),
+		LastResult:  results["LastResult"].(bool),
+		LastExec:    time.Unix(results["LastExec"].(primitive.DateTime).Time().Unix(), 0),
+		LastPing:    time.Unix(results["LastPing"].(primitive.DateTime).Time().Unix(), 0),
+		Enabled:     results["Enabled"].(bool),
+	}, err
+}
+
+func BulkWriteChecks(models []mongo.WriteModel, opts *options.BulkWriteOptions) (*mongo.BulkWriteResult, error) {
+	collection := config.Store.client.Database().Collection("checks")
+	return collection.BulkWrite(DBContext, models, opts)
+}
+
+func BulkWriteAlerts(models []mongo.WriteModel, opts *options.BulkWriteOptions) (*mongo.BulkWriteResult, error) {
+	collection := config.Store.client.Database().Collection("alerts")
+	return collection.BulkWrite(DBContext, models, opts)
+}
+
+func GetAllChecks() ([]DbCheckObject, error) {
+	collection := config.Store.client.Database().Collection("checks")
+	cur, err := collection.Find(DBContext, bson.M{})
+	if err != nil {
+		logger.Errorf("Error while getting checks from MongoDB: %s", err.Error())
+	}
+
+	var checks []DbCheckObject
+	for cur.Next(DBContext) {
+		var t DbCheckObject
+		err := cur.Decode(&t)
+		if err != nil {
+			return checks, err
+		}
+
+		checks = append(checks, t)
+	}
+
+	if err := cur.Err(); err != nil {
+		return checks, err
+	}
+
+	return checks, err
+}
+
+func GetAllAlerts() (*MessagesContextStorage, error) {
+	collection := config.Store.client.Database().Collection("alerts")
+	cur, err := collection.Find(DBContext, bson.M{})
+	if err != nil {
+		logger.Errorf("Error while getting checks from MongoDB: %s", err.Error())
+	}
+
+	var res MessagesContextStorage
+	for cur.Next(DBContext) {
+		var t map[int]config.TAlertDetails
+		err := cur.Decode(&t)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := cur.Err(); err != nil {
+		return &res, err
+	}
+
+	return &res, err
+}
+
+func UpdateSingleCheck(check DbCheckObject) error {
+	collection := config.Store.client.Database().Collection("checks")
+
+	_, err := collection.UpdateOne(
+		DBContext,
+		bson.M{"UUID": check.UUID},
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "Project", Value: check.Project},
+			{Key: "Healthcheck", Value: check.Healthcheck},
+			{Key: "Name", Value: check.Name},
+			{Key: "LastResult", Value: check.LastResult},
+			{Key: "LastExec", Value: check.LastExec},
+			{Key: "LastPing", Value: check.LastPing},
+			{Key: "Enabled", Value: check.Enabled},
+		}}},
+	)
+
+	return err
 }

@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"my/checker/store"
+	"my/checker/store/mongodb"
 	"time"
 )
 
@@ -81,12 +81,13 @@ func GetMaintenanceTickers() TMaintenanceTickersCollection {
 		make(map[string]TMaintenanceTicker),
 	}
 
+	// maintenance ticker dumps checks and alerts to DB
 	if configurer.DB.Connected {
 		tickers.Tickers[configurer.Defaults.MaintenanceDuration] = TMaintenanceTicker{
 			Duration: configurer.Defaults.MaintenanceDuration,
 			Ticker:   time.NewTicker(time.Minute),
 			exec: func() error {
-				err := store.Store.UpdateChecks()
+				err := configurer.UpdateChecks()
 				if err != nil {
 					logger.Errorf("Failed to update checks in DB: %s", err.Error())
 					return err

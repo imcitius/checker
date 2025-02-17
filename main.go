@@ -9,7 +9,7 @@ import (
 	"my/checker/checks"
 	"my/checker/config"
 	"my/checker/scheduler"
-	"my/checker/store"
+	"my/checker/store/mongodb"
 	"my/checker/web"
 	"os"
 	"os/signal"
@@ -76,10 +76,21 @@ func check(ctx context.Context) {
 	if config.GetConfig().DB.Protocol != "" {
 		// causes panic, need to pass context
 		//defer store.Store.Disconnect()
-		_, err := store.InitDB()
+		store, err := store.InitDB(store.DBConfig{
+			Protocol: config.GetConfig().DB.Protocol,
+			Host:     config.GetConfig().DB.Host,
+			Port:     config.GetConfig().DB.Port,
+			Username: config.GetConfig().DB.Username,
+			Password: config.GetConfig().DB.Password,
+		})
 		if err != nil {
 			logrus.Fatalf("DB connect error: %s", err.Error())
 		}
+		config.GetConfig().SetDBConnected(store)
+		
+		loadChecks(store)
+		loadAlerts(store)
+
 	} else {
 		logrus.Infof("DB is not configured")
 	}
@@ -97,4 +108,39 @@ func check(ctx context.Context) {
 			scheduler.RunScheduler(ctx)
 		}
 	}
+}
+
+func loadChecks(store store.IStore) {
+	checksFromDb, err := config.GetConfig().GetAllChecks()
+	if err != nil {
+		logrus.Fatalf("Cannot get checks from DB: %s", err)
+	}
+	for _, o := range checksFromDb {
+		check, err := config.GetConfig().GetCheckByUUid(o.UUID)
+		if err != nil {
+			logrus.Debugf("Cannot get check from db: %s", err.Error())
+			continue
+		}
+		check.LastExec = o.LastExec
+		check.LastPing = o.LastPing
+		check.LastResult = o.LastResult
+		check.Enabled = o.Enabled
+
+		err = config.GetConfig().UpdateCheckByUUID(check)
+		if err != nil {
+			logrus.Errorf("Cannot update check: %s", err.Error())
+		}
+	}
+}
+
+func loadAlerts(store store.IStore) {
+	//alertsFromDb, err := Store.GetAllAlerts()
+
+	var err error = nil
+	if err != nil {
+		logrus.Fatalf("Cannot get checks from DB: %s", err)
+	}
+	//for _, o := range alertsFromDb.data {
+	//
+	//}
 }

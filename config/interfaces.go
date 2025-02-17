@@ -1,4 +1,4 @@
-package store
+package config
 
 import (
 	"go.mongodb.org/mongo-driver/mongo"
@@ -6,9 +6,6 @@ import (
 )
 
 type IStore interface {
-	Init() (IStore, error)
-	Disconnect() error
-
 	GetCheckObjectByUUid(string) (DbCheckObject, error)
 	BulkWriteChecks([]mongo.WriteModel, *options.BulkWriteOptions) (*mongo.BulkWriteResult, error)
 	BulkWriteAlerts([]mongo.WriteModel, *options.BulkWriteOptions) (*mongo.BulkWriteResult, error)
