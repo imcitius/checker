@@ -8,13 +8,13 @@
     <div class="container">
         <h1>Health Checks Dashboard</h1>
         <div class="checks-grid">
-            {{range .}}
+            {{range .checks}}
             <div class="check-card {{if .LastResult}}success{{else}}failure{{end}}">
                 <div class="check-header">
                     <h2>{{.Name}}</h2>
                     <label class="switch">
                         <input type="checkbox" {{if .Enabled}}checked{{end}}
-                               onchange="toggleCheck('{{.UUID}}', this.checked)">
+                               onchange="toggleCheck('{{.ID}}', this.checked)">
                         <span class="slider"></span>
                     </label>
                 </div>

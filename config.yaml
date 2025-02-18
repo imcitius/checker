@@ -1,5 +1,5 @@
 defaults:
-  duration: 10s
+  duration: 1s
   alerts_channel: telegram
   maintenance_duration: 15m
 
@@ -26,9 +26,24 @@ projects:
     parameters:
       duration: 14s
     healthchecks:
-      checks_http:
+      http:
         checks:
-          Check google:
+          Check google http:
             type: http
             url: https://google.com/
             answer_present: true
+      ping:
+        checks:
+          Check google ping:
+            parameters:
+              duration: 5s
+            type: ping
+            host: google.com
+      tcp:
+        checks:
+          Check google tcp:
+            parameters:
+              duration: 8s
+            type: tcp
+            host: google.com
+            port: 80

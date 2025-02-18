@@ -6,9 +6,14 @@ import (
     "strings"
 )
 
-// PingCheck uses system "ping" command. In production, consider a pure Go approach or library.
-func PingCheck(host string) (bool, string) {
-    out, err := exec.Command("ping", "-c", "1", "-W", "5", host).CombinedOutput()
+// PingCheck represents a Ping health check.
+type PingCheck struct {
+    Host string
+}
+
+// Run executes the Ping health check.
+func (pc *PingCheck) Run() (bool, string) {
+    out, err := exec.Command("ping", "-c", "1", "-W", "5", pc.Host).CombinedOutput()
     if err != nil {
         return false, fmt.Sprintf("Ping error: %v", err)
     }

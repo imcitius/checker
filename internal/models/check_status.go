@@ -1,21 +1,22 @@
 package models
 
 import (
-    "time"
+	"time"
 
-    "go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // CheckStatus is a record of an individual check’s current state.
 type CheckStatus struct {
-    ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-    Project       string             `bson:"project" json:"project"`
-    CheckGroup    string             `bson:"check_group" json:"check_group"`
-    CheckName     string             `bson:"check_name" json:"check_name"`
-    CheckType     string             `bson:"check_type" json:"check_type"`
-    LastRun       time.Time          `bson:"last_run" json:"last_run"`
-    IsHealthy     bool               `bson:"is_healthy" json:"is_healthy"`
-    Message       string             `bson:"message" json:"message"`
-    IsEnabled     bool               `bson:"is_enabled" json:"is_enabled"`
-    LastAlertSent time.Time          `bson:"last_alert_sent" json:"last_alert_sent"`
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	UUID          string             `bson:"uuid" json:"uuid"`
+	Project       string             `bson:"project" json:"project"`
+	CheckGroup    string             `bson:"check_group" json:"check_group"`
+	CheckName     string             `bson:"check_name" json:"check_name"`
+	CheckType     string             `bson:"check_type" json:"check_type"`
+	LastRun       time.Time          `bson:"last_run" json:"last_run"`
+	IsHealthy     bool               `bson:"is_healthy" json:"is_healthy"`
+	Message       string             `bson:"message" json:"message"`
+	IsEnabled     bool               `bson:"is_enabled" json:"is_enabled"`
+	LastAlertSent time.Time          `bson:"last_alert_sent" json:"last_alert_sent"`
 }

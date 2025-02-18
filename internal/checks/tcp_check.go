@@ -6,9 +6,14 @@ import (
     "time"
 )
 
-// TCPCheck tries to open a TCP connection to the given address.
-func TCPCheck(address string) (bool, string) {
-    conn, err := net.DialTimeout("tcp", address, 5*time.Second)
+// TCPCheck represents a TCP health check.
+type TCPCheck struct {
+    Address string
+}
+
+// Run executes the TCP health check.
+func (tc *TCPCheck) Run() (bool, string) {
+    conn, err := net.DialTimeout("tcp", tc.Address, 5*time.Second)
     if err != nil {
         return false, fmt.Sprintf("TCP connection error: %v", err)
     }

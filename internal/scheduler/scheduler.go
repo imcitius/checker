@@ -1,173 +1,284 @@
 package scheduler
 
 import (
-    "context"
-    "time"
+	"context"
+	"fmt"
+	"sync"
+	"time"
 
-    "github.com/sirupsen/logrus"
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/mongo"
-    "go.mongodb.org/mongo-driver/mongo/options"
-    "checker/internal/alerts"
-    "checker/internal/checks"
-    "checker/internal/config"
-    "checker/internal/db"
-    "checker/internal/models"
+	"checker/internal/checks"
+	"checker/internal/config"
+	"checker/internal/db"
+	"checker/internal/models"
+
+	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// CheckerFactory creates Checker instances based on the CheckConfig.
+func CheckerFactory(cfg config.CheckConfig) checks.Checker {
+	switch cfg.Type {
+	case "http":
+		return &checks.HTTPCheck{
+			URL:                 cfg.URL,
+			Timeout:             cfg.Timeout,
+			Answer:              cfg.Answer,
+			AnswerPresent:       cfg.AnswerPresent,
+			Code:                cfg.Code,
+			Headers:             mergeHeaders(cfg.Headers),
+			SkipCheckSSL:        cfg.SkipCheckSSL,
+			SSLExpirationPeriod: cfg.SSLExpirationPeriod,
+			StopFollowRedirects: cfg.StopFollowRedirects,
+		}
+	case "tcp":
+		return &checks.TCPCheck{
+			Address: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		}
+	case "ping":
+		return &checks.PingCheck{
+			Host: cfg.Host,
+		}
+	default:
+		logrus.Warnf("Unknown check type: %s", cfg.Type)
+		return nil
+	}
+}
+
+// RunScheduler starts the health check scheduler.
 func RunScheduler(cfg *config.Config, mongoDB *db.MongoDB) {
-    // Basic ticker approach
-    ticker := time.NewTicker(cfg.Defaults.Duration)
-    defer ticker.Stop()
+	logrus.Info("Starting health check scheduler")
+	counter := 1
+	wg := sync.WaitGroup{}
 
-    for {
-        select {
-        case <-ticker.C:
-            performAllChecks(cfg, mongoDB)
-        }
-    }
+	for _, ticker := range cfg.Tickers {
+		wg.Add(1)
+		if counter == len(cfg.Tickers) /*+len(maintenances.Tickers)*/ {
+			runProjectTicker(ticker, &wg, cfg, mongoDB)
+		} else {
+			go runProjectTicker(ticker, &wg, cfg, mongoDB)
+			counter++
+		}
+	}
 }
 
-// performAllChecks iterates over all projects & checks, runs them, and stores results
-func performAllChecks(cfg *config.Config, mongoDB *db.MongoDB) {
-    for projectName, project := range cfg.Projects {
-        // Use project.Parameters.Duration if present, else default
-        checkInterval := project.Parameters.Duration
-        if checkInterval == 0 {
-            checkInterval = cfg.Defaults.Duration
-        }
+func runProjectTicker(ticker config.TTickerWithDuration, wg *sync.WaitGroup, cfg *config.Config, mongoDB *db.MongoDB) {
+	defer ticker.Ticker.Stop()
+	defer wg.Done()
+	logrus.Debugf("Starting project ticker with duration %s", ticker.Duration)
 
-        for checkGroup, groupDetails := range project.HealthChecks {
-            for checkName, checkData := range groupDetails.Checks {
-                // Retrieve current status from DB to see if it's enabled
-                currentStatus, err := findCheckStatus(mongoDB, projectName, checkGroup, checkName)
-                if err != nil && err != mongo.ErrNoDocuments {
-                    logrus.Errorf("Failed to fetch check status: %v", err)
-                    continue
-                }
-
-                // If new, default isEnabled to true
-                isEnabled := true
-                if currentStatus != nil {
-                    isEnabled = currentStatus.IsEnabled
-                }
-                if !isEnabled {
-                    logrus.Infof("Skipping disabled check %s/%s/%s", projectName, checkGroup, checkName)
-                    continue
-                }
-
-                // Run the appropriate check
-                isHealthy, message := runCheck(checkData.Type, checkData.URL, checkData.AnswerPresent)
-                now := time.Now()
-
-                // Prepare record
-                checkStatus := models.CheckStatus{
-                    Project:    projectName,
-                    CheckGroup: checkGroup,
-                    CheckName:  checkName,
-                    CheckType:  checkData.Type,
-                    LastRun:    now,
-                    IsHealthy:  isHealthy,
-                    Message:    message,
-                    IsEnabled:  isEnabled,
-                }
-                if currentStatus != nil {
-                    checkStatus.ID = currentStatus.ID
-                    checkStatus.LastAlertSent = currentStatus.LastAlertSent
-                }
-
-                // Update DB
-                upsertCheckStatus(mongoDB, &checkStatus)
-
-                // Send alerts if needed
-                if !isHealthy {
-                    shouldAlert := shouldSendAlert(cfg, checkStatus)
-                    if shouldAlert {
-                        sendAlerts(cfg, checkStatus)
-                        checkStatus.LastAlertSent = now
-                        upsertCheckStatus(mongoDB, &checkStatus)
-                    }
-                }
-            }
-        }
-    }
+	for range ticker.Ticker.C {
+		performAllChecks(ticker.Duration, cfg, mongoDB)
+	}
 }
 
-func runCheck(checkType, url string, answerPresent bool) (bool, string) {
-    switch checkType {
-    case "http":
-        return checks.HTTPCheck(url, answerPresent)
-    case "tcp":
-        return checks.TCPCheck(url)
-    case "ping":
-        return checks.PingCheck(url)
-    default:
-        return false, "Unknown check type"
-    }
+// performAllChecks iterates over all projects and runs each check if check duration equal to passed on func call
+func performAllChecks(duration string, cfg *config.Config, mongoDB *db.MongoDB) {
+	totalChecks := 0
+	successfulChecks := 0
+
+	for projectName, project := range cfg.Projects {
+		logrus.WithField("project", projectName).Debug("Processing project %s checks", projectName)
+		// Iterate over each health check group
+		for groupName, group := range project.HealthChecks {
+			// Iterate over each check in the group
+			for checkName, checkData := range group.Checks {
+				totalChecks++
+
+				// Compute effective duration with precedence:
+				//   defaults < project < group < check (if check.Parameters.Duration is set)
+				effectiveDuration := cfg.Defaults.Duration
+				if project.Parameters.Duration != 0 {
+					effectiveDuration = project.Parameters.Duration
+				}
+				if group.Parameters.Duration != 0 {
+					effectiveDuration = group.Parameters.Duration
+				}
+				if checkData.Parameters.Duration != 0 {
+					effectiveDuration = checkData.Parameters.Duration
+				}
+
+				if effectiveDuration.String() == duration {
+					// Retrieve current status from DB.
+					logger := logrus.WithFields(logrus.Fields{
+						"project": projectName,
+						"group":   groupName,
+						"check":   checkName,
+						"type":    checkData.Type,
+					})
+					currentStatus, err := findCheckStatus(mongoDB, checkData.UUID)
+					if err != nil && err != mongo.ErrNoDocuments {
+						logger.WithError(err).Error("Failed to fetch check status")
+						continue
+					}
+
+					// If the check ran recently then skip it.
+					if currentStatus != nil {
+						if !currentStatus.LastRun.IsZero() {
+							if time.Since(currentStatus.LastRun) < effectiveDuration {
+								remaining := effectiveDuration - time.Since(currentStatus.LastRun)
+								logger.WithField("next_run_in", remaining).Debugf("Skipping check, not due yet")
+								continue
+							}
+						}
+						if !currentStatus.IsEnabled {
+							logger.Debug("Skipping check, it is disabled")
+							continue
+						}
+					}
+
+					// Create checker instance.
+					checker := CheckerFactory(checkData)
+					if checker == nil {
+						logger.Error("Failed to create checker")
+						continue
+					}
+
+					checkStartTime := time.Now()
+					logger.Debug("Starting individual check")
+
+					// Run the check.
+					isHealthy, message := checker.Run()
+					checkDuration := time.Since(checkStartTime)
+					if isHealthy {
+						successfulChecks++
+					}
+
+					logger.WithFields(logrus.Fields{
+						"is_healthy":  isHealthy,
+						"message":     message,
+						"duration_ms": checkDuration.Milliseconds(),
+					}).Info("Check completed")
+
+					now := time.Now()
+					checkStatus := models.CheckStatus{
+						UUID:      checkData.UUID,
+						Project:   projectName,
+						CheckName: checkName,
+						CheckType: checkData.Type,
+						LastRun:   now,
+						IsHealthy: isHealthy,
+						Message:   message,
+						IsEnabled: true, // assuming true if it’s not skipped
+					}
+					// Preserve ID and LastAlertSent if the record already exists.
+					if currentStatus != nil {
+						checkStatus.ID = currentStatus.ID
+						checkStatus.LastAlertSent = currentStatus.LastAlertSent
+					}
+
+					// Update the status in the database.
+					if err := upsertCheckStatus(mongoDB, &checkStatus); err != nil {
+						logger.WithError(err).Error("Failed to update check status")
+					}
+
+					// Handle alerts if the check fails.
+					if !isHealthy {
+						if shouldSendAlert(effectiveDuration, checkStatus) {
+							alertStartTime := time.Now()
+							sendAlerts(cfg, checkStatus)
+							logger.WithField("alert_duration_ms", time.Since(alertStartTime).Milliseconds()).
+								Info("Alert sent")
+							checkStatus.LastAlertSent = now
+							if err := upsertCheckStatus(mongoDB, &checkStatus); err != nil {
+								logger.WithError(err).Error("Failed to update last alert time")
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//logrus.WithFields(logrus.Fields{
+	//	"total_checks":      totalChecks,
+	//	"successful_checks": successfulChecks,
+	//	"failed_checks":     totalChecks - successfulChecks,
+	//}).Info("Check run summary")
 }
 
-// upsertCheckStatus either inserts or updates a CheckStatus in MongoDB
-func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) {
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    defer cancel()
+// findCheckStatus looks up the check status in the database.
+func findCheckStatus(mongoDB *db.MongoDB, UUID string) (*models.CheckStatus, error) {
+	// Stub implementation – replace with actual MongoDB query.
+	filter := bson.M{
+		"UUID": UUID,
+	}
 
-    filter := bson.M{
-        "project":    status.Project,
-        "check_group": status.CheckGroup,
-        "check_name":  status.CheckName,
-    }
-    update := bson.M{"$set": status}
-    _, err := mongoDB.Database.Collection("check_statuses").UpdateOne(ctx, filter, update, 
-        options.Update().SetUpsert(true),
-    )
-    if err != nil {
-        logrus.Errorf("Failed to upsert status for %s: %v", status.CheckName, err)
-    }
+	var checkStatus models.CheckStatus
+	err := mongoDB.Collection("check_statuses").FindOne(context.Background(), filter).Decode(&checkStatus)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, err
+		}
+		return nil, fmt.Errorf("error finding check status: %w", err)
+	}
+
+	return &checkStatus, nil
 }
 
-func findCheckStatus(mongoDB *db.MongoDB, project, group, name string) (*models.CheckStatus, error) {
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    defer cancel()
+// upsertCheckStatus inserts or updates a CheckStatus in the database.
+func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) error {
+	// Stub implementation – replace with upsert logic.
+	filter := bson.M{
+		"UUID": status.UUID,
+	}
 
-    filter := bson.M{
-        "project":     project,
-        "check_group": group,
-        "check_name":  name,
-    }
+	update := bson.M{
+		"$set": bson.M{
+			"UUID":            status.UUID,
+			"project":         status.Project,
+			"check_name":      status.CheckName,
+			"is_healthy":      status.IsHealthy,
+			"message":         status.Message,
+			"last_run":        status.LastRun,
+			"last_alert_sent": status.LastAlertSent,
+			"updated_at":      time.Now(),
+		},
+	}
 
-    var status models.CheckStatus
-    err := mongoDB.Database.Collection("check_statuses").FindOne(ctx, filter).Decode(&status)
-    if err != nil {
-        return nil, err
-    }
-    return &status, nil
+	opts := options.Update().SetUpsert(true)
+
+	_, err := mongoDB.Collection("check_statuses").UpdateOne(
+		context.Background(),
+		filter,
+		update,
+		opts,
+	)
+	if err != nil {
+		return fmt.Errorf("error upserting check status: %w", err)
+	}
+	return nil
 }
 
+// shouldSendAlert determines if an alert should be sent.
+func shouldSendAlert(effectiveDuration time.Duration, status models.CheckStatus) bool {
+	// If check is healthy, no need to alert.
+	if status.IsHealthy {
+		return false
+	}
+	// If no previous alert was sent, we should alert.
+	if status.LastAlertSent.IsZero() {
+		return true
+	}
+	// Check if enough time (as defined by the effective duration) has passed since last alert.
+	return time.Since(status.LastAlertSent) > effectiveDuration
+}
+
+// sendAlerts dispatches alerts based on the configuration.
 func sendAlerts(cfg *config.Config, status models.CheckStatus) {
-    alertChannel := cfg.Defaults.AlertsChannel
-    // If needed, you can override at project level, etc.
-
-    if alert, ok := cfg.Alerts[alertChannel]; ok {
-        msg := "ALERT: " + status.Project + " | " + status.CheckGroup + " | " + status.CheckName + " is DOWN. " + status.Message
-        switch alert.Type {
-        case "telegram":
-            // Decide whether to send to critical_channel or noncritical_channel
-            // In real usage, you might check severity or other conditions
-            alerts.SendTelegramAlert(alert.BotToken, alert.CriticalChannel, msg)
-        case "slack":
-            // Slack alert
-            // alerts.SendSlackAlert(alert.WebhookURL, msg)
-        }
-    } else {
-        logrus.Warnf("No alert configuration found for channel: %s", alertChannel)
-    }
+	// Stub implementation – invoke alert functions, e.g., slack/telegram.
+	logrus.Infof("Sending alert for project %s, check %s", status.Project, status.CheckName)
+	// Example: alerts.SendTelegram(...), or alerts.SendSlack(...)
 }
 
-// Decide whether to send an alert. This could factor in throttling, maintenance windows, etc.
-func shouldSendAlert(cfg *config.Config, status models.CheckStatus) bool {
-    // Example: only send alert if last alert was more than X minutes ago
-    if time.Since(status.LastAlertSent) < 5*time.Minute {
-        return false
-    }
-    return true
+// mergeHeaders converts a slice of header maps ([]map[string]string) into a single map[string]string.
+func mergeHeaders(headersSlice []map[string]string) map[string]string {
+	m := make(map[string]string)
+	for _, hm := range headersSlice {
+		for k, v := range hm {
+			m[k] = v
+		}
+	}
+	return m
 }
