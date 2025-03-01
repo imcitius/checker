@@ -22,4 +22,6 @@
 #go.work
 #
 
-app
+/app
+/v2/*
+/web

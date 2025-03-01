@@ -19,6 +19,9 @@ func main() {
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
+	
+	// Set log level to debug by default
+	logrus.SetLevel(logrus.DebugLevel)
 
 	// CLI App
 	app := &cli.App{

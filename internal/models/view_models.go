@@ -10,4 +10,9 @@ type CheckViewModel struct {
 	LastExec    string // maps to LastRun
 	LastPing    string // maps to LastAlertSent
 	Enabled     bool   // maps to IsEnabled
+	UUID        string // maps to UUID
+	CheckType   string // Type of check (HTTP, TCP, etc.)
+	Message     string // Error message or status message
+	Host        string // Host being checked
+	Periodicity string // How often the check runs
 }

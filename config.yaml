@@ -7,7 +7,7 @@ db:
   protocol: mongodb
   host: cluster0.vjrpdjs.mongodb.net
   username: checker-dev
-  password: secret123
+  password: h5UB62yt8Lkku1co
   database: checker_dev
 
 alerts:
@@ -21,29 +21,31 @@ alerts:
     type: slack
     # Slack-specific fields
 
+actors:
+  
+
 projects:
   testProject:
     parameters:
-      duration: 14s
+      duration: 5s
     healthchecks:
       http:
         checks:
           Check google http:
             type: http
-            url: https://google.com/
-            answer_present: true
-      ping:
-        checks:
-          Check google ping:
-            parameters:
-              duration: 5s
-            type: ping
-            host: google.com
-      tcp:
-        checks:
-          Check google tcp:
-            parameters:
-              duration: 8s
-            type: tcp
-            host: google.com
-            port: 80
+            url: https://google.com2/
+#      ping:
+#        checks:
+#          Check google ping:
+#            parameters:
+#              duration: 5s
+#            type: ping
+#            host: google.com
+#      tcp:
+#        checks:
+#          Check google tcp:
+#            parameters:
+#              duration: 8s
+#            type: tcp
+#            host: google.com
+#            port: 80

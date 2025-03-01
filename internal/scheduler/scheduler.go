@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"checker/internal/checks"
 	"checker/internal/config"
 	"checker/internal/db"
 	"checker/internal/models"
@@ -16,35 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-// CheckerFactory creates Checker instances based on the CheckConfig.
-func CheckerFactory(cfg config.CheckConfig) checks.Checker {
-	switch cfg.Type {
-	case "http":
-		return &checks.HTTPCheck{
-			URL:                 cfg.URL,
-			Timeout:             cfg.Timeout,
-			Answer:              cfg.Answer,
-			AnswerPresent:       cfg.AnswerPresent,
-			Code:                cfg.Code,
-			Headers:             mergeHeaders(cfg.Headers),
-			SkipCheckSSL:        cfg.SkipCheckSSL,
-			SSLExpirationPeriod: cfg.SSLExpirationPeriod,
-			StopFollowRedirects: cfg.StopFollowRedirects,
-		}
-	case "tcp":
-		return &checks.TCPCheck{
-			Address: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		}
-	case "ping":
-		return &checks.PingCheck{
-			Host: cfg.Host,
-		}
-	default:
-		logrus.Warnf("Unknown check type: %s", cfg.Type)
-		return nil
-	}
-}
 
 // RunScheduler starts the health check scheduler.
 func RunScheduler(cfg *config.Config, mongoDB *db.MongoDB) {
@@ -63,7 +33,7 @@ func RunScheduler(cfg *config.Config, mongoDB *db.MongoDB) {
 	}
 }
 
-func runProjectTicker(ticker config.TTickerWithDuration, wg *sync.WaitGroup, cfg *config.Config, mongoDB *db.MongoDB) {
+func runProjectTicker(ticker config.TickerWithDuration, wg *sync.WaitGroup, cfg *config.Config, mongoDB *db.MongoDB) {
 	defer ticker.Ticker.Stop()
 	defer wg.Done()
 	logrus.Debugf("Starting project ticker with duration %s", ticker.Duration)
@@ -75,11 +45,12 @@ func runProjectTicker(ticker config.TTickerWithDuration, wg *sync.WaitGroup, cfg
 
 // performAllChecks iterates over all projects and runs each check if check duration equal to passed on func call
 func performAllChecks(duration string, cfg *config.Config, mongoDB *db.MongoDB) {
+	// logrus.Debugf("Performing all checks with duration: %s", duration)
 	totalChecks := 0
 	successfulChecks := 0
 
 	for projectName, project := range cfg.Projects {
-		logrus.WithField("project", projectName).Debug("Processing project %s checks", projectName)
+		// logrus.WithField("project", projectName).Debugf("Processing project %s checks", projectName)
 		// Iterate over each health check group
 		for groupName, group := range project.HealthChecks {
 			// Iterate over each check in the group
@@ -107,6 +78,7 @@ func performAllChecks(duration string, cfg *config.Config, mongoDB *db.MongoDB) 
 						"check":   checkName,
 						"type":    checkData.Type,
 					})
+					checkData.Logger = logger
 					currentStatus, err := findCheckStatus(mongoDB, checkData.UUID)
 					if err != nil && err != mongo.ErrNoDocuments {
 						logger.WithError(err).Error("Failed to fetch check status")
@@ -123,43 +95,46 @@ func performAllChecks(duration string, cfg *config.Config, mongoDB *db.MongoDB) 
 							}
 						}
 						if !currentStatus.IsEnabled {
-							logger.Debug("Skipping check, it is disabled")
+							//logger.Debug("Skipping check, it is disabled")
 							continue
 						}
 					}
 
 					// Create checker instance.
-					checker := CheckerFactory(checkData)
+					checker := CheckerFactory(checkData, logger)
 					if checker == nil {
 						logger.Error("Failed to create checker")
 						continue
 					}
 
-					checkStartTime := time.Now()
 					logger.Debug("Starting individual check")
 
 					// Run the check.
-					isHealthy, message := checker.Run()
-					checkDuration := time.Since(checkStartTime)
-					if isHealthy {
+					isHealthy := true
+					errMessage := ""
+					runTime := time.Now()
+
+					checkDuration, err := checker.Run()
+					if err != nil {
 						successfulChecks++
+						isHealthy = false
+						errMessage = err.Error()
 					}
 
 					logger.WithFields(logrus.Fields{
-						"is_healthy":  isHealthy,
-						"message":     message,
+						"healthy":     isHealthy,
+						"message":     errMessage,
 						"duration_ms": checkDuration.Milliseconds(),
 					}).Info("Check completed")
 
-					now := time.Now()
 					checkStatus := models.CheckStatus{
 						UUID:      checkData.UUID,
 						Project:   projectName,
 						CheckName: checkName,
 						CheckType: checkData.Type,
-						LastRun:   now,
+						LastRun:   runTime,
 						IsHealthy: isHealthy,
-						Message:   message,
+						Message:   errMessage,
 						IsEnabled: true, // assuming true if it’s not skipped
 					}
 					// Preserve ID and LastAlertSent if the record already exists.
@@ -180,7 +155,7 @@ func performAllChecks(duration string, cfg *config.Config, mongoDB *db.MongoDB) 
 							sendAlerts(cfg, checkStatus)
 							logger.WithField("alert_duration_ms", time.Since(alertStartTime).Milliseconds()).
 								Info("Alert sent")
-							checkStatus.LastAlertSent = now
+							checkStatus.LastAlertSent = runTime
 							if err := upsertCheckStatus(mongoDB, &checkStatus); err != nil {
 								logger.WithError(err).Error("Failed to update last alert time")
 							}
@@ -192,9 +167,10 @@ func performAllChecks(duration string, cfg *config.Config, mongoDB *db.MongoDB) 
 	}
 
 	//logrus.WithFields(logrus.Fields{
-	//	"total_checks":      totalChecks,
-	//	"successful_checks": successfulChecks,
-	//	"failed_checks":     totalChecks - successfulChecks,
+	//	"duration": duration,
+	//	"total":    totalChecks,
+	//	"success":  successfulChecks,
+	//	"failed":   totalChecks - successfulChecks,
 	//}).Info("Check run summary")
 }
 
@@ -219,7 +195,8 @@ func findCheckStatus(mongoDB *db.MongoDB, UUID string) (*models.CheckStatus, err
 
 // upsertCheckStatus inserts or updates a CheckStatus in the database.
 func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) error {
-	// Stub implementation – replace with upsert logic.
+	logrus.Debugf("Upserting check status for UUID: %s, Project: %s, CheckName: %s", status.UUID, status.Project, status.CheckName)
+	// Implement MongoDB upsert logic
 	filter := bson.M{
 		"UUID": status.UUID,
 	}
@@ -234,20 +211,25 @@ func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) error {
 			"last_run":        status.LastRun,
 			"last_alert_sent": status.LastAlertSent,
 			"updated_at":      time.Now(),
+			"host":            status.Host,
+			"periodicity":     status.Periodicity,
 		},
 	}
 
 	opts := options.Update().SetUpsert(true)
 
-	_, err := mongoDB.Collection("check_statuses").UpdateOne(
+	result, err := mongoDB.Collection("check_statuses").UpdateOne(
 		context.Background(),
 		filter,
 		update,
 		opts,
 	)
 	if err != nil {
+		logrus.Errorf("Error upserting check status: %v", err)
 		return fmt.Errorf("error upserting check status: %w", err)
 	}
+	logrus.Debugf("Upsert result - Modified: %d, Upserted ID: %v", 
+		result.ModifiedCount, result.UpsertedID)
 	return nil
 }
 

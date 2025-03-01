@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"os"
@@ -37,7 +38,7 @@ type Config struct {
 		// add Slack configs, etc.
 	} `yaml:"alerts"`
 
-	Tickers map[string]TTickerWithDuration
+	Tickers map[string]TickerWithDuration
 
 	Projects map[string]ProjectConfig `yaml:"projects"`
 }
@@ -102,11 +103,21 @@ type CheckConfig struct {
 		CommandChannel      string        `yaml:"command_channel,omitempty"`
 		Mentions            []string      `yaml:"mentions,omitempty"`
 	} `yaml:"parameters,omitempty"`
+
+	ActorType string `yaml:"actor_type"`
+	AlertType string `yaml:"alert_type"`
+	Logger    *logrus.Entry
 }
 
-type TTickerWithDuration struct {
+// TickerWithDuration associates a ticker with its duration string representation.
+type TickerWithDuration struct {
 	Ticker   *time.Ticker
 	Duration string
+}
+
+type ActorConfig struct {
+	Type    string `yaml:"type"`
+	Message string
 }
 
 // LoadConfig reads the YAML file specified by filename and returns a pointer
@@ -213,7 +224,7 @@ func (cfg *Config) setDefaults() {
 					check.Name = checkName
 				}
 				if check.UUID == "" {
-					check.UUID = genUUID(check.Name, hostOrUrl(check))
+					check.UUID = generateUUID(check.Name, getHostOrURL(check))
 				}
 				group.Checks[checkName] = check
 			}
@@ -223,14 +234,14 @@ func (cfg *Config) setDefaults() {
 	}
 }
 
-// create function getTickers that returns a map of all configured tickers based on the configuration.
+// setTickers creates tickers for all configured durations in the configuration.
 func (cfg *Config) setTickers() {
 
-	tickers := make(map[string]TTickerWithDuration)
+	tickers := make(map[string]TickerWithDuration)
 	// Create a default ticker based on the default duration.
 	defaultDuration := cfg.Defaults.Duration
 
-	tickers[cfg.Defaults.Duration.String()] = TTickerWithDuration{
+	tickers[cfg.Defaults.Duration.String()] = TickerWithDuration{
 		time.NewTicker(defaultDuration),
 		defaultDuration.String(),
 	}
@@ -238,21 +249,21 @@ func (cfg *Config) setTickers() {
 	// Iterate over projects and health checks to create tickers for each duration.
 	for _, project := range cfg.Projects {
 		if project.Parameters.Duration > 0 {
-			tickers[project.Parameters.Duration.String()] = TTickerWithDuration{
+			tickers[project.Parameters.Duration.String()] = TickerWithDuration{
 				time.NewTicker(project.Parameters.Duration),
 				project.Parameters.Duration.String(),
 			}
 		}
 		for _, group := range project.HealthChecks {
 			if group.Parameters.Duration > 0 {
-				tickers[group.Parameters.Duration.String()] = TTickerWithDuration{
+				tickers[group.Parameters.Duration.String()] = TickerWithDuration{
 					time.NewTicker(group.Parameters.Duration),
 					group.Parameters.Duration.String(),
 				}
 			}
 			for _, check := range group.Checks {
 				if check.Parameters.Duration > 0 {
-					tickers[check.Parameters.Duration.String()] = TTickerWithDuration{
+					tickers[check.Parameters.Duration.String()] = TickerWithDuration{
 						time.NewTicker(check.Parameters.Duration),
 						check.Parameters.Duration.String(),
 					}
@@ -263,7 +274,8 @@ func (cfg *Config) setTickers() {
 	cfg.Tickers = tickers
 }
 
-func genUUID(name ...string) string {
+// generateUUID creates a deterministic UUID based on the given name components.
+func generateUUID(name ...string) string {
 	var err error
 
 	ns, err := uuid.Parse("00000000-0000-0000-0000-000000000000")
@@ -275,7 +287,8 @@ func genUUID(name ...string) string {
 	return u2.String()
 }
 
-func hostOrUrl(c CheckConfig) string {
+// getHostOrURL returns the URL if set, otherwise returns the host address.
+func getHostOrURL(c CheckConfig) string {
 	if c.URL != "" {
 		return c.URL
 	}

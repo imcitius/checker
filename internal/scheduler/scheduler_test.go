@@ -3,25 +3,25 @@ package scheduler
 import (
 	"testing"
 
-	"checker/internal/config"
 	"checker/internal/checks"
+	"checker/internal/config"
 )
 
 // TestCheckerFactory_Http verifies that CheckerFactory returns an HTTPCheck for a valid HTTP configuration.
 func TestCheckerFactory_Http(t *testing.T) {
 	cfg := config.CheckConfig{
-		Type:          "http",
-		URL:           "https://example.com",
-		Timeout:       "5s",
-		Answer:        "ok",
-		AnswerPresent: true,
-		Code:          []int{200},
-		Headers:       []map[string]string{{"Content-Type": "application/json"}},
+		Type:                "http",
+		URL:                 "https://example.com",
+		Timeout:             "5s",
+		Answer:              "ok",
+		AnswerPresent:       true,
+		Code:                []int{200},
+		Headers:             []map[string]string{{"Content-Type": "application/json"}},
 		SkipCheckSSL:        false,
 		SSLExpirationPeriod: "720h",
 		StopFollowRedirects: false,
 	}
-	checker := CheckerFactory(cfg)
+	checker := CheckerFactory(cfg, nil)
 	if checker == nil {
 		t.Fatal("CheckerFactory returned nil for HTTP check")
 	}
@@ -37,7 +37,7 @@ func TestCheckerFactory_Unknown(t *testing.T) {
 	cfg := config.CheckConfig{
 		Type: "unsupported",
 	}
-	checker := CheckerFactory(cfg)
+	checker := CheckerFactory(cfg, nil)
 	if checker != nil {
 		t.Errorf("Expected nil for unknown check type, got %T", checker)
 	}
@@ -53,4 +53,4 @@ func TestMergeHeaders(t *testing.T) {
 	if merged["A"] != "ValueA" || merged["B"] != "ValueB" {
 		t.Errorf("mergeHeaders failed, got: %v", merged)
 	}
-} 
+}

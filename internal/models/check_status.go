@@ -19,4 +19,6 @@ type CheckStatus struct {
 	Message       string             `bson:"message" json:"message"`
 	IsEnabled     bool               `bson:"is_enabled" json:"is_enabled"`
 	LastAlertSent time.Time          `bson:"last_alert_sent" json:"last_alert_sent"`
+	Host          string             `bson:"host" json:"host"`
+	Periodicity   string             `bson:"periodicity" json:"periodicity"`
 }

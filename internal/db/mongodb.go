@@ -21,13 +21,21 @@ func NewMongoDB(cfg *config.Config) (*MongoDB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	dbPassword := cfg.DB.Password
-	pass, ok := os.LookupEnv("CHECKER_DB_PASSWORD")
-	if ok {
-		dbPassword = pass
+	var mongoURI string
+	if cfg.DB.Host == "localhost:27017" || cfg.DB.Host == "127.0.0.1:27017" {
+		// Local MongoDB connection without authentication
+		mongoURI = "mongodb://" + cfg.DB.Host
+		logrus.Debug("Using local MongoDB connection without authentication")
+	} else {
+		// Remote MongoDB connection with authentication
+		dbPassword := cfg.DB.Password
+		pass, ok := os.LookupEnv("CHECKER_DB_PASSWORD")
+		if ok {
+			dbPassword = pass
+		}
+		mongoURI = "mongodb+srv://" + cfg.DB.Username + ":" + dbPassword + "@" + cfg.DB.Host + "/" + cfg.DB.Database + "?retryWrites=true&w=majority"
+		logrus.Debug("Using remote MongoDB connection with authentication")
 	}
-
-	mongoURI := "mongodb+srv://" + cfg.DB.Username + ":" + dbPassword + "@" + cfg.DB.Host + "/" + cfg.DB.Database + "?retryWrites=true&w=majority"
 	clientOpts := options.Client().ApplyURI(mongoURI)
 
 	client, err := mongo.Connect(ctx, clientOpts)
