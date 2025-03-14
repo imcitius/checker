@@ -24,4 +24,4 @@
 
 /app
 /v2/*
-/web
+.DS_store

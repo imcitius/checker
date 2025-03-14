@@ -2,32 +2,174 @@
 <html>
 <head>
     <title>Health Checks Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css" type="text/css" onerror="console.error('Failed to load external stylesheet.')">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    
+    <!-- CSS loading check -->
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const styles = document.styleSheets;
+                let externalStylesLoaded = false;
+                for (let i = 0; i < styles.length; i++) {
+                    try {
+                        // Check if this is our external stylesheet
+                        if (styles[i].href && styles[i].href.includes('styles.css')) {
+                            // Try to access rules to verify it loaded properly
+                            const rules = styles[i].cssRules || styles[i].rules;
+                            if (rules && rules.length > 0) {
+                                externalStylesLoaded = true;
+                                console.log('External CSS successfully loaded with', rules.length, 'rules');
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error checking stylesheet:', e);
+                    }
+                }
+            }, 1000);
+        });
+    </script>
 </head>
 <body>
-    <div class="container">
-        <h1>Health Checks Dashboard</h1>
-        <div class="checks-grid">
-            {{range .checks}}
-            <div class="check-card {{if .LastResult}}success{{else}}failure{{end}}">
-                <div class="check-header">
-                    <h2>{{.Name}}</h2>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>Health Checks Dashboard</h1>
+            <div id="notification-area" class="notification-area"></div>
+            <div class="dashboard-controls">
+                <div class="search-container">
+                    <input type="text" id="search-input" placeholder="Search checks..." />
+                    <select id="filter-status">
+                        <option value="all">All statuses</option>
+                        <option value="healthy">Healthy only</option>
+                        <option value="unhealthy">Unhealthy only</option>
+                    </select>
+                    <select id="filter-project">
+                        <option value="all">All projects</option>
+                    </select>
+                    <select id="filter-type">
+                        <option value="all">All types</option>
+                    </select>
+                </div>
+                <!-- View controls removed in favor of expandable rows -->
+            </div>
+        </header>
+        
+        <div id="connection-status" class="connection-status">Connecting...</div>
+        <div class="debug-controls">
+            <button id="test-websocket" class="debug-button">Test WebSocket Connection</button>
+            <span id="test-result"></span>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="stats-summary">
+            <div class="stat-card" id="total-checks">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Total Checks</div>
+            </div>
+            <div class="stat-card" id="healthy-checks">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Healthy</div>
+            </div>
+            <div class="stat-card" id="unhealthy-checks">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Unhealthy</div>
+            </div>
+            <div class="stat-card" id="disabled-checks">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Disabled</div>
+            </div>
+        </div>
+
+        <h2>Checks</h2>
+        <div id="checks-list"></div>
+
+        <!-- Checks List with Expandable Rows -->
+        <div id="checks-container">
+            <table id="checks-table" class="checks-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Project</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Last Check</th>
+                        <th>Enabled</th>
+                    </tr>
+                </thead>
+                <tbody id="checks-list">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Templates for JavaScript rendering -->
+    <template id="expandable-row-template">
+        <tr class="check-row">
+            <td class="check-name-cell">
+                <div class="check-name-container">
+                    <span class="check-name"></span>
+                    <span class="expand-icon">▼</span>
+                </div>
+            </td>
+            <td class="check-project"></td>
+            <td class="check-type"></td>
+            <td class="check-status-cell">
+                <span class="check-status-indicator"></span>
+                <span class="check-status-text"></span>
+            </td>
+            <td class="check-last-exec"></td>
+            <td class="check-enabled-cell">
+                <label class="switch">
+                    <input type="checkbox" class="check-toggle">
+                    <span class="slider"></span>
+                </label>
+            </td>
+        </tr>
+        <tr class="check-details-row">
+            <td colspan="6" class="check-details-cell">
+                <div class="check-details-container">
+                    <div class="check-details-section">
+                        <div class="check-detail-item">
+                            <span class="check-detail-label">Host:</span>
+                            <span class="check-host"><i>🖥️</i><span class="host-value"></span></span>
+                        </div>
+                        <div class="check-detail-item">
+                            <span class="check-detail-label">Frequency:</span>
+                            <span class="check-periodicity"><i>🔄</i><span class="periodicity-value"></span></span>
+                        </div>
+                    </div>
+                    <div class="check-message"></div>
+                </div>
+            </td>
+        </tr>
+    </template>
+    
+    <template id="card-template">
+        <div class="check-card">
+            <div class="check-header">
+                <h2 class="check-name"></h2>
+                <div class="check-control">
+                    <span class="check-status"></span>
                     <label class="switch">
-                        <input type="checkbox" {{if .Enabled}}checked{{end}}
-                               onchange="toggleCheck('{{.ID}}', this.checked)">
+                        <input type="checkbox" class="check-toggle">
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="check-details">
-                    <p><strong>Project:</strong> {{.Project}}</p>
-                    <p><strong>Healthcheck:</strong> {{.Healthcheck}}</p>
-                    <p><strong>Last Execution:</strong> {{.LastExec}}</p>
-                    <p><strong>Last Ping:</strong> {{.LastPing}}</p>
-                </div>
             </div>
-            {{end}}
+            <div class="check-details">
+                <p><strong>Project:</strong> <span class="check-project"></span></p>
+                <p><strong>Type:</strong> <span class="check-type"></span></p>
+                <p><strong>Group:</strong> <span class="check-group"></span></p>
+                <p><strong>Last Check:</strong> <span class="check-last-exec"></span></p>
+                <p><strong>Last Alert:</strong> <span class="check-last-ping"></span></p>
+                <div class="check-message"></div>
+                <p class="check-uuid"></p>
+            </div>
         </div>
-    </div>
+    </template>
+
     <script src="/static/script.js"></script>
 </body>
-</html> 
+</html>

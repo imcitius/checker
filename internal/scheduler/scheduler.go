@@ -95,9 +95,25 @@ func performAllChecks(duration string, cfg *config.Config, mongoDB *db.MongoDB) 
 							}
 						}
 						if !currentStatus.IsEnabled {
-							//logger.Debug("Skipping check, it is disabled")
+							logger.WithField("is_enabled", currentStatus.IsEnabled).Debug("Skipping check, it is disabled")
 							continue
+						} else {
+							logger.WithField("is_enabled", currentStatus.IsEnabled).Debug("Check is enabled, proceeding with execution")
 						}
+					} else {
+						// No existing status found, create a new one with default enabled state
+						logger.Debug("No existing status found, creating new status with enabled=true")
+						currentStatus = &models.CheckStatus{
+							UUID:        checkData.UUID,
+							Project:     projectName,
+							CheckGroup:  groupName,
+							CheckName:   checkName,
+							CheckType:   checkData.Type,
+							IsEnabled:   true, // Default to enabled for new checks
+							Host:        checkData.Host,
+							Periodicity: duration,
+						}
+						// Don't need to save it here, it will be saved after execution
 					}
 
 					// Create checker instance.
@@ -128,19 +144,23 @@ func performAllChecks(duration string, cfg *config.Config, mongoDB *db.MongoDB) 
 					}).Info("Check completed")
 
 					checkStatus := models.CheckStatus{
-						UUID:      checkData.UUID,
-						Project:   projectName,
-						CheckName: checkName,
-						CheckType: checkData.Type,
-						LastRun:   runTime,
-						IsHealthy: isHealthy,
-						Message:   errMessage,
-						IsEnabled: true, // assuming true if it’s not skipped
+						UUID:        checkData.UUID,
+						Project:     projectName,
+						CheckGroup:  groupName,
+						CheckName:   checkName,
+						CheckType:   checkData.Type,
+						LastRun:     runTime,
+						IsHealthy:   isHealthy,
+						Message:     errMessage,
+						IsEnabled:   true, // Default to enabled for new checks
+						Host:        checkData.Host,
+						Periodicity: duration,
 					}
-					// Preserve ID and LastAlertSent if the record already exists.
+					// Preserve ID, IsEnabled, and LastAlertSent if the record already exists.
 					if currentStatus != nil {
 						checkStatus.ID = currentStatus.ID
 						checkStatus.LastAlertSent = currentStatus.LastAlertSent
+						checkStatus.IsEnabled = currentStatus.IsEnabled // Preserve the existing enabled status
 					}
 
 					// Update the status in the database.
@@ -195,7 +215,8 @@ func findCheckStatus(mongoDB *db.MongoDB, UUID string) (*models.CheckStatus, err
 
 // upsertCheckStatus inserts or updates a CheckStatus in the database.
 func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) error {
-	logrus.Debugf("Upserting check status for UUID: %s, Project: %s, CheckName: %s", status.UUID, status.Project, status.CheckName)
+	logrus.Debugf("Upserting check status for UUID: %s, Project: %s, CheckName: %s, IsEnabled: %v",
+		status.UUID, status.Project, status.CheckName, status.IsEnabled)
 	// Implement MongoDB upsert logic
 	filter := bson.M{
 		"UUID": status.UUID,
@@ -206,6 +227,8 @@ func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) error {
 			"UUID":            status.UUID,
 			"project":         status.Project,
 			"check_name":      status.CheckName,
+			"check_group":     status.CheckGroup,
+			"check_type":      status.CheckType,
 			"is_healthy":      status.IsHealthy,
 			"message":         status.Message,
 			"last_run":        status.LastRun,
@@ -213,6 +236,7 @@ func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) error {
 			"updated_at":      time.Now(),
 			"host":            status.Host,
 			"periodicity":     status.Periodicity,
+			"is_enabled":      status.IsEnabled, // Ensure is_enabled is preserved
 		},
 	}
 
@@ -228,7 +252,7 @@ func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) error {
 		logrus.Errorf("Error upserting check status: %v", err)
 		return fmt.Errorf("error upserting check status: %w", err)
 	}
-	logrus.Debugf("Upsert result - Modified: %d, Upserted ID: %v", 
+	logrus.Debugf("Upsert result - Modified: %d, Upserted ID: %v",
 		result.ModifiedCount, result.UpsertedID)
 	return nil
 }
