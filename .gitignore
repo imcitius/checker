@@ -7,3 +7,4 @@ kubeconfig.json
 build/*
 images-report.*
 old
+testconfig.*yaml
