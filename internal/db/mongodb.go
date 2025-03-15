@@ -12,6 +12,7 @@ import (
 	"checker/internal/config"
 )
 
+// MongoDB provides methods to interact with MongoDB.
 type MongoDB struct {
 	Client   *mongo.Client
 	Database *mongo.Database
@@ -54,4 +55,14 @@ func NewMongoDB(cfg *config.Config) (*MongoDB, error) {
 // Collection returns a handle for a Mongo collection.
 func (mdb *MongoDB) Collection(name string) *mongo.Collection {
 	return mdb.Database.Collection(name)
+}
+
+// Close disconnects from MongoDB gracefully
+func (m *MongoDB) Close(ctx context.Context) error {
+	if m.Client == nil {
+		return nil
+	}
+
+	logrus.Info("Closing MongoDB connection")
+	return m.Client.Disconnect(ctx)
 }

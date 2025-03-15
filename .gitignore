@@ -25,3 +25,4 @@
 /app
 /v2/*
 .DS_store
+config.yaml

@@ -3,9 +3,10 @@ package checks
 import (
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // TCPCheck represents a TCP health check.
@@ -17,31 +18,43 @@ type TCPCheck struct {
 }
 
 // Run executes the TCP health check.
-func (tc *TCPCheck) Run() (time.Duration, error) {
+func (check *TCPCheck) Run() (time.Duration, error) {
 	var (
 		errorHeader, errorMessage string
 		start                     = time.Now()
 	)
 
-	timeOut, err := time.ParseDuration(tc.Timeout)
+	// Parse timeout duration first to validate it
+	timeout, err := time.ParseDuration(check.Timeout)
 	if err != nil {
-		return time.Now().Sub(start), fmt.Errorf(ErrCannotParseTimeout, tc.Timeout)
+		return time.Since(start), fmt.Errorf("invalid timeout value: %v", err)
+	}
+	if timeout <= 0 {
+		return time.Since(start), fmt.Errorf("timeout must be positive")
 	}
 
-	if tc.Host == "" {
+	if check.Host == "" {
 		errorMessage = errorHeader + ErrEmptyHost
-		return time.Now().Sub(start), errors.New(errorMessage)
+		return time.Since(start), errors.New(errorMessage)
 	}
 
-	if tc.Port == 0 {
+	if check.Port == 0 {
 		errorMessage = errorHeader + ErrEmptyPort
-		return time.Now().Sub(start), errors.New(errorMessage)
+		return time.Since(start), errors.New(errorMessage)
 	}
 
-	conn, err := net.DialTimeout("tcp", tc.Host, timeOut)
-	if err != nil {
-		return time.Now().Sub(start), err
+	// Ensure logger is initialized
+	if check.Logger == nil {
+		check.Logger = logrus.WithField("check", "tcp")
 	}
-	conn.Close()
-	return time.Now().Sub(start), nil
+
+	hostPort := fmt.Sprintf("%s:%d", check.Host, check.Port)
+	conn, err := net.DialTimeout("tcp", hostPort, timeout)
+	if err != nil {
+		check.Logger.WithError(err).Debugf("TCP check %s, err: %+v", hostPort, err)
+		// Return the original error to preserve timeout information
+		return 0, err
+	}
+	defer conn.Close()
+	return time.Since(start), nil
 }

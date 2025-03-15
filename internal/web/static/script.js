@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add debug attribute with check data
                 mainRow.setAttribute('data-debug', JSON.stringify({
                     name: check.Name || check.name,
-                    uuid: uuid,
+                    UUID: uuid,
                     enabled: enabled
                 }));
                 

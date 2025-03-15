@@ -35,9 +35,9 @@ func main() {
 	defer cancel()
 
 	// Construct MongoDB URI from config
-	uri := fmt.Sprintf("mongodb+srv://%s:%s@%s/?retryWrites=true&w=majority", 
-		cfg.DB.Username, 
-		cfg.DB.Password, 
+	uri := fmt.Sprintf("mongodb+srv://%s:%s@%s/?retryWrites=true&w=majority",
+		cfg.DB.Username,
+		cfg.DB.Password,
 		cfg.DB.Host)
 
 	fmt.Printf("Connecting to MongoDB at %s...", cfg.DB.Host)
@@ -58,9 +58,9 @@ func main() {
 	// Get the database
 	database := client.Database(cfg.DB.Database)
 	fmt.Printf("Using database: %s\n", cfg.DB.Database)
-	
-	// Count documents in check_statuses collection
-	count, err := database.Collection("check_statuses").CountDocuments(ctx, map[string]interface{}{})
+
+	// Count documents in check_definitions collection
+	count, err := database.Collection("check_definitions").CountDocuments(ctx, map[string]interface{}{})
 	if err != nil {
 		log.Fatalf("Failed to count documents: %v", err)
 	}

@@ -2,32 +2,49 @@
 <html>
 <head>
     <title>Health Checks Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css" type="text/css" onerror="console.error('Failed to load external stylesheet.')">
+    <link rel="stylesheet" href="/static/styles.css" type="text/css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
     
-    <!-- CSS loading check -->
+    <!-- Simple resource loading error handler -->
     <script>
-        window.addEventListener('load', function() {
-            setTimeout(function() {
-                const styles = document.styleSheets;
-                let externalStylesLoaded = false;
-                for (let i = 0; i < styles.length; i++) {
-                    try {
-                        // Check if this is our external stylesheet
-                        if (styles[i].href && styles[i].href.includes('styles.css')) {
-                            // Try to access rules to verify it loaded properly
-                            const rules = styles[i].cssRules || styles[i].rules;
-                            if (rules && rules.length > 0) {
-                                externalStylesLoaded = true;
-                                console.log('External CSS successfully loaded with', rules.length, 'rules');
-                            }
+        // Track resource loading
+        window.resourcesLoaded = {
+            css: false,
+            js: false
+        };
+        
+        // Function to check if resources are loaded
+        function checkResources() {
+            const styles = document.styleSheets;
+            // Check if external stylesheet loaded
+            for (let i = 0; i < styles.length; i++) {
+                try {
+                    if (styles[i].href && styles[i].href.includes('styles.css')) {
+                        const rules = styles[i].cssRules || styles[i].rules;
+                        if (rules && rules.length > 0) {
+                            window.resourcesLoaded.css = true;
+                            break;
                         }
-                    } catch (e) {
-                        console.error('Error checking stylesheet:', e);
                     }
+                } catch (e) {
+                    console.error('Error checking stylesheet:', e);
                 }
-            }, 1000);
+            }
+            
+            // Update notification if resources failed to load
+            if (!window.resourcesLoaded.css || !window.resourcesLoaded.js) {
+                const notification = document.getElementById('notification-area');
+                if (notification) {
+                    notification.className = 'notification-area warning';
+                    notification.textContent = 'Some resources failed to load. The application may not function correctly.';
+                }
+            }
+        }
+        
+        // Check resources after page load
+        window.addEventListener('load', function() {
+            setTimeout(checkResources, 1000);
         });
     </script>
 </head>
@@ -51,12 +68,16 @@
                         <option value="all">All types</option>
                     </select>
                 </div>
-                <!-- View controls removed in favor of expandable rows -->
+                <div class="view-controls">
+                    <a href="/check-definitions" class="btn btn-primary" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 8px 15px; border-radius: 4px; display: inline-block;">Manage Checks</a>
+                </div>
             </div>
         </header>
         
         <div id="connection-status" class="connection-status">Connecting...</div>
-        <div class="debug-controls">
+        
+        <!-- Debug controls - only shown in development mode -->
+        <div id="debug-controls" class="debug-controls" style="display: none;">
             <button id="test-websocket" class="debug-button">Test WebSocket Connection</button>
             <span id="test-result"></span>
         </div>
@@ -170,6 +191,27 @@
         </div>
     </template>
 
-    <script src="/static/script.js"></script>
+    <script src="/static/script.js" onerror="console.error('Failed to load script.js'); window.resourcesLoaded.js = false;"></script>
+    <script>
+        // Flag JavaScript as loaded
+        window.resourcesLoaded.js = true;
+        
+        // Show debug controls only in development environments
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for development mode indicators
+            const hostname = window.location.hostname;
+            const debugMode = hostname === 'localhost' || 
+                             hostname === '127.0.0.1' || 
+                             hostname.includes('.local') ||
+                             window.location.port !== '';
+            
+            if (debugMode) {
+                const debugControls = document.getElementById('debug-controls');
+                if (debugControls) {
+                    debugControls.style.display = 'flex';
+                }
+            }
+        });
+    </script>
 </body>
 </html>

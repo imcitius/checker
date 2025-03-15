@@ -64,48 +64,49 @@ type HealthCheckConfig struct {
 
 // CheckConfig represents an individual check's configuration
 type CheckConfig struct {
-	Type          string              `yaml:"type"`
-	UUID          string              `yaml:"uuid,omitempty"`
-	Name          string              `yaml:"name,omitempty"`
-	URL           string              `yaml:"url,omitempty"`
-	Host          string              `yaml:"host,omitempty"`
-	Timeout       string              `yaml:"timeout" env-default:"3s"`
-	Port          int                 `yaml:"port,omitempty"`
-	Hash          string              `yaml:"hash,omitempty"`
-	Size          int64               `yaml:"size,omitempty"`
-	Attempts      int                 `yaml:"attempts,omitempty"`
-	Mode          string              `yaml:"mode,omitempty"`
-	Count         int                 `yaml:"count" env-default:"3"`
-	AllowFails    int                 `yaml:"allow_fails"`
-	Code          []int               `yaml:"code,omitempty"`
-	Answer        string              `yaml:"answer,omitempty"`
-	AnswerPresent bool                `yaml:"answer_present,omitempty"`
-	Headers       []map[string]string `yaml:"headers,omitempty"`
+	Type          string
+	UUID          string
+	Name          string
+	Description   string
+	URL           string
+	Host          string
+	Timeout       string
+	Port          int
+	Hash          string
+	Size          int64
+	Attempts      int
+	Mode          string
+	Count         int
+	AllowFails    int
+	Code          []int
+	Answer        string
+	AnswerPresent bool
+	Headers       []map[string]string
 	Auth          struct {
-		User     string `yaml:"user,omitempty"`
-		Password string `yaml:"password,omitempty"`
-	} `yaml:"auth,omitempty"`
-	SkipCheckSSL        bool          `yaml:"skip_check_ssl" env-default:"false"`
-	StopFollowRedirects bool          `yaml:"stop_follow_redirects" env-default:"false"`
-	SSLExpirationPeriod string        `yaml:"ssl_expiration_period,omitempty"`
-	Cookies             []http.Cookie `yaml:"cookies,omitempty"`
-	DebugLevel          string        `yaml:"debug_level,omitempty"`
+		User     string
+		Password string
+	}
+	SkipCheckSSL        bool
+	StopFollowRedirects bool
+	SSLExpirationPeriod string
+	Cookies             []http.Cookie
+	DebugLevel          string
 	Parameters          struct {
-		Mode                string        `yaml:"mode" env-default:"loud"`
-		Duration            time.Duration `yaml:"duration" env-default:"60s"`
-		Timeout             string        `yaml:"timeout" env-default:"3s"`
-		SSLExpirationPeriod string        `yaml:"ssl_expiration_period" env-default:"360h"`
-		MinHealth           int           `yaml:"min_health" env-default:"1"`
-		AllowFails          int           `yaml:"allow_fails" env-default:"0"`
-		AlerterName         string        `yaml:"alerter,omitempty"`
-		AlertChannel        string        `yaml:"noncrit_channel,omitempty"`
-		CritAlertChannel    string        `yaml:"crit_channel,omitempty"`
-		CommandChannel      string        `yaml:"command_channel,omitempty"`
-		Mentions            []string      `yaml:"mentions,omitempty"`
+		Mode                string
+		Duration            time.Duration
+		Timeout             string
+		SSLExpirationPeriod string
+		MinHealth           int
+		AllowFails          int
+		AlerterName         string
+		AlertChannel        string
+		CritAlertChannel    string
+		CommandChannel      string
+		Mentions            []string
 	} `yaml:"parameters,omitempty"`
 
-	ActorType string `yaml:"actor_type"`
-	AlertType string `yaml:"alert_type"`
+	ActorType string
+	AlertType string
 	Logger    *logrus.Entry
 }
 

@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Check Definitions Management</title>
+    <link rel="stylesheet" href="/static/styles.css" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <style>
+        /* Additional styles for check management page */
+        .definition-form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            margin-bottom: 15px;
+        }
+
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-row input,
+        .form-row select,
+        .form-row textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .form-row input.error,
+        .form-row select.error,
+        .form-row textarea.error {
+            border-color: #f44336;
+            background-color: rgba(244, 67, 54, 0.05);
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .form-row textarea {
+            min-height: 80px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Type-specific fields */
+        .type-specific-fields {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        /* Definition table */
+        .definitions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .definitions-table th,
+        .definitions-table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .definitions-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .definition-row:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+            cursor: pointer;
+        }
+
+        .definition-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .definition-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-http {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .badge-tcp {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .badge-icmp {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .badge-passive {
+            background-color: #9E9E9E;
+            color: white;
+        }
+
+        .tab-container {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom-color: #2196F3;
+            font-weight: 500;
+            color: #2196F3;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>Check Definitions Management</h1>
+            <div id="notification-area" class="notification-area"></div>
+            <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+        </header>
+
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" data-tab="list">Check Definitions List</div>
+                <div class="tab" data-tab="create">Create New Check</div>
+            </div>
+
+            <div class="tab-content active" id="list-tab">
+                <div class="search-container">
+                    <input type="text" id="search-definitions" placeholder="Search definitions..." />
+                    <select id="filter-def-project">
+                        <option value="all">All projects</option>
+                    </select>
+                    <select id="filter-def-type">
+                        <option value="all">All types</option>
+                        <option value="http">HTTP</option>
+                        <option value="tcp">TCP</option>
+                        <option value="icmp">ICMP</option>
+                        <option value="passive">Passive</option>
+                    </select>
+                </div>
+
+                <div class="definitions-container">
+                    <table class="definitions-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Project</th>
+                                <th>Type</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="definitions-list">
+                            <!-- Will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="create-tab">
+                <form id="check-definition-form" class="definition-form">
+                    <h2>Create New Check Definition</h2>
+
+                    <input type="hidden" id="def-id" name="id" value="">
+                    <input type="hidden" id="def-uuid" name="uuid" value="">
+
+                    <div class="form-grid">
+                        <div class="form-row">
+                            <label for="def-name">Check Name*</label>
+                            <input type="text" id="def-name" name="name" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="def-project">Project*</label>
+                            <input type="text" id="def-project" name="project" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="def-group">Group Name</label>
+                            <input type="text" id="def-group" name="group_name">
+                        </div>
+
+                        <div class="form-row">
+                            <label for="def-type">Check Type*</label>
+                            <select id="def-type" name="type" required>
+                                <option value="http">HTTP</option>
+                                <option value="tcp">TCP</option>
+                                <option value="icmp">ICMP</option>
+                                <option value="passive">Passive</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="def-duration">Duration (frequency)*</label>
+                            <input type="text" id="def-duration" name="duration" required
+                                placeholder="e.g. 1m, 5m, 1h, 24h">
+                            <small class="help-text">Enter a Go duration string (e.g., "1m", "5m", "15m", "30m", "1h",
+                                "6h", "12h", "24h")</small>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="def-enabled">Enabled</label>
+                            <select id="def-enabled" name="enabled">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="def-description">Description</label>
+                        <textarea id="def-description" name="description"></textarea>
+                    </div>
+
+                    <!-- Type-specific fields -->
+                    <div class="type-specific-fields">
+                        <h3>Check Configuration</h3>
+
+                        <!-- HTTP fields -->
+                        <div id="http-fields">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="http-url">URL*</label>
+                                    <input type="url" id="http-url" name="url">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="http-timeout">Timeout</label>
+                                    <input type="text" id="http-timeout" name="timeout" placeholder="5s">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="http-answer">Expected Text in Response</label>
+                                    <input type="text" id="http-answer" name="answer">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="http-codes">Expected Status Codes</label>
+                                    <input type="text" id="http-codes" name="codes" placeholder="200,201,204">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="http-skip-ssl">Skip SSL Verification</label>
+                                    <select id="http-skip-ssl" name="skip_check_ssl">
+                                        <option value="false">No</option>
+                                        <option value="true">Yes</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="http-stop-redirects">Stop Following Redirects</label>
+                                    <select id="http-stop-redirects" name="stop_follow_redirects">
+                                        <option value="false">No</option>
+                                        <option value="true">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TCP fields -->
+                        <div id="tcp-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="tcp-host">Host*</label>
+                                    <input type="text" id="tcp-host" name="host">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="tcp-port">Port*</label>
+                                    <input type="number" id="tcp-port" name="port" min="1" max="65535">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="tcp-timeout">Timeout</label>
+                                    <input type="text" id="tcp-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ICMP fields -->
+                        <div id="icmp-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="icmp-host">Host*</label>
+                                    <input type="text" id="icmp-host" name="host">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="icmp-count">Count</label>
+                                    <input type="number" id="icmp-count" name="count" min="1" max="10" value="3">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="icmp-timeout">Timeout</label>
+                                    <input type="text" id="icmp-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Passive check fields -->
+                        <div id="passive-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="passive-timeout">Timeout</label>
+                                    <input type="text" id="passive-timeout" name="timeout" placeholder="5m">
+                                    <small class="help-text">Maximum time to wait for a ping before marking the check as
+                                        unhealthy</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alert Configuration -->
+                    <div class="type-specific-fields">
+                        <h3>Alert Configuration</h3>
+
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="actor-type">Alert Type</label>
+                                <select id="actor-type" name="actor_type">
+                                    <option value="">No alerts</option>
+                                    <option value="log">Log only</option>
+                                    <option value="alert">Send alerts</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row alert-fields" style="display: none;">
+                                <label for="alert-type">Alert Destination</label>
+                                <select id="alert-type" name="alert_type">
+                                    <option value="telegram">Telegram</option>
+                                    <option value="slack">Slack</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row alert-fields" style="display: none;">
+                                <label for="alert-destination">Destination</label>
+                                <input type="text" id="alert-destination" name="alert_destination"
+                                    placeholder="Chat ID or webhook URL">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Check Definition</button>
+                        <button type="button" id="cancel-form" class="btn btn-secondary">Cancel</button>
+                        <button type="button" id="delete-definition" class="btn btn-danger"
+                            style="display: none;">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Show/hide notification
+            function showNotification(message, type = 'info') {
+                const notificationArea = document.getElementById('notification-area');
+                notificationArea.textContent = message;
+                notificationArea.className = `notification-area ${type}`;
+                notificationArea.style.display = 'block';
+
+                // Auto-hide after 5 seconds for non-error messages
+                if (type !== 'error') {
+                    setTimeout(() => {
+                        notificationArea.style.display = 'none';
+                    }, 5000);
+                }
+            }
+
+            // Tab switching
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    // Remove active class from all tabs and contents
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+
+                    // Show corresponding content
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+
+            // Type selection changes visible fields
+            const typeSelect = document.getElementById('def-type');
+            typeSelect.addEventListener('change', function () {
+                // Hide all type-specific fields
+                document.getElementById('http-fields').style.display = 'none';
+                document.getElementById('tcp-fields').style.display = 'none';
+                document.getElementById('icmp-fields').style.display = 'none';
+                document.getElementById('passive-fields').style.display = 'none';
+
+                // Show fields for selected type
+                const selectedType = this.value;
+                document.getElementById(`${selectedType}-fields`).style.display = 'block';
+            });
+
+            // Actor type changes
+            const actorTypeSelect = document.getElementById('actor-type');
+            actorTypeSelect.addEventListener('change', function () {
+                const alertFields = document.querySelectorAll('.alert-fields');
+                if (this.value === 'alert') {
+                    alertFields.forEach(field => field.style.display = 'block');
+                } else {
+                    alertFields.forEach(field => field.style.display = 'none');
+                }
+            });
+
+            // Form submit handler
+            const form = document.getElementById('check-definition-form');
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                // Form validation
+                let isValid = true;
+
+                // Validate duration field - should match Go duration format
+                const durationField = document.getElementById('def-duration');
+                const durationPattern = /^(\d+)(ns|us|µs|ms|s|m|h)$/;
+                if (!durationPattern.test(durationField.value)) {
+                    showNotification('Invalid duration format. Please use a valid Go duration string (e.g., "1m", "5m", "1h", "24h")', 'error');
+                    durationField.classList.add('error');
+                    isValid = false;
+                } else {
+                    durationField.classList.remove('error');
+                }
+
+                if (!isValid) {
+                    return;
+                }
+
+                // Collect form data
+                const formData = new FormData(form);
+                const checkDef = {};
+
+                for (const [key, value] of formData.entries()) {
+                    // Skip empty values and fields not relevant to the current check type
+                    if (value === '') continue;
+
+                    // Handle special cases
+                    if (key === 'codes') {
+                        checkDef.code = value.split(',').map(code => parseInt(code.trim()));
+                        continue;
+                    }
+
+                    // Boolean conversions
+                    if (value === 'true') {
+                        checkDef[key] = true;
+                        continue;
+                    }
+                    if (value === 'false') {
+                        checkDef[key] = false;
+                        continue;
+                    }
+
+                    // Number conversions
+                    if (key === 'port' || key === 'count') {
+                        checkDef[key] = parseInt(value);
+                        continue;
+                    }
+
+                    // Default case
+                    checkDef[key] = value;
+                }
+
+                // Determine if this is a create or update
+                const isUpdate = !!checkDef.uuid;
+
+                // API endpoint
+                const endpoint = isUpdate
+                    ? `/api/check-definitions/${checkDef.uuid}`
+                    : '/api/check-definitions';
+
+                // API method
+                const method = isUpdate ? 'PUT' : 'POST';
+
+                // Send to API
+                fetch(endpoint, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(checkDef)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to save check definition');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Show success notification
+                        const notification = document.getElementById('notification-area');
+                        notification.className = 'notification-area success';
+                        notification.textContent = isUpdate
+                            ? 'Check definition updated successfully'
+                            : 'Check definition created successfully';
+
+                        // Reset form and switch to list tab
+                        form.reset();
+                        document.getElementById('def-id').value = '';
+                        document.getElementById('def-uuid').value = '';
+                        document.querySelector('.tab[data-tab="list"]').click();
+
+                        // Refresh the list
+                        loadCheckDefinitions();
+                    })
+                    .catch(error => {
+                        // Show error notification
+                        const notification = document.getElementById('notification-area');
+                        notification.className = 'notification-area error';
+                        notification.textContent = error.message;
+                    });
+            });
+
+            // Cancel button
+            document.getElementById('cancel-form').addEventListener('click', function () {
+                form.reset();
+                document.getElementById('def-id').value = '';
+                document.getElementById('def-uuid').value = '';
+                document.getElementById('delete-definition').style.display = 'none';
+                document.querySelector('.tab[data-tab="list"]').click();
+            });
+
+            // Delete button
+            document.getElementById('delete-definition').addEventListener('click', function () {
+                const uuid = document.getElementById('def-uuid').value;
+                if (!uuid) return;
+
+                if (!confirm('Are you sure you want to delete this check definition?')) {
+                    return;
+                }
+
+                fetch(`/api/check-definitions/${uuid}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to delete check definition');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Show success notification
+                        const notification = document.getElementById('notification-area');
+                        notification.className = 'notification-area success';
+                        notification.textContent = 'Check definition deleted successfully';
+
+                        // Reset form and switch to list tab
+                        form.reset();
+                        document.getElementById('def-id').value = '';
+                        document.getElementById('def-uuid').value = '';
+                        document.getElementById('delete-definition').style.display = 'none';
+                        document.querySelector('.tab[data-tab="list"]').click();
+
+                        // Refresh the list
+                        loadCheckDefinitions();
+                    })
+                    .catch(error => {
+                        // Show error notification
+                        const notification = document.getElementById('notification-area');
+                        notification.className = 'notification-area error';
+                        notification.textContent = error.message;
+                    });
+            });
+
+            // Load check definitions
+            function loadCheckDefinitions() {
+                fetch('/api/check-definitions')
+                    .then(response => response.json())
+                    .then(data => {
+                        renderCheckDefinitions(data);
+                    })
+                    .catch(error => {
+                        console.error('Error loading check definitions:', error);
+                        // Show error notification
+                        const notification = document.getElementById('notification-area');
+                        notification.className = 'notification-area error';
+                        notification.textContent = 'Failed to load check definitions';
+                    });
+            }
+
+            // Render check definitions
+            function renderCheckDefinitions(definitions) {
+                const tbody = document.getElementById('definitions-list');
+                tbody.innerHTML = '';
+
+                if (definitions.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="6" style="text-align: center;">No check definitions found</td>`;
+                    tbody.appendChild(row);
+                    return;
+                }
+
+                // Collect unique projects
+                const projects = new Set();
+
+                definitions.forEach(def => {
+                    projects.add(def.project);
+
+                    const row = document.createElement('tr');
+                    row.className = 'definition-row';
+                    row.dataset.uuid = def.uuid;
+
+                    // Type badge class
+                    const typeBadgeClass = `badge-${def.type}`;
+
+                    row.innerHTML = `
+                        <td>${def.name}</td>
+                        <td>${def.project}</td>
+                        <td><span class="definition-badge ${typeBadgeClass}">${def.type}</span></td>
+                        <td>${def.duration}</td>
+                        <td>${def.enabled ? 'Enabled' : 'Disabled'}</td>
+                        <td class="definition-actions">
+                            <button class="btn btn-secondary edit-btn">Edit</button>
+                            <button class="btn ${def.enabled ? 'btn-danger' : 'btn-primary'} toggle-btn">
+                                ${def.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                        </td>
+                    `;
+
+                    tbody.appendChild(row);
+                });
+
+                // Update project filter options
+                const projectFilter = document.getElementById('filter-def-project');
+                projectFilter.innerHTML = '<option value="all">All projects</option>';
+
+                Array.from(projects).sort().forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project;
+                    option.textContent = project;
+                    projectFilter.appendChild(option);
+                });
+
+                // Add event listeners to edit buttons
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        const uuid = this.closest('tr').dataset.uuid;
+                        editCheckDefinition(uuid);
+                    });
+                });
+
+                // Add event listeners to toggle buttons
+                document.querySelectorAll('.toggle-btn').forEach(btn => {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        const uuid = this.closest('tr').dataset.uuid;
+                        const enabled = this.textContent.trim() === 'Enable';
+                        toggleCheckDefinition(uuid, enabled);
+                    });
+                });
+
+                // Row click for edit
+                document.querySelectorAll('.definition-row').forEach(row => {
+                    row.addEventListener('click', function () {
+                        const uuid = this.dataset.uuid;
+                        editCheckDefinition(uuid);
+                    });
+                });
+            }
+
+            // Edit check definition
+            function editCheckDefinition(uuid) {
+                fetch(`/api/check-definitions/${uuid}`)
+                    .then(response => response.json())
+                    .then(def => {
+                        // Switch to edit tab
+                        document.querySelector('.tab[data-tab="create"]').click();
+
+                        // Set form fields
+                        document.getElementById('def-id').value = def.id;
+                        document.getElementById('def-uuid').value = def.uuid;
+                        document.getElementById('def-name').value = def.name;
+                        document.getElementById('def-project').value = def.project;
+                        document.getElementById('def-group').value = def.group_name || '';
+                        document.getElementById('def-type').value = def.type;
+                        document.getElementById('def-duration').value = def.duration;
+                        document.getElementById('def-enabled').value = def.enabled.toString();
+                        document.getElementById('def-description').value = def.description || '';
+
+                        // Set type-specific fields
+                        document.getElementById('http-fields').style.display = 'none';
+                        document.getElementById('tcp-fields').style.display = 'none';
+                        document.getElementById('icmp-fields').style.display = 'none';
+
+                        document.getElementById(`${def.type}-fields`).style.display = 'block';
+
+                        // Set HTTP fields
+                        if (def.type === 'http') {
+                            document.getElementById('http-url').value = def.url || '';
+                            document.getElementById('http-timeout').value = def.timeout || '';
+                            document.getElementById('http-answer').value = def.answer || '';
+                            document.getElementById('http-codes').value = def.code ? def.code.join(',') : '';
+                            document.getElementById('http-skip-ssl').value = (def.skip_check_ssl || false).toString();
+                            document.getElementById('http-stop-redirects').value = (def.stop_follow_redirects || false).toString();
+                        }
+
+                        // Set TCP fields
+                        if (def.type === 'tcp') {
+                            document.getElementById('tcp-host').value = def.host || '';
+                            document.getElementById('tcp-port').value = def.port || '';
+                            document.getElementById('tcp-timeout').value = def.timeout || '';
+                        }
+
+                        // Set ICMP fields
+                        if (def.type === 'icmp') {
+                            document.getElementById('icmp-host').value = def.host || '';
+                            document.getElementById('icmp-count').value = def.count || '3';
+                            document.getElementById('icmp-timeout').value = def.timeout || '';
+                        }
+
+                        // Set alert fields
+                        document.getElementById('actor-type').value = def.actor_type || '';
+
+                        // Show/hide alert fields
+                        const alertFields = document.querySelectorAll('.alert-fields');
+                        if (def.actor_type === 'alert') {
+                            alertFields.forEach(field => field.style.display = 'block');
+                            document.getElementById('alert-type').value = def.alert_type || 'telegram';
+                            document.getElementById('alert-destination').value = def.alert_destination || '';
+                        } else {
+                            alertFields.forEach(field => field.style.display = 'none');
+                        }
+
+                        // Show delete button
+                        document.getElementById('delete-definition').style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error loading check definition:', error);
+                        // Show error notification
+                        const notification = document.getElementById('notification-area');
+                        notification.className = 'notification-area error';
+                        notification.textContent = 'Failed to load check definition';
+                    });
+            }
+
+            // Toggle check definition
+            function toggleCheckDefinition(uuid, enabled) {
+                fetch(`/api/check-definitions/${uuid}/toggle?enabled=${enabled}`, {
+                    method: 'PATCH'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Show success notification
+                        const notification = document.getElementById('notification-area');
+                        notification.className = 'notification-area success';
+                        notification.textContent = `Check definition ${enabled ? 'enabled' : 'disabled'} successfully`;
+
+                        // Refresh the list
+                        loadCheckDefinitions();
+                    })
+                    .catch(error => {
+                        // Show error notification
+                        const notification = document.getElementById('notification-area');
+                        notification.className = 'notification-area error';
+                        notification.textContent = 'Failed to toggle check definition';
+                    });
+            }
+
+            // Handle search and filters
+            document.getElementById('search-definitions').addEventListener('input', filterDefinitions);
+            document.getElementById('filter-def-project').addEventListener('change', filterDefinitions);
+            document.getElementById('filter-def-type').addEventListener('change', filterDefinitions);
+
+            function filterDefinitions() {
+                const searchTerm = document.getElementById('search-definitions').value.toLowerCase();
+                const projectFilter = document.getElementById('filter-def-project').value;
+                const typeFilter = document.getElementById('filter-def-type').value;
+
+                const rows = document.querySelectorAll('.definition-row');
+                rows.forEach(row => {
+                    const name = row.cells[0].textContent.toLowerCase();
+                    const project = row.cells[1].textContent;
+                    const type = row.cells[2].textContent.toLowerCase();
+
+                    const matchesSearch = name.includes(searchTerm);
+                    const matchesProject = projectFilter === 'all' || project === projectFilter;
+                    const matchesType = typeFilter === 'all' || type === typeFilter;
+
+                    row.style.display = matchesSearch && matchesProject && matchesType ? '' : 'none';
+                });
+            }
+
+            // Initial load
+            loadCheckDefinitions();
+        });
+    </script>
+</body>
+
+</html>

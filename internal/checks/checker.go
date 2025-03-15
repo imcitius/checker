@@ -5,10 +5,15 @@ import (
 )
 
 const (
-	ErrEmptyHost          = "host is empty"
-	ErrICMPError          = "ICMP error: %s"
-	ErrPacketLoss         = "ping error: %f percent packet loss"
-	ErrOther              = "other ping error: %s"
+	ErrEmptyHost          = "empty host"
+	ErrEmptyURL           = "empty url"
+	ErrInvalidStatusCode  = "invalid status code: %d"
+	ErrAnswerNotFound     = "answer not found in response"
+	ErrAnswerFound        = "answer found in response"
+	ErrTCPError           = "tcp error: %s"
+	ErrICMPError          = "icmp error: %s"
+	ErrPacketLoss         = "icmp error: %f percent packet loss"
+	ErrOther              = "other icmp error: %s"
 	ErrEmptyPort          = "port is empty"
 	ErrCannotParseTimeout = "%scannot parse http check timeout: %s"
 
@@ -30,10 +35,7 @@ const (
 	ErrHTTPRegexParseError   = "%serror processing answer regex: %v"
 	ErrHTTPAnswerTooLong     = "answer is %d bytes long, check the logs"
 
-	ErrTCPError = "TCP error"
-
 	ErrGetFile          = "File get error "
-	ErrEmptyUrl         = "Url is empty"
 	ErrEmptyHash        = "Hash of empty file"
 	ErrFileReadOnly     = "Temp file '%s' appears to be read-only"
 	ErrOpenTempFile     = "Can't open temp file"

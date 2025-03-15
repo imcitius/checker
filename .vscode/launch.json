@@ -7,9 +7,6 @@
         "mode": "auto",
         "program": "${workspaceFolder}/cmd/app/main.go",
         "cwd": "${workspaceFolder}",
-        "env": {
-            "CHECKER_DB_PASSWORD": "h5UB62yt8Lkku1co"
-        }
     }
     ]
 }
