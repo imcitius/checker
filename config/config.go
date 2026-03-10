@@ -85,6 +85,7 @@ type File struct {
 	Projects []Project
 
 	ConsulCatalog ConsulCatalog `koanf:"consul_catalog"`
+	SlackApp      SlackAppConfig `koanf:"slack_app"`
 }
 
 type Parameters struct {
@@ -108,6 +109,14 @@ type Parameters struct {
 	SSLExpirationPeriod string `koanf:"ssl_expiration_period"`
 
 	Mentions []string
+}
+
+// SlackAppConfig holds configuration for the Slack App integration.
+// This is separate from the legacy Mattermost/Slack webhook alert type.
+type SlackAppConfig struct {
+	BotToken       string `koanf:"bot_token"`
+	SigningSecret  string `koanf:"signing_secret"`
+	DefaultChannel string `koanf:"default_channel"`
 }
 
 type ConsulCatalog struct {
