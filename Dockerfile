@@ -1,21 +1,39 @@
-FROM golang:1.17-alpine as build
-COPY . /app
+# Build stage
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /build
+
+# Copy dependency files first for layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build static binary with optimized flags
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w" \
+    -o checker \
+    .
+
+# Runtime stage
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates tzdata
+
 WORKDIR /app
-RUN apk --no-cache add gcc g++
-RUN go get -v -d ./... \
-    && CGO_ENABLED=1 GOOS=linux go build -ldflags "-X my/checker/config.Version=${GITHUB_REF_NAME}" -o build/checker
 
-FROM alpine
-# default config file to copy to image
+# Copy binary from builder
+COPY --from=builder /build/checker /app/checker
 
-LABEL "repository" = "https://github.com/imcitius/checker"
-LABEL "homepage" = "https://github.com/imcitius/checker"
-LABEL "maintainer" = "Ilya Rubinchik <citius@citius.dev>"
+# Copy migrations directory for runtime migration (created by migration tasks)
+# Using a wildcard so the build doesn't fail if the directory doesn't exist yet
+COPY --from=builder /build/migration[s] /app/migrations/
 
-RUN apk --no-cache add curl
+# Copy config.yaml as default config (can be overridden via volume mount or env vars)
+# Using a wildcard so the build doesn't fail if the file doesn't exist yet
+COPY --from=builder /build/config.yam[l] /app/
 
-COPY --from=build /app/build/checker /bin/checker
-COPY --from=build /app/docs/build/entrypoint.sh /
+EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c"]
-CMD ["/entrypoint.sh"]
+ENTRYPOINT ["/app/checker"]
