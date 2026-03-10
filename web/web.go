@@ -6,6 +6,7 @@ import (
 	"golang.org/x/sync/semaphore"
 	"io"
 	"my/checker/config"
+	"my/checker/slack"
 	"net/http"
 	_ "net/http/pprof"
 )
@@ -63,6 +64,13 @@ func Serve(_ chan bool, sem *semaphore.Weighted) {
 	http.Handle("/check/fire/", authHandler(http.HandlerFunc(checkFire)))
 	http.Handle("/listChecks", authHandler(http.HandlerFunc(listChecks)))
 	http.Handle("/metrics", promhttp.Handler())
+
+	// Slack slash command endpoint
+	if Config.SlackApp.SigningSecret != "" {
+		slackHandler := slack.NewInteractionHandler(Config.SlackApp.SigningSecret)
+		http.HandleFunc("/api/slack/commands", slackHandler.HandleSlashCommand)
+		config.Log.Info("Slack slash command endpoint registered at /api/slack/commands")
+	}
 
 	if err := server.ListenAndServe(); err != nil {
 		config.Log.Fatalf("ListenAndServe: %s", err)
