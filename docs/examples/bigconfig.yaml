@@ -6,6 +6,7 @@ slack_app:
   bot_token: "xoxb-your-bot-token"
   signing_secret: "your-signing-secret"
   default_channel: "C0123456789"
+  database_url: "postgres://user:password@localhost:5432/checker?sslmode=disable"
 
 defaults:
   http_port: '80'

@@ -103,6 +103,24 @@ func (c *SlackClient) SendSilenceConfirmation(ctx context.Context, channelID, th
 	return nil
 }
 
+// SendAlertReply posts an alert message as a thread reply to an existing message.
+// It returns the reply message timestamp.
+func (c *SlackClient) SendAlertReply(ctx context.Context, channelID, threadTS string, info CheckAlertInfo) (string, error) {
+	blocks := BuildAlertBlocks(info)
+	fallback := fmt.Sprintf("%s %s: %s", severityEmoji(info), info.Name, info.Message)
+
+	_, ts, err := c.api.PostMessageContext(ctx, channelID,
+		slack.MsgOptionBlocks(blocks...),
+		slack.MsgOptionText(fallback, false),
+		slack.MsgOptionTS(threadTS),
+	)
+	if err != nil {
+		return "", fmt.Errorf("SendAlertReply: %w", err)
+	}
+
+	return ts, nil
+}
+
 // PostAlert is a backward-compatible wrapper around SendAlert.
 func (c *SlackClient) PostAlert(ctx context.Context, channelID string, info CheckAlertInfo) (string, error) {
 	return c.SendAlert(ctx, channelID, info)

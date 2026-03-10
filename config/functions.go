@@ -386,6 +386,24 @@ func (c *File) FillSecrets() error {
 		}
 	}
 
+	if strings.HasPrefix(c.SlackApp.DatabaseURL, "vault") {
+		dbURL, err := GetVaultSecret(c.SlackApp.DatabaseURL)
+		if err == nil {
+			c.SlackApp.DatabaseURL = dbURL
+		} else {
+			return fmt.Errorf("FillSecrets error getting Slack App database URL from vault: %v", err)
+		}
+	}
+	if strings.HasPrefix(c.SlackApp.DatabaseURL, "env") {
+		envVar := strings.Split(c.SlackApp.DatabaseURL, ":")[1]
+		envProperty := strings.Replace(strings.ToLower(envVar), "_", ".", -1)
+		if Koanf.String(envProperty) != "" {
+			c.SlackApp.DatabaseURL = Koanf.String(envProperty)
+		} else {
+			return fmt.Errorf("FillSecrets %s env not defined for Slack App database URL", envVar)
+		}
+	}
+
 	if strings.HasPrefix(string(c.Defaults.TokenEncryptionKey), "vault") {
 		token, err := GetVaultSecret(string(c.Defaults.TokenEncryptionKey))
 		if err == nil {

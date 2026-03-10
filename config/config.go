@@ -117,6 +117,7 @@ type SlackAppConfig struct {
 	BotToken       string `koanf:"bot_token"`
 	SigningSecret  string `koanf:"signing_secret"`
 	DefaultChannel string `koanf:"default_channel"`
+	DatabaseURL    string `koanf:"database_url"`
 }
 
 type ConsulCatalog struct {

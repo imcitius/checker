@@ -1,13 +1,17 @@
 package cmd
 
 import (
+	"database/sql"
 	"my/checker/catalog"
 	"my/checker/config"
+	"my/checker/internal/db"
 	"my/checker/internal/slack"
 	"my/checker/scheduler"
 	"my/checker/status"
 	"my/checker/web"
 	"os"
+
+	_ "github.com/lib/pq"
 )
 
 func mainChecker() {
@@ -30,6 +34,24 @@ func mainChecker() {
 			)
 			scheduler.SetSlackClient(slackClient)
 			config.Log.Info("Slack App client initialized and passed to scheduler")
+
+			// Initialize database repository for Slack thread tracking and silence checks
+			if config.Config.SlackApp.DatabaseURL != "" {
+				sqlDB, err := sql.Open("postgres", config.Config.SlackApp.DatabaseURL)
+				if err != nil {
+					config.Log.Errorf("Failed to open database for Slack integration: %v", err)
+				} else {
+					if err := sqlDB.Ping(); err != nil {
+						config.Log.Errorf("Failed to connect to database for Slack integration: %v", err)
+					} else {
+						repository := db.NewPostgresDB(sqlDB)
+						scheduler.SetRepository(repository)
+						config.Log.Info("Database repository initialized for Slack thread tracking and silences")
+					}
+				}
+			} else {
+				config.Log.Warn("Slack App database_url not configured; thread tracking and silence features are disabled")
+			}
 		}
 
 		if watchConfig {
