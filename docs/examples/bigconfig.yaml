@@ -36,6 +36,16 @@ alerts:
     bot_token: env:CHECKER_BOT_TOKEN
     noncritical_channel: env:CHECKER_BOT_NONCRIT_CHANNEL
     critical_channel: env:CHECKER_BOT_CRIT_CHANNEL
+  # Slack App alert (uses Bot Token API for rich messages, threads, and interactivity)
+  - name: slack_alerts
+    type: slack
+    bot_token: xoxb-YOUR-BOT-TOKEN
+    signing_secret: YOUR-SIGNING-SECRET
+    channel_id: C0123456789
+  # Legacy Slack/Mattermost webhook alert (simple webhook, no interactivity)
+  # - name: slack_legacy
+  #   type: slack
+  #   mattermost_webhook_url: https://hooks.slack.com/services/T00/B00/XXXX
 projects:
   - name: staging
     mentions:

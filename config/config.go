@@ -128,14 +128,35 @@ type ConsulCatalog struct {
 type AlertConfigs struct {
 	Name string
 	Type string
-	// token for bot
+	// token for bot (Telegram bot token or Slack Bot User OAuth Token xoxb-...)
 	BotToken string `koanf:"bot_token"`
 	// critical channel name
 	CriticalChannel string `koanf:"critical_channel"`
 	// non critical and chatops channel name
 	ProjectChannel string `koanf:"noncritical_channel"`
 
+	// Legacy Mattermost/Slack webhook URL.
+	// If only this is set (with type "slack"), the legacy webhook mode is used.
 	MMWebHookURL string `koanf:"mattermost_webhook_url"`
+
+	// Slack App fields (used when type is "slack" and bot_token is set).
+	// signing_secret is used for Slack request signature verification.
+	SigningSecret string `koanf:"signing_secret"`
+	// channel_id is the default Slack channel ID for this alert destination.
+	ChannelID string `koanf:"channel_id"`
+}
+
+// IsSlackApp returns true if this alert config uses the Slack App (Bot Token API)
+// rather than the legacy Mattermost webhook mode.
+// When both bot_token and mattermost_webhook_url are set, bot_token takes precedence.
+func (a *AlertConfigs) IsSlackApp() bool {
+	return a.Type == "slack" && a.BotToken != ""
+}
+
+// IsLegacyWebhook returns true if this alert config uses the legacy webhook mode.
+// This is the case when type is "slack" or "mattermost" and only webhook_url is set.
+func (a *AlertConfigs) IsLegacyWebhook() bool {
+	return (a.Type == "slack" || a.Type == "mattermost") && a.MMWebHookURL != "" && a.BotToken == ""
 }
 
 type ActorConfigs struct {

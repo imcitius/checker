@@ -134,7 +134,7 @@ Actors (actions) are described in the ʻactors` block.
 
 ## Description of notification methods is contained in the ʻalerts` block.
 
-Three types of notifications are supported: telegram, slack / mattermost, log.
+Four types of notifications are supported: telegram, slack (App or legacy webhook), mattermost, log.
 
 The block should contain sub-blocks, with settings specific to each notification method:
 
@@ -148,14 +148,86 @@ bot_token: token
 noncritical_channel: Channel for non-critical notifications
 critical_channel: Channel for critical alerts
 
-// slack / mattermost parameters
+// Slack App parameters (recommended — rich messages, threads, interactivity)
+bot_token: xoxb-... Bot User OAuth Token
+signing_secret: Slack App signing secret for request verification
+channel_id: Default Slack channel ID (e.g. C0123456789)
+
+// Legacy slack / mattermost webhook parameters
 mattermost_webhook_url: webhook url. Used for all types of alerts and ChatOps.
 
 ```
 
+**Backward compatibility:** When `type: slack` is set, Checker detects the mode automatically:
+- If `bot_token` is provided → Slack App mode (rich Block Kit messages, threads, silence via slash commands)
+- If only `mattermost_webhook_url` is provided → legacy webhook mode (simple text messages)
+
 If there is no `alerts` block, all alerts will be sent only to the log.
 
 Parameter `severity: critical` may be set in each check, to explicitly send alerts to Critical alerts channel.
+
+### Setting up Slack App
+
+To use the Slack App integration for richer alert messages with threads, interactive silence buttons, and recovery tracking:
+
+#### 1. Create a Slack App
+
+1. Go to [https://api.slack.com/apps](https://api.slack.com/apps) and click **Create New App**
+2. Choose **From scratch**, give it a name (e.g. "Checker Alerts"), and select your workspace
+
+#### 2. Configure Bot Token Scopes
+
+Navigate to **OAuth & Permissions** and add these **Bot Token Scopes**:
+- `chat:write` — Send messages as the bot
+- `chat:write.public` — Send messages to channels the bot hasn't joined
+- `channels:read` — View basic channel info
+
+#### 3. Install the App to your workspace
+
+Click **Install to Workspace** on the OAuth & Permissions page. After authorizing, copy the **Bot User OAuth Token** (starts with `xoxb-`).
+
+#### 4. Enable Interactivity (optional, for silence buttons)
+
+If you want interactive silence buttons on alert messages:
+1. Navigate to **Interactivity & Shortcuts**
+2. Toggle **Interactivity** on
+3. Set the **Request URL** to: `https://your-checker-domain/api/slack/interactive`
+
+#### 5. Set up Slash Commands (optional, for `/checker-silence`)
+
+To enable the `/checker-silence` slash command:
+1. Navigate to **Slash Commands** and click **Create New Command**
+2. Command: `/checker-silence`
+3. Request URL: `https://your-checker-domain/api/slack/interactive`
+4. Description: "Manage Checker alert silences"
+
+#### 6. Copy credentials to config.yaml
+
+Get the **Signing Secret** from the **Basic Information** page of your Slack App.
+
+```yaml
+# Top-level Slack App config (used by the scheduler for thread tracking)
+slack_app:
+  bot_token: "xoxb-YOUR-BOT-TOKEN"
+  signing_secret: "YOUR-SIGNING-SECRET"
+  default_channel: "C0123456789"
+
+# Alert-level config (used by the alert pipeline)
+alerts:
+  - name: slack_alerts
+    type: slack
+    bot_token: xoxb-YOUR-BOT-TOKEN
+    signing_secret: YOUR-SIGNING-SECRET
+    channel_id: C0123456789
+```
+
+Secrets can be loaded from Vault (`vault:secret/path:field`) or environment variables (`env:VAR_NAME`).
+
+#### 7. Invite the bot to your alert channel
+
+In Slack, go to your alert channel and run: `/invite @YourBotName`
+
+Or use `chat:write.public` scope to skip this step for public channels.
 
 ### Manage alerts
 

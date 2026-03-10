@@ -468,6 +468,26 @@ func loadAlertConfig(c *File, i int, alert AlertConfigs) error {
 			return fmt.Errorf("FillSecrets %s env not defined", envVar)
 		}
 	}
+
+	// Resolve Slack App alert-level signing_secret from vault/env
+	if strings.HasPrefix(alert.SigningSecret, "vault") {
+		secret, err := GetVaultSecret(alert.SigningSecret)
+		if err == nil {
+			c.Alerts[i].SigningSecret = secret
+		} else {
+			return fmt.Errorf("FillSecrets error getting alert signing secret from vault: %v", err)
+		}
+	}
+	if strings.HasPrefix(alert.SigningSecret, "env") {
+		envVar := strings.Split(alert.SigningSecret, ":")[1]
+		envProperty := strings.Replace(strings.ToLower(envVar), "_", ".", -1)
+		if Koanf.String(envProperty) != "" {
+			c.Alerts[i].SigningSecret = Koanf.String(envProperty)
+		} else {
+			return fmt.Errorf("FillSecrets %s env not defined", envVar)
+		}
+	}
+
 	return nil
 }
 
