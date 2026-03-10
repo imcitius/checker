@@ -7,37 +7,50 @@ type CheckAlertInfo struct {
 	Project   string
 	Group     string
 	CheckType string
+	Frequency string // e.g. "5m"
 	Message   string // error message
 	IsHealthy bool
+	Severity  string // "critical", "degraded", "resolved"
 }
 
-// slackRequest is the base request body for Slack API calls.
-type slackRequest struct {
-	Channel     string        `json:"channel"`
-	Text        string        `json:"text,omitempty"`
-	Attachments []attachment  `json:"attachments,omitempty"`
-	ThreadTS    string        `json:"thread_ts,omitempty"`
-	User        string        `json:"user,omitempty"`
-	TS          string        `json:"ts,omitempty"`
+// typeEmoji returns the emoji for a check type.
+func typeEmoji(checkType string) string {
+	switch checkType {
+	case "http":
+		return "🌐"
+	case "tcp":
+		return "🔌"
+	case "icmp":
+		return "📡"
+	case "pgsql", "postgresql":
+		return "🐘"
+	case "mysql":
+		return "🐬"
+	case "passive":
+		return "⏳"
+	default:
+		return "🔍"
+	}
 }
 
-// attachment represents a Slack message attachment.
-type attachment struct {
-	Color    string            `json:"color"`
-	Fallback string           `json:"fallback"`
-	Fields   []attachmentField `json:"fields"`
+// severityEmoji returns the header emoji based on severity/health status.
+func severityEmoji(info CheckAlertInfo) string {
+	if info.IsHealthy {
+		return "🟢"
+	}
+	switch info.Severity {
+	case "degraded":
+		return "🟡"
+	default:
+		// critical or unspecified unhealthy
+		return "🔴"
+	}
 }
 
-// attachmentField represents a field within a Slack attachment.
-type attachmentField struct {
-	Title string `json:"title"`
-	Value string `json:"value"`
-	Short bool   `json:"short"`
-}
-
-// slackResponse is the base response from Slack API calls.
-type slackResponse struct {
-	OK    bool   `json:"ok"`
-	Error string `json:"error,omitempty"`
-	TS    string `json:"ts,omitempty"`
+// statusText returns a human-readable status string with emoji.
+func statusText(isHealthy bool) string {
+	if isHealthy {
+		return "🟢 Healthy"
+	}
+	return "🔴 Unhealthy"
 }

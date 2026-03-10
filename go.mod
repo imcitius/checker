@@ -1,6 +1,6 @@
 module my/checker
 
-go 1.17
+go 1.25
 
 // +heroku goVersion go1.14
 
@@ -40,6 +40,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-hclog v0.16.1 // indirect
@@ -66,6 +67,7 @@ require (
 	github.com/prometheus/procfs v0.0.8 // indirect
 	github.com/rhnvrm/simples3 v0.6.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/slack-go/slack v0.19.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	golang.org/x/net v0.0.0-20211029224645-99673261e6eb // indirect

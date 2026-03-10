@@ -23,7 +23,11 @@ func mainChecker() {
 		// Initialize Slack App integration if configured
 		if config.Config.SlackApp.BotToken != "" {
 			config.Log.Info("Slack App integration is enabled")
-			slackClient := slack.NewSlackClient(config.Config.SlackApp.BotToken)
+			slackClient := slack.NewSlackClient(
+				config.Config.SlackApp.BotToken,
+				config.Config.SlackApp.SigningSecret,
+				config.Config.SlackApp.DefaultChannel,
+			)
 			scheduler.SetSlackClient(slackClient)
 			config.Log.Info("Slack App client initialized and passed to scheduler")
 		}

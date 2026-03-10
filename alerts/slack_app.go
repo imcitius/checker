@@ -31,7 +31,11 @@ func (s *SlackApp) Send(a *AlertConfigs, message, messageType string) error {
 		return nil
 	}
 
-	client := slack.NewSlackClient(config.Config.SlackApp.BotToken)
+	client := slack.NewSlackClient(
+		config.Config.SlackApp.BotToken,
+		config.Config.SlackApp.SigningSecret,
+		config.Config.SlackApp.DefaultChannel,
+	)
 	ctx := context.Background()
 
 	alertInfo := slack.CheckAlertInfo{
