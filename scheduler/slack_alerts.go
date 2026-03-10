@@ -9,6 +9,8 @@ import (
 
 // SendSlackAppAlert handles sending a Slack App alert for a failing check.
 // It checks silence status, posts a rich alert via the SlackClient, and tracks the thread.
+// If the check already has an unresolved Slack thread (ongoing failure), the alert is
+// posted as a thread reply instead of creating a new top-level message.
 func SendSlackAppAlert(project *projects.Project, healthcheck *config.Healthcheck, check *config.Check, errMessage string) {
 	if slackClient == nil {
 		config.Log.Errorf("Slack App client not initialized for check %s", check.UUid)
@@ -24,7 +26,7 @@ func SendSlackAppAlert(project *projects.Project, healthcheck *config.Healthchec
 			config.Log.Errorf("Failed to check silence status for %s: %v", check.UUid, err)
 		}
 		if silenced {
-			config.Log.Debugf("Check %s is silenced, skipping slack_app alert", check.UUid)
+			config.Log.Infof("Check %s (project %s) is silenced, skipping slack_app alert", check.UUid, project.Name)
 			return
 		}
 	}
@@ -46,7 +48,23 @@ func SendSlackAppAlert(project *projects.Project, healthcheck *config.Healthchec
 		IsHealthy: false,
 	}
 
-	// Post the alert
+	// Check if there's an existing unresolved thread for this check (ongoing failure).
+	// If so, post the alert as a thread reply instead of a new top-level message.
+	if repo != nil {
+		thread, err := repo.GetUnresolvedThread(ctx, check.UUid)
+		if err == nil && thread.ThreadTs != "" {
+			// ONGOING failure: post as thread reply to existing thread
+			replyTs, err := slackClient.SendAlertReply(ctx, thread.ChannelID, thread.ThreadTs, alertInfo)
+			if err != nil {
+				config.Log.Errorf("Failed to send Slack App thread reply for check %s: %v", check.UUid, err)
+				return
+			}
+			config.Log.Infof("Slack App thread reply sent for check %s (channel: %s, thread: %s, reply: %s)", check.UUid, thread.ChannelID, thread.ThreadTs, replyTs)
+			return
+		}
+	}
+
+	// NEW failure: post a new top-level alert message
 	messageTs, err := slackClient.PostAlert(ctx, channelID, alertInfo)
 	if err != nil {
 		config.Log.Errorf("Failed to send Slack App alert for check %s: %v", check.UUid, err)
@@ -96,18 +114,18 @@ func HandleSlackAppRecovery(project *projects.Project, healthcheck *config.Healt
 		IsHealthy: true,
 	}
 
-	// Post resolution reply in thread
-	if err := slackClient.PostResolution(ctx, thread.ChannelID, thread.ThreadTs, alertInfo); err != nil {
+	// Post resolution reply in thread AND update original message to green
+	if err := slackClient.SendResolve(ctx, alertInfo, thread.ThreadTs, thread.ChannelID); err != nil {
 		config.Log.Errorf("Failed to post Slack resolution for check %s: %v", check.UUid, err)
-	}
-
-	// Update parent message color to green
-	if err := slackClient.UpdateMessageColor(ctx, thread.ChannelID, thread.ParentTs, "good", alertInfo); err != nil {
-		config.Log.Errorf("Failed to update Slack message color for check %s: %v", check.UUid, err)
 	}
 
 	// Mark thread as resolved in database
 	if err := repo.ResolveThread(ctx, check.UUid); err != nil {
 		config.Log.Errorf("Failed to resolve Slack thread for check %s: %v", check.UUid, err)
+	}
+
+	// Also clear the slack_thread_ts/slack_channel_id on check_definitions
+	if err := repo.UpdateSlackThread(ctx, check.UUid, "", ""); err != nil {
+		config.Log.Errorf("Failed to clear Slack thread on check_definitions for check %s: %v", check.UUid, err)
 	}
 }
