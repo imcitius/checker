@@ -16,4 +16,5 @@ func init() {
 	AlerterCollections["log"] = new(LogAlert)
 	AlerterCollections["mattermost"] = new(Mattermost)
 	AlerterCollections["telegram"] = new(Telegram)
+	AlerterCollections["slack_app"] = new(SlackApp)
 }

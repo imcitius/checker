@@ -40,10 +40,11 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 		}
 		//config.Log.Debugf("Check mode: %s", status.GetCheckMode(check))
 
+		shouldAlert := false
 		if check.AllowFails > 0 {
 			if statusByUUID.SeqErrorsCount >= check.AllowFails {
 				if st, e := status.GetCheckMode(check); st != "quiet" && e == nil {
-					chooseChannelAndSendAlert(project, check, err)
+					shouldAlert = true
 				} else {
 					if e != nil {
 						config.Log.Errorf("Error checking checks's status: %s", e.Error())
@@ -52,11 +53,21 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 			}
 		} else {
 			if st, e := status.GetCheckMode(check); st != "quiet" && e == nil {
-				chooseChannelAndSendAlert(project, check, err)
+				shouldAlert = true
 			} else {
 				if e != nil {
 					config.Log.Errorf("Error checking checks's status: %s", e.Error())
 				}
+			}
+		}
+
+		if shouldAlert {
+			// Send via existing alert channels (telegram, mattermost, log, etc.)
+			chooseChannelAndSendAlert(project, check, err)
+
+			// Also send via Slack App if the callback is registered
+			if SlackAppAlertFunc != nil {
+				SlackAppAlertFunc(project, healthcheck, check, err.Error())
 			}
 		}
 
@@ -125,6 +136,16 @@ func EvaluateCheckResult(project *projects.Project, healthcheck *config.Healthch
 				}
 			}
 		}
+		// Handle Slack App recovery: if the check was previously failing (unhealthy -> healthy),
+		// resolve any open Slack threads regardless of alert type configuration.
+		if _, ok := status.Statuses.Checks[check.UUid]; ok {
+			if !statusByUUID.LastResult && statusByUUID.ExecuteCount > 1 {
+				if SlackAppRecoveryFunc != nil {
+					SlackAppRecoveryFunc(project, healthcheck, check)
+				}
+			}
+		}
+
 		statusByUUID.LastResult = true
 		statusByProject.Alive++
 	}

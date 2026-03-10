@@ -3,6 +3,7 @@ package cmd
 import (
 	"my/checker/catalog"
 	"my/checker/config"
+	"my/checker/internal/slack"
 	"my/checker/scheduler"
 	"my/checker/status"
 	"my/checker/web"
@@ -17,6 +18,14 @@ func mainChecker() {
 
 		if err := config.LoadConfig(); err != nil {
 			config.Log.Infof("Config load error: %s", err)
+		}
+
+		// Initialize Slack App integration if configured
+		if config.Config.SlackApp.BotToken != "" {
+			config.Log.Info("Slack App integration is enabled")
+			slackClient := slack.NewSlackClient(config.Config.SlackApp.BotToken)
+			scheduler.SetSlackClient(slackClient)
+			config.Log.Info("Slack App client initialized and passed to scheduler")
 		}
 
 		if watchConfig {

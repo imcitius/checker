@@ -1,4 +1,12 @@
 ---
+# Slack App integration (optional)
+# Uses Bot Token for richer Slack interactions (threads, reactions, interactivity)
+# distinct from the legacy mattermost/slack webhook alert type.
+slack_app:
+  bot_token: "xoxb-your-bot-token"
+  signing_secret: "your-signing-secret"
+  default_channel: "C0123456789"
+
 defaults:
   http_port: '80'
   bots_enabled: 'true'

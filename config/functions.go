@@ -350,6 +350,42 @@ func (c *File) FillSecrets() error {
 		}
 	}
 
+	// Resolve Slack App secrets from vault/env if configured
+	if strings.HasPrefix(c.SlackApp.BotToken, "vault") {
+		token, err := GetVaultSecret(c.SlackApp.BotToken)
+		if err == nil {
+			c.SlackApp.BotToken = token
+		} else {
+			return fmt.Errorf("FillSecrets error getting Slack App bot token from vault: %v", err)
+		}
+	}
+	if strings.HasPrefix(c.SlackApp.BotToken, "env") {
+		envVar := strings.Split(c.SlackApp.BotToken, ":")[1]
+		envProperty := strings.Replace(strings.ToLower(envVar), "_", ".", -1)
+		if Koanf.String(envProperty) != "" {
+			c.SlackApp.BotToken = Koanf.String(envProperty)
+		} else {
+			return fmt.Errorf("FillSecrets %s env not defined for Slack App bot token", envVar)
+		}
+	}
+	if strings.HasPrefix(c.SlackApp.SigningSecret, "vault") {
+		secret, err := GetVaultSecret(c.SlackApp.SigningSecret)
+		if err == nil {
+			c.SlackApp.SigningSecret = secret
+		} else {
+			return fmt.Errorf("FillSecrets error getting Slack App signing secret from vault: %v", err)
+		}
+	}
+	if strings.HasPrefix(c.SlackApp.SigningSecret, "env") {
+		envVar := strings.Split(c.SlackApp.SigningSecret, ":")[1]
+		envProperty := strings.Replace(strings.ToLower(envVar), "_", ".", -1)
+		if Koanf.String(envProperty) != "" {
+			c.SlackApp.SigningSecret = Koanf.String(envProperty)
+		} else {
+			return fmt.Errorf("FillSecrets %s env not defined for Slack App signing secret", envVar)
+		}
+	}
+
 	if strings.HasPrefix(string(c.Defaults.TokenEncryptionKey), "vault") {
 		token, err := GetVaultSecret(string(c.Defaults.TokenEncryptionKey))
 		if err == nil {
