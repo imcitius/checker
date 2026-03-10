@@ -63,32 +63,94 @@ func (p *PostgresDB) ResolveThread(ctx context.Context, checkUUID string) error 
 	return nil
 }
 
-// CreateSilence inserts a new alert silence and returns its ID.
-func (p *PostgresDB) CreateSilence(ctx context.Context, silence models.AlertSilence) (int, error) {
+// UpdateSlackThread updates the Slack thread timestamp and channel ID
+// on the check_definitions table for a given check UUID.
+func (p *PostgresDB) UpdateSlackThread(ctx context.Context, uuid, threadTS, channelID string) error {
 	query := `
-		INSERT INTO alert_silences (scope, target, created_by, reason, expires_at, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id`
-
-	var id int
-	err := p.db.QueryRowContext(ctx, query,
-		silence.Scope, silence.Target, silence.CreatedBy,
-		silence.Reason, silence.ExpiresAt, silence.IsActive,
-	).Scan(&id)
+		UPDATE check_definitions
+		SET slack_thread_ts = $2, slack_channel_id = $3
+		WHERE uuid = $1`
+	_, err := p.db.ExecContext(ctx, query, uuid, threadTS, channelID)
 	if err != nil {
-		return 0, fmt.Errorf("create silence: %w", err)
+		return fmt.Errorf("update slack thread: %w", err)
 	}
-	return id, nil
+	return nil
+}
+
+// GetSlackThread returns the Slack thread timestamp and channel ID
+// stored on the check_definitions table for a given check UUID.
+func (p *PostgresDB) GetSlackThread(ctx context.Context, uuid string) (threadTS, channelID string, err error) {
+	query := `
+		SELECT COALESCE(slack_thread_ts, ''), COALESCE(slack_channel_id, '')
+		FROM check_definitions
+		WHERE uuid = $1`
+	err = p.db.QueryRowContext(ctx, query, uuid).Scan(&threadTS, &channelID)
+	if err != nil {
+		return "", "", fmt.Errorf("get slack thread: %w", err)
+	}
+	return threadTS, channelID, nil
+}
+
+// GetActiveSilence returns the first active, non-expired silence matching
+// the given scope and target, or nil if none found.
+func (p *PostgresDB) GetActiveSilence(ctx context.Context, scope, target string) (*models.AlertSilence, error) {
+	query := `
+		SELECT id, scope, target, silenced_by, silenced_at, expires_at, reason, active
+		FROM alert_silences
+		WHERE active = true
+		AND scope = $1
+		AND target = $2
+		AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY silenced_at DESC
+		LIMIT 1`
+
+	var s models.AlertSilence
+	err := p.db.QueryRowContext(ctx, query, scope, target).Scan(
+		&s.ID, &s.Scope, &s.Target, &s.SilencedBy,
+		&s.SilencedAt, &s.ExpiresAt, &s.Reason, &s.Active,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get active silence: %w", err)
+	}
+	return &s, nil
+}
+
+// CreateSilence inserts a new alert silence.
+func (p *PostgresDB) CreateSilence(ctx context.Context, silence models.AlertSilence) error {
+	query := `
+		INSERT INTO alert_silences (scope, target, silenced_by, reason, expires_at, active)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err := p.db.ExecContext(ctx, query,
+		silence.Scope, silence.Target, silence.SilencedBy,
+		silence.Reason, silence.ExpiresAt, silence.Active,
+	)
+	if err != nil {
+		return fmt.Errorf("create silence: %w", err)
+	}
+	return nil
+}
+
+// DeactivateSilence sets active=false for the given silence ID.
+func (p *PostgresDB) DeactivateSilence(ctx context.Context, id int) error {
+	query := `UPDATE alert_silences SET active = false WHERE id = $1`
+	_, err := p.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("deactivate silence: %w", err)
+	}
+	return nil
 }
 
 // GetActiveSilences returns all active, non-expired silences.
 func (p *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
 	query := `
-		SELECT id, scope, target, created_by, reason, created_at, expires_at, is_active
+		SELECT id, scope, target, silenced_by, reason, silenced_at, expires_at, active
 		FROM alert_silences
-		WHERE is_active = true
+		WHERE active = true
 		AND (expires_at IS NULL OR expires_at > NOW())
-		ORDER BY created_at DESC`
+		ORDER BY silenced_at DESC`
 
 	rows, err := p.db.QueryContext(ctx, query)
 	if err != nil {
@@ -100,8 +162,8 @@ func (p *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilen
 	for rows.Next() {
 		var s models.AlertSilence
 		if err := rows.Scan(
-			&s.ID, &s.Scope, &s.Target, &s.CreatedBy,
-			&s.Reason, &s.CreatedAt, &s.ExpiresAt, &s.IsActive,
+			&s.ID, &s.Scope, &s.Target, &s.SilencedBy,
+			&s.Reason, &s.SilencedAt, &s.ExpiresAt, &s.Active,
 		); err != nil {
 			return nil, fmt.Errorf("scan silence: %w", err)
 		}
@@ -118,9 +180,9 @@ func (p *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project str
 	query := `
 		SELECT EXISTS(
 			SELECT 1 FROM alert_silences
-			WHERE is_active = true
+			WHERE active = true
 			AND (expires_at IS NULL OR expires_at > NOW())
-			AND (scope = 'all' OR (scope = 'check' AND target = $1) OR (scope = 'project' AND target = $2))
+			AND ((scope = 'check' AND target = $1) OR (scope = 'project' AND target = $2))
 		)`
 
 	var silenced bool
@@ -131,19 +193,9 @@ func (p *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project str
 	return silenced, nil
 }
 
-// DeactivateSilence sets is_active=false for the given silence ID.
-func (p *PostgresDB) DeactivateSilence(ctx context.Context, silenceID int) error {
-	query := `UPDATE alert_silences SET is_active = false WHERE id = $1`
-	_, err := p.db.ExecContext(ctx, query, silenceID)
-	if err != nil {
-		return fmt.Errorf("deactivate silence: %w", err)
-	}
-	return nil
-}
-
-// DeactivateAllSilences sets is_active=false for all silences.
+// DeactivateAllSilences sets active=false for all silences.
 func (p *PostgresDB) DeactivateAllSilences(ctx context.Context) error {
-	query := `UPDATE alert_silences SET is_active = false WHERE is_active = true`
+	query := `UPDATE alert_silences SET active = false WHERE active = true`
 	_, err := p.db.ExecContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("deactivate all silences: %w", err)
