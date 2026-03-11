@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -23,11 +22,12 @@ type Config struct {
 	ServerPort string `yaml:"server_port"`
 
 	DB struct {
-		Protocol string `yaml:"protocol"`
-		Host     string `yaml:"host"`
-		Username string `yaml:"username"`
-		Database string `yaml:"database"`
-		Password string `yaml:"password,omitempty"`
+		Protocol    string `yaml:"protocol"`
+		Host        string `yaml:"host"`
+		Username    string `yaml:"username"`
+		Database    string `yaml:"database"`
+		Password    string `yaml:"password,omitempty"`
+		DatabaseURL string `yaml:"database_url,omitempty"`
 	} `yaml:"db"`
 
 	Alerts map[string]struct {
@@ -39,6 +39,12 @@ type Config struct {
 	} `yaml:"alerts"`
 
 	Tickers map[string]TickerWithDuration
+
+	SlackApp struct {
+		BotToken       string `yaml:"bot_token"`
+		SigningSecret  string `yaml:"signing_secret"`
+		DefaultChannel string `yaml:"default_channel"`
+	} `yaml:"slack_app"`
 
 	Projects map[string]ProjectConfig `yaml:"projects"`
 }
@@ -124,20 +130,53 @@ type ActorConfig struct {
 // LoadConfig reads the YAML file specified by filename and returns a pointer
 // to a Config struct, or an error if reading or unmarshalling fails.
 func LoadConfig(filename string) (*Config, error) {
+	var cfg Config
+
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("error reading config file: %w", err)
+		if os.IsNotExist(err) {
+			logrus.Warnf("Config file %s not found, using defaults + env overrides", filename)
+		} else {
+			return nil, fmt.Errorf("error reading config file: %w", err)
+		}
+	} else {
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return nil, fmt.Errorf("error unmarshalling config file: %w", err)
+		}
 	}
 
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("error unmarshalling config file: %w", err)
-	}
-
+	cfg.applyEnvOverrides()
 	cfg.setDefaults()
 	cfg.setTickers()
 
 	return &cfg, nil
+}
+
+func (cfg *Config) applyEnvOverrides() {
+	if v := os.Getenv("DATABASE_URL"); v != "" {
+		cfg.DB.DatabaseURL = v
+	}
+	if v := os.Getenv("PGHOST"); v != "" {
+		cfg.DB.Host = v
+	}
+	if v := os.Getenv("PGUSER"); v != "" {
+		cfg.DB.Username = v
+	}
+	if v := os.Getenv("PGPASSWORD"); v != "" {
+		cfg.DB.Password = v
+	}
+	if v := os.Getenv("PGDATABASE"); v != "" {
+		cfg.DB.Database = v
+	}
+	if v := os.Getenv("SLACK_BOT_TOKEN"); v != "" {
+		cfg.SlackApp.BotToken = v
+	}
+	if v := os.Getenv("SLACK_SIGNING_SECRET"); v != "" {
+		cfg.SlackApp.SigningSecret = v
+	}
+	if v := os.Getenv("SLACK_DEFAULT_CHANNEL"); v != "" {
+		cfg.SlackApp.DefaultChannel = v
+	}
 }
 
 // SetDefaults assigns default values to Config fields if they are not set
@@ -201,7 +240,8 @@ func (cfg *Config) setDefaults() {
 
 	// Set Projects defaults.
 	if cfg.Projects == nil {
-		log.Fatalf("Projects not found in config file")
+		logrus.Warn("No projects found in config, starting with empty project list")
+		cfg.Projects = make(map[string]ProjectConfig)
 	}
 	for projectName, project := range cfg.Projects {
 		// Set project duration default if not provided.

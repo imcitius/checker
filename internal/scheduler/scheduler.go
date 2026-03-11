@@ -23,30 +23,32 @@ const (
 
 // Scheduler manages the lifecycle of health checks
 type Scheduler struct {
-	workerPool *WorkerPool
-	checkHeap  *CheckHeap
-	checkMap   map[string]*CheckItem // Map UUID -> CheckItem
-	lock       sync.Mutex
-	repo       db.Repository
+	workerPool   *WorkerPool
+	checkHeap    *CheckHeap
+	checkMap     map[string]*CheckItem // Map UUID -> CheckItem
+	lock         sync.Mutex
+	repo         db.Repository
+	slackAlerter *SlackAlerter
 }
 
 // NewScheduler creates a new scheduler instance
-func NewScheduler(repo db.Repository) *Scheduler {
+func NewScheduler(repo db.Repository, slackAlerter *SlackAlerter) *Scheduler {
 	h := &CheckHeap{}
 	heap.Init(h)
 	return &Scheduler{
-		workerPool: NewWorkerPool(DefaultWorkerPoolSize, repo),
-		checkHeap:  h,
-		checkMap:   make(map[string]*CheckItem),
-		repo:       repo,
+		workerPool:   NewWorkerPool(DefaultWorkerPoolSize, repo, slackAlerter),
+		checkHeap:    h,
+		checkMap:     make(map[string]*CheckItem),
+		repo:         repo,
+		slackAlerter: slackAlerter,
 	}
 }
 
 // RunScheduler starts the health check scheduler.
-func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository) error {
+func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, slackAlerter *SlackAlerter) error {
 	logrus.Info("Starting event-driven health check scheduler")
 
-	s := NewScheduler(repo)
+	s := NewScheduler(repo, slackAlerter)
 
 	// Start worker pool
 	s.workerPool.Start()
@@ -218,7 +220,7 @@ func (s *Scheduler) getAllChecks(ctx context.Context) ([]models.CheckDefinition,
 }
 
 // executeCheck runs a single check and updates its status
-func executeCheck(repo db.Repository, checkDef models.CheckDefinition) error {
+func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAlerter *SlackAlerter) error {
 	logger := logrus.WithFields(logrus.Fields{
 		"project": checkDef.Project,
 		// "group":   checkDef.GroupName,
@@ -274,6 +276,9 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition) error {
 		return err
 	}
 
+	// Detect state transition for Slack recovery
+	wasUnhealthy := !checkDef.IsHealthy
+
 	// Handle alerts if check fails
 	if !isHealthy {
 		checkDurationParsed, _ := time.ParseDuration(checkDef.Duration)
@@ -287,6 +292,16 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition) error {
 				logger.WithError(err).Error("Failed to update last alert time")
 			}
 		}
+
+		// Slack App alert (runs alongside existing alerts)
+		if slackAlerter != nil {
+			slackAlerter.SendAlert(context.Background(), checkDef, checkStatus)
+		}
+	}
+
+	// Handle Slack recovery when check transitions from unhealthy to healthy
+	if isHealthy && wasUnhealthy && slackAlerter != nil {
+		slackAlerter.HandleRecovery(context.Background(), checkDef)
 	}
 
 	return nil

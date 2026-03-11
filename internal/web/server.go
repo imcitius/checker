@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
+	"io/fs"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"checker/internal/config"
 	"checker/internal/db"
 	"checker/internal/models"
+	"checker/internal/slack"
 )
 
 var (
@@ -127,7 +129,7 @@ func BroadcastChecksUpdate(repo db.Repository) {
 }
 
 // RunServer starts the web server and returns an error if it fails
-func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository) error {
+func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slackClient *slack.SlackClient) error {
 	// Create a router with default middleware
 	router := gin.Default()
 
@@ -137,41 +139,20 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository) erro
 		c.Next()
 	})
 
-	// Get the current working directory
-	cwd, err := os.Getwd()
+	// Load embedded HTML templates (strip "templates/" prefix so names match c.HTML calls)
+	subTemplates, err := fs.Sub(templateFS, "templates")
 	if err != nil {
-		logrus.Errorf("Failed to get working directory: %v", err)
+		return fmt.Errorf("failed to access embedded templates: %w", err)
 	}
-	logrus.Infof("Current working directory: %s", cwd)
+	tmpl := template.Must(template.New("").ParseFS(subTemplates, "*.html"))
+	router.SetHTMLTemplate(tmpl)
 
-	// Create absolute paths for templates
-	templatesDir := filepath.Join(cwd, "internal", "web", "templates")
-	staticDir := filepath.Join(cwd, "internal", "web", "static")
-
-	// Log filesystem check (once at startup, not per request)
-	logrus.Infof("Static directory: %s", staticDir)
-	if stat, err := os.Stat(staticDir); err != nil {
-		logrus.Errorf("Static directory issue: %v", err)
-	} else {
-		logrus.Infof("Static directory exists and is a directory: %v", stat.IsDir())
-
-		// List files in the static directory
-		files, err := os.ReadDir(staticDir)
-		if err != nil {
-			logrus.Errorf("Failed to read static directory: %v", err)
-		} else {
-			logrus.Info("Files in static directory:")
-			for _, file := range files {
-				logrus.Infof("  - %s", file.Name())
-			}
-		}
+	// Serve embedded static files
+	subStatic, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		return fmt.Errorf("failed to access embedded static files: %w", err)
 	}
-
-	// Load HTML templates
-	router.LoadHTMLGlob(filepath.Join(templatesDir, "*.html"))
-
-	// Serve static files (using Gin's built-in Static method)
-	router.Static("/static", staticDir)
+	router.StaticFS("/static", http.FS(subStatic))
 
 	// Main dashboard route
 	router.GET("/", handleDashboard)
@@ -204,6 +185,13 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository) erro
 		metadataGroup.GET("/projects", GetCheckProjects)
 		metadataGroup.GET("/check-types", GetCheckTypes)
 		metadataGroup.GET("/default-timeouts", GetDefaultTimeouts)
+	}
+
+	// Slack interactive endpoint
+	if slackClient != nil {
+		handler := NewSlackInteractiveHandler(slackClient.SigningSecret(), slackClient, repo)
+		router.POST("/api/slack/interactive", gin.WrapF(handler.HandleInteraction))
+		logrus.Info("Slack interactive endpoint registered at /api/slack/interactive")
 	}
 
 	// Admin endpoints for migrations (not for production use)
@@ -305,10 +293,9 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository) erro
 	if gin.Mode() != gin.ReleaseMode {
 		router.GET("/debug/static", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
-				"message":     "Static debug endpoint",
-				"static_path": staticDir,
-				"files":       []string{"styles.css", "script.js"},
-				"time":        time.Now().String(),
+				"message": "Static assets are embedded in binary",
+				"files":   []string{"styles.css", "script.js"},
+				"time":    time.Now().String(),
 			})
 		})
 	}

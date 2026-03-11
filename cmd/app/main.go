@@ -15,6 +15,7 @@ import (
 	"checker/internal/config"
 	"checker/internal/db"
 	"checker/internal/scheduler"
+	"checker/internal/slack"
 	"checker/internal/web"
 )
 
@@ -86,24 +87,38 @@ func main() {
 				repo.Close()
 			}()
 
-			// 3. Start Scheduler in background
+			// 3. Initialize Slack App client
+			var slackClient *slack.SlackClient
+			if cfg.SlackApp.BotToken != "" {
+				slackClient = slack.NewSlackClient(cfg.SlackApp.BotToken, cfg.SlackApp.SigningSecret, cfg.SlackApp.DefaultChannel)
+				logrus.Info("Slack App client initialized")
+			} else {
+				logrus.Info("Slack App not configured, skipping")
+			}
+
+			var slackAlerter *scheduler.SlackAlerter
+			if slackClient != nil {
+				slackAlerter = scheduler.NewSlackAlerter(slackClient, repo, cfg.SlackApp.DefaultChannel)
+			}
+
+			// 4. Start Scheduler in background
 			logrus.Info("Starting scheduler")
 			schedulerCtx, schedulerCancel := context.WithCancel(ctx)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := scheduler.RunScheduler(schedulerCtx, cfg, repo); err != nil {
+				if err := scheduler.RunScheduler(schedulerCtx, cfg, repo, slackAlerter); err != nil {
 					logrus.Errorf("Scheduler error: %v", err)
 				}
 			}()
 
-			// 4. Start Web Server (in a goroutine so we can handle graceful shutdown)
+			// 5. Start Web Server (in a goroutine so we can handle graceful shutdown)
 			logrus.Info("Starting web server")
 			serverCtx, serverCancel := context.WithCancel(ctx)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := web.RunServer(serverCtx, cfg, repo); err != nil {
+				if err := web.RunServer(serverCtx, cfg, repo, slackClient); err != nil {
 					logrus.Errorf("Web server error: %v", err)
 					// Trigger app shutdown if web server fails
 					cancel()

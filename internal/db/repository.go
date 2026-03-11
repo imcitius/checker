@@ -20,4 +20,14 @@ type Repository interface {
 	GetAllCheckTypes(ctx context.Context) ([]string, error)
 	ConvertConfigToCheckDefinitions(ctx context.Context, config *config.Config) error
 	GetAllDefaultTimeouts() map[string]string
+
+	// Slack thread tracking
+	CreateSlackThread(ctx context.Context, checkUUID, channelID, threadTs, parentTs string) error
+	GetUnresolvedThread(ctx context.Context, checkUUID string) (models.SlackAlertThread, error)
+	ResolveThread(ctx context.Context, checkUUID string) error
+	UpdateSlackThread(ctx context.Context, checkUUID, threadTs, channelID string) error
+
+	// Alert silences
+	CreateSilence(ctx context.Context, silence models.AlertSilence) error
+	IsCheckSilenced(ctx context.Context, checkUUID, project string) (bool, error)
 }

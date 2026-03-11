@@ -21,8 +21,11 @@ type PostgresDB struct {
 }
 
 func NewPostgresDB(cfg *config.Config) (*PostgresDB, error) {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
-		cfg.DB.Username, cfg.DB.Password, cfg.DB.Host, cfg.DB.Database)
+	dsn := cfg.DB.DatabaseURL
+	if dsn == "" {
+		dsn = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
+			cfg.DB.Username, cfg.DB.Password, cfg.DB.Host, cfg.DB.Database)
+	}
 
 	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
@@ -387,6 +390,65 @@ func (db *PostgresDB) GetAllDefaultTimeouts() map[string]string {
 		"mysql":   "10s",
 		"default": "5s",
 	}
+}
+
+// Slack thread tracking
+
+func (db *PostgresDB) CreateSlackThread(ctx context.Context, checkUUID, channelID, threadTs, parentTs string) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO slack_alert_threads (check_uuid, channel_id, thread_ts, parent_ts) VALUES ($1, $2, $3, $4)`,
+		checkUUID, channelID, threadTs, parentTs)
+	return err
+}
+
+func (db *PostgresDB) GetUnresolvedThread(ctx context.Context, checkUUID string) (models.SlackAlertThread, error) {
+	var t models.SlackAlertThread
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id, check_uuid, channel_id, thread_ts, parent_ts, is_resolved, created_at, resolved_at
+		 FROM slack_alert_threads WHERE check_uuid=$1 AND is_resolved=false LIMIT 1`, checkUUID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChannelID, &t.ThreadTs, &t.ParentTs, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.SlackAlertThread{}, err
+	}
+	return t, nil
+}
+
+func (db *PostgresDB) ResolveThread(ctx context.Context, checkUUID string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE slack_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false`,
+		checkUUID)
+	return err
+}
+
+func (db *PostgresDB) UpdateSlackThread(ctx context.Context, checkUUID, threadTs, channelID string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE check_definitions SET slack_thread_ts=$2, slack_channel_id=$3 WHERE uuid=$1`,
+		checkUUID, threadTs, channelID)
+	return err
+}
+
+// Alert silences
+
+func (db *PostgresDB) CreateSilence(ctx context.Context, silence models.AlertSilence) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO alert_silences (scope, target, silenced_by, expires_at, reason, active) VALUES ($1, $2, $3, $4, $5, $6)`,
+		silence.Scope, silence.Target, silence.SilencedBy, silence.ExpiresAt, silence.Reason, silence.Active)
+	return err
+}
+
+func (db *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project string) (bool, error) {
+	var exists bool
+	err := db.Pool.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM alert_silences
+			WHERE active = true
+			AND (expires_at IS NULL OR expires_at > NOW())
+			AND (
+				(scope = 'check' AND target = $1)
+				OR (scope = 'project' AND target = $2)
+			)
+		)`, checkUUID, project).Scan(&exists)
+	return exists, err
 }
 
 func unmarshalConfig(checkType string, data []byte) (models.CheckConfig, error) {

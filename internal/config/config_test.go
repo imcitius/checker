@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"os"
 	"testing"
 	"time"
@@ -129,16 +128,19 @@ func TestLoadConfig(t *testing.T) {
 	})
 }
 
-// TestLoadConfig_FileNotFound verifies that LoadConfig returns an error when the file is missing
+// TestLoadConfig_FileNotFound verifies that LoadConfig tolerates a missing file
+// and returns a valid config with defaults + env overrides
 func TestLoadConfig_FileNotFound(t *testing.T) {
-	_, err := LoadConfig("nonexistent.yaml")
-	if err == nil {
-		t.Fatal("Expected error for nonexistent file, got nil")
+	cfg, err := LoadConfig("nonexistent.yaml")
+	if err != nil {
+		t.Fatalf("Expected no error for nonexistent file, got: %v", err)
 	}
-
-	var pathErr *os.PathError
-	if !errors.As(err, &pathErr) {
-		t.Errorf("Expected file not found error, got: %v", err)
+	if cfg == nil {
+		t.Fatal("Expected non-nil config for nonexistent file")
+	}
+	// Should have defaults applied
+	if cfg.Defaults.Duration != 10*time.Second {
+		t.Errorf("Expected default duration 10s, got %v", cfg.Defaults.Duration)
 	}
 }
 

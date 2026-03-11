@@ -12,10 +12,11 @@ import (
 	"net/http"
 	"time"
 
-	"my/checker/config"
-	"my/checker/internal/db"
-	"my/checker/internal/models"
-	"my/checker/internal/slack"
+	"github.com/sirupsen/logrus"
+
+	"checker/internal/db"
+	"checker/internal/models"
+	"checker/internal/slack"
 )
 
 // SlackInteractiveHandler handles Slack interactive message payloads (button clicks).
@@ -91,7 +92,7 @@ func (h *SlackInteractiveHandler) HandleInteraction(w http.ResponseWriter, r *ht
 	// Read body for signature verification
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		config.Log.Errorf("slack interactive: failed to read request body: %s", err)
+		logrus.Errorf("slack interactive: failed to read request body: %s", err)
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -99,7 +100,7 @@ func (h *SlackInteractiveHandler) HandleInteraction(w http.ResponseWriter, r *ht
 
 	// Verify Slack request signature
 	if !VerifySlackSignature(h.signingSecret, r, body) {
-		config.Log.Warn("slack interactive: invalid request signature")
+		logrus.Warn("slack interactive: invalid request signature")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -107,7 +108,7 @@ func (h *SlackInteractiveHandler) HandleInteraction(w http.ResponseWriter, r *ht
 	// Parse the interaction payload - Slack sends it as form-encoded "payload" field
 	payload, err := ParseInteractionPayload(body)
 	if err != nil {
-		config.Log.Errorf("slack interactive: failed to parse payload: %s", err)
+		logrus.Errorf("slack interactive: failed to parse payload: %s", err)
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -117,7 +118,7 @@ func (h *SlackInteractiveHandler) HandleInteraction(w http.ResponseWriter, r *ht
 	defer cancel()
 
 	if len(payload.Actions) == 0 {
-		config.Log.Warn("slack interactive: no actions in payload")
+		logrus.Warn("slack interactive: no actions in payload")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -131,7 +132,7 @@ func (h *SlackInteractiveHandler) HandleInteraction(w http.ResponseWriter, r *ht
 	case "ack_alert":
 		h.handleAckAlert(ctx, w, payload, action)
 	default:
-		config.Log.Infof("slack interactive: unknown action_id: %s", action.ActionID)
+		logrus.Infof("slack interactive: unknown action_id: %s", action.ActionID)
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -156,7 +157,7 @@ func (h *SlackInteractiveHandler) handleSilenceCheck(ctx context.Context, w http
 
 	if h.repo != nil {
 		if err := h.repo.CreateSilence(ctx, silence); err != nil {
-			config.Log.Errorf("slack interactive: failed to create silence: %s", err)
+			logrus.Errorf("slack interactive: failed to create silence: %s", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -165,7 +166,7 @@ func (h *SlackInteractiveHandler) handleSilenceCheck(ctx context.Context, w http
 	// Post silence confirmation in thread
 	if h.slackClient != nil {
 		if err := h.slackClient.SendSilenceConfirmation(ctx, channelID, messageTs, "check", checkUUID, "1h", userID); err != nil {
-			config.Log.Errorf("slack interactive: failed to send silence confirmation: %s", err)
+			logrus.Errorf("slack interactive: failed to send silence confirmation: %s", err)
 		}
 
 		// Update original message to show "Silenced" badge, remove buttons
@@ -177,7 +178,7 @@ func (h *SlackInteractiveHandler) handleSilenceCheck(ctx context.Context, w http
 		blocks := slack.BuildSilencedOriginalBlocks(info, userID)
 		fallback := fmt.Sprintf("🔇 SILENCED: %s", info.Name)
 		if err := h.slackClient.UpdateMessage(ctx, channelID, messageTs, blocks, fallback); err != nil {
-			config.Log.Errorf("slack interactive: failed to update original message: %s", err)
+			logrus.Errorf("slack interactive: failed to update original message: %s", err)
 		}
 	}
 
@@ -204,7 +205,7 @@ func (h *SlackInteractiveHandler) handleSilenceProject(ctx context.Context, w ht
 
 	if h.repo != nil {
 		if err := h.repo.CreateSilence(ctx, silence); err != nil {
-			config.Log.Errorf("slack interactive: failed to create project silence: %s", err)
+			logrus.Errorf("slack interactive: failed to create project silence: %s", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -213,7 +214,7 @@ func (h *SlackInteractiveHandler) handleSilenceProject(ctx context.Context, w ht
 	// Post silence confirmation in thread
 	if h.slackClient != nil {
 		if err := h.slackClient.SendSilenceConfirmation(ctx, channelID, messageTs, "project", projectName, "1h", userID); err != nil {
-			config.Log.Errorf("slack interactive: failed to send silence confirmation: %s", err)
+			logrus.Errorf("slack interactive: failed to send silence confirmation: %s", err)
 		}
 
 		// Update original message to show "Silenced" badge, remove buttons
@@ -224,7 +225,7 @@ func (h *SlackInteractiveHandler) handleSilenceProject(ctx context.Context, w ht
 		blocks := slack.BuildSilencedOriginalBlocks(info, userID)
 		fallback := fmt.Sprintf("🔇 SILENCED: %s", info.Name)
 		if err := h.slackClient.UpdateMessage(ctx, channelID, messageTs, blocks, fallback); err != nil {
-			config.Log.Errorf("slack interactive: failed to update original message: %s", err)
+			logrus.Errorf("slack interactive: failed to update original message: %s", err)
 		}
 	}
 
@@ -242,7 +243,7 @@ func (h *SlackInteractiveHandler) handleAckAlert(ctx context.Context, w http.Res
 		// Post thread reply with acknowledgment
 		ackText := fmt.Sprintf("👀 Acknowledged by <@%s>", userID)
 		if _, err := h.slackClient.PostThreadReply(ctx, channelID, messageTs, ackText); err != nil {
-			config.Log.Errorf("slack interactive: failed to post ack reply: %s", err)
+			logrus.Errorf("slack interactive: failed to post ack reply: %s", err)
 		}
 
 		// Update original message to show "Acknowledged" badge
@@ -254,7 +255,7 @@ func (h *SlackInteractiveHandler) handleAckAlert(ctx context.Context, w http.Res
 		blocks := slack.BuildAcknowledgedOriginalBlocks(info, userID)
 		fallback := fmt.Sprintf("👀 ACKNOWLEDGED: %s", info.Name)
 		if err := h.slackClient.UpdateMessage(ctx, channelID, messageTs, blocks, fallback); err != nil {
-			config.Log.Errorf("slack interactive: failed to update original message: %s", err)
+			logrus.Errorf("slack interactive: failed to update original message: %s", err)
 		}
 	}
 

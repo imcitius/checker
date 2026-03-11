@@ -6,4 +6,5 @@ kubeconfig.json
 build/*
 images-report.json
 dev/db
-app
+/app
+/.stoneforge/.worktrees/
