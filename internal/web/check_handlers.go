@@ -173,8 +173,13 @@ func UpdateCheckDefinition(c *gin.Context) {
 		return
 	}
 
-	// Preserve the ID
+	// Preserve the ID and status fields that are not part of the edit view model
 	def.ID = existingDef.ID
+	def.CreatedAt = existingDef.CreatedAt
+	def.LastRun = existingDef.LastRun
+	def.IsHealthy = existingDef.IsHealthy
+	def.LastMessage = existingDef.LastMessage
+	def.LastAlertSent = existingDef.LastAlertSent
 
 	// Update the definition
 	if err := repo.UpdateCheckDefinition(ctx, def); err != nil {
