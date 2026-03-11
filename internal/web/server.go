@@ -155,6 +155,16 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	}
 	router.StaticFS("/static", http.FS(subStatic))
 
+	// Serve the React SPA from embedded frontend/dist (built by Vite)
+	spaRoot, spaErr := fs.Sub(spaFS, "spa")
+	if spaErr != nil {
+		logrus.Warnf("SPA frontend not embedded (run 'make build-frontend' first): %v", spaErr)
+	}
+	var spaHandler http.Handler
+	if spaErr == nil {
+		spaHandler = http.FileServer(http.FS(spaRoot))
+	}
+
 	// Health check endpoint (public — used by Railway/load balancers)
 	router.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -178,16 +188,27 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	protected := router.Group("/")
 	protected.Use(authMgr.Middleware())
 
-	// Main dashboard route
-	protected.GET("/", handleDashboard)
-
-	// Check definitions management page
-	protected.GET("/check-definitions", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "check_management.html", gin.H{
-			"user_email": c.GetString("user_email"),
-			"user_name":  c.GetString("user_name"),
+	// Serve SPA for dashboard routes (if frontend is built), fall back to legacy templates
+	if spaHandler != nil {
+		protected.GET("/", serveSPA(spaRoot))
+		protected.GET("/manage", serveSPA(spaRoot))
+	} else {
+		// Legacy template-based routes (fallback when SPA not built)
+		protected.GET("/", handleDashboard)
+		protected.GET("/check-definitions", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "check_management.html", gin.H{
+				"user_email": c.GetString("user_email"),
+				"user_name":  c.GetString("user_name"),
+			})
 		})
-	})
+	}
+
+	// Serve SPA static assets (JS, CSS, etc.)
+	if spaHandler != nil {
+		router.GET("/assets/*filepath", func(c *gin.Context) {
+			spaHandler.ServeHTTP(c.Writer, c.Request)
+		})
+	}
 
 	// WebSocket endpoint
 	protected.GET("/ws", func(c *gin.Context) {
@@ -524,6 +545,18 @@ func toggleCheck(repo db.Repository, uuid string, enabled bool) error {
 	}
 
 	return nil
+}
+
+// serveSPA returns a gin handler that serves the SPA index.html for client-side routing
+func serveSPA(spaRoot fs.FS) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		indexHTML, err := fs.ReadFile(spaRoot, "index.html")
+		if err != nil {
+			c.String(http.StatusInternalServerError, "SPA index.html not found")
+			return
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
+	}
 }
 
 func handleDashboard(c *gin.Context) {

@@ -8,3 +8,5 @@ images-report.json
 dev/db
 /app
 /.stoneforge/.worktrees/
+frontend/node_modules/
+frontend/dist/
