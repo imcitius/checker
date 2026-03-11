@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -90,6 +91,18 @@ func CreateCheckDefinition(c *gin.Context) {
 
 	// Convert VM -> Domain Model
 	def = convertFromCheckDefViewModel(vm)
+
+	// Generate UUID if not provided (required for PostgreSQL uuid column)
+	if def.UUID == "" {
+		def.UUID = uuid.New().String()
+	}
+
+	// Set timestamps
+	now := time.Now()
+	if def.CreatedAt.IsZero() {
+		def.CreatedAt = now
+	}
+	def.UpdatedAt = now
 
 	// Default to enabled if not specified
 	if !def.Enabled {
