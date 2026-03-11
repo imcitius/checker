@@ -53,6 +53,39 @@ export interface CheckDefinition {
   alert_destination?: string
 }
 
+export interface CheckImportResultItem {
+  name: string
+  uuid: string
+  project: string
+}
+
+export interface CheckImportError {
+  name: string
+  index: number
+  message: string
+}
+
+export interface CheckImportResult {
+  created: CheckImportResultItem[]
+  updated: CheckImportResultItem[]
+  deleted: CheckImportResultItem[]
+  errors: CheckImportError[]
+  summary: {
+    total: number
+    created: number
+    updated: number
+    deleted: number
+    errors: number
+  }
+}
+
+export interface CheckImportValidation {
+  valid: boolean
+  checks: Array<Record<string, unknown>>
+  errors: CheckImportError[]
+  count: number
+}
+
 export const api = {
   getChecks: () => request<CheckDefinition[]>('/api/check-definitions'),
   getCheck: (uuid: string) => request<CheckDefinition>(`/api/check-definitions/${uuid}`),
@@ -75,4 +108,61 @@ export const api = {
   getProjects: () => request<string[]>('/api/metadata/projects'),
   getCheckTypes: () => request<string[]>('/api/metadata/check-types'),
   getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),
+
+  // Bulk import/export
+  importChecks: (yamlContent: string) => {
+    return fetch(`${BASE}/api/checks/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-yaml' },
+      credentials: 'include',
+      body: yamlContent,
+    }).then(async (res) => {
+      if (res.status === 401) {
+        window.location.href = '/auth/login'
+        throw new Error('Unauthorized')
+      }
+      const data = await res.json()
+      if (!res.ok && res.status !== 200) {
+        throw new Error(data.error || res.statusText)
+      }
+      return data as CheckImportResult
+    })
+  },
+  validateImport: (yamlContent: string) => {
+    return fetch(`${BASE}/api/checks/import/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-yaml' },
+      credentials: 'include',
+      body: yamlContent,
+    }).then(async (res) => {
+      if (res.status === 401) {
+        window.location.href = '/auth/login'
+        throw new Error('Unauthorized')
+      }
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || res.statusText)
+      }
+      return data as CheckImportValidation
+    })
+  },
+  exportChecks: (project?: string, environment?: string) => {
+    const params = new URLSearchParams()
+    if (project) params.set('project', project)
+    if (environment) params.set('environment', environment)
+    const query = params.toString()
+    return fetch(`${BASE}/api/checks/export${query ? '?' + query : ''}`, {
+      headers: { Accept: 'application/x-yaml' },
+      credentials: 'include',
+    }).then(async (res) => {
+      if (res.status === 401) {
+        window.location.href = '/auth/login'
+        throw new Error('Unauthorized')
+      }
+      if (!res.ok) {
+        throw new Error(res.statusText)
+      }
+      return res.text()
+    })
+  },
 }

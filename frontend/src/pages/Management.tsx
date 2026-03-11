@@ -20,12 +20,14 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Pencil, Trash2, Search, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, RefreshCw, Upload, Download } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
 import { useChecks } from '@/hooks/useChecks'
 import { useRef } from 'react'
+import { ImportDialog } from '@/components/ImportDialog'
+import { api as apiClient } from '@/lib/api'
 
 const EMPTY_FORM: Partial<CheckDefinition> = {
   name: '',
@@ -56,6 +58,8 @@ export function Management() {
   const [editingCheck, setEditingCheck] = useState<Partial<CheckDefinition>>(EMPTY_FORM)
   const [deletingUUID, setDeletingUUID] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
 
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -152,6 +156,26 @@ export function Management() {
     }
   }
 
+  const handleExport = async () => {
+    try {
+      const yamlContent = await apiClient.exportChecks(
+        projectFilter !== 'all' ? projectFilter : undefined
+      )
+      // Create a blob and download
+      const blob = new Blob([yamlContent], { type: 'application/x-yaml' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'checks.yaml'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Failed to export:', err)
+    }
+  }
+
   const updateForm = (field: string, value: string | number | boolean) => {
     setEditingCheck((prev) => ({ ...prev, [field]: value }))
   }
@@ -182,6 +206,14 @@ export function Management() {
               <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-1" />
+                Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
+                <Upload className="h-4 w-4 mr-1" />
+                Import YAML
               </Button>
               <Button size="sm" onClick={handleCreate}>
                 <Plus className="h-4 w-4 mr-1" />
@@ -475,6 +507,13 @@ export function Management() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Import Dialog */}
+        <ImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          onImportComplete={fetchData}
+        />
       </div>
     </TooltipProvider>
   )

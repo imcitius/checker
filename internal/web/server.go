@@ -226,6 +226,14 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		checkDefinitionsGroup.PATCH("/:uuid/toggle", ToggleCheckDefinitionStatus)
 	}
 
+	// Bulk import/export endpoints (separate group to avoid /:uuid conflict)
+	bulkGroup := protected.Group("/api/checks")
+	{
+		bulkGroup.POST("/import", ImportCheckDefinitions)
+		bulkGroup.POST("/import/validate", ValidateImportPayload)
+		bulkGroup.GET("/export", ExportCheckDefinitions)
+	}
+
 	// Metadata endpoints
 	metadataGroup := protected.Group("/api/metadata")
 	{
