@@ -18,8 +18,8 @@ A distributed health checking system for monitoring various services, databases,
 
 ### Requirements
 
-- Go 1.23.5 or later
-- MongoDB (for storing check configurations and results)
+- Go 1.24.0 or later
+- PostgreSQL (for storing check configurations and results)
 - Access to monitored services
 
 ### Building from Source
@@ -30,7 +30,7 @@ git clone https://github.com/yourusername/checker-github.git
 cd checker-github
 
 # Build the binary
-go build -o checker ./cmd/checker
+go build -o checker ./cmd/app
 
 # Run the checker
 ./checker -config config.yaml
@@ -47,8 +47,8 @@ defaults:
   maintenance_duration: 15m
 
 db:
-  protocol: mongodb
-  host: localhost
+  protocol: postgres
+  host: localhost:5432
   username: checker-dev
   database: checker_dev
   password: password
@@ -140,12 +140,11 @@ MySQL Basic Query:
   host: db.example.com
   port: 3306
   timeout: 5s
-  mysql:
-    username: dbuser
-    password: dbpassword
-    dbname: mydatabase
-    query: "SELECT 1;"
-    response: "1"  # Optional expected response
+  username: dbuser
+  password: dbpassword
+  dbname: mydatabase
+  query: "SELECT 1;"
+  response: "1"  # Optional expected response
 ```
 
 #### MySQL Time Check
@@ -158,12 +157,11 @@ MySQL Time Check:
   host: db.example.com
   port: 3306
   timeout: 5s
-  mysql:
-    username: dbuser
-    password: dbpassword
-    dbname: mydatabase
-    query: "SELECT UNIX_TIMESTAMP();"
-    difference: "10s"  # Maximum allowed time difference
+  username: dbuser
+  password: dbpassword
+  dbname: mydatabase
+  query: "SELECT UNIX_TIMESTAMP();"
+  difference: "10s"  # Maximum allowed time difference
 ```
 
 #### MySQL Replication Check
@@ -176,14 +174,15 @@ MySQL Replication:
   host: master-db.example.com
   port: 3306
   timeout: 5s
-  mysql:
-    username: repluser
-    password: replpassword
-    dbname: test_db
-    table_name: replication_test  # Table must exist on all servers
-    lag: "5s"  # Maximum allowed replication lag
-      - "replica1.example.com"
-      - "replica2.example.com:3307"
+  username: repluser
+  password: replpassword
+  dbname: test_db
+  table_name: replication_test  # Table must exist on all servers
+  lag: "5s"  # Maximum allowed replication lag
+  server_list:
+    - "replica1.example.com"
+    - "replica2.example.com:3307"
+```
 
 ### PostgreSQL Checks
 
@@ -197,12 +196,11 @@ PostgreSQL Basic Query:
   host: db.example.com
   port: 5432
   timeout: 5s
-  mysql: # Using common config structure, key is usually ignored or reused
-    username: dbuser
-    password: dbpassword
-    dbname: mydatabase
-    query: "SELECT 1;"
-    response: "1"  # Optional expected response
+  username: dbuser
+  password: dbpassword
+  dbname: mydatabase
+  query: "SELECT 1;"
+  response: "1"  # Optional expected response
 ```
 
 #### PostgreSQL Time Check
@@ -211,16 +209,15 @@ Verifies that the database server's time is synchronized.
 
 ```yaml
 PostgreSQL Time Check:
-  type: pgsql_unixtime # or pgsql_timestamp
+  type: pgsql_query_unixtime # or pgsql_query_timestamp
   host: db.example.com
   port: 5432
   timeout: 5s
-  mysql:
-    username: dbuser
-    password: dbpassword
-    dbname: mydatabase
-    query: "SELECT CAST(EXTRACT(EPOCH FROM NOW()) AS INTEGER);" # for unixtime
-    difference: "10s"  # Maximum allowed time difference
+  username: dbuser
+  password: dbpassword
+  dbname: mydatabase
+  query: "SELECT CAST(EXTRACT(EPOCH FROM NOW()) AS INTEGER);" # for unixtime
+  difference: "10s"  # Maximum allowed time difference
 ```
 
 #### PostgreSQL Replication Check
@@ -233,15 +230,13 @@ PostgreSQL Replication:
   host: master-db.example.com
   port: 5432
   timeout: 5s
-  mysql:
-    username: repluser
-    password: replpassword
-    dbname: test_db
-    table_name: replication_test
-    lag: "5s"
-    server_list: 
-      - "replica1.example.com"
-```
+  username: repluser
+  password: replpassword
+  dbname: test_db
+  table_name: replication_test
+  lag: "5s"
+  server_list:
+    - "replica1.example.com"
 ```
 
 ## Development
@@ -272,4 +267,4 @@ INTEGRATION_TESTS=true TEST_MYSQL_USERNAME=root TEST_MYSQL_PASSWORD=password go 
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License.
