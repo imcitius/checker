@@ -172,3 +172,59 @@ func BuildSilenceConfirmationBlocks(scope, target, duration, user string) []slac
 
 	return []slack.Block{header, body, ctx}
 }
+
+// BuildSilencedOriginalBlocks constructs Block Kit blocks for updating the original
+// alert message after a silence is applied. Shows a "Silenced" badge and removes action buttons.
+func BuildSilencedOriginalBlocks(info CheckAlertInfo, silencedBy string) []slack.Block {
+	emoji := severityEmoji(info)
+
+	headerText := fmt.Sprintf("%s 🔇 SILENCED: %s", emoji, info.Name)
+	header := slack.NewHeaderBlock(
+		slack.NewTextBlockObject(slack.PlainTextType, headerText, true, false),
+	)
+
+	checkTypeLabel := fmt.Sprintf("%s %s", typeEmoji(info.CheckType), info.CheckType)
+	fields := []*slack.TextBlockObject{
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:*\n%s", info.Project), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:*\n%s", info.Group), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:*\n%s", checkTypeLabel), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, "*Status:*\n🔇 Silenced", false, false),
+	}
+	fieldsSection := slack.NewSectionBlock(nil, fields, nil)
+
+	now := time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
+	ctx := slack.NewContextBlock("",
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("🔇 Silenced by <@%s> at %s", silencedBy, now), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("UUID: `%s`", info.UUID), false, false),
+	)
+
+	return []slack.Block{header, fieldsSection, ctx}
+}
+
+// BuildAcknowledgedOriginalBlocks constructs Block Kit blocks for updating the original
+// alert message after acknowledgment. Shows an "Acknowledged" badge and removes action buttons.
+func BuildAcknowledgedOriginalBlocks(info CheckAlertInfo, ackedBy string) []slack.Block {
+	emoji := severityEmoji(info)
+
+	headerText := fmt.Sprintf("%s 👀 ACKNOWLEDGED: %s", emoji, info.Name)
+	header := slack.NewHeaderBlock(
+		slack.NewTextBlockObject(slack.PlainTextType, headerText, true, false),
+	)
+
+	checkTypeLabel := fmt.Sprintf("%s %s", typeEmoji(info.CheckType), info.CheckType)
+	fields := []*slack.TextBlockObject{
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:*\n%s", info.Project), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:*\n%s", info.Group), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:*\n%s", checkTypeLabel), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Status:*\n%s", statusText(info.IsHealthy)), false, false),
+	}
+	fieldsSection := slack.NewSectionBlock(nil, fields, nil)
+
+	now := time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
+	ctx := slack.NewContextBlock("",
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("👀 Acknowledged by <@%s> at %s", ackedBy, now), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("UUID: `%s`", info.UUID), false, false),
+	)
+
+	return []slack.Block{header, fieldsSection, ctx}
+}
