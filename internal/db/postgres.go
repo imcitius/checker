@@ -458,6 +458,46 @@ func (db *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project st
 	return exists, err
 }
 
+func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT id, scope, target, silenced_by, silenced_at, expires_at, reason, active
+		 FROM alert_silences WHERE active = true AND (expires_at IS NULL OR expires_at > NOW())`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var silences []models.AlertSilence
+	for rows.Next() {
+		var s models.AlertSilence
+		if err := rows.Scan(&s.ID, &s.Scope, &s.Target, &s.SilencedBy, &s.SilencedAt, &s.ExpiresAt, &s.Reason, &s.Active); err != nil {
+			return nil, err
+		}
+		silences = append(silences, s)
+	}
+	return silences, nil
+}
+
+func (db *PostgresDB) GetUnhealthyChecks(ctx context.Context) ([]models.CheckDefinition, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT uuid, name, project, group_name, type, is_healthy, last_message, last_run
+		 FROM check_definitions WHERE is_healthy = false AND enabled = true`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var checks []models.CheckDefinition
+	for rows.Next() {
+		var c models.CheckDefinition
+		if err := rows.Scan(&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.IsHealthy, &c.LastMessage, &c.LastRun); err != nil {
+			return nil, err
+		}
+		checks = append(checks, c)
+	}
+	return checks, nil
+}
+
 func unmarshalConfig(checkType string, data []byte) (models.CheckConfig, error) {
 	switch checkType {
 	case "http":

@@ -31,4 +31,6 @@ type Repository interface {
 	CreateSilence(ctx context.Context, silence models.AlertSilence) error
 	IsCheckSilenced(ctx context.Context, checkUUID, project string) (bool, error)
 	DeactivateSilence(ctx context.Context, scope, target string) error
+	GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error)
+	GetUnhealthyChecks(ctx context.Context) ([]models.CheckDefinition, error)
 }

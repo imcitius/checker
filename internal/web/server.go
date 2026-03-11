@@ -192,6 +192,8 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		handler := NewSlackInteractiveHandler(slackClient.SigningSecret(), slackClient, repo)
 		router.POST("/api/slack/interactive", gin.WrapF(handler.HandleInteraction))
 		logrus.Info("Slack interactive endpoint registered at /api/slack/interactive")
+		router.POST("/api/slack/commands", gin.WrapF(handler.HandleSlashCommand))
+		logrus.Info("Slack slash command endpoint registered at /api/slack/commands")
 	}
 
 	// Admin endpoints for migrations (not for production use)
@@ -511,6 +513,13 @@ func handleDashboard(c *gin.Context) {
 	})
 }
 
+func formatTimeOrNever(t time.Time) string {
+	if t.IsZero() {
+		return "Never"
+	}
+	return t.Format("2006-01-02 15:04:05")
+}
+
 func convertToViewModel(check models.CheckStatus) models.CheckViewModel {
 	return models.CheckViewModel{
 		ID:          check.ID.Hex(),
@@ -518,8 +527,8 @@ func convertToViewModel(check models.CheckStatus) models.CheckViewModel {
 		Project:     check.Project,
 		Healthcheck: check.CheckGroup,
 		LastResult:  check.IsHealthy,
-		LastExec:    check.LastRun.Format("2006-01-02 15:04:05"),
-		LastPing:    check.LastAlertSent.Format("2006-01-02 15:04:05"),
+		LastExec:    formatTimeOrNever(check.LastRun),
+		LastPing:    formatTimeOrNever(check.LastAlertSent),
 		Enabled:     check.IsEnabled,
 		UUID:        check.UUID,
 		CheckType:   check.CheckType,

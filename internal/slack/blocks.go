@@ -29,10 +29,10 @@ func BuildAlertBlocks(info CheckAlertInfo) []slack.Block {
 	// b. Section with fields: Project, Group, Type, Status
 	checkTypeLabel := fmt.Sprintf("%s %s", typeEmoji(info.CheckType), info.CheckType)
 	fields := []*slack.TextBlockObject{
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:*\n%s", info.Project), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:*\n%s", info.Group), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:*\n%s", checkTypeLabel), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Status:*\n%s", statusText(info.IsHealthy)), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:* %s", info.Project), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:* %s", info.Group), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:* %s", checkTypeLabel), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Status:* %s", statusText(info.IsHealthy)), false, false),
 	}
 	fieldsSection := slack.NewSectionBlock(nil, fields, nil)
 
@@ -161,10 +161,10 @@ func BuildResolvedOriginalBlocks(info CheckAlertInfo) []slack.Block {
 	// Fields section (same layout as alert, but with healthy status)
 	checkTypeLabel := fmt.Sprintf("%s %s", typeEmoji(info.CheckType), info.CheckType)
 	fields := []*slack.TextBlockObject{
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:*\n%s", info.Project), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:*\n%s", info.Group), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:*\n%s", checkTypeLabel), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Status:*\n%s", statusText(true)), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:* %s", info.Project), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:* %s", info.Group), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:* %s", checkTypeLabel), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Status:* %s", statusText(true)), false, false),
 	}
 	fieldsSection := slack.NewSectionBlock(nil, fields, nil)
 
@@ -243,10 +243,10 @@ func BuildSilencedOriginalBlocks(info CheckAlertInfo, silencedBy, silenceScope, 
 
 	checkTypeLabel := fmt.Sprintf("%s %s", typeEmoji(info.CheckType), info.CheckType)
 	fields := []*slack.TextBlockObject{
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:*\n%s", info.Project), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:*\n%s", info.Group), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:*\n%s", checkTypeLabel), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, "*Status:*\n🔇 Silenced", false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:* %s", info.Project), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:* %s", info.Group), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:* %s", checkTypeLabel), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, "*Status:* 🔇 Silenced", false, false),
 	}
 	fieldsSection := slack.NewSectionBlock(nil, fields, nil)
 
@@ -279,10 +279,10 @@ func BuildAcknowledgedOriginalBlocks(info CheckAlertInfo, ackedBy string) []slac
 
 	checkTypeLabel := fmt.Sprintf("%s %s", typeEmoji(info.CheckType), info.CheckType)
 	fields := []*slack.TextBlockObject{
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:*\n%s", info.Project), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:*\n%s", info.Group), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:*\n%s", checkTypeLabel), false, false),
-		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Status:*\n%s", statusText(info.IsHealthy)), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Project:* %s", info.Project), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Group:* %s", info.Group), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Type:* %s", checkTypeLabel), false, false),
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Status:* %s", statusText(info.IsHealthy)), false, false),
 	}
 	fieldsSection := slack.NewSectionBlock(nil, fields, nil)
 

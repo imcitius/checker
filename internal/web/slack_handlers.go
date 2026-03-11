@@ -498,6 +498,243 @@ func formUnescape(s string) string {
 	return string(result)
 }
 
+// parseSlashDuration parses a duration string from a slash command argument.
+// Returns the parsed duration, a human-readable label, and whether it's indefinite.
+// Returns ok=false if the duration string is not recognized.
+func parseSlashDuration(s string) (duration time.Duration, label string, ok bool) {
+	switch s {
+	case "30m":
+		return 30 * time.Minute, "30m", true
+	case "1h":
+		return 1 * time.Hour, "1h", true
+	case "4h":
+		return 4 * time.Hour, "4h", true
+	case "8h":
+		return 8 * time.Hour, "8h", true
+	case "24h":
+		return 24 * time.Hour, "24h", true
+	case "indefinite":
+		return 0, "indefinitely", true
+	default:
+		return 0, "", false
+	}
+}
+
+// HandleSlashCommand handles POST /api/slack/commands requests from Slack slash commands.
+func (h *SlackInteractiveHandler) HandleSlashCommand(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Read body for signature verification
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		logrus.Errorf("slack command: failed to read request body: %s", err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Verify Slack request signature
+	if !VerifySlackSignature(h.signingSecret, r, body) {
+		logrus.Warn("slack command: invalid request signature")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse the form-encoded slash command
+	formData := parseFormValues(string(body))
+	text := strings.TrimSpace(formData["text"])
+	userID := formData["user_id"]
+
+	// Route subcommands
+	args := strings.Fields(text)
+	var subcommand string
+	if len(args) > 0 {
+		subcommand = args[0]
+	}
+
+	switch subcommand {
+	case "status":
+		h.handleSlashStatus(w, r)
+	case "silence":
+		h.handleSlashSilence(w, r, userID, args[1:])
+	case "unsilence":
+		h.handleSlashUnsilence(w, r, args[1:])
+	case "help", "":
+		h.handleSlashHelp(w)
+	default:
+		respondEphemeral(w, fmt.Sprintf("Unknown command: `%s`. Type `/checker help` for available commands.", subcommand))
+	}
+}
+
+// respondEphemeral sends an ephemeral JSON response to Slack.
+func respondEphemeral(w http.ResponseWriter, text string) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"response_type": "ephemeral",
+		"text":          text,
+	})
+}
+
+// handleSlashStatus handles `/checker status`.
+func (h *SlackInteractiveHandler) handleSlashStatus(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	checks, err := h.repo.GetUnhealthyChecks(ctx)
+	if err != nil {
+		logrus.Errorf("slack command: failed to get unhealthy checks: %s", err)
+		respondEphemeral(w, "Failed to retrieve check status. Please try again.")
+		return
+	}
+
+	if len(checks) == 0 {
+		respondEphemeral(w, "All checks healthy :white_check_mark:")
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("*%d unhealthy check(s):*\n", len(checks)))
+	for _, c := range checks {
+		sb.WriteString(fmt.Sprintf("\xf0\x9f\x94\xb4 *%s* (%s/%s) \u2014 %s\n", c.Name, c.Project, c.GroupName, c.LastMessage))
+	}
+
+	respondEphemeral(w, sb.String())
+}
+
+// handleSlashSilence handles `/checker silence ...` subcommands.
+func (h *SlackInteractiveHandler) handleSlashSilence(w http.ResponseWriter, r *http.Request, userID string, args []string) {
+	if len(args) == 0 {
+		respondEphemeral(w, "Usage: `/checker silence list`, `/checker silence check <uuid> <duration>`, or `/checker silence project <name> <duration>`\nDurations: `30m`, `1h`, `4h`, `8h`, `24h`, `indefinite`")
+		return
+	}
+
+	switch args[0] {
+	case "list":
+		h.handleSlashSilenceList(w, r)
+	case "check":
+		if len(args) < 3 {
+			respondEphemeral(w, "Usage: `/checker silence check <uuid> <duration>`\nDurations: `30m`, `1h`, `4h`, `8h`, `24h`, `indefinite`")
+			return
+		}
+		h.handleSlashSilenceCreate(w, r, userID, "check", args[1], args[2])
+	case "project":
+		if len(args) < 3 {
+			respondEphemeral(w, "Usage: `/checker silence project <name> <duration>`\nDurations: `30m`, `1h`, `4h`, `8h`, `24h`, `indefinite`")
+			return
+		}
+		h.handleSlashSilenceCreate(w, r, userID, "project", args[1], args[2])
+	default:
+		respondEphemeral(w, fmt.Sprintf("Unknown silence subcommand: `%s`. Use `list`, `check`, or `project`.", args[0]))
+	}
+}
+
+// handleSlashSilenceList handles `/checker silence list`.
+func (h *SlackInteractiveHandler) handleSlashSilenceList(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	silences, err := h.repo.GetActiveSilences(ctx)
+	if err != nil {
+		logrus.Errorf("slack command: failed to get active silences: %s", err)
+		respondEphemeral(w, "Failed to retrieve silences. Please try again.")
+		return
+	}
+
+	if len(silences) == 0 {
+		respondEphemeral(w, "No active silences.")
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("*%d active silence(s):*\n", len(silences)))
+	for _, s := range silences {
+		expires := "never"
+		if s.ExpiresAt != nil {
+			expires = s.ExpiresAt.Format("2006-01-02 15:04 UTC")
+		}
+		sb.WriteString(fmt.Sprintf("\xf0\x9f\x94\x87 %s *%s* \u2014 by <@%s>, expires %s\n", s.Scope, s.Target, s.SilencedBy, expires))
+	}
+
+	respondEphemeral(w, sb.String())
+}
+
+// handleSlashSilenceCreate creates a silence for a check or project.
+func (h *SlackInteractiveHandler) handleSlashSilenceCreate(w http.ResponseWriter, r *http.Request, userID, scope, target, durationStr string) {
+	duration, durationLabel, ok := parseSlashDuration(durationStr)
+	if !ok {
+		respondEphemeral(w, fmt.Sprintf("Invalid duration: `%s`. Valid values: `30m`, `1h`, `4h`, `8h`, `24h`, `indefinite`.", durationStr))
+		return
+	}
+
+	silence := models.AlertSilence{
+		Scope:      scope,
+		Target:     target,
+		SilencedBy: userID,
+		Reason:     fmt.Sprintf("Silenced via /checker command for %s", durationLabel),
+		Active:     true,
+	}
+	if durationStr != "indefinite" {
+		expiresAt := time.Now().Add(duration)
+		silence.ExpiresAt = &expiresAt
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.repo.CreateSilence(ctx, silence); err != nil {
+		logrus.Errorf("slack command: failed to create silence: %s", err)
+		respondEphemeral(w, "Failed to create silence. Please try again.")
+		return
+	}
+
+	respondEphemeral(w, fmt.Sprintf("\xf0\x9f\x94\x87 Silenced %s `%s` for %s.", scope, target, durationLabel))
+}
+
+// handleSlashUnsilence handles `/checker unsilence ...` subcommands.
+func (h *SlackInteractiveHandler) handleSlashUnsilence(w http.ResponseWriter, r *http.Request, args []string) {
+	if len(args) < 2 {
+		respondEphemeral(w, "Usage: `/checker unsilence check <uuid>` or `/checker unsilence project <name>`")
+		return
+	}
+
+	scope := args[0]
+	target := args[1]
+
+	if scope != "check" && scope != "project" {
+		respondEphemeral(w, fmt.Sprintf("Invalid scope: `%s`. Use `check` or `project`.", scope))
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.repo.DeactivateSilence(ctx, scope, target); err != nil {
+		logrus.Errorf("slack command: failed to deactivate silence: %s", err)
+		respondEphemeral(w, "Failed to remove silence. Please try again.")
+		return
+	}
+
+	respondEphemeral(w, fmt.Sprintf("\xf0\x9f\x94\x8a Removed silence for %s `%s`.", scope, target))
+}
+
+// handleSlashHelp handles `/checker help` or `/checker` with no arguments.
+func (h *SlackInteractiveHandler) handleSlashHelp(w http.ResponseWriter) {
+	help := "*`/checker` commands:*\n" +
+		"\u2022 `/checker status` \u2014 Show unhealthy checks\n" +
+		"\u2022 `/checker silence list` \u2014 Show active silences\n" +
+		"\u2022 `/checker silence check <uuid> <duration>` \u2014 Silence a check\n" +
+		"\u2022 `/checker silence project <name> <duration>` \u2014 Silence a project\n" +
+		"\u2022 `/checker unsilence check <uuid>` \u2014 Remove silence for a check\n" +
+		"\u2022 `/checker unsilence project <name>` \u2014 Remove silence for a project\n" +
+		"\u2022 `/checker help` \u2014 Show this message\n" +
+		"\n_Durations: `30m`, `1h`, `4h`, `8h`, `24h`, `indefinite`_"
+
+	respondEphemeral(w, help)
+}
+
 // extractCheckNameFromMessage attempts to extract the check name from the original message text.
 // The fallback text format is "{emoji} ALERT: {name}: {message}".
 func extractCheckNameFromMessage(payload SlackInteractionPayload) string {
