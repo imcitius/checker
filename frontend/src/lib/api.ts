@@ -10,7 +10,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     credentials: 'include',
   })
   if (res.status === 401) {
-    window.location.href = '/auth/login'
+    window.location.href = '/login'
     throw new Error('Unauthorized')
   }
   if (!res.ok) {
@@ -118,7 +118,7 @@ export const api = {
       body: yamlContent,
     }).then(async (res) => {
       if (res.status === 401) {
-        window.location.href = '/auth/login'
+        window.location.href = '/login'
         throw new Error('Unauthorized')
       }
       const data = await res.json()
@@ -136,7 +136,7 @@ export const api = {
       body: yamlContent,
     }).then(async (res) => {
       if (res.status === 401) {
-        window.location.href = '/auth/login'
+        window.location.href = '/login'
         throw new Error('Unauthorized')
       }
       const data = await res.json()
@@ -156,7 +156,7 @@ export const api = {
       credentials: 'include',
     }).then(async (res) => {
       if (res.status === 401) {
-        window.location.href = '/auth/login'
+        window.location.href = '/login'
         throw new Error('Unauthorized')
       }
       if (!res.ok) {

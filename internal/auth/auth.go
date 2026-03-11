@@ -112,11 +112,10 @@ func (am *AuthManager) Middleware() gin.HandlerFunc {
 			logrus.Debugf("Invalid session cookie: %v", err)
 		}
 
-		// 3. Browser request → redirect to login
+		// 3. Browser request → redirect to login page
 		accept := c.GetHeader("Accept")
 		if strings.Contains(accept, "text/html") {
-			redirectURL := c.Request.URL.RequestURI()
-			c.Redirect(http.StatusFound, "/auth/login?redirect="+redirectURL)
+			c.Redirect(http.StatusFound, "/login")
 			c.Abort()
 			return
 		}
@@ -227,10 +226,10 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirect)
 }
 
-// HandleLogout clears the session cookie and redirects to home.
+// HandleLogout clears the session cookie and redirects to login page.
 func (am *AuthManager) HandleLogout(c *gin.Context) {
 	c.SetCookie("checker_session", "", -1, "/", "", c.Request.TLS != nil, true)
-	c.Redirect(http.StatusFound, "/")
+	c.Redirect(http.StatusFound, "/login")
 }
 
 func (am *AuthManager) createSessionJWT(email, name string) (string, error) {

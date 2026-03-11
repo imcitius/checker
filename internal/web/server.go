@@ -175,6 +175,11 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	router.GET("/auth/callback", authMgr.HandleCallback)
 	router.GET("/auth/logout", authMgr.HandleLogout)
 
+	// Public login page (serves SPA without auth so users see the login UI)
+	if spaHandler != nil {
+		router.GET("/login", serveSPA(spaRoot))
+	}
+
 	// Slack routes (exempt from OIDC — they have their own signature verification)
 	if slackClient != nil {
 		handler := NewSlackInteractiveHandler(slackClient.SigningSecret(), slackClient, repo)

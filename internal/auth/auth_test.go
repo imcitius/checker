@@ -212,7 +212,7 @@ func TestMiddleware_NoAuth_BrowserRedirect(t *testing.T) {
 	req.Header.Set("Accept", "text/html,application/xhtml+xml")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusFound, w.Code)
-	assert.Contains(t, w.Header().Get("Location"), "/auth/login")
+	assert.Contains(t, w.Header().Get("Location"), "/login")
 }
 
 func TestMiddleware_NoAuth_APIUnauthorized(t *testing.T) {
