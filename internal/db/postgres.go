@@ -405,7 +405,7 @@ func (db *PostgresDB) GetUnresolvedThread(ctx context.Context, checkUUID string)
 	var t models.SlackAlertThread
 	err := db.Pool.QueryRow(ctx,
 		`SELECT id, check_uuid, channel_id, thread_ts, parent_ts, is_resolved, created_at, resolved_at
-		 FROM slack_alert_threads WHERE check_uuid=$1 AND is_resolved=false LIMIT 1`, checkUUID).Scan(
+		 FROM slack_alert_threads WHERE check_uuid=$1 AND is_resolved=false ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
 		&t.ID, &t.CheckUUID, &t.ChannelID, &t.ThreadTs, &t.ParentTs, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
 	if err != nil {
 		return models.SlackAlertThread{}, err
@@ -422,7 +422,7 @@ func (db *PostgresDB) ResolveThread(ctx context.Context, checkUUID string) error
 
 func (db *PostgresDB) UpdateSlackThread(ctx context.Context, checkUUID, threadTs, channelID string) error {
 	_, err := db.Pool.Exec(ctx,
-		`UPDATE check_definitions SET slack_thread_ts=$2, slack_channel_id=$3 WHERE uuid=$1`,
+		`UPDATE check_definitions SET slack_thread_ts=$2, slack_channel_id=$3, updated_at=NOW() WHERE uuid=$1`,
 		checkUUID, threadTs, channelID)
 	return err
 }
@@ -431,7 +431,7 @@ func (db *PostgresDB) UpdateSlackThread(ctx context.Context, checkUUID, threadTs
 
 func (db *PostgresDB) CreateSilence(ctx context.Context, silence models.AlertSilence) error {
 	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO alert_silences (scope, target, silenced_by, expires_at, reason, active) VALUES ($1, $2, $3, $4, $5, $6)`,
+		`INSERT INTO alert_silences (scope, target, silenced_by, silenced_at, expires_at, reason, active) VALUES ($1, $2, $3, NOW(), $4, $5, $6)`,
 		silence.Scope, silence.Target, silence.SilencedBy, silence.ExpiresAt, silence.Reason, silence.Active)
 	return err
 }
