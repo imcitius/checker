@@ -7,30 +7,26 @@ on:
     branches: [master, staging]
 
 jobs:
-  lint-and-test:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - run: go mod download
-      - run: go vet ./...
-      - run: go test -race -count=1 ./...
 
-  build:
-    needs: lint-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - run: go build -o checker ./cmd/app
+      - name: Download dependencies
+        run: go mod download
 
-  docker:
-    needs: lint-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: docker build -t checker:ci .
+      - name: Lint
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race -count=1 ./...
+
+      - name: Build binary
+        run: go build -o checker ./cmd/app
+
+      - name: Build Docker image
+        run: docker build -t checker:ci .
