@@ -48,7 +48,7 @@ func (check *TCPCheck) Run() (time.Duration, error) {
 		check.Logger = logrus.WithField("check", "tcp")
 	}
 
-	hostPort := fmt.Sprintf("%s:%d", check.Host, check.Port)
+	hostPort := net.JoinHostPort(check.Host, fmt.Sprintf("%d", check.Port))
 	conn, err := net.DialTimeout("tcp", hostPort, timeout)
 	if err != nil {
 		check.Logger.WithError(err).Debugf("TCP check %s, err: %+v", hostPort, err)
