@@ -1474,6 +1474,19 @@
                         // Continue with the rest of the field settings...
                         // ... (keep the existing field settings for other types)
 
+                        // Set alert-related fields
+                        document.getElementById('actor-type').value = def.actor_type || '';
+                        document.getElementById('alert-type').value = def.alert_type || 'telegram';
+                        document.getElementById('alert-destination').value = def.alert_destination || '';
+
+                        // Show/hide alert fields based on actor_type
+                        const alertFields = document.querySelectorAll('.alert-fields');
+                        if (def.actor_type === 'alert') {
+                            alertFields.forEach(field => field.style.display = 'block');
+                        } else {
+                            alertFields.forEach(field => field.style.display = 'none');
+                        }
+
                         // Show delete button for existing definitions
                         document.getElementById('delete-definition').style.display = 'inline-block';
                     })
