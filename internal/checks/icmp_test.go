@@ -1,10 +1,19 @@
 package checks
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/sirupsen/logrus"
 )
+
+// skipIfNoICMPPrivilege skips the test if the error indicates missing raw socket permissions.
+func skipIfNoICMPPrivilege(t *testing.T, err error) {
+	t.Helper()
+	if err != nil && strings.Contains(err.Error(), "permission denied") {
+		t.Skip("Skipping: ICMP raw socket not permitted (requires root or CAP_NET_RAW)")
+	}
+}
 
 // TestICMPCheck_EmptyHost tests handling of empty host.
 func TestICMPCheck_EmptyHost(t *testing.T) {
@@ -49,6 +58,7 @@ func TestICMPCheck_LocalhostSuccess(t *testing.T) {
 	}
 
 	duration, err := check.Run()
+	skipIfNoICMPPrivilege(t, err)
 	if err != nil {
 		t.Errorf("Expected success but got error: %v", err)
 	}
@@ -98,6 +108,7 @@ func TestICMPCheck_ZeroCount(t *testing.T) {
 	}
 
 	_, err := check.Run()
+	skipIfNoICMPPrivilege(t, err)
 	if err != nil {
 		t.Errorf("Expected success with default count but got error: %v", err)
 	}
