@@ -242,7 +242,14 @@
         <header class="dashboard-header">
             <h1>Check Definitions Management</h1>
             <div id="notification-area" class="notification-area"></div>
-            <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+                {{if .user_email}}
+                <span style="color: #666; font-size: 0.9em;">{{.user_email}}</span>
+                <a href="/auth/logout"
+                    style="text-decoration: none; background-color: #888; color: white; padding: 8px 15px; border-radius: 4px; display: inline-block;">Logout</a>
+                {{end}}
+            </div>
         </header>
 
         <div class="tab-container">

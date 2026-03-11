@@ -1,14 +1,16 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,6 +47,17 @@ type Config struct {
 		SigningSecret  string `yaml:"signing_secret"`
 		DefaultChannel string `yaml:"default_channel"`
 	} `yaml:"slack_app"`
+
+	Auth struct {
+		OIDC struct {
+			IssuerURL    string `yaml:"issuer_url"`
+			ClientID     string `yaml:"client_id"`
+			ClientSecret string `yaml:"client_secret"`
+			RedirectURL  string `yaml:"redirect_url"`
+		} `yaml:"oidc"`
+		APIKeys   []string `yaml:"api_keys"`
+		JWTSecret string   `yaml:"jwt_secret"`
+	} `yaml:"auth"`
 
 	Projects map[string]ProjectConfig `yaml:"projects"`
 }
@@ -177,6 +190,26 @@ func (cfg *Config) applyEnvOverrides() {
 	if v := os.Getenv("SLACK_DEFAULT_CHANNEL"); v != "" {
 		cfg.SlackApp.DefaultChannel = v
 	}
+
+	// Auth overrides
+	if v := os.Getenv("AUTH_OIDC_ISSUER_URL"); v != "" {
+		cfg.Auth.OIDC.IssuerURL = v
+	}
+	if v := os.Getenv("AUTH_OIDC_CLIENT_ID"); v != "" {
+		cfg.Auth.OIDC.ClientID = v
+	}
+	if v := os.Getenv("AUTH_OIDC_CLIENT_SECRET"); v != "" {
+		cfg.Auth.OIDC.ClientSecret = v
+	}
+	if v := os.Getenv("AUTH_OIDC_REDIRECT_URL"); v != "" {
+		cfg.Auth.OIDC.RedirectURL = v
+	}
+	if v := os.Getenv("AUTH_API_KEYS"); v != "" {
+		cfg.Auth.APIKeys = strings.Split(v, ",")
+	}
+	if v := os.Getenv("AUTH_JWT_SECRET"); v != "" {
+		cfg.Auth.JWTSecret = v
+	}
 }
 
 // SetDefaults assigns default values to Config fields if they are not set
@@ -235,6 +268,17 @@ func (cfg *Config) setDefaults() {
 			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
 		}{
 			Type: "slack",
+		}
+	}
+
+	// Generate random JWT secret if auth is enabled but no secret provided
+	if cfg.Auth.OIDC.IssuerURL != "" && cfg.Auth.JWTSecret == "" {
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			logrus.Errorf("Failed to generate random JWT secret: %v", err)
+		} else {
+			cfg.Auth.JWTSecret = hex.EncodeToString(b)
+			logrus.Warn("AUTH_JWT_SECRET not set, generated random secret — sessions will not survive restarts")
 		}
 	}
 

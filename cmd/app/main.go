@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
+	"checker/internal/auth"
 	"checker/internal/config"
 	"checker/internal/db"
 	"checker/internal/scheduler"
@@ -96,6 +97,12 @@ func main() {
 				logrus.Info("Slack App not configured, skipping")
 			}
 
+			// 3b. Initialize Auth Manager
+			authMgr, err := auth.NewAuthManager(ctx, cfg)
+			if err != nil {
+				return fmt.Errorf("failed to initialize auth: %w", err)
+			}
+
 			var slackAlerter *scheduler.SlackAlerter
 			if slackClient != nil {
 				slackAlerter = scheduler.NewSlackAlerter(slackClient, repo, cfg.SlackApp.DefaultChannel)
@@ -118,7 +125,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := web.RunServer(serverCtx, cfg, repo, slackClient); err != nil {
+				if err := web.RunServer(serverCtx, cfg, repo, slackClient, authMgr); err != nil {
 					logrus.Errorf("Web server error: %v", err)
 					// Trigger app shutdown if web server fails
 					cancel()

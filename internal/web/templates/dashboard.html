@@ -74,6 +74,11 @@
                     <a href="/check-definitions" class="btn btn-primary"
                         style="text-decoration: none; background-color: #4CAF50; color: white; padding: 8px 15px; border-radius: 4px; display: inline-block;">Manage
                         Checks</a>
+                    {{if .user_email}}
+                    <span style="margin-left: 15px; color: #666; font-size: 0.9em;">{{.user_email}}</span>
+                    <a href="/auth/logout"
+                        style="text-decoration: none; background-color: #888; color: white; padding: 8px 15px; border-radius: 4px; display: inline-block; margin-left: 5px;">Logout</a>
+                    {{end}}
                 </div>
             </div>
         </header>

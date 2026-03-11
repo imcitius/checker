@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 
+	"checker/internal/auth"
 	"checker/internal/config"
 	"checker/internal/db"
 	"checker/internal/models"
@@ -129,7 +130,7 @@ func BroadcastChecksUpdate(repo db.Repository) {
 }
 
 // RunServer starts the web server and returns an error if it fails
-func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slackClient *slack.SlackClient) error {
+func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slackClient *slack.SlackClient, authMgr *auth.AuthManager) error {
 	// Create a router with default middleware
 	router := gin.Default()
 
@@ -147,29 +148,49 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	tmpl := template.Must(template.New("").ParseFS(subTemplates, "*.html"))
 	router.SetHTMLTemplate(tmpl)
 
-	// Serve embedded static files
+	// Serve embedded static files (public — CSS/JS must load for login redirects)
 	subStatic, err := fs.Sub(staticFS, "static")
 	if err != nil {
 		return fmt.Errorf("failed to access embedded static files: %w", err)
 	}
 	router.StaticFS("/static", http.FS(subStatic))
 
+	// Public auth routes (no auth required)
+	router.GET("/auth/login", authMgr.HandleLogin)
+	router.GET("/auth/callback", authMgr.HandleCallback)
+	router.GET("/auth/logout", authMgr.HandleLogout)
+
+	// Slack routes (exempt from OIDC — they have their own signature verification)
+	if slackClient != nil {
+		handler := NewSlackInteractiveHandler(slackClient.SigningSecret(), slackClient, repo)
+		router.POST("/api/slack/interactive", gin.WrapF(handler.HandleInteraction))
+		logrus.Info("Slack interactive endpoint registered at /api/slack/interactive")
+		router.POST("/api/slack/commands", gin.WrapF(handler.HandleSlashCommand))
+		logrus.Info("Slack slash command endpoint registered at /api/slack/commands")
+	}
+
+	// Protected routes (OIDC cookie or API key required)
+	protected := router.Group("/")
+	protected.Use(authMgr.Middleware())
+
 	// Main dashboard route
-	router.GET("/", handleDashboard)
+	protected.GET("/", handleDashboard)
 
 	// Check definitions management page
-	router.GET("/check-definitions", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "check_management.html", nil)
+	protected.GET("/check-definitions", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "check_management.html", gin.H{
+			"user_email": c.GetString("user_email"),
+			"user_name":  c.GetString("user_name"),
+		})
 	})
 
 	// WebSocket endpoint
-	router.GET("/ws", func(c *gin.Context) {
+	protected.GET("/ws", func(c *gin.Context) {
 		handleWebSocket(c, repo)
 	})
 
 	// REST API routes
-	// API for check definitions management
-	checkDefinitionsGroup := router.Group("/api/check-definitions")
+	checkDefinitionsGroup := protected.Group("/api/check-definitions")
 	{
 		checkDefinitionsGroup.GET("", ListCheckDefinitions)
 		checkDefinitionsGroup.GET("/:uuid", GetCheckDefinition)
@@ -180,25 +201,16 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	}
 
 	// Metadata endpoints
-	metadataGroup := router.Group("/api/metadata")
+	metadataGroup := protected.Group("/api/metadata")
 	{
 		metadataGroup.GET("/projects", GetCheckProjects)
 		metadataGroup.GET("/check-types", GetCheckTypes)
 		metadataGroup.GET("/default-timeouts", GetDefaultTimeouts)
 	}
 
-	// Slack interactive endpoint
-	if slackClient != nil {
-		handler := NewSlackInteractiveHandler(slackClient.SigningSecret(), slackClient, repo)
-		router.POST("/api/slack/interactive", gin.WrapF(handler.HandleInteraction))
-		logrus.Info("Slack interactive endpoint registered at /api/slack/interactive")
-		router.POST("/api/slack/commands", gin.WrapF(handler.HandleSlashCommand))
-		logrus.Info("Slack slash command endpoint registered at /api/slack/commands")
-	}
-
 	// Admin endpoints for migrations (not for production use)
 	if gin.Mode() != gin.ReleaseMode {
-		router.POST("/api/admin/migrate-config", func(c *gin.Context) {
+		protected.POST("/api/admin/migrate-config", func(c *gin.Context) {
 			// Convert config file to database entries
 			err := repo.ConvertConfigToCheckDefinitions(c.Request.Context(), cfg)
 			if err != nil {
@@ -214,7 +226,7 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	}
 
 	// Legacy API routes (for backward compatibility)
-	router.GET("/api/checks", func(c *gin.Context) {
+	protected.GET("/api/checks", func(c *gin.Context) {
 		statuses, err := getAllCheckStatuses(repo)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -226,7 +238,7 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	})
 
 	// Enable/disable a check
-	router.POST("/api/toggle-check", func(c *gin.Context) {
+	protected.POST("/api/toggle-check", func(c *gin.Context) {
 		uuid := c.PostForm("uuid")
 		enabled := c.PostForm("enabled") == "true"
 
@@ -247,11 +259,7 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		// Get updated check to broadcast
 		check, err := getCheckByUUID(repo, uuid)
 		if err != nil {
-			// This logic handles potential immediate retrieval issues but assumes success means it's updated
-			// Replicating original fallback logic
-			if err.Error() == "check definition not found" { // Simplified error check for repo
-				// This shouldn't happen since toggleCheck should create the check if it doesn't exist
-				// But just in case, create a placeholder check for the response
+			if err.Error() == "check definition not found" {
 				logrus.Warnf("Check %s still not found after toggle, using placeholder for response", uuid)
 
 				check = models.CheckStatus{
@@ -269,7 +277,6 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 				}
 			} else {
 				logrus.Errorf("Failed to get check %s after toggle: %v", uuid, err)
-				// Continue anyway to return success to the client
 			}
 		}
 
@@ -289,11 +296,11 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	})
 
 	// Update last ping status for passive checks
-	router.POST("/api/checks/:uuid/ping", updateLastPingStatus)
+	protected.POST("/api/checks/:uuid/ping", updateLastPingStatus)
 
 	// Debug endpoint for verifying static resources (removed in production)
 	if gin.Mode() != gin.ReleaseMode {
-		router.GET("/debug/static", func(c *gin.Context) {
+		protected.GET("/debug/static", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Static assets are embedded in binary",
 				"files":   []string{"styles.css", "script.js"},
@@ -528,7 +535,9 @@ func handleDashboard(c *gin.Context) {
 	viewModels := convertToViewModels(checks)
 
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
-		"checks": viewModels,
+		"checks":     viewModels,
+		"user_email": c.GetString("user_email"),
+		"user_name":  c.GetString("user_name"),
 	})
 }
 
