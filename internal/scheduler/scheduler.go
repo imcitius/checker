@@ -284,7 +284,7 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 		checkDurationParsed, _ := time.ParseDuration(checkDef.Duration)
 		if shouldSendAlert(checkDurationParsed, checkStatus) {
 			// alertStartTime := time.Now()
-			sendAlerts(checkStatus, checkDef)
+			sendAlerts(checkStatus, checkDef, slackAlerter != nil)
 			// logger.WithField("alert_duration_ms", time.Since(alertStartTime).Milliseconds()).Info("Alert sent")
 
 			checkStatus.LastAlertSent = runTime
@@ -327,7 +327,8 @@ func splitAlertDestination(destination string) []string {
 }
 
 // sendAlerts dispatches alerts based on the check definition.
-func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition) {
+// When slackAppActive is true, the "slack" alertType is skipped because the SlackAlerter handles it natively.
+func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
 	// Skip if no actor type is defined
 	if checkDef.ActorType == "" {
 		// logrus.Debugf("No actor type defined for check %s, skipping alerts", status.UUID)
@@ -361,6 +362,10 @@ func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition) {
 			}
 
 		case "slack":
+			if slackAppActive {
+				// Slack App (SlackAlerter) handles this natively — skip legacy webhook path
+				return
+			}
 			if checkDef.AlertDestination == "" {
 				logrus.Errorf("Slack webhook URL is not configured for check %s", status.UUID)
 				return
