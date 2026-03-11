@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Health Checks Dashboard</title>
     <link rel="stylesheet" href="/static/styles.css" type="text/css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    
+
     <!-- Simple resource loading error handler -->
     <script>
         // Track resource loading
@@ -13,7 +14,7 @@
             css: false,
             js: false
         };
-        
+
         // Function to check if resources are loaded
         function checkResources() {
             const styles = document.styleSheets;
@@ -31,7 +32,7 @@
                     console.error('Error checking stylesheet:', e);
                 }
             }
-            
+
             // Update notification if resources failed to load
             if (!window.resourcesLoaded.css || !window.resourcesLoaded.js) {
                 const notification = document.getElementById('notification-area');
@@ -41,13 +42,14 @@
                 }
             }
         }
-        
+
         // Check resources after page load
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             setTimeout(checkResources, 1000);
         });
     </script>
 </head>
+
 <body>
     <div class="dashboard-container">
         <header class="dashboard-header">
@@ -69,18 +71,14 @@
                     </select>
                 </div>
                 <div class="view-controls">
-                    <a href="/check-definitions" class="btn btn-primary" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 8px 15px; border-radius: 4px; display: inline-block;">Manage Checks</a>
+                    <a href="/check-definitions" class="btn btn-primary"
+                        style="text-decoration: none; background-color: #4CAF50; color: white; padding: 8px 15px; border-radius: 4px; display: inline-block;">Manage
+                        Checks</a>
                 </div>
             </div>
         </header>
-        
+
         <div id="connection-status" class="connection-status">Connecting...</div>
-        
-        <!-- Debug controls - only shown in development mode -->
-        <div id="debug-controls" class="debug-controls" style="display: none;">
-            <button id="test-websocket" class="debug-button">Test WebSocket Connection</button>
-            <span id="test-result"></span>
-        </div>
 
         <!-- Stats Summary -->
         <div class="stats-summary">
@@ -102,10 +100,7 @@
             </div>
         </div>
 
-        <h2>Checks</h2>
-        <div id="checks-list"></div>
-
-        <!-- Checks List with Expandable Rows -->
+        <!-- Checks Table -->
         <div id="checks-container">
             <table id="checks-table" class="checks-table">
                 <thead>
@@ -115,7 +110,8 @@
                         <th>Type</th>
                         <th>Status</th>
                         <th>Last Check</th>
-                        <th>Enabled</th>
+                        <th>Frequency</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="checks-list">
@@ -131,87 +127,706 @@
             <td class="check-name-cell">
                 <div class="check-name-container">
                     <span class="check-name"></span>
-                    <span class="expand-icon">▼</span>
                 </div>
             </td>
             <td class="check-project"></td>
             <td class="check-type"></td>
             <td class="check-status-cell">
-                <span class="check-status-indicator"></span>
-                <span class="check-status-text"></span>
-            </td>
-            <td class="check-last-exec"></td>
-            <td class="check-enabled-cell">
-                <label class="switch">
-                    <input type="checkbox" class="check-toggle">
-                    <span class="slider"></span>
-                </label>
-            </td>
-        </tr>
-        <tr class="check-details-row">
-            <td colspan="6" class="check-details-cell">
-                <div class="check-details-container">
-                    <div class="check-details-section">
-                        <div class="check-detail-item">
-                            <span class="check-detail-label">Host:</span>
-                            <span class="check-host"><i>🖥️</i><span class="host-value"></span></span>
-                        </div>
-                        <div class="check-detail-item">
-                            <span class="check-detail-label">Frequency:</span>
-                            <span class="check-periodicity"><i>🔄</i><span class="periodicity-value"></span></span>
-                        </div>
-                    </div>
-                    <div class="check-message"></div>
+                <div class="status-container">
+                    <span class="check-status-indicator"></span>
+                    <span class="check-status-text"></span>
                 </div>
             </td>
-        </tr>
-    </template>
-    
-    <template id="card-template">
-        <div class="check-card">
-            <div class="check-header">
-                <h2 class="check-name"></h2>
-                <div class="check-control">
-                    <span class="check-status"></span>
-                    <label class="switch">
+            <td class="check-last-exec"></td>
+            <td class="check-frequency">
+                <div class="frequency-container">
+                    <span class="frequency-value"></span>
+                </div>
+            </td>
+            <td class="check-actions">
+                <div class="actions-container">
+                    <label class="switch" title="Enable/Disable Check">
                         <input type="checkbox" class="check-toggle">
                         <span class="slider"></span>
                     </label>
+                    <button class="action-button edit-button" title="Edit Check">
+                        ✏️
+                    </button>
                 </div>
-            </div>
-            <div class="check-details">
-                <p><strong>Project:</strong> <span class="check-project"></span></p>
-                <p><strong>Type:</strong> <span class="check-type"></span></p>
-                <p><strong>Group:</strong> <span class="check-group"></span></p>
-                <p><strong>Last Check:</strong> <span class="check-last-exec"></span></p>
-                <p><strong>Last Alert:</strong> <span class="check-last-ping"></span></p>
-                <div class="check-message"></div>
-                <p class="check-uuid"></p>
-            </div>
-        </div>
+            </td>
+        </tr>
+        <tr class="check-details-row always-visible">
+            <td colspan="7" class="check-details-cell">
+                <div class="check-details-inline">
+                    <div class="detail-item uuid-item">
+                        <span class="detail-label">UUID:</span>
+                        <div class="uuid-container" title="Click to copy">
+                            <span class="uuid-value"></span>
+                        </div>
+                    </div>
+                    <div class="detail-item url-item">
+                        <span class="detail-label">URL/Host:</span>
+                        <div class="url-container">
+                            <span class="url-value"></span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
     </template>
 
-    <script src="/static/script.js" onerror="console.error('Failed to load script.js'); window.resourcesLoaded.js = false;"></script>
+    <style>
+        .checks-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .checks-table th,
+        .checks-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Remove bottom border from main row to create a cohesive two-row group */
+        .check-row td {
+            border-bottom: none;
+            padding-bottom: 12px;
+            padding-top: 14px;
+            height: 50px;
+        }
+
+        /* Add extra padding to details row to visually separate check groups */
+        .check-details-row td {
+            padding-top: 0px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            height: 30px;
+        }
+
+        /* Add visual space between check groups */
+        .check-details-row:not(:last-child) td {
+            padding-bottom: 12px;
+        }
+
+        /* Make header row properly aligned with the taller main rows */
+        .checks-table th {
+            font-weight: 600;
+            color: #495057;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+            padding-top: 16px;
+            padding-bottom: 16px;
+            position: relative;
+            height: 20px;
+        }
+
+        .check-name-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .expand-icon {
+            font-size: 12px;
+            color: #868e96;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            min-width: 12px;
+        }
+
+        .expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .check-details-row {
+            display: none;
+            background-color: #f8f9fa;
+        }
+
+        .check-details-row.expanded {
+            display: table-row;
+        }
+
+        .check-details-cell {
+            padding: 20px !important;
+        }
+
+        .check-details-container {
+            padding: 16px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .check-details-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .check-details-section {
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .check-details-section h4 {
+            margin: 0 0 12px 0;
+            color: #495057;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .check-details-section h4::before {
+            content: '';
+            width: 4px;
+            height: 14px;
+            background: #4CAF50;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .check-details-section:nth-child(1) h4::before {
+            background: #fa5252;
+        }
+
+        .check-details-section:nth-child(3) h4::before {
+            background: #4dabf7;
+        }
+
+        .check-message,
+        .check-uuid,
+        .check-group,
+        .check-last-run {
+            margin: 8px 0;
+            font-size: 13px;
+            color: #495057;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+
+        .check-message.error-message {
+            background: #fff5f5;
+            border-color: #ffa8a8;
+            color: #e03131;
+        }
+
+        .check-uuid {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .check-uuid:hover {
+            background: #f1f3f5;
+            color: #495057;
+        }
+
+        .check-uuid.copied {
+            background-color: #d3f9d8;
+            color: #2b8a3e;
+            transform: scale(1.02);
+        }
+
+        .check-uuid::after {
+            content: '📋';
+            margin-left: 8px;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+
+        .check-uuid:hover::after {
+            opacity: 1;
+        }
+
+        .check-uuid.copied::after {
+            content: '✓';
+            color: #2b8a3e;
+        }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .check-status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .check-status-indicator:after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            opacity: 0.2;
+        }
+
+        .check-status-indicator.healthy {
+            background-color: #40c057;
+            color: #40c057;
+        }
+
+        .check-status-indicator.unhealthy {
+            background-color: #fa5252;
+            color: #fa5252;
+        }
+
+        .check-status-indicator.disabled {
+            background-color: #868e96;
+            color: #868e96;
+        }
+
+        .check-status-text {
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .check-actions {
+            white-space: nowrap;
+            text-align: right;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .action-button {
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .action-button:hover {
+            background-color: #f1f3f5;
+        }
+
+        .action-icon {
+            font-size: 16px;
+        }
+
+        .check-host-details,
+        .check-frequency-details {
+            margin: 8px 0;
+            font-size: 13px;
+            color: #495057;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .host-label {
+            font-weight: 500;
+            margin-right: 8px;
+            min-width: 150px;
+        }
+
+        .host-value {
+            word-break: break-all;
+            flex: 1;
+        }
+
+        .check-frequency-details .frequency-value {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        .host-label::before {
+            margin-right: 6px;
+            opacity: 0.7;
+        }
+
+        .check-host-details .host-label::before {
+            content: '🔗';
+        }
+
+        .check-frequency-details .host-label::before {
+            content: '🔄';
+        }
+
+        .check-uuid::before {
+            content: '🆔';
+            margin-right: 6px;
+            opacity: 0.7;
+        }
+
+        .check-group::before {
+            content: '📁';
+            margin-right: 6px;
+            opacity: 0.7;
+        }
+
+        .check-last-run::before {
+            content: '🕒';
+            margin-right: 6px;
+            opacity: 0.7;
+        }
+
+        /* Improve toggle switch appearance */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+            margin: 0 8px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s ease-in-out;
+            border-radius: 22px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s ease-in-out;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        input:checked+.slider {
+            background-color: #4CAF50;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+        }
+
+        /* Disabled state for toggle */
+        input:disabled+.slider {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Edit button styles */
+        .edit-button {
+            color: #0066cc;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            background-color: transparent;
+        }
+
+        .edit-button:hover {
+            transform: scale(1.1);
+            background-color: #e6f2ff;
+            border: 1px solid #cce5ff;
+        }
+
+        /* Add transition for dropdown */
+        .check-details-row {
+            transition: all 0.3s ease-in-out;
+        }
+
+        .check-details-row.expanded {
+            display: table-row;
+            background: #f8f9fa;
+        }
+
+        .check-details-container {
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin: 0 16px;
+        }
+
+        /* Stats summary adjustments */
+        .stats-summary {
+            margin-bottom: 32px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #868e96;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .actions-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .action-button {
+            background: none;
+            border: none;
+            padding: 6px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+        }
+
+        .action-button:hover {
+            background-color: #f1f3f5;
+            transform: scale(1.1);
+        }
+
+        .action-icon {
+            font-size: 16px;
+        }
+
+        .edit-button {
+            color: #4CAF50;
+        }
+
+        .edit-button:hover {
+            background-color: #e8f5e9;
+        }
+
+        .check-frequency {
+            white-space: nowrap;
+            color: #495057;
+        }
+
+        .frequency-value {
+            font-size: 0.9em;
+        }
+
+        /* Notification styles */
+        .notification-area {
+            padding: 10px 16px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+        }
+
+        .notification-area:not(:empty) {
+            max-height: 60px;
+            opacity: 1;
+            margin-bottom: 20px;
+        }
+
+        .notification-area.success {
+            background-color: #d3f9d8;
+            color: #2b8a3e;
+            border-left: 4px solid #2b8a3e;
+        }
+
+        .notification-area.error {
+            background-color: #ffe3e3;
+            color: #e03131;
+            border-left: 4px solid #e03131;
+        }
+
+        .notification-area.warning {
+            background-color: #fff3bf;
+            color: #994c0c;
+            border-left: 4px solid #f59f00;
+        }
+
+        .notification-area.info {
+            background-color: #e7f5ff;
+            color: #1971c2;
+            border-left: 4px solid #1971c2;
+        }
+
+        .uuid-container,
+        .url-container {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.8em;
+            line-height: 1;
+        }
+
+        .uuid-container {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .uuid-container:hover {
+            background-color: #f1f3f5;
+        }
+
+        .uuid-container.copied {
+            background-color: #d3f9d8;
+            color: #2b8a3e;
+        }
+
+        .url-value a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        .url-value a:hover {
+            text-decoration: underline;
+        }
+
+        /* Add new CSS for two-story row layout */
+        .check-details-row.always-visible {
+            display: table-row !important;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #eee;
+        }
+
+        .check-details-inline {
+            display: flex;
+            padding: 2px 16px 2px;
+            gap: 24px;
+            line-height: 1.2;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+            height: 24px;
+        }
+
+        .uuid-item {
+            flex: 1;
+        }
+
+        .url-item {
+            flex: 2;
+        }
+
+        .detail-label {
+            color: #6c757d;
+            font-size: 0.8rem;
+            font-weight: 500;
+            min-width: 60px;
+        }
+
+        /* Alternate row styling for better readability */
+        .check-row {
+            background-color: #ffffff;
+        }
+
+        .check-row:nth-of-type(4n+1),
+        .check-row:nth-of-type(4n+2) {
+            background-color: #f8f9fa;
+        }
+
+        .check-details-row.always-visible:nth-of-type(4n+2),
+        .check-details-row.always-visible:nth-of-type(4n+3) {
+            background-color: #f0f1f2;
+        }
+
+        /* Status coloring for both rows */
+        .check-row.healthy {
+            border-left: 4px solid #40c057;
+        }
+
+        .check-details-row.always-visible.healthy {
+            border-left: 4px solid #40c057;
+        }
+
+        .check-row.unhealthy {
+            border-left: 4px solid #fa5252;
+        }
+
+        .check-details-row.always-visible.unhealthy {
+            border-left: 4px solid #fa5252;
+        }
+
+        .check-row.disabled {
+            border-left: 4px solid #868e96;
+        }
+
+        .check-details-row.always-visible.disabled {
+            border-left: 4px solid #868e96;
+        }
+
+        .checks-table thead {
+            background: linear-gradient(to bottom, #f8f9fa, #f1f3f5);
+            border-bottom: 2px solid #e9ecef;
+        }
+    </style>
+
+    <script src="/static/script.js"
+        onerror="console.error('Failed to load script.js'); window.resourcesLoaded.js = false;"></script>
     <script>
         // Flag JavaScript as loaded
         window.resourcesLoaded.js = true;
-        
-        // Show debug controls only in development environments
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check for development mode indicators
-            const hostname = window.location.hostname;
-            const debugMode = hostname === 'localhost' || 
-                             hostname === '127.0.0.1' || 
-                             hostname.includes('.local') ||
-                             window.location.port !== '';
-            
-            if (debugMode) {
-                const debugControls = document.getElementById('debug-controls');
-                if (debugControls) {
-                    debugControls.style.display = 'flex';
-                }
-            }
-        });
     </script>
 </body>
+
 </html>

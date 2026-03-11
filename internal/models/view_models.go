@@ -15,4 +15,5 @@ type CheckViewModel struct {
 	Message     string // Error message or status message
 	Host        string // Host being checked
 	Periodicity string // How often the check runs
+	URL         string // URL for HTTP checks
 }

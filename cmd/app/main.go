@@ -26,7 +26,7 @@ func main() {
 	})
 
 	// Set log level to debug by default
-	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(logrus.InfoLevel)
 
 	// CLI App
 	app := &cli.App{
@@ -71,20 +71,19 @@ func main() {
 			}
 			logrus.Infof("Configuration loaded successfully from %s", configPath)
 
-			// 2. Initialize MongoDB
-			logrus.Info("Connecting to MongoDB")
-			mongoDB, err := db.NewMongoDB(cfg)
+			// 2. Initialize Database (PostgreSQL)
+			logrus.Info("Connecting to Database")
+			// We now use PostgresDB as the implementation of Repository
+			repo, err := db.NewPostgresDB(cfg)
 			if err != nil {
-				return fmt.Errorf("failed to connect to MongoDB: %w", err)
+				return fmt.Errorf("failed to connect to Database: %w", err)
 			}
-			logrus.Info("MongoDB connection established")
+			logrus.Info("Database connection established")
 
-			// Ensure MongoDB is closed on exit
+			// Ensure Database is closed on exit
 			defer func() {
-				logrus.Info("Closing MongoDB connection")
-				if err := mongoDB.Close(ctx); err != nil {
-					logrus.Errorf("Error closing MongoDB connection: %v", err)
-				}
+				logrus.Info("Closing Database connection")
+				repo.Close()
 			}()
 
 			// 3. Start Scheduler in background
@@ -93,7 +92,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := scheduler.RunScheduler(schedulerCtx, cfg, mongoDB); err != nil {
+				if err := scheduler.RunScheduler(schedulerCtx, cfg, repo); err != nil {
 					logrus.Errorf("Scheduler error: %v", err)
 				}
 			}()
@@ -104,7 +103,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := web.RunServer(serverCtx, cfg, mongoDB); err != nil {
+				if err := web.RunServer(serverCtx, cfg, repo); err != nil {
 					logrus.Errorf("Web server error: %v", err)
 					// Trigger app shutdown if web server fails
 					cancel()

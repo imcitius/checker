@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS check_definitions (
+    uuid UUID PRIMARY KEY,
+    name TEXT NOT NULL,
+    project TEXT NOT NULL,
+    group_name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    description TEXT,
+    enabled BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    last_run TIMESTAMPTZ,
+    is_healthy BOOLEAN,
+    last_message TEXT,
+    last_alert_sent TIMESTAMPTZ,
+    duration TEXT,
+    actor_type TEXT,
+    alert_type TEXT,
+    alert_destination TEXT,
+    config JSONB,
+    actor_config JSONB
+);

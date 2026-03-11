@@ -1,151 +1,233 @@
 package scheduler
 
 import (
+	"container/heap"
 	"context"
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 
+	"checker/internal/alerts"
 	"checker/internal/config"
 	"checker/internal/db"
 	"checker/internal/models"
 
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// secondsFromDayStart returns the number of seconds elapsed since the start of the current day
-func secondsFromDayStart() int64 {
-	now := time.Now()
-	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	return int64(now.Sub(startOfDay).Seconds())
+const (
+	DefaultWorkerPoolSize = 50
+	SyncInterval          = 10 * time.Second
+)
+
+// Scheduler manages the lifecycle of health checks
+type Scheduler struct {
+	workerPool *WorkerPool
+	checkHeap  *CheckHeap
+	checkMap   map[string]*CheckItem // Map UUID -> CheckItem
+	lock       sync.Mutex
+	repo       db.Repository
 }
 
-// durationToSeconds converts a duration string (e.g., "1m", "1h") to seconds
-func durationToSeconds(duration string) (int64, error) {
-	d, err := time.ParseDuration(duration)
-	if err != nil {
-		return 0, err
+// NewScheduler creates a new scheduler instance
+func NewScheduler(repo db.Repository) *Scheduler {
+	h := &CheckHeap{}
+	heap.Init(h)
+	return &Scheduler{
+		workerPool: NewWorkerPool(DefaultWorkerPoolSize, repo),
+		checkHeap:  h,
+		checkMap:   make(map[string]*CheckItem),
+		repo:       repo,
 	}
-	return int64(d.Seconds()), nil
 }
 
 // RunScheduler starts the health check scheduler.
-func RunScheduler(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) error {
-	logrus.Info("Starting health check scheduler")
+func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository) error {
+	logrus.Info("Starting event-driven health check scheduler")
 
-	// Create a cancellable context for the ticker
-	tickerCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	s := NewScheduler(repo)
 
-	// Create a single ticker that runs every second
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
+	// Start worker pool
+	s.workerPool.Start()
+	defer s.workerPool.Stop()
 
-	// Channel to collect errors
-	errChan := make(chan error, 1)
+	// Initial Sync
+	if err := s.Sync(ctx); err != nil {
+		logrus.Errorf("Initial sync failed: %v", err)
+	}
 
-	// Start the ticker goroutine
-	go func() {
-		logrus.Debug("Starting scheduler ticker")
+	// Create sync ticker
+	syncTicker := time.NewTicker(SyncInterval)
+	defer syncTicker.Stop()
 
-		for {
-			select {
-			case <-tickerCtx.Done():
-				logrus.Debug("Scheduler ticker shutting down")
-				return
-			case <-ticker.C:
-				// Get current seconds from day start
-				currentSeconds := secondsFromDayStart()
+	for {
+		// Determine wait time for next check
+		var waitDuration time.Duration
 
-				// Get all enabled check definitions
-				definitions, err := getAllEnabledChecks(mongoDB)
-				if err != nil {
-					logrus.Errorf("Failed to get enabled checks: %v", err)
-					continue
-				}
+		s.lock.Lock()
+		nextItem := s.checkHeap.Peek()
+		s.lock.Unlock()
 
-				// Process each check definition
-				for _, checkDef := range definitions {
-					// Convert check duration to seconds
-					checkSeconds, err := durationToSeconds(checkDef.Duration)
-					if err != nil {
-						logrus.Warnf("Invalid duration for check %s: %s", checkDef.UUID, checkDef.Duration)
-						continue
-					}
-
-					// Skip if check period is 0 (invalid)
-					if checkSeconds == 0 {
-						continue
-					}
-
-					if !checkDef.Enabled {
-						logrus.Infof("Check %s is disabled", checkDef.UUID)
-						continue
-					}
-
-					// Check if it's time to run this check
-					if currentSeconds%checkSeconds == 0 {
-						// Run the check in a separate goroutine
-						go func(def models.CheckDefinition) {
-							if err := executeCheck(mongoDB, def); err != nil {
-								logrus.Errorf("Error executing check %s: %v", def.UUID, err)
-							}
-						}(checkDef)
-					}
-				}
+		if nextItem != nil {
+			waitDuration = time.Until(nextItem.NextRun)
+			if waitDuration < 0 {
+				waitDuration = 0
 			}
+		} else {
+			// No checks, wait for sync
+			waitDuration = SyncInterval
 		}
-	}()
 
-	// Wait for context cancellation or error
-	select {
-	case <-ctx.Done():
-		logrus.Info("Scheduler shutting down due to context cancellation")
-		cancel() // Cancel ticker context
-		return ctx.Err()
-	case err := <-errChan:
-		logrus.Errorf("Scheduler shutting down due to error: %v", err)
-		cancel() // Cancel ticker context
-		return err
+		// Cap wait time at SyncInterval (or slightly less to ensure we catch sync signal)
+		// Actually, we use select cases, so we don't need to cap it manually if we have a separate channel for sync.
+		// But timer allocation optimization:
+
+		timer := time.NewTimer(waitDuration)
+
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			logrus.Info("Scheduler shutting down")
+			return ctx.Err()
+
+		case <-syncTicker.C:
+			timer.Stop()
+			// logrus.Debug("Syncing checks...")
+			if err := s.Sync(ctx); err != nil {
+				logrus.Errorf("Sync failed: %v", err)
+			}
+
+		case <-timer.C:
+			// Time to maybe run a check
+			s.processNextCheck()
+		}
 	}
 }
 
-// getAllEnabledChecks retrieves all enabled check definitions from the database
-func getAllEnabledChecks(mongoDB *db.MongoDB) ([]models.CheckDefinition, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+// timeoutDurationStrHelper converts generic duration string to time.Duration safely
+func parseDuration(d string) time.Duration {
+	dur, _ := time.ParseDuration(d)
+	if dur == 0 {
+		return time.Minute // Default fallback
+	}
+	return dur
+}
+
+func (s *Scheduler) processNextCheck() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	item := s.checkHeap.Peek()
+	if item == nil {
+		return
+	}
+
+	now := time.Now()
+	if item.NextRun.After(now) {
+		// Spurious wake-up or timing issue, just return and let loop recalculate wait
+		return
+	}
+
+	// Pop the item
+	heap.Pop(s.checkHeap)
+
+	// Submit to worker pool if enabled
+	if item.CheckDef.Enabled {
+		s.workerPool.Submit(item.CheckDef)
+	}
+
+	// Schedule next run
+	// Logic: NextRun = Now + Duration
+	// This creates a "Fixed Delay" schedule (start to start >= duration + execution time wait)
+	// Usage of 'processNextCheck' implies we just dispatched it.
+	// To minimize drift, we could use item.NextRun.Add(duration), but if we are lagging, we might spiral.
+	// Let's use Now + Duration for robustness.
+
+	dur := parseDuration(item.CheckDef.Duration)
+	item.NextRun = now.Add(dur)
+
+	// Push back to heap
+	heap.Push(s.checkHeap, item)
+}
+
+// Sync fetches checks from DB and updates the heap
+func (s *Scheduler) Sync(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	filter := bson.M{
-		"enabled": true,
-	}
-
-	var definitions []models.CheckDefinition
-	cursor, err := mongoDB.Collection("check_definitions").Find(ctx, filter)
+	defs, err := s.getAllChecks(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query check definitions: %w", err)
-	}
-	defer cursor.Close(ctx)
-
-	if err := cursor.All(ctx, &definitions); err != nil {
-		return nil, fmt.Errorf("failed to decode check definitions: %w", err)
+		return err
 	}
 
-	return definitions, nil
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	activeUUIDs := make(map[string]bool)
+
+	for _, def := range defs {
+		activeUUIDs[def.UUID] = true
+
+		item, exists := s.checkMap[def.UUID]
+		if exists {
+			// Update existing definition
+			// If duration changed, we might want to reschedule?
+			// For simplicity, update ref, and it will be picked up on next run.
+			// Only if Enabled changed from false->true we might want to run sooner?
+			// Let's just update the def.
+			item.CheckDef = def
+
+			// If it was disabled and now enabled, ensure it's in heap?
+			// We keep disabled items in heap but just don't execute them.
+			// Simpler to remove disabled from heap?
+			// Keeping them is easier for now to maintain NextRun state.
+		} else {
+			// New check
+			newItem := &CheckItem{
+				CheckDef: def,
+				NextRun:  time.Now(), // Run immediately
+			}
+			s.checkMap[def.UUID] = newItem
+			heap.Push(s.checkHeap, newItem)
+			logrus.Infof("Scheduled new check %s", def.UUID)
+		}
+	}
+
+	// Remove processed/deleted checks
+	// We need to be careful removing from heap using index.
+	// It's safer to rebuild user list or just mark them as removed?
+	// If we simply delete from checkMap, the item is still in heap.
+	// We should remove from heap.
+
+	for uuid, item := range s.checkMap {
+		if !activeUUIDs[uuid] {
+			// Check was deleted or became invalid
+			heap.Remove(s.checkHeap, item.Index)
+			delete(s.checkMap, uuid)
+			logrus.Infof("Descheduled check %s", uuid)
+		}
+	}
+
+	return nil
+}
+
+func (s *Scheduler) getAllChecks(ctx context.Context) ([]models.CheckDefinition, error) {
+	// We fetch ALL checks, check definitions (enabled only)
+	return s.repo.GetEnabledCheckDefinitions(ctx)
 }
 
 // executeCheck runs a single check and updates its status
-func executeCheck(mongoDB *db.MongoDB, checkDef models.CheckDefinition) error {
+func executeCheck(repo db.Repository, checkDef models.CheckDefinition) error {
 	logger := logrus.WithFields(logrus.Fields{
 		"project": checkDef.Project,
-		"group":   checkDef.GroupName,
-		"check":   checkDef.Name,
-		"type":    checkDef.Type,
-		"uuid":    checkDef.UUID,
+		// "group":   checkDef.GroupName,
+		"check": checkDef.Name,
+		// "type":    checkDef.Type,
+		// "uuid":    checkDef.UUID,
 	})
 
-	logger.Debug("Executing check")
+	// logger.Debug("Executing check")
 
 	// Create checker instance
 	checker := CheckerFactory(checkDef, logger)
@@ -158,17 +240,18 @@ func executeCheck(mongoDB *db.MongoDB, checkDef models.CheckDefinition) error {
 	errMessage := ""
 	runTime := time.Now()
 
-	checkDuration, err := checker.Run()
+	_, err := checker.Run()
 	if err != nil {
 		isHealthy = false
 		errMessage = err.Error()
 	}
 
-	logger.WithFields(logrus.Fields{
-		"healthy":     isHealthy,
-		"message":     errMessage,
-		"duration_ms": checkDuration.Milliseconds(),
-	}).Info("Check completed")
+	// logger.Debugf("Check finished: healthy=%v duration=%v", isHealthy, checkDuration)
+
+	host := ""
+	if checkDef.Config != nil {
+		host = checkDef.Config.GetTarget()
+	}
 
 	// Create status for update
 	checkStatus := models.CheckStatus{
@@ -181,132 +264,31 @@ func executeCheck(mongoDB *db.MongoDB, checkDef models.CheckDefinition) error {
 		IsHealthy:   isHealthy,
 		Message:     errMessage,
 		IsEnabled:   checkDef.Enabled,
-		Host:        checkDef.Host,
+		Host:        host,
 		Periodicity: checkDef.Duration,
 	}
 
 	// Update status in database
-	if err := upsertCheckStatus(mongoDB, &checkStatus); err != nil {
+	if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 		logger.WithError(err).Error("Failed to update check status")
 		return err
 	}
 
 	// Handle alerts if check fails
 	if !isHealthy {
-		checkDuration, _ := time.ParseDuration(checkDef.Duration)
-		if shouldSendAlert(checkDuration, checkStatus) {
-			alertStartTime := time.Now()
+		checkDurationParsed, _ := time.ParseDuration(checkDef.Duration)
+		if shouldSendAlert(checkDurationParsed, checkStatus) {
+			// alertStartTime := time.Now()
 			sendAlerts(checkStatus, checkDef)
-			logger.WithField("alert_duration_ms", time.Since(alertStartTime).Milliseconds()).Info("Alert sent")
+			// logger.WithField("alert_duration_ms", time.Since(alertStartTime).Milliseconds()).Info("Alert sent")
 
 			checkStatus.LastAlertSent = runTime
-			if err := upsertCheckStatus(mongoDB, &checkStatus); err != nil {
+			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 				logger.WithError(err).Error("Failed to update last alert time")
 			}
 		}
 	}
 
-	return nil
-}
-
-// getCheckDefinitionsByDuration retrieves all enabled check definitions for a specific duration
-func getCheckDefinitionsByDuration(ctx context.Context, mongoDB *db.MongoDB, duration string) ([]models.CheckDefinition, error) {
-	checkDefinitionsCollection := "check_definitions"
-
-	// Query for enabled checks with the specified duration
-	filter := bson.M{
-		"enabled":  true,
-		"duration": duration,
-	}
-
-	var definitions []models.CheckDefinition
-
-	cursor, err := mongoDB.Collection(checkDefinitionsCollection).Find(ctx, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query check definitions: %w", err)
-	}
-	defer cursor.Close(ctx)
-
-	if err := cursor.All(ctx, &definitions); err != nil {
-		return nil, fmt.Errorf("failed to decode check definitions: %w", err)
-	}
-
-	return definitions, nil
-}
-
-// findCheckStatus looks up the check status in the database.
-func findCheckStatus(mongoDB *db.MongoDB, UUID string) (*models.CheckStatus, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	filter := bson.M{
-		"uuid": UUID,
-	}
-
-	var checkDef models.CheckDefinition
-	err := mongoDB.Collection("check_definitions").FindOne(ctx, filter).Decode(&checkDef)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, err
-		}
-		return nil, fmt.Errorf("error finding check: %w", err)
-	}
-
-	// Convert CheckDefinition to CheckStatus
-	return &models.CheckStatus{
-		ID:            checkDef.ID,
-		UUID:          checkDef.UUID,
-		Project:       checkDef.Project,
-		CheckGroup:    checkDef.GroupName,
-		CheckName:     checkDef.Name,
-		CheckType:     checkDef.Type,
-		LastRun:       checkDef.LastRun,
-		IsHealthy:     checkDef.IsHealthy,
-		Message:       checkDef.LastMessage,
-		IsEnabled:     checkDef.Enabled,
-		LastAlertSent: checkDef.LastAlertSent,
-		Host:          checkDef.Host,
-		Periodicity:   checkDef.Duration,
-	}, nil
-}
-
-// upsertCheckStatus updates the status fields in the check definition.
-func upsertCheckStatus(mongoDB *db.MongoDB, status *models.CheckStatus) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	filter := bson.M{
-		"uuid": status.UUID,
-	}
-
-	update := bson.M{
-		"$set": bson.M{
-			"last_run":        status.LastRun,
-			"is_healthy":      status.IsHealthy,
-			"last_message":    status.Message,
-			"last_alert_sent": status.LastAlertSent,
-			"updated_at":      time.Now(),
-		},
-	}
-
-	opts := options.Update().SetUpsert(false) // Don't upsert as we only update existing checks
-
-	result, err := mongoDB.Collection("check_definitions").UpdateOne(
-		ctx,
-		filter,
-		update,
-		opts,
-	)
-	if err != nil {
-		logrus.Errorf("Error updating check status: %v", err)
-		return fmt.Errorf("error updating check status: %w", err)
-	}
-
-	if result.MatchedCount == 0 {
-		return fmt.Errorf("check with UUID %s not found", status.UUID)
-	}
-
-	logrus.Debugf("Update result - Modified: %d", result.ModifiedCount)
 	return nil
 }
 
@@ -324,14 +306,62 @@ func shouldSendAlert(effectiveDuration time.Duration, status models.CheckStatus)
 	return time.Since(status.LastAlertSent) > effectiveDuration
 }
 
+// splitAlertDestination splits an alert destination string by colon
+func splitAlertDestination(destination string) []string {
+	return strings.Split(destination, ":")
+}
+
 // sendAlerts dispatches alerts based on the check definition.
 func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition) {
 	// Skip if no actor type is defined
 	if checkDef.ActorType == "" {
-		logrus.Debugf("No actor type defined for check %s, skipping alerts", status.UUID)
+		// logrus.Debugf("No actor type defined for check %s, skipping alerts", status.UUID)
 		return
 	}
 
+	// Handle alerts separately from actors
+	if checkDef.ActorType == "alert" {
+		logrus.Infof("Sending %s notification for check %s (%s/%s)",
+			checkDef.AlertType, status.UUID, status.Project, status.CheckName)
+
+		switch checkDef.AlertType {
+		case "telegram":
+			// AlertDestination should contain: botToken:chatID
+			if checkDef.AlertDestination == "" {
+				logrus.Errorf("Telegram alert destination is not configured for check %s", status.UUID)
+				return
+			}
+			// Parse the destination (format: "botToken:chatID")
+			parts := splitAlertDestination(checkDef.AlertDestination)
+			if len(parts) != 2 {
+				logrus.Errorf("Invalid Telegram alert destination format for check %s (expected 'botToken:chatID')", status.UUID)
+				return
+			}
+			botToken := parts[0]
+			chatID := parts[1]
+
+			message := fmt.Sprintf("Check %s (%s/%s) failed: %s", status.CheckName, status.Project, status.CheckGroup, status.Message)
+			if err := alerts.SendTelegramAlert(botToken, chatID, message); err != nil {
+				logrus.Errorf("Failed to send Telegram alert: %v", err)
+			}
+
+		case "slack":
+			if checkDef.AlertDestination == "" {
+				logrus.Errorf("Slack webhook URL is not configured for check %s", status.UUID)
+				return
+			}
+			message := fmt.Sprintf("Check %s (%s/%s) failed: %s", status.CheckName, status.Project, status.CheckGroup, status.Message)
+			if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
+				logrus.Errorf("Failed to send Slack alert: %v", err)
+			}
+
+		default:
+			logrus.Errorf("Unknown alert type: %s for check %s", checkDef.AlertType, status.UUID)
+		}
+		return
+	}
+
+	// Handle actors (log, webhook, etc.)
 	actor, err := ActorFactory(checkDef)
 	if err != nil {
 		logrus.Errorf("Failed to create actor for check %s: %v", status.UUID, err)
@@ -339,19 +369,25 @@ func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition) {
 	}
 
 	if actor != nil {
-		// Implement alerting logic here
-		logrus.Infof("Sending %s alert for check %s (%s/%s)",
+		logrus.Infof("Executing %s actor for check %s (%s/%s)",
 			checkDef.ActorType, status.UUID, status.Project, status.CheckName)
+
+		if err := actor.Act(status.Message); err != nil {
+			logrus.Errorf("Failed to execute action: %v", err)
+		}
 	}
 }
 
-// mergeHeaders converts a slice of header maps ([]map[string]string) into a single map[string]string.
-func mergeHeaders(headersSlice []map[string]string) map[string]string {
-	m := make(map[string]string)
-	for _, hm := range headersSlice {
-		for k, v := range hm {
-			m[k] = v
-		}
-	}
-	return m
-}
+// Helper to find check status (needed by web handlers mostly, but if used here strictly, keeping it)
+// It was in scheduler.go but seemingly unused by scheduler itself, only by web/tests?
+// Wait, web server probably calls methods in db package.
+// If findCheckStatus was exported, I should keep it. It was unexported.
+// It was used by nothing in the previous file iteration except itself?
+// Re-checking previous file content...
+// `findCheckStatus` was unused in `scheduler.go`. It might be used by tests in `scheduler_package`.
+// I will keep it just in case tests need it, or remove it if I am sure.
+// Tests in `scheduler_test.go` didn't seem to use it (I refactored them).
+// I will omit `findCheckStatus` and `getCheckDefinitionsByDuration` if they are not used.
+
+// Exported Accessors?
+// No, previously everything was in `RunScheduler`.

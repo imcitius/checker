@@ -8,7 +8,7 @@ type LogActor struct {
 	Message string
 }
 
-func (l *LogActor) Act() error {
-	logrus.Info(l.Message)
+func (l *LogActor) Act(msg string) error {
+	logrus.Info(msg)
 	return nil
 }

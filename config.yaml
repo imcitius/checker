@@ -4,16 +4,16 @@ defaults:
   maintenance_duration: 15m
 
 db:
-  protocol: mongodb
-  host: cluster0.vjrpdjs.mongodb.net
-  username: checker-dev
-  password: h5UB62yt8Lkku1co
-  database: checker_dev
+  protocol: postgres
+  host: localhost:5438
+  username: postgres
+  password: postgres
+  database: checker_test
 
 alerts:
   telegram:
     type: telegram
-    bot_token: 201865937:flskdfj;lskdjfl;ksdjsf
+    bot_token: 201865937:AAHBSXrIlEFSbVfUCvkkd3y4kbvJNgNIJuM
     critical_channel: 1390752
     noncritical_channel: 1390752
 
@@ -21,8 +21,7 @@ alerts:
     type: slack
     # Slack-specific fields
 
-actors:
-  
+actors: []
 
 projects:
   testProject:
@@ -33,7 +32,7 @@ projects:
         checks:
           Check google http:
             type: http
-            url: https://google.com2/
+            url: https://google.com/
 #      ping:
 #        checks:
 #          Check google ping:

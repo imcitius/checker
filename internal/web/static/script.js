@@ -51,27 +51,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const host = window.location.host;
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${host}/ws`;
-        
+
         console.log('[WebSocket] Current page URL:', window.location.href);
-        
+
         console.log(`[WebSocket] Initializing connection to ${wsUrl}`);
-        
+
         // Close existing connection if any
         if (state.websocket) {
             console.log('[WebSocket] Closing existing connection');
             state.websocket.close();
         }
-        
+
         try {
             // Create WebSocket connection
             console.log('[WebSocket] Creating new WebSocket instance to URL:', wsUrl);
             try {
                 // Explicitly make a simple connection without any protocols
                 state.websocket = new WebSocket(wsUrl);
-                
+
                 // Set binary type
                 state.websocket.binaryType = 'arraybuffer';
-                
+
                 console.log('[WebSocket] Initial connection created, status:', state.websocket.readyState);
             } catch (wsError) {
                 console.error('[WebSocket] Error creating WebSocket instance:', wsError);
@@ -79,14 +79,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(initWebSocket, 3000);
                 return;
             }
-            
+
             // Connection opened
             state.websocket.addEventListener('open', (event) => {
                 console.log('[WebSocket] Connection established successfully');
                 elements.connectionStatus.textContent = 'Connected to the server';
                 elements.connectionStatus.classList.remove('disconnected');
                 elements.connectionStatus.classList.add('connected');
-                
+
                 // Send an initial message to request data
                 console.log('[WebSocket] Connected - sending initial request for data');
                 try {
@@ -96,217 +96,72 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('[WebSocket] Error sending initial request:', err);
                 }
             });
-            
+
             // Listen for messages
             state.websocket.addEventListener('message', (event) => {
-                // Message received (logging removed)
-                
-                // We'll avoid sending pings after every message as that's excessive
-                // The server already has its own ping mechanism
-                // We'll just check the connection is open for safety
-                if (state.websocket && state.websocket.readyState !== WebSocket.OPEN) {
-                    console.warn(`[WebSocket] Connection not open while processing message. State: ${state.websocket ? state.websocket.readyState : 'undefined'}`);
-                }
-                
                 try {
-                    // Try to parse the message as JSON
-                    let data;
-                    try {
-                        // Check if the message is already an object (some browsers may auto-parse)
-                        if (typeof event.data === 'object' && event.data !== null && !(event.data instanceof Blob)) {
-                            data = event.data;
-                            // Message already parsed (logging removed)
-                        } else {
-                            data = JSON.parse(event.data);
-                            // Successfully parsed message (logging removed)
-                        }
-                    } catch (parseError) {
-                        console.error('[WebSocket] Failed to parse message as JSON:', parseError);
-                        // Raw message logging removed
-                        
-                        // Send acknowledgment even for non-JSON messages to keep connection alive
-                        try {
-                            if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
-                                state.websocket.send(JSON.stringify({ action: 'ack', received: true }));
-                            }
-                        } catch (ackError) {
-                            console.error('[WebSocket] Error sending acknowledgment for non-JSON message:', ackError);
-                        }
-                        return;
-                    }
-                    
-                    // Check if data has a type property
-                    if (!data || !data.type) {
-                        console.error('[WebSocket] Message missing type property:', data);
-                        return;
-                    }
-                    
-                    // Process other message types here
+                    // Parse message
+                    let data = typeof event.data === 'object' ? event.data : JSON.parse(event.data);
+
                     if (data.type === 'checks') {
-                        // Update checks data
-                        if (!data.checks) {
-                            console.warn('[WebSocket] Message has type "checks" but no checks array');
-                            elements.connectionStatus.textContent = 'Connected, but no checks found';
-                            return;
-                        }
-                        
-                        console.log(`[WebSocket] Received ${data.checks.length} checks`);
-                        
-                        if (data.checks.length === 0) {
-                            console.warn('[WebSocket] Empty checks array received from server');
-                            elements.connectionStatus.textContent = 'Connected, but no checks found';
-                        } else {
-                            console.log('[WebSocket] Updating UI with checks data');
-                            
-                            // Log first check for debugging
-                            console.log('[WebSocket] First check sample:', JSON.stringify(data.checks[0], null, 2));
-                            
-                            // Verify checks have required properties and normalize the data
-                            const validChecks = data.checks.filter(check => {
-                                if (!check || typeof check !== 'object') {
-                                    console.warn('[WebSocket] Invalid check object:', check);
-                                    return false;
-                                }
-                                
-                                if (!check.UUID && !check.uuid) {
-                                    console.warn('[WebSocket] Check missing UUID:', check);
-                                    return false;
-                                }
-                                
-                                // Normalize the properties to ensure consistent access regardless of case
-                                // This fixes issues where server sends camelCase but client expects PascalCase or vice versa
-                                check.UUID = check.UUID || check.uuid;
-                                check.Name = check.Name || check.name;
-                                check.Project = check.Project || check.project;
-                                check.CheckType = check.CheckType || check.checkType || check.type;
-                                check.LastResult = check.LastResult !== undefined ? check.LastResult : 
-                                                  (check.lastResult !== undefined ? check.lastResult : false);
-                                check.LastExec = check.LastExec || check.lastExec || 'Unknown';
-                                check.Enabled = check.Enabled !== undefined ? check.Enabled : 
-                                               (check.enabled !== undefined ? check.enabled : true);
-                                check.Message = check.Message || check.message || '';
-                                check.Host = check.Host || check.host || '';
-                                check.Periodicity = check.Periodicity || check.periodicity || '';
-                                
-                                return true;
+                        console.log('[WebSocket] Received checks update:', data.checks.length);
+
+                        // Debug: Log the raw data structure of the first few checks
+                        if (data.checks.length > 0) {
+                            console.log('[DEBUG] Raw check data structure sample:');
+                            data.checks.slice(0, 2).forEach((check, i) => {
+                                console.log(`Check ${i}:`, JSON.stringify(check, null, 2));
                             });
-                            
-                            if (validChecks.length < data.checks.length) {
-                                console.warn(`[WebSocket] Filtered out ${data.checks.length - validChecks.length} invalid checks`);
-                            }
-                            
-                            state.checks = validChecks;
                         }
-                        
+
+                        // Normalize all checks
+                        const validChecks = data.checks
+                            .map(check => normalizeCheckData(check))
+                            .filter(check => check !== null);
+
+                        if (validChecks.length < data.checks.length) {
+                            console.warn(`[WebSocket] Filtered out ${data.checks.length - validChecks.length} invalid checks`);
+                        }
+
+                        state.checks = validChecks;
+
                         // Update UI
                         try {
                             updateFilters();
                             applyFilters();
                             render();
-                            
-                            // Update connection status with check count
                             elements.connectionStatus.textContent = `Connected: ${state.checks.length} checks loaded`;
                         } catch (uiError) {
                             console.error('[WebSocket] Error updating UI:', uiError);
                         }
-                        
-                        // Send acknowledgment to server to keep connection open
-                        try {
-                            if (state.websocket && state.websocket.readyState === WebSocket.OPEN) {
-                                console.log('[WebSocket] Sending acknowledgment to keep connection alive');
-                                state.websocket.send(JSON.stringify({ action: 'ack', received: true }));
-                            }
-                        } catch (ackError) {
-                            console.error('[WebSocket] Error sending acknowledgment:', ackError);
-                        }
                     } else if (data.type === 'update') {
-                        // Update a single check
-                        if (!data.check || typeof data.check !== 'object') {
-                            console.error('[WebSocket] Update message missing valid check object:', data);
+                        // Handle single check update
+                        if (!data.check) {
+                            console.error('[WebSocket] Update message missing check data');
                             return;
                         }
-                        
-                        const checkName = data.check.Name || data.check.name || 'unknown';
-                        const checkUuid = data.check.UUID || data.check.uuid;
-                        
-                        if (!checkUuid) {
-                            console.error('[WebSocket] Update check missing UUID:', data.check);
+
+                        const normalizedCheck = normalizeCheckData(data.check);
+                        if (!normalizedCheck) {
+                            console.error('[WebSocket] Failed to normalize update check data');
                             return;
                         }
-                        
-                        console.log(`[WebSocket] Received update for check: ${checkName} (${checkUuid})`);
-                        
-                        // Check if there's a recent user toggle for this check
-                        const hasRecentUserToggle = window.lastToggleTimestamps && 
-                                                  window.lastToggleTimestamps[checkUuid] && 
-                                                  (Date.now() - window.lastToggleTimestamps[checkUuid] < 5000);
-                        
-                        if (hasRecentUserToggle && window.userIntendedStates && 
-                            window.userIntendedStates[checkUuid] !== undefined) {
-                            const userState = window.userIntendedStates[checkUuid];
-                            const serverState = data.check.Enabled !== undefined ? 
-                                              data.check.Enabled : 
-                                              (data.check.enabled !== undefined ? data.check.enabled : true);
-                            
-                            if (userState !== serverState) {
-                                console.log(`[WebSocket] Server sent Enabled=${serverState} but user recently set it to ${userState}. Respecting user's choice.`);
-                                data.check.Enabled = userState;
-                                data.check.enabled = userState;
-                                
-                                // Re-send the user's intended state to the server to ensure consistency
-                                setTimeout(() => {
-                                    console.log(`[WebSocket] Re-sending user's intended state (${userState}) to server`);
-                                    fetch('/api/toggle-check', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/x-www-form-urlencoded',
-                                        },
-                                        body: `uuid=${checkUuid}&enabled=${userState}`
-                                    }).catch(err => {
-                                        console.error('[WebSocket] Error re-sending user state:', err);
-                                    });
-                                }, 500);
-                            }
-                        }
-                        
-                        // Check if this check exists in our local state
-                        const existingCheck = state.checks.find(c => c.UUID === checkUuid);
-                        if (!existingCheck) {
-                            console.log(`[WebSocket] Check ${checkUuid} not found in local state, adding it`);
-                            
-                            // Normalize the check data
-                            const normalizedCheck = {
-                                UUID: checkUuid,
-                                Name: data.check.Name || data.check.name || `Check ${checkUuid.substring(0, 8)}...`,
-                                Project: data.check.Project || data.check.project || 'Unknown',
-                                CheckType: data.check.CheckType || data.check.checkType || data.check.type || 'Unknown',
-                                LastResult: data.check.LastResult !== undefined ? data.check.LastResult : 
-                                          (data.check.lastResult !== undefined ? data.check.lastResult : false),
-                                LastExec: data.check.LastExec || data.check.lastExec || 'Never',
-                                Enabled: data.check.Enabled !== undefined ? data.check.Enabled : 
-                                        (data.check.enabled !== undefined ? data.check.enabled : true),
-                                Message: data.check.Message || data.check.message || '',
-                                Host: data.check.Host || data.check.host || '',
-                                Periodicity: data.check.Periodicity || data.check.periodicity || ''
-                            };
-                            
-                            // Add to state
+
+                        // Update the check in state
+                        const index = state.checks.findIndex(c => c.UUID === normalizedCheck.UUID);
+                        if (index !== -1) {
+                            state.checks[index] = normalizedCheck;
+                        } else {
                             state.checks.push(normalizedCheck);
-                            
-                            // Update UI
+                        }
+
+                        // Update UI
+                        try {
                             updateFilters();
                             applyFilters();
                             render();
-                            
-                            return;
-                        }
-                        
-                        try {
-                            updateCheck(data.check);
-                            applyFilters();
-                            render();
-                        } catch (updateError) {
-                            console.error('[WebSocket] Error processing check update:', updateError);
+                        } catch (uiError) {
+                            console.error('[WebSocket] Error updating UI after check update:', uiError);
                         }
                     } else if (data.type === 'ack') {
                         // Server acknowledgment message - just log it
@@ -320,29 +175,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('[WebSocket] Raw message that caused error:', event.data);
                 }
             });
-            
+
             // Connection closed
             state.websocket.addEventListener('close', (event) => {
                 console.log(`[WebSocket] Connection closed. Code: ${event.code}, Reason: ${event.reason || 'No reason provided'}`);
                 console.log('[WebSocket] Last checks data count:', state.checks.length);
-                
+
                 // Update UI to show disconnection
                 elements.connectionStatus.textContent = 'Disconnected from server. Attempting to reconnect...';
                 elements.connectionStatus.classList.remove('connected');
                 elements.connectionStatus.classList.add('disconnected');
-                
+
                 // If we have checks already loaded, keep them visible
                 if (state.checks.length > 0) {
                     console.log('[WebSocket] Keeping existing checks visible despite disconnection');
                 } else {
                     console.log('[WebSocket] No checks to display after disconnection');
                 }
-                
+
                 // Try to reconnect after 2 seconds
                 console.log('[WebSocket] Will attempt to reconnect in 2 seconds');
                 setTimeout(initWebSocket, 2000);
             });
-            
+
             // Connection error
             state.websocket.addEventListener('error', (event) => {
                 console.error('[WebSocket] Connection error:', event);
@@ -355,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.connectionStatus.textContent = 'Failed to create WebSocket connection: ' + error.message;
             elements.connectionStatus.classList.remove('connected');
             elements.connectionStatus.classList.add('disconnected');
-            
+
             // For debugging - try accessing direct URL
             fetch(wsUrl.replace('ws:', 'http:').replace('wss:', 'https:'))
                 .then(response => {
@@ -364,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch(err => {
                     console.error('[Debug] HTTP request to WS endpoint failed:', err);
                 });
-            
+
             // Try to reconnect after 5 seconds
             setTimeout(initWebSocket, 5000);
         }
@@ -376,40 +231,40 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('[UpdateCheck] Received invalid check:', updatedCheck);
             return;
         }
-        
+
         console.log('[UpdateCheck] Updating check:', updatedCheck);
-        
+
         // Normalize the properties to ensure consistent access regardless of case
         // This fixes issues where server sends camelCase but client expects PascalCase or vice versa
         updatedCheck.UUID = updatedCheck.UUID || updatedCheck.uuid;
         updatedCheck.Name = updatedCheck.Name || updatedCheck.name;
         updatedCheck.Project = updatedCheck.Project || updatedCheck.project;
-        updatedCheck.CheckType = updatedCheck.CheckType || updatedCheck.checkType || updatedCheck.type;
-        updatedCheck.LastResult = updatedCheck.LastResult !== undefined ? updatedCheck.LastResult : 
-                              (updatedCheck.lastResult !== undefined ? updatedCheck.lastResult : false);
+        updatedCheck.CheckType = updatedCheck.CheckType || updatedCheck.check_type || updatedCheck.type || 'Unknown';
+        updatedCheck.LastResult = updatedCheck.LastResult !== undefined ? updatedCheck.LastResult :
+            (updatedCheck.lastResult !== undefined ? updatedCheck.lastResult : false);
         updatedCheck.LastExec = updatedCheck.LastExec || updatedCheck.lastExec || 'Unknown';
-        updatedCheck.Enabled = updatedCheck.Enabled !== undefined ? updatedCheck.Enabled : 
-                             (updatedCheck.enabled !== undefined ? updatedCheck.enabled : true);
+        updatedCheck.Enabled = updatedCheck.Enabled !== undefined ? updatedCheck.Enabled :
+            (updatedCheck.enabled !== undefined ? updatedCheck.enabled : true);
         updatedCheck.Message = updatedCheck.Message || updatedCheck.message || '';
         updatedCheck.Host = updatedCheck.Host || updatedCheck.host || '';
         updatedCheck.Periodicity = updatedCheck.Periodicity || updatedCheck.periodicity || '';
-        
+
         const uuid = updatedCheck.UUID;
-        
+
         if (!uuid) {
             console.error('[UpdateCheck] Check missing UUID, cannot update');
             return;
         }
-        
+
         // Check if there's a user-intended state for this check's enabled status
         // This prevents WebSocket updates from overriding user actions
         if (window.userIntendedStates && window.userIntendedStates[uuid] !== undefined) {
             const userIntendedState = window.userIntendedStates[uuid];
             const lastToggleTimestamp = window.lastToggleTimestamps ? window.lastToggleTimestamps[uuid] : 0;
-            
+
             // Only respect user's intended state if the toggle was recent (within last 10 seconds)
             const isRecentToggle = lastToggleTimestamp && (Date.now() - lastToggleTimestamp < 10000);
-            
+
             if (isRecentToggle && updatedCheck.Enabled !== userIntendedState) {
                 console.log(`[UpdateCheck] Received server update with Enabled=${updatedCheck.Enabled} but respecting user's intended state=${userIntendedState}`);
                 updatedCheck.Enabled = userIntendedState;
@@ -419,12 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete window.userIntendedStates[uuid];
             }
         }
-        
+
         // Log detailed information about the update
         console.log(`[UpdateCheck] Check details - UUID: ${uuid}, Name: ${updatedCheck.Name}, Enabled: ${updatedCheck.Enabled}`);
-        
+
         const index = state.checks.findIndex(check => check.UUID === uuid);
-        
+
         if (index !== -1) {
             console.log(`[UpdateCheck] Found existing check at index ${index}, updating from ${state.checks[index].Enabled} to ${updatedCheck.Enabled}`);
             state.checks[index] = updatedCheck;
@@ -432,14 +287,14 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('[UpdateCheck] Adding new check');
             state.checks.push(updatedCheck);
         }
-        
+
         // Update filtered checks list if the check is there
         const filteredIndex = state.filteredChecks.findIndex(check => check.UUID === uuid);
         if (filteredIndex !== -1) {
             console.log(`[UpdateCheck] Updating filtered check at index ${filteredIndex}`);
             state.filteredChecks[filteredIndex] = updatedCheck;
         }
-        
+
         // After updating state, reapply filters and re-render
         updateFilters();
         applyFilters();
@@ -451,24 +306,24 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset project and type sets
         state.projects.clear();
         state.types.clear();
-        
+
         console.log('[Filters] Updating filter options from', state.checks.length, 'checks');
-        
+
         // Collect unique projects and types
         state.checks.forEach(check => {
             if (!check) return;
-            
+
             // Handle different property naming conventions
             const project = check.Project || check.project || '';
-            const checkType = check.CheckType || check.type || '';
-            
+            const checkType = check.CheckType || '';
+
             if (project) state.projects.add(project);
             if (checkType) state.types.add(checkType);
         });
-        
+
         console.log('[Filters] Found unique projects:', Array.from(state.projects));
         console.log('[Filters] Found unique types:', Array.from(state.types));
-        
+
         // Update project filter options
         elements.filterProject.innerHTML = '<option value="all">All projects</option>';
         state.projects.forEach(project => {
@@ -477,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             option.textContent = project;
             elements.filterProject.appendChild(option);
         });
-        
+
         // Update type filter options
         elements.filterType.innerHTML = '<option value="all">All types</option>';
         state.types.forEach(type => {
@@ -486,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             option.textContent = type;
             elements.filterType.appendChild(option);
         });
-        
+
         // Update stats
         updateStats();
     }
@@ -514,15 +369,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return !enabled;
             }).length
         };
-        
+
         console.log('[Stats] Stats calculated:', stats);
-        
+
         // Check if DOM elements exist before updating
         if (!elements.stats.total || !elements.stats.healthy || !elements.stats.unhealthy || !elements.stats.disabled) {
             console.error('[Stats] One or more stat elements not found in DOM');
             return;
         }
-        
+
         try {
             elements.stats.total.textContent = stats.total;
             elements.stats.healthy.textContent = stats.healthy;
@@ -538,10 +393,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyFilters() {
         console.log('[Filters] Applying filters:', state.filters);
         console.log('[Filters] Total checks before filtering:', state.checks.length);
-        
+
         state.filteredChecks = state.checks.filter(check => {
             if (!check) return false;
-            
+
             // Handle different property naming conventions
             const name = (check.Name || check.name || '').toLowerCase();
             const project = (check.Project || check.project || '').toLowerCase();
@@ -549,14 +404,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const checkType = check.CheckType || check.type || '';
             const lastResult = check.LastResult !== undefined ? check.LastResult : (check.lastResult !== undefined ? check.lastResult : false);
             const enabled = check.Enabled !== undefined ? check.Enabled : (check.enabled !== undefined ? check.enabled : true);
-            
+
             // Search filter
             const searchTerm = state.filters.search.toLowerCase();
-            const searchMatch = searchTerm === '' || 
+            const searchMatch = searchTerm === '' ||
                 name.includes(searchTerm) ||
                 project.includes(searchTerm) ||
                 healthcheck.includes(searchTerm);
-            
+
             // Status filter
             let statusMatch = true;
             if (state.filters.status === 'healthy') {
@@ -564,16 +419,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (state.filters.status === 'unhealthy') {
                 statusMatch = !lastResult && enabled;
             }
-            
+
             // Project filter
             const projectMatch = state.filters.project === 'all' || project === state.filters.project.toLowerCase();
-            
+
             // Type filter
             const typeMatch = state.filters.type === 'all' || checkType === state.filters.type;
-            
+
             return searchMatch && statusMatch && projectMatch && typeMatch;
         });
-        
+
         console.log('[Filters] Checks after filtering:', state.filteredChecks.length);
     }
 
@@ -593,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
             expandableRow: templates.expandableRow ? 'Yes' : 'No',
             card: templates.card ? 'Yes' : 'No'
         });
-        
+
         // Clear previous content
         if (elements.checksList) {
             console.log('[Render] Checks list element found, clearing content');
@@ -607,9 +462,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.checksList.innerHTML = '';
             } else {
                 // Try alternative selectors
-                const alternativeList = document.querySelector('tbody#checks-list') || 
-                                       document.querySelector('#checks-list') || 
-                                       document.querySelector('.checks-container tbody');
+                const alternativeList = document.querySelector('tbody#checks-list') ||
+                    document.querySelector('#checks-list') ||
+                    document.querySelector('.checks-container tbody');
                 if (alternativeList) {
                     console.log('[Render] Found checks list with alternative selector');
                     elements.checksList = alternativeList;
@@ -628,18 +483,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        
+
         if (!state.filteredChecks || state.filteredChecks.length === 0) {
             console.log('No checks to display');
             const emptyRow = document.createElement('tr');
-            emptyRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 20px;">No checks available</td>';
+            emptyRow.innerHTML = '<td colspan="9" style="text-align: center; padding: 20px;">No checks available</td>';
             elements.checksList.appendChild(emptyRow);
             return;
         }
-        
+
         // Log data structure for debugging
         console.log('[Debug] Check data structure sample:', JSON.stringify(state.filteredChecks[0], null, 2));
-        
+
         state.filteredChecks.forEach((check, index) => {
             try {
                 // Verify check has required properties
@@ -647,20 +502,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Invalid check object at index', index, ':', check);
                     return;
                 }
-                
+
                 // Check for UUID
                 const uuid = check.UUID || check.uuid;
                 if (!uuid) {
                     console.error('Check missing UUID at index', index, ':', check);
                     return;
                 }
-                
+
                 console.log(`Rendering check ${index}:`, check.Name || check.name || 'Unnamed check', 'UUID:', uuid);
-                
+
                 // Clone template
                 if (!templates.expandableRow) {
                     console.error('Expandable row template not found');
-                    
+
                     // Debug template status
                     console.error('Template status:', {
                         'expandableRow': document.getElementById('expandable-row-template') ? 'Found in DOM but not in templates' : 'Not found in DOM',
@@ -668,22 +523,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     return;
                 }
-                
+
                 let mainRow, detailsRow;
                 try {
                     const template = templates.expandableRow.content.cloneNode(true);
                     const rows = template.querySelectorAll('tr');
-                    
-                    if (rows.length < 2) {
-                        console.error('Template does not contain expected rows. Found:', rows.length);
-                        return;
-                    }
-                    
-                    // Store references to the cloned template rows
-                    mainRow = rows[0];
-                    detailsRow = rows[1];
-                    
-                    console.log('Successfully cloned template with rows:', {
+                    mainRow = rows[0]; // First row - main content
+                    detailsRow = rows[1]; // Second row - details with UUID and URL
+
+                    console.log('Successfully cloned template rows:', {
                         mainRow: mainRow ? 'Found' : 'Missing',
                         detailsRow: detailsRow ? 'Found' : 'Missing'
                     });
@@ -692,26 +540,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('Template content:', templates.expandableRow ? templates.expandableRow.innerHTML : 'Missing template');
                     return;
                 }
-                
+
                 // Set row ID for tracking expanded state
                 const rowId = `check-${uuid}`;
                 mainRow.id = rowId;
-                
+
                 // Determine status class
                 const enabled = check.Enabled !== undefined ? check.Enabled : (check.enabled !== undefined ? check.enabled : true);
                 const lastResult = check.LastResult !== undefined ? check.LastResult : (check.lastResult !== undefined ? check.lastResult : false);
-                
+
                 // Set the row class based on status - disabled checks should have 'disabled' class
                 mainRow.className = `check-row ${enabled ? (lastResult ? 'healthy' : 'unhealthy') : 'disabled'}`;
-                
-                // Handle expanded state
-                if (state.expandedRows.has(rowId)) {
-                    mainRow.classList.add('expanded');
-                    detailsRow.style.display = 'table-row';
-                } else {
-                    detailsRow.style.display = 'none';
+
+                // Apply the same status class to the details row for consistent styling
+                if (detailsRow) {
+                    detailsRow.className = `check-details-row always-visible ${enabled ? (lastResult ? 'healthy' : 'unhealthy') : 'disabled'}`;
                 }
-                
+
                 // Set check data with fallbacks for different property naming conventions
                 const nameEl = mainRow.querySelector('.check-name');
                 if (nameEl) {
@@ -719,21 +564,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     console.error('Could not find .check-name element');
                 }
-                
+
                 const projectEl = mainRow.querySelector('.check-project');
                 if (projectEl) {
                     projectEl.textContent = check.Project || check.project || 'N/A';
                 } else {
                     console.error('Could not find .check-project element');
                 }
-                
+
                 const typeEl = mainRow.querySelector('.check-type');
                 if (typeEl) {
                     typeEl.textContent = check.CheckType || check.type || 'Unknown';
                 } else {
                     console.error('Could not find .check-type element');
                 }
-                
+
                 const statusIndicator = mainRow.querySelector('.check-status-indicator');
                 if (statusIndicator) {
                     // For disabled checks, use a 'disabled' class for the indicator rather than unhealthy
@@ -745,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     console.error('Could not find .check-status-indicator element');
                 }
-                
+
                 const statusTextEl = mainRow.querySelector('.check-status-text');
                 if (statusTextEl) {
                     // Set status text appropriately for disabled checks
@@ -757,127 +602,164 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     console.error('Could not find .check-status-text element');
                 }
-                
+
                 const lastExecEl = mainRow.querySelector('.check-last-exec');
                 if (lastExecEl) {
                     lastExecEl.textContent = check.LastExec || check.lastExec || 'Never';
                 } else {
                     console.error('Could not find .check-last-exec element');
                 }
-                
+
+                // Set UUID value in details row
+                const uuidValueEl = detailsRow.querySelector('.uuid-value');
+                if (uuidValueEl) {
+                    uuidValueEl.textContent = uuid || 'Unknown';
+
+                    // Make UUID cell clickable for copying
+                    const uuidContainer = detailsRow.querySelector('.uuid-container');
+                    if (uuidContainer) {
+                        uuidContainer.addEventListener('click', function (e) {
+                            e.stopPropagation();
+
+                            // Copy UUID to clipboard
+                            navigator.clipboard.writeText(uuid).then(() => {
+                                // Show success feedback
+                                this.classList.add('copied');
+                                const originalTitle = this.getAttribute('title');
+                                this.setAttribute('title', 'Copied!');
+
+                                // Reset after 2 seconds
+                                setTimeout(() => {
+                                    this.classList.remove('copied');
+                                    this.setAttribute('title', originalTitle);
+                                }, 2000);
+                            }).catch(err => {
+                                console.error('Failed to copy UUID:', err);
+                            });
+                        });
+                    }
+                }
+
+                // Set URL value with link if it's an HTTP check in details row
+                const urlValueEl = detailsRow.querySelector('.url-value');
+                if (urlValueEl) {
+                    const checkType = (check.CheckType || check.type || '').toLowerCase();
+                    const url = check.URL || check.url || check.Url || '';
+
+                    if (checkType.includes('http') && url) {
+                        // Format URL and make clickable
+                        let formattedUrl = url;
+                        if (!url.startsWith('http')) {
+                            formattedUrl = 'http://' + url;
+                        }
+                        urlValueEl.innerHTML = `<a href="${formattedUrl}" target="_blank" title="${formattedUrl}">${url}</a>`;
+                    } else if (checkType.includes('http')) {
+                        urlValueEl.textContent = 'Not specified';
+                        urlValueEl.classList.add('text-muted');
+                    } else {
+                        // For non-HTTP checks, use Host if available
+                        const host = check.Host || check.host || '';
+                        urlValueEl.textContent = host || 'N/A';
+                    }
+                }
+
+                const frequencyValue = mainRow.querySelector('.frequency-value');
+                if (frequencyValue) {
+                    const duration = check.Periodicity || check.periodicity || check.Duration || check.duration || 'Not set';
+                    console.log('[Render] Setting frequency value:', duration);
+                    frequencyValue.textContent = duration;
+                    frequencyValue.title = duration;
+                } else {
+                    console.warn('[Render] Frequency value element not found');
+                }
+
+                // Add event listener for toggle switch
                 const checkToggle = mainRow.querySelector('.check-toggle');
                 if (checkToggle) {
+                    // Set initial checked state
                     checkToggle.checked = enabled;
                     // Store the UUID directly on the element for easier access
                     checkToggle.dataset.uuid = uuid;
-                } else {
-                    console.error('Could not find .check-toggle element');
-                }
-                
-                // Add debug attribute with check data
-                mainRow.setAttribute('data-debug', JSON.stringify({
-                    name: check.Name || check.name,
-                    UUID: uuid,
-                    enabled: enabled
-                }));
-                
-                // Set details data
-                try {
-                    // Host information
-                    const hostValue = detailsRow.querySelector('.host-value');
-                    const hostItem = detailsRow.querySelector('.check-detail-item:first-child');
-                    
-                    if (check.Host || check.host) {
-                        if (hostValue) {
-                            hostValue.textContent = check.Host || check.host;
+
+                    // Remove existing event listeners to prevent duplicates
+                    const oldElement = checkToggle.cloneNode(true);
+                    checkToggle.parentNode.replaceChild(oldElement, checkToggle);
+                    const newCheckToggle = oldElement;
+
+                    // Re-establish data-uuid attribute
+                    newCheckToggle.dataset.uuid = uuid;
+                    newCheckToggle.checked = enabled;
+
+                    // Add debounced event listener to prevent bounce-back
+                    newCheckToggle.addEventListener('change', (e) => {
+                        e.stopPropagation(); // Prevent row click
+
+                        // Disable the toggle temporarily to prevent multiple clicks
+                        newCheckToggle.disabled = true;
+
+                        // Add visual feedback when toggling
+                        const actionsContainer = mainRow.querySelector('.actions-container');
+                        if (actionsContainer) {
+                            // Add a temporary processing indicator
+                            const processingIndicator = document.createElement('span');
+                            processingIndicator.className = 'processing-indicator';
+                            processingIndicator.textContent = '⟳';
+                            processingIndicator.style.cssText = 'animation: spin 1s linear infinite; display: inline-block; margin-left: 5px; color: #0066cc;';
+                            actionsContainer.appendChild(processingIndicator);
+
+                            // Add keyframes for spin animation if not already added
+                            if (!document.querySelector('style#spin-animation')) {
+                                const styleEl = document.createElement('style');
+                                styleEl.id = 'spin-animation';
+                                styleEl.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+                                document.head.appendChild(styleEl);
+                            }
                         }
-                        if (hostItem) {
-                            hostItem.style.display = '';
-                        }
-                    } else if (hostItem) {
-                        hostItem.style.display = 'none';
-                    }
-                    
-                    // Periodicity information
-                    const periodicityValue = detailsRow.querySelector('.periodicity-value');
-                    const periodicityItem = detailsRow.querySelector('.check-detail-item:nth-child(2)');
-                    
-                    if (check.Periodicity || check.periodicity) {
-                        if (periodicityValue) {
-                            periodicityValue.textContent = check.Periodicity || check.periodicity;
-                        }
-                        if (periodicityItem) {
-                            periodicityItem.style.display = '';
-                        }
-                    } else if (periodicityItem) {
-                        periodicityItem.style.display = 'none';
-                    }
-                    
-                    // Error message
-                    const messageEl = detailsRow.querySelector('.check-message');
-                    if (messageEl) {
-                        if (check.Message || check.message) {
-                            messageEl.textContent = check.Message || check.message;
-                            messageEl.style.display = 'block';
-                        } else {
-                            messageEl.style.display = 'none';
-                        }
-                    }
-                    
-                    // Add click handler for expanding/collapsing
-                    mainRow.addEventListener('click', (e) => {
-                        // Don't trigger if clicking on the toggle switch
-                        if (e.target.closest('.switch')) return;
-                        
-                        const isExpanded = mainRow.classList.toggle('expanded');
-                        detailsRow.style.display = isExpanded ? 'table-row' : 'none';
-                        
-                        if (isExpanded) {
-                            state.expandedRows.add(rowId);
-                        } else {
-                            state.expandedRows.delete(rowId);
-                        }
-                    });
-                    
-                    // Add event listener for toggle switch
-                    if (checkToggle) {
-                        // Remove existing event listeners to prevent duplicates
-                        const oldElement = checkToggle.cloneNode(true);
-                        checkToggle.parentNode.replaceChild(oldElement, checkToggle);
-                        const newCheckToggle = oldElement;
-                        
-                        // Re-establish data-uuid attribute
-                        newCheckToggle.dataset.uuid = uuid;
-                        
-                        // Add debounced event listener to prevent bounce-back
-                        newCheckToggle.addEventListener('change', (e) => {
-                            e.stopPropagation(); // Prevent row click
-                            
-                            // Disable the toggle temporarily to prevent multiple clicks
-                            newCheckToggle.disabled = true;
-                            
-                            // Get the current checked state
-                            const isChecked = e.target.checked;
-                            console.log(`[Toggle Event] Toggle changed to ${isChecked} for ${uuid}`);
-                            
-                            // Call toggle check with small delay to let UI update first
+
+                        // Get the current checked state
+                        const isChecked = e.target.checked;
+                        console.log(`[Toggle Event] Toggle changed to ${isChecked} for ${uuid}`);
+
+                        // Call toggle check with small delay to let UI update first
+                        setTimeout(() => {
+                            toggleCheck(uuid, isChecked);
+                            // Re-enable after a delay
                             setTimeout(() => {
-                                toggleCheck(uuid, isChecked);
-                                // Re-enable after a delay
-                                setTimeout(() => {
-                                    newCheckToggle.disabled = false;
-                                }, 500);
-                            }, 10);
-                        });
-                    }
-                    
-                    // Append rows to the DOM
-                    elements.checksList.appendChild(mainRow);
-                    elements.checksList.appendChild(detailsRow);
-                    
-                } catch (error) {
-                    console.error(`Error setting up details for check ${index}:`, error);
+                                newCheckToggle.disabled = false;
+                                // Remove processing indicator
+                                const processingIndicator = mainRow.querySelector('.processing-indicator');
+                                if (processingIndicator) {
+                                    processingIndicator.remove();
+                                }
+                            }, 500);
+                        }, 10);
+                    });
                 }
+
+                // Add event listener to the edit button
+                const editButton = mainRow.querySelector('.edit-button');
+                if (editButton) {
+                    // Remove existing event listeners to prevent duplicates
+                    const oldEditButton = editButton.cloneNode(true);
+                    editButton.parentNode.replaceChild(oldEditButton, editButton);
+                    const newEditButton = oldEditButton;
+
+                    // Add click event listener
+                    newEditButton.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent row click
+                        e.preventDefault();
+
+                        // Navigate to check definitions page with this UUID
+                        window.location.href = `/check-definitions?uuid=${uuid}`;
+                    });
+                }
+
+                // Append both rows to the DOM
+                elements.checksList.appendChild(mainRow);
+                if (detailsRow) {
+                    elements.checksList.appendChild(detailsRow);
+                }
+
             } catch (error) {
                 console.error(`Error rendering check ${index}:`, error, '\nCheck data:', check);
             }
@@ -888,11 +770,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderDetailedView() {
         const container = document.getElementById('detailed-view');
         container.innerHTML = '';
-        
+
         state.filteredChecks.forEach(check => {
             const clone = templates.card.content.cloneNode(true);
             const card = clone.querySelector('.check-card');
-            
+
             // Set card status class
             if (!check.Enabled) {
                 card.classList.add('disabled');
@@ -901,7 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 card.classList.add('unhealthy');
             }
-            
+
             // Fill in the card data
             clone.querySelector('.check-name').textContent = check.Name;
             clone.querySelector('.check-status').classList.add(check.LastResult ? 'healthy' : 'unhealthy');
@@ -913,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clone.querySelector('.check-last-exec').textContent = check.LastExec;
             clone.querySelector('.check-last-ping').textContent = check.LastPing;
             clone.querySelector('.check-uuid').textContent = `UUID: ${check.UUID}`;
-            
+
             // Add host and periodicity if available
             const detailsSection = clone.querySelector('.check-details-section');
             if (check.Host || check.Periodicity) {
@@ -922,29 +804,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     const detailsContainer = document.createElement('div');
                     detailsContainer.className = 'check-details-section';
                     detailsContainer.style.marginTop = '10px';
-                    
+
                     // Create a single details element with both host and periodicity
                     const detailsEl = document.createElement('div');
                     detailsEl.className = 'check-details';
-                    
+
                     let detailsContent = '';
                     if (check.Host) {
                         detailsContent += `<span class="check-host"><i>🖥️</i>Host: ${check.Host}</span>`;
                     }
-                    
+
                     if (check.Periodicity) {
                         detailsContent += `<span class="check-periodicity"><i>🔄</i>Every ${check.Periodicity}</span>`;
                     }
-                    
+
                     detailsEl.innerHTML = detailsContent;
                     detailsContainer.appendChild(detailsEl);
-                    
+
                     // Insert after the check name
                     const nameEl = clone.querySelector('.check-name');
                     nameEl.parentNode.insertBefore(detailsContainer, nameEl.nextSibling);
                 }
             }
-            
+
             // Add error message if available
             const messageEl = clone.querySelector('.check-message');
             if (check.Message && !check.LastResult) {
@@ -952,7 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 messageEl.style.display = 'none';
             }
-            
+
             container.appendChild(clone);
         });
     }
@@ -961,11 +843,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTableView() {
         const tbody = document.getElementById('table-checks');
         tbody.innerHTML = '';
-        
+
         state.filteredChecks.forEach(check => {
             const tr = document.createElement('tr');
             tr.className = check.Enabled ? (check.LastResult ? 'healthy' : 'unhealthy') : 'disabled';
-            
+
             // Create check name cell with detailed info
             const nameWithDetails = `
                 ${check.Name}
@@ -976,7 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </span>
                 ` : ''}
             `;
-            
+
             tr.innerHTML = `
                 <td title="${check.Name}">${nameWithDetails}</td>
                 <td>${check.Project}</td>
@@ -997,7 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </label>
                 </td>
             `;
-            
+
             tbody.appendChild(tr);
         });
     }
@@ -1005,56 +887,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle check enabled status
     function toggleCheck(uuid, enabled) {
         console.log(`[Toggle] Attempting to set check ${uuid} to enabled=${enabled}`);
-        
+
         // Track this toggle operation with a unique timestamp
         const toggleTimestamp = Date.now();
         console.log(`[Toggle ${toggleTimestamp}] Starting toggle operation`);
-        
+
         // Determine current state before updating
         const check = state.checks.find(c => c.UUID === uuid);
         const previousState = check ? check.Enabled : !enabled;
-        
+
         // Check if we're actually changing the state
         if (check && previousState === enabled) {
             console.log(`[Toggle ${toggleTimestamp}] Check ${check.Name} (${uuid}) already in requested state: ${enabled}, skipping update`);
             return; // Skip if already in desired state
         }
-        
+
         // Create a last toggle timestamp to track the latest toggle for this UUID
         if (!window.lastToggleTimestamps) {
             window.lastToggleTimestamps = {};
         }
         window.lastToggleTimestamps[uuid] = toggleTimestamp;
-        
+
         // Store the user's intended state for this toggle operation
         if (!window.userIntendedStates) {
             window.userIntendedStates = {};
         }
         window.userIntendedStates[uuid] = enabled;
-        
+
         // Immediately update local state for responsive UI
         if (check) {
             console.log(`[Toggle ${toggleTimestamp}] Updating local state for ${check.Name} (${uuid}) from ${check.Enabled} to ${enabled}`);
             check.Enabled = enabled;
-            
+
             // Update filtered checks if the check is in the filtered list
             const filteredCheck = state.filteredChecks.find(c => c.UUID === uuid);
             if (filteredCheck) {
                 filteredCheck.Enabled = enabled;
             }
-            
+
             // Force update any checkboxes in the UI to match our state
             const allCheckboxes = document.querySelectorAll(`input[data-uuid="${uuid}"]`);
             allCheckboxes.forEach(checkbox => {
                 checkbox.checked = enabled;
             });
-            
+
             // Re-apply filters and render to update UI immediately
             applyFilters();
             render();
         } else {
             console.warn(`[Toggle ${toggleTimestamp}] Could not find check with UUID ${uuid} in local state, creating placeholder`);
-            
+
             // Create a placeholder check if it doesn't exist in our local state
             const placeholderCheck = {
                 UUID: uuid,
@@ -1068,15 +950,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 Host: "",
                 Periodicity: ""
             };
-            
+
             // Add to state
             state.checks.push(placeholderCheck);
-            
+
             // Re-apply filters and render to update UI immediately
             applyFilters();
             render();
         }
-        
+
         // Send toggle request to server
         console.log(`[Toggle ${toggleTimestamp}] Sending API request to server`);
         fetch('/api/toggle-check', {
@@ -1086,130 +968,126 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             body: `uuid=${uuid}&enabled=${enabled}`
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    throw new Error(`Network response was not ok: ${response.status} ${response.statusText} - ${text}`);
-                });
-            }
-            console.log(`[Toggle ${toggleTimestamp}] Server accepted toggle for ${uuid} to enabled=${enabled}`);
-            // Server will send an update via WebSocket to confirm
-            return response.json();
-        })
-        .then(data => {
-            console.log(`[Toggle ${toggleTimestamp}] Server response:`, data);
-            
-            // Check if the server response includes the enabled state
-            if (data && data.enabled !== undefined && data.enabled !== enabled) {
-                console.warn(`[Toggle ${toggleTimestamp}] Server returned different enabled state (${data.enabled}) than requested (${enabled})`);
-                
-                // Update our local state to match the server
-                const checkNow = state.checks.find(c => c.UUID === uuid);
-                if (checkNow) {
-                    checkNow.Enabled = data.enabled;
-                    
-                    // Update filtered checks
-                    const filteredCheck = state.filteredChecks.find(c => c.UUID === uuid);
-                    if (filteredCheck) {
-                        filteredCheck.Enabled = data.enabled;
-                    }
-                    
-                    // Force the UI to update
-                    applyFilters();
-                    render();
-                    
-                    // Update any checkboxes in the UI
-                    const allCheckboxes = document.querySelectorAll(`input[data-uuid="${uuid}"]`);
-                    allCheckboxes.forEach(checkbox => {
-                        checkbox.checked = data.enabled;
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`Network response was not ok: ${response.status} ${response.statusText} - ${text}`);
                     });
                 }
-                
-                // Update user intended state
-                window.userIntendedStates[uuid] = data.enabled;
-            }
-            
-            // The server should send a WebSocket update, but we'll verify our UI state after a delay
-            // as a backup mechanism
-            setTimeout(() => {
-                // Only proceed if this is still the latest toggle operation for this UUID
-                if (window.lastToggleTimestamps[uuid] === toggleTimestamp) {
-                    // Verify that our UI matches what we expect
+                console.log(`[Toggle ${toggleTimestamp}] Server accepted toggle for ${uuid} to enabled=${enabled}`);
+                // Server will send an update via WebSocket to confirm
+
+                // Show a success notification
+                const checkName = check ? check.Name : `Check ${uuid.substring(0, 8)}...`;
+                showNotification(`${checkName} ${enabled ? 'enabled' : 'disabled'} successfully`);
+
+                return response.json();
+            })
+            .then(data => {
+                console.log(`[Toggle ${toggleTimestamp}] Server response:`, data);
+
+                // Check if the server response includes the enabled state
+                if (data && data.enabled !== undefined && data.enabled !== enabled) {
+                    console.warn(`[Toggle ${toggleTimestamp}] Server returned different enabled state (${data.enabled}) than requested (${enabled})`);
+
+                    // Update our local state to match the server
                     const checkNow = state.checks.find(c => c.UUID === uuid);
-                    if (checkNow && checkNow.Enabled !== enabled) {
-                        console.log(`[Toggle ${toggleTimestamp}] UI state verification failed. Forcing update to ${enabled}`);
-                        // Force the state to match what we sent to the server
-                        checkNow.Enabled = enabled;
-                        
+                    if (checkNow) {
+                        checkNow.Enabled = data.enabled;
+
                         // Update filtered checks
                         const filteredCheck = state.filteredChecks.find(c => c.UUID === uuid);
                         if (filteredCheck) {
-                            filteredCheck.Enabled = enabled;
+                            filteredCheck.Enabled = data.enabled;
                         }
-                        
+
                         // Force the UI to update
                         applyFilters();
                         render();
-                        
+
                         // Update any checkboxes in the UI
                         const allCheckboxes = document.querySelectorAll(`input[data-uuid="${uuid}"]`);
                         allCheckboxes.forEach(checkbox => {
-                            console.log(`[Toggle ${toggleTimestamp}] Setting checkbox UI state to ${enabled}`);
-                            checkbox.checked = enabled;
+                            checkbox.checked = data.enabled;
                         });
                     }
+
+                    // Update user intended state
+                    window.userIntendedStates[uuid] = data.enabled;
                 }
-            }, 1500); // Wait 1.5 seconds to allow for WebSocket update to arrive
-        })
-        .catch(error => {
-            console.error(`[Toggle ${toggleTimestamp}] Error:`, error);
-            
-            // Only process this error if this is still the latest toggle operation for this UUID
-            if (window.lastToggleTimestamps[uuid] !== toggleTimestamp) {
-                console.log(`[Toggle ${toggleTimestamp}] Ignoring error because a newer toggle operation exists`);
-                return;
-            }
-            
-            // Revert the local state change only if we're not currently in sync with server
-            // This prevents excessive toggling
-            if (check && check.Enabled !== previousState) {
-                console.log(`[Toggle ${toggleTimestamp}] Reverting local state for ${check.Name} (${uuid}) back to ${previousState}`);
-                check.Enabled = previousState;
-                
-                // Update filtered checks if the check is in the filtered list
-                const filteredCheck = state.filteredChecks.find(c => c.UUID === uuid);
-                if (filteredCheck) {
-                    filteredCheck.Enabled = previousState;
-                }
-                
-                // Re-apply filters and render to update UI with reverted state
-                applyFilters();
-                render();
-                
-                // Update any checkboxes in the UI
-                const allCheckboxes = document.querySelectorAll(`input[data-uuid="${uuid}"]`);
-                allCheckboxes.forEach(checkbox => {
-                    console.log(`[Toggle ${toggleTimestamp}] Reverting checkbox UI state to ${previousState}`);
-                    checkbox.checked = previousState;
-                });
-            }
-            
-            // Show an error message to the user
-            const errorMessage = `Failed to toggle check: ${error.message}`;
-            console.error(errorMessage);
-            
-            // Display error in UI if we have a notification area
-            if (elements.notificationArea) {
-                elements.notificationArea.textContent = errorMessage;
-                elements.notificationArea.classList.add('error');
-                
-                // Clear the error after 5 seconds
+
+                // The server should send a WebSocket update, but we'll verify our UI state after a delay
+                // as a backup mechanism
                 setTimeout(() => {
-                    elements.notificationArea.textContent = '';
-                    elements.notificationArea.classList.remove('error');
-                }, 5000);
-            }
-        });
+                    // Only proceed if this is still the latest toggle operation for this UUID
+                    if (window.lastToggleTimestamps[uuid] === toggleTimestamp) {
+                        // Verify that our UI matches what we expect
+                        const checkNow = state.checks.find(c => c.UUID === uuid);
+                        if (checkNow && checkNow.Enabled !== enabled) {
+                            console.log(`[Toggle ${toggleTimestamp}] UI state verification failed. Forcing update to ${enabled}`);
+                            // Force the state to match what we sent to the server
+                            checkNow.Enabled = enabled;
+
+                            // Update filtered checks
+                            const filteredCheck = state.filteredChecks.find(c => c.UUID === uuid);
+                            if (filteredCheck) {
+                                filteredCheck.Enabled = enabled;
+                            }
+
+                            // Force the UI to update
+                            applyFilters();
+                            render();
+
+                            // Update any checkboxes in the UI
+                            const allCheckboxes = document.querySelectorAll(`input[data-uuid="${uuid}"]`);
+                            allCheckboxes.forEach(checkbox => {
+                                console.log(`[Toggle ${toggleTimestamp}] Setting checkbox UI state to ${enabled}`);
+                                checkbox.checked = enabled;
+                            });
+                        }
+                    }
+                }, 1500); // Wait 1.5 seconds to allow for WebSocket update to arrive
+            })
+            .catch(error => {
+                console.error(`[Toggle ${toggleTimestamp}] Error:`, error);
+
+                // Only process this error if this is still the latest toggle operation for this UUID
+                if (window.lastToggleTimestamps[uuid] !== toggleTimestamp) {
+                    console.log(`[Toggle ${toggleTimestamp}] Ignoring error because a newer toggle operation exists`);
+                    return;
+                }
+
+                // Revert the local state change only if we're not currently in sync with server
+                // This prevents excessive toggling
+                if (check && check.Enabled !== previousState) {
+                    console.log(`[Toggle ${toggleTimestamp}] Reverting local state for ${check.Name} (${uuid}) back to ${previousState}`);
+                    check.Enabled = previousState;
+
+                    // Update filtered checks if the check is in the filtered list
+                    const filteredCheck = state.filteredChecks.find(c => c.UUID === uuid);
+                    if (filteredCheck) {
+                        filteredCheck.Enabled = previousState;
+                    }
+
+                    // Re-apply filters and render to update UI with reverted state
+                    applyFilters();
+                    render();
+
+                    // Update any checkboxes in the UI
+                    const allCheckboxes = document.querySelectorAll(`input[data-uuid="${uuid}"]`);
+                    allCheckboxes.forEach(checkbox => {
+                        console.log(`[Toggle ${toggleTimestamp}] Reverting checkbox UI state to ${previousState}`);
+                        checkbox.checked = previousState;
+                    });
+                }
+
+                // Show an error message to the user
+                const errorMessage = `Failed to toggle check: ${error.message}`;
+                console.error(errorMessage);
+
+                // Display error using notification function
+                showNotification(errorMessage, 'error');
+            });
     }
 
     // Set up event listeners
@@ -1220,20 +1098,20 @@ document.addEventListener('DOMContentLoaded', () => {
             applyFilters();
             render();
         });
-        
+
         // Filter changes
         elements.filterStatus.addEventListener('change', () => {
             state.filters.status = elements.filterStatus.value;
             applyFilters();
             render();
         });
-        
+
         elements.filterProject.addEventListener('change', () => {
             state.filters.project = elements.filterProject.value;
             applyFilters();
             render();
         });
-        
+
         elements.filterType.addEventListener('change', () => {
             state.filters.type = elements.filterType.value;
             applyFilters();
@@ -1246,19 +1124,19 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('[Init] Initializing dashboard');
         console.log('[Init] Page URL:', window.location.href);
         console.log('[Init] Document ready state:', document.readyState);
-        
+
         // Fix for templates not being initialized correctly
         if (!templates.expandableRow) {
             console.log('[Init] Retrying template acquisition');
             templates.expandableRow = document.getElementById('expandable-row-template');
             console.log('[Init] expandableRow template:', templates.expandableRow ? 'Found' : 'Missing');
         }
-        
+
         if (!templates.card) {
             templates.card = document.getElementById('card-template');
             console.log('[Init] card template:', templates.card ? 'Found' : 'Missing');
         }
-        
+
         // Verify DOM elements
         let missingElements = [];
         for (const key in elements) {
@@ -1290,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        
+
         if (missingElements.length > 0) {
             console.error(`[Init] Missing DOM elements: ${missingElements.join(', ')}`);
             // Add visible error to the page
@@ -1301,11 +1179,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(errorDiv);
             }
         }
-        
+
         // Initialize WebSocket and event listeners
         initWebSocket();
         setupEventListeners();
-        
+
         // Set initial UI state
         if (elements.connectionStatus) {
             elements.connectionStatus.textContent = 'Connecting to server...';
@@ -1313,19 +1191,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             console.error('[Init] Cannot update connection status - element missing');
         }
-        
+
         // Run health check after slight delay
         setTimeout(healthCheck, 3000);
-        
+
         console.log('[Init] Dashboard initialization complete');
     }
-    
+
     // Start the app
     init();
 });
 
 // Expose toggleCheck for global access
-window.toggleCheck = function(uuid, enabled) {
+window.toggleCheck = function (uuid, enabled) {
     // This function is defined inside the DOMContentLoaded event handler,
     // but also exposed globally for use in inline event handlers
     fetch('/api/toggle-check', {
@@ -1335,18 +1213,208 @@ window.toggleCheck = function(uuid, enabled) {
         },
         body: `uuid=${uuid}&enabled=${enabled}`
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        // The update will come via WebSocket
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        // Revert the toggle if there was an error
-        const checkboxes = document.querySelectorAll(`input[onchange*="'${uuid}'"]:checked`);
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = !enabled;
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            // The update will come via WebSocket
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Revert the toggle if there was an error
+            const checkboxes = document.querySelectorAll(`input[onchange*="'${uuid}'"]:checked`);
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = !enabled;
+            });
         });
-    });
 };
+
+// Function to create a check row from template
+function createCheckRow(check) {
+    console.log('[createCheckRow] Creating row for check:', {
+        UUID: check.UUID,
+        Name: check.Name,
+        Host: check.Host,
+        Periodicity: check.Periodicity
+    });
+
+    const template = document.getElementById('expandable-row-template');
+    const row = template.content.cloneNode(true);
+
+    // Set check name and project
+    const nameElement = row.querySelector('.check-name');
+    const projectElement = row.querySelector('.check-project');
+    if (nameElement && projectElement) {
+        nameElement.textContent = check.Name || 'Unnamed Check';
+        projectElement.textContent = check.Project || 'No Project';
+    }
+
+    // Set frequency/duration value with proper fallbacks
+    const frequencyValueElement = row.querySelector('.frequency-value');
+    if (frequencyValueElement) {
+        const duration = check.Periodicity || check.periodicity || check.Duration || check.duration || 'Not set';
+        console.log('[createCheckRow] Setting frequency value:', duration);
+        frequencyValueElement.textContent = formatDuration(duration);
+        frequencyValueElement.title = formatDuration(duration);
+    } else {
+        console.warn('[createCheckRow] Frequency value element not found');
+    }
+
+    // Set status and result
+    const statusElement = row.querySelector('.check-status');
+    if (statusElement) {
+        const isHealthy = check.LastResult !== undefined ? check.LastResult : true;
+        statusElement.classList.toggle('healthy', isHealthy);
+        statusElement.classList.toggle('unhealthy', !isHealthy);
+        statusElement.textContent = isHealthy ? 'Healthy' : 'Unhealthy';
+    }
+
+    // Set last execution time
+    const lastExecElement = row.querySelector('.last-execution');
+    if (lastExecElement && check.LastExec) {
+        lastExecElement.textContent = formatDate(check.LastExec);
+        lastExecElement.title = new Date(check.LastExec).toLocaleString();
+    }
+
+    // Set message in details
+    const messageElement = row.querySelector('.check-message');
+    if (messageElement) {
+        messageElement.textContent = check.Message || 'No message available';
+        if (!check.LastResult) {
+            messageElement.classList.add('error-message');
+        }
+    }
+
+    return row;
+}
+
+// Helper function to format duration
+function formatDuration(duration) {
+    if (!duration) return 'Not set';
+
+    // If duration is already formatted (e.g., "1h", "30m"), return as is
+    if (typeof duration === 'string' && /^(\d+[hms])+$/.test(duration)) {
+        return duration;
+    }
+
+    try {
+        // Try to parse as a number (assuming seconds)
+        const seconds = parseInt(duration);
+        if (isNaN(seconds)) return duration;
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+
+        const parts = [];
+        if (hours > 0) parts.push(`${hours}h`);
+        if (minutes > 0) parts.push(`${minutes}m`);
+        if (remainingSeconds > 0) parts.push(`${remainingSeconds}s`);
+
+        return parts.join('') || '0s';
+    } catch (e) {
+        console.warn('[formatDuration] Error formatting duration:', e);
+        return duration;
+    }
+}
+
+// Helper function to format dates
+function formatDate(dateStr) {
+    if (!dateStr) return 'Never';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+
+        const now = new Date();
+        const diff = now - date;
+
+        // If less than 24 hours ago, show relative time
+        if (diff < 24 * 60 * 60 * 1000) {
+            const hours = Math.floor(diff / (60 * 60 * 1000));
+            const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+            if (hours > 0) {
+                return `${hours}h ${minutes}m ago`;
+            }
+            if (minutes > 0) {
+                return `${minutes}m ago`;
+            }
+            return 'Just now';
+        }
+
+        // Otherwise show date and time
+        return date.toLocaleString();
+    } catch (e) {
+        return dateStr;
+    }
+}
+
+function normalizeCheckData(check) {
+    if (!check || typeof check !== 'object') {
+        console.warn('[normalizeCheckData] Invalid check object:', check);
+        return null;
+    }
+
+    // Log original data
+    console.log('[normalizeCheckData] Original check data:', {
+        UUID: check.UUID || check.uuid,
+        Name: check.Name || check.name,
+        Host: check.Host || check.host,
+        URL: check.URL || check.url || check.Url,
+        Type: check.CheckType || check.check_type || check.type,
+        Duration: check.Duration || check.duration || check.Periodicity || check.periodicity,
+        raw: check
+    });
+
+    // Get the check type (lowercase for easier comparison)
+    const checkType = (check.CheckType || check.check_type || check.type || '').toLowerCase();
+
+    // For HTTP checks, prefer URL over Host
+    let connectionValue = '';
+    if (checkType.includes('http')) {
+        connectionValue = check.URL || check.url || check.Url || check.Host || check.host || '';
+    } else {
+        connectionValue = check.Host || check.host || '';
+    }
+
+    // Create normalized check object
+    const normalized = {
+        UUID: check.UUID || check.uuid,
+        Name: check.Name || check.name || 'Unnamed Check',
+        Project: check.Project || check.project || 'No Project',
+        CheckType: check.CheckType || check.check_type || check.type || 'Unknown',
+        LastResult: check.LastResult !== undefined ? check.LastResult :
+            (check.lastResult !== undefined ? check.lastResult : false),
+        LastExec: check.LastExec || check.lastExec || 'Unknown',
+        Enabled: check.Enabled !== undefined ? check.Enabled :
+            (check.enabled !== undefined ? check.enabled : true),
+        Message: check.Message || check.message || '',
+        Host: connectionValue,
+        URL: check.URL || check.url || check.Url || '',
+        Periodicity: check.Periodicity || check.periodicity || check.Duration || check.duration || ''
+    };
+
+    // Log normalized data
+    console.log('[normalizeCheckData] Normalized check data:', normalized);
+
+    return normalized;
+}
+
+// Show a notification message in the notification area
+function showNotification(message, type = 'info') {
+    if (!elements.notificationArea) return;
+
+    // Clear existing notifications
+    elements.notificationArea.innerHTML = '';
+
+    // Set message and class
+    elements.notificationArea.textContent = message;
+    elements.notificationArea.className = `notification-area ${type}`;
+
+    // Auto-hide after 3 seconds for success messages
+    if (type === 'success') {
+        setTimeout(() => {
+            elements.notificationArea.textContent = '';
+            elements.notificationArea.className = 'notification-area';
+        }, 3000);
+    }
+}

@@ -1,5 +1,5 @@
 package actors
 
 type Actor interface {
-	Act() error
+	Act(msg string) error
 }

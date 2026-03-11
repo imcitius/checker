@@ -16,12 +16,12 @@ import (
 
 // ListCheckDefinitions returns all check definitions
 func ListCheckDefinitions(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	defs, err := mongoDB.GetAllCheckDefinitions(ctx)
+	defs, err := repo.GetAllCheckDefinitions(ctx)
 	if err != nil {
 		logrus.Errorf("Failed to get check definitions: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -41,7 +41,7 @@ func ListCheckDefinitions(c *gin.Context) {
 
 // GetCheckDefinition returns a single check definition by UUID
 func GetCheckDefinition(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 	uuid := c.Param("uuid")
 
 	if uuid == "" {
@@ -54,7 +54,7 @@ func GetCheckDefinition(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	def, err := mongoDB.GetCheckDefinitionByUUID(ctx, uuid)
+	def, err := repo.GetCheckDefinitionByUUID(ctx, uuid)
 	if err != nil {
 		logrus.Errorf("Failed to get check definition %s: %v", uuid, err)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -68,10 +68,11 @@ func GetCheckDefinition(c *gin.Context) {
 
 // CreateCheckDefinition creates a new check definition
 func CreateCheckDefinition(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 
 	var def models.CheckDefinition
-	if err := c.ShouldBindJSON(&def); err != nil {
+	var vm models.CheckDefinitionViewModel
+	if err := c.ShouldBindJSON(&vm); err != nil {
 		logrus.Errorf("Failed to bind check definition: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid check definition data",
@@ -79,13 +80,16 @@ func CreateCheckDefinition(c *gin.Context) {
 		return
 	}
 
-	// Validate the check definition
-	if def.Name == "" || def.Project == "" || def.Type == "" {
+	// Validate
+	if vm.Name == "" || vm.Project == "" || vm.Type == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Name, project, and type are required fields",
 		})
 		return
 	}
+
+	// Convert VM -> Domain Model
+	def = convertFromCheckDefViewModel(vm)
 
 	// Default to enabled if not specified
 	if !def.Enabled {
@@ -95,7 +99,7 @@ func CreateCheckDefinition(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	id, err := mongoDB.CreateCheckDefinition(ctx, def)
+	id, err := repo.CreateCheckDefinition(ctx, def)
 	if err != nil {
 		logrus.Errorf("Failed to create check definition: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -104,9 +108,14 @@ func CreateCheckDefinition(c *gin.Context) {
 		return
 	}
 
-	// Update the ID and return the created check definition
 	if idObj, err := primitive.ObjectIDFromHex(id); err == nil {
 		def.ID = idObj
+	} else {
+		// Since we switched to Postgres, ID might be UUID already in CreateCheckDefinition return
+		// but primitive.ObjectIDFromHex is Mongo specific.
+		// We should just use the returned 'id' assuming it is the UUID or something useful.
+		// Actually CreateCheckDefinition returns UUID as string in our implementation.
+		def.UUID = id
 	}
 
 	c.JSON(http.StatusCreated, convertToCheckDefViewModel(def))
@@ -114,7 +123,7 @@ func CreateCheckDefinition(c *gin.Context) {
 
 // UpdateCheckDefinition updates an existing check definition
 func UpdateCheckDefinition(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 	uuid := c.Param("uuid")
 
 	if uuid == "" {
@@ -124,14 +133,16 @@ func UpdateCheckDefinition(c *gin.Context) {
 		return
 	}
 
-	var def models.CheckDefinition
-	if err := c.ShouldBindJSON(&def); err != nil {
+	var vm models.CheckDefinitionViewModel
+	if err := c.ShouldBindJSON(&vm); err != nil {
 		logrus.Errorf("Failed to bind check definition: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid check definition data",
 		})
 		return
 	}
+
+	def := convertFromCheckDefViewModel(vm)
 
 	// Ensure UUID in URL matches body
 	def.UUID = uuid
@@ -140,7 +151,7 @@ func UpdateCheckDefinition(c *gin.Context) {
 	defer cancel()
 
 	// Get the existing definition to maintain ID
-	existingDef, err := mongoDB.GetCheckDefinitionByUUID(ctx, uuid)
+	existingDef, err := repo.GetCheckDefinitionByUUID(ctx, uuid)
 	if err != nil {
 		logrus.Errorf("Failed to get check definition %s: %v", uuid, err)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -153,7 +164,7 @@ func UpdateCheckDefinition(c *gin.Context) {
 	def.ID = existingDef.ID
 
 	// Update the definition
-	if err := mongoDB.UpdateCheckDefinition(ctx, def); err != nil {
+	if err := repo.UpdateCheckDefinition(ctx, def); err != nil {
 		logrus.Errorf("Failed to update check definition %s: %v", uuid, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update check definition",
@@ -166,7 +177,7 @@ func UpdateCheckDefinition(c *gin.Context) {
 
 // DeleteCheckDefinition deletes a check definition
 func DeleteCheckDefinition(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 	uuid := c.Param("uuid")
 
 	if uuid == "" {
@@ -179,7 +190,7 @@ func DeleteCheckDefinition(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := mongoDB.DeleteCheckDefinition(ctx, uuid); err != nil {
+	if err := repo.DeleteCheckDefinition(ctx, uuid); err != nil {
 		logrus.Errorf("Failed to delete check definition %s: %v", uuid, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete check definition",
@@ -195,7 +206,7 @@ func DeleteCheckDefinition(c *gin.Context) {
 
 // ToggleCheckDefinitionStatus enables or disables a check definition
 func ToggleCheckDefinitionStatus(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 	uuid := c.Param("uuid")
 
 	if uuid == "" {
@@ -210,7 +221,7 @@ func ToggleCheckDefinitionStatus(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := mongoDB.ToggleCheckDefinition(ctx, uuid, enabled); err != nil {
+	if err := repo.ToggleCheckDefinition(ctx, uuid, enabled); err != nil {
 		logrus.Errorf("Failed to toggle check definition %s: %v", uuid, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to toggle check definition",
@@ -219,7 +230,7 @@ func ToggleCheckDefinitionStatus(c *gin.Context) {
 	}
 
 	// Get the updated check definition
-	def, err := mongoDB.GetCheckDefinitionByUUID(ctx, uuid)
+	def, err := repo.GetCheckDefinitionByUUID(ctx, uuid)
 	if err != nil {
 		logrus.Warnf("Check definition %s toggled but could not be retrieved: %v", uuid, err)
 		c.JSON(http.StatusOK, gin.H{
@@ -240,12 +251,12 @@ func ToggleCheckDefinitionStatus(c *gin.Context) {
 
 // Get all projects for check definitions
 func GetCheckProjects(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	projects, err := mongoDB.GetAllProjects(ctx)
+	projects, err := repo.GetAllProjects(ctx)
 	if err != nil {
 		logrus.Errorf("Failed to get projects: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -259,12 +270,12 @@ func GetCheckProjects(c *gin.Context) {
 
 // Get all check types
 func GetCheckTypes(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	types, err := mongoDB.GetAllCheckTypes(ctx)
+	types, err := repo.GetAllCheckTypes(ctx)
 	if err != nil {
 		logrus.Errorf("Failed to get check types: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -276,9 +287,16 @@ func GetCheckTypes(c *gin.Context) {
 	c.JSON(http.StatusOK, types)
 }
 
+// GetDefaultTimeouts returns default timeouts for all check types
+func GetDefaultTimeouts(c *gin.Context) {
+	repo := c.MustGet("repo").(db.Repository)
+	defaultTimeouts := repo.GetAllDefaultTimeouts()
+	c.JSON(http.StatusOK, defaultTimeouts)
+}
+
 // Helper to convert a CheckDefinition to a CheckDefinitionViewModel
 func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefinitionViewModel {
-	return models.CheckDefinitionViewModel{
+	vm := models.CheckDefinitionViewModel{
 		ID:               def.ID.Hex(),
 		UUID:             def.UUID,
 		Name:             def.Name,
@@ -290,12 +308,86 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 		CreatedAt:        def.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:        def.UpdatedAt.Format(time.RFC3339),
 		Duration:         def.Duration,
-		URL:              def.URL,
-		Timeout:          def.Timeout,
-		Host:             def.Host,
-		Port:             def.Port,
 		ActorType:        def.ActorType,
 		AlertType:        def.AlertType,
 		AlertDestination: def.AlertDestination,
 	}
+
+	// Populate config fields
+	if def.Config != nil {
+		switch c := def.Config.(type) {
+		case *models.HTTPCheckConfig:
+			vm.URL = c.URL
+			vm.Timeout = c.Timeout
+		case *models.TCPCheckConfig:
+			vm.Host = c.Host
+			vm.Port = c.Port
+			vm.Timeout = c.Timeout
+		case *models.MySQLCheckConfig:
+			vm.MySQL.UserName = c.UserName
+			vm.MySQL.DBName = c.DBName
+			vm.MySQL.Query = c.Query
+			vm.MySQL.ServerList = c.ServerList
+		case *models.PostgreSQLCheckConfig:
+			vm.PgSQL.UserName = c.UserName
+			vm.PgSQL.DBName = c.DBName
+			vm.PgSQL.Query = c.Query
+			vm.PgSQL.ServerList = c.ServerList
+		}
+	}
+
+	// What about Webhook? ViewModel doesn't expose it yet in the original code,
+	// so we might not need to map it for now.
+
+	return vm
+}
+
+// Helper to convert CheckDefinitionViewModel to CheckDefinition
+func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.CheckDefinition {
+	def := models.CheckDefinition{
+		UUID:             vm.UUID,
+		Name:             vm.Name,
+		Project:          vm.Project,
+		GroupName:        vm.GroupName,
+		Type:             vm.Type,
+		Description:      vm.Description,
+		Enabled:          vm.Enabled,
+		Duration:         vm.Duration,
+		ActorType:        vm.ActorType,
+		AlertType:        vm.AlertType,
+		AlertDestination: vm.AlertDestination,
+	}
+
+	// Create ID if present (parsed later usually)
+
+	// Populate Config
+	switch vm.Type {
+	case "http":
+		def.Config = &models.HTTPCheckConfig{
+			URL:     vm.URL,
+			Timeout: vm.Timeout,
+		}
+	case "tcp":
+		def.Config = &models.TCPCheckConfig{
+			Host:    vm.Host,
+			Port:    vm.Port,
+			Timeout: vm.Timeout,
+		}
+	case "mysql_query", "mysql_query_unixtime", "mysql_replication":
+		def.Config = &models.MySQLCheckConfig{
+			UserName:   vm.MySQL.UserName,
+			DBName:     vm.MySQL.DBName,
+			Query:      vm.MySQL.Query,
+			ServerList: vm.MySQL.ServerList,
+		}
+	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
+		def.Config = &models.PostgreSQLCheckConfig{
+			UserName:   vm.PgSQL.UserName,
+			DBName:     vm.PgSQL.DBName,
+			Query:      vm.PgSQL.Query,
+			ServerList: vm.PgSQL.ServerList,
+		}
+	}
+
+	return def
 }

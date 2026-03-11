@@ -1,0 +1,23 @@
+# Stoneforge Configuration
+# See https://github.com/stoneforge/stoneforge for documentation
+
+# Default actor for operations (optional)
+# actor: my-agent
+
+# Database path (relative to .stoneforge/)
+database: stoneforge.db
+
+# Sync settings
+sync:
+  auto_export: true
+  elements_file: elements.jsonl
+  dependencies_file: dependencies.jsonl
+
+# Playbook search paths
+playbooks:
+  paths:
+    - playbooks
+
+# Identity settings
+identity:
+  mode: soft

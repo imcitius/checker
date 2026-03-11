@@ -21,4 +21,5 @@ type CheckStatus struct {
 	LastAlertSent time.Time          `bson:"last_alert_sent" json:"last_alert_sent"`
 	Host          string             `bson:"host" json:"host"`
 	Periodicity   string             `bson:"periodicity" json:"periodicity"`
+	URL           string             `bson:"url" json:"url"`
 }

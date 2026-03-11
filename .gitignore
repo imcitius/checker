@@ -25,4 +25,6 @@
 /app
 /v2/*
 .DS_store
-*config*
+/testconfigs*
+/dev
+/.stoneforge/.worktrees/

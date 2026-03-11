@@ -13,8 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"checker/internal/config"
 	"checker/internal/db"
@@ -76,7 +74,7 @@ func BroadcastCheckUpdate(checkStatus models.CheckViewModel) {
 }
 
 // BroadcastChecksUpdate sends all check statuses to all connected WebSocket clients
-func BroadcastChecksUpdate(mongoDB *db.MongoDB) {
+func BroadcastChecksUpdate(repo db.Repository) {
 	// If no clients, skip fetching data and broadcasting
 	clientsMux.Lock()
 	clientCount := len(clients)
@@ -86,7 +84,7 @@ func BroadcastChecksUpdate(mongoDB *db.MongoDB) {
 		return
 	}
 
-	checks, err := getAllCheckStatuses(mongoDB)
+	checks, err := getAllCheckStatuses(repo)
 	if err != nil {
 		logrus.Errorf("Failed to get check statuses for broadcast: %v", err)
 		return
@@ -102,7 +100,7 @@ func BroadcastChecksUpdate(mongoDB *db.MongoDB) {
 		return
 	}
 
-	logrus.Debugf("Broadcasting check updates to %d clients", len(clients))
+	// logrus.Debugf("Broadcasting check updates to %d clients", len(clients))
 	disconnectedClients := []*websocket.Conn{}
 
 	for client := range clients {
@@ -129,13 +127,13 @@ func BroadcastChecksUpdate(mongoDB *db.MongoDB) {
 }
 
 // RunServer starts the web server and returns an error if it fails
-func RunServer(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) error {
+func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository) error {
 	// Create a router with default middleware
 	router := gin.Default()
 
-	// Add MongoDB to context
+	// Add Repository to context
 	router.Use(func(c *gin.Context) {
-		c.Set("mongodb", mongoDB)
+		c.Set("repo", repo)
 		c.Next()
 	})
 
@@ -185,7 +183,7 @@ func RunServer(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) err
 
 	// WebSocket endpoint
 	router.GET("/ws", func(c *gin.Context) {
-		handleWebSocket(c, mongoDB)
+		handleWebSocket(c, repo)
 	})
 
 	// REST API routes
@@ -205,13 +203,14 @@ func RunServer(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) err
 	{
 		metadataGroup.GET("/projects", GetCheckProjects)
 		metadataGroup.GET("/check-types", GetCheckTypes)
+		metadataGroup.GET("/default-timeouts", GetDefaultTimeouts)
 	}
 
 	// Admin endpoints for migrations (not for production use)
 	if gin.Mode() != gin.ReleaseMode {
 		router.POST("/api/admin/migrate-config", func(c *gin.Context) {
 			// Convert config file to database entries
-			err := mongoDB.ConvertConfigToCheckDefinitions(c.Request.Context(), cfg)
+			err := repo.ConvertConfigToCheckDefinitions(c.Request.Context(), cfg)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": fmt.Sprintf("Failed to migrate config: %v", err),
@@ -226,7 +225,7 @@ func RunServer(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) err
 
 	// Legacy API routes (for backward compatibility)
 	router.GET("/api/checks", func(c *gin.Context) {
-		statuses, err := getAllCheckStatuses(mongoDB)
+		statuses, err := getAllCheckStatuses(repo)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -244,7 +243,7 @@ func RunServer(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) err
 		logrus.Infof("Received toggle request for check %s to enabled=%v", uuid, enabled)
 
 		// Try to toggle the check
-		if err := toggleCheck(mongoDB, uuid, enabled); err != nil {
+		if err := toggleCheck(repo, uuid, enabled); err != nil {
 			logrus.Errorf("Failed to toggle check %s: %v", uuid, err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error":   err.Error(),
@@ -256,9 +255,11 @@ func RunServer(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) err
 		}
 
 		// Get updated check to broadcast
-		check, err := getCheckByUUID(mongoDB, uuid)
+		check, err := getCheckByUUID(repo, uuid)
 		if err != nil {
-			if err == mongo.ErrNoDocuments {
+			// This logic handles potential immediate retrieval issues but assumes success means it's updated
+			// Replicating original fallback logic
+			if err.Error() == "check definition not found" { // Simplified error check for repo
 				// This shouldn't happen since toggleCheck should create the check if it doesn't exist
 				// But just in case, create a placeholder check for the response
 				logrus.Warnf("Check %s still not found after toggle, using placeholder for response", uuid)
@@ -328,7 +329,7 @@ func RunServer(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) err
 				logrus.Info("Broadcast ticker stopping due to context cancellation")
 				return
 			case <-broadcastTicker.C:
-				BroadcastChecksUpdate(mongoDB)
+				BroadcastChecksUpdate(repo)
 			}
 		}
 	}()
@@ -398,99 +399,117 @@ func RunServer(ctx context.Context, cfg *config.Config, mongoDB *db.MongoDB) err
 	return nil
 }
 
-func getAllCheckStatuses(mongoDB *db.MongoDB) ([]models.CheckStatus, error) {
-	logrus.Debug("Getting all check statuses from MongoDB")
-
-	if mongoDB == nil {
-		logrus.Error("MongoDB connection is nil")
-		return nil, fmt.Errorf("database connection is nil")
-	}
-
-	if mongoDB.Database == nil {
-		logrus.Error("MongoDB database is nil")
-		return nil, fmt.Errorf("database is nil")
+func getAllCheckStatuses(repo db.Repository) ([]models.CheckStatus, error) {
+	if repo == nil {
+		logrus.Error("Repository is nil")
+		return nil, fmt.Errorf("repository is nil")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cursor, err := mongoDB.Database.Collection("check_definitions").Find(ctx, bson.M{})
+	// Using GetAllCheckDefinitions which fetches all checks (enabled and disabled)
+	// Actually for getAllCheckStatuses used in dashboard, we probably want all checks too.
+	definitions, err := repo.GetAllCheckDefinitions(ctx)
 	if err != nil {
-		logrus.Errorf("Failed to query check_definitions collection: %v", err)
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var results []models.CheckStatus
-	if err := cursor.All(ctx, &results); err != nil {
-		logrus.Errorf("Failed to decode check statuses: %v", err)
+		logrus.Errorf("Failed to query check definitions: %v", err)
 		return nil, err
 	}
 
-	logrus.Debugf("Retrieved %d check statuses from database", len(results))
+	// Convert CheckDefinition to CheckStatus
+	results := make([]models.CheckStatus, len(definitions))
+	for i, def := range definitions {
+		host := ""
+		url := ""
+		if def.Config != nil {
+			host = def.Config.GetTarget()
+			if httpConf, ok := def.Config.(*models.HTTPCheckConfig); ok {
+				url = httpConf.URL
+			}
+		}
+
+		results[i] = models.CheckStatus{
+			ID:            def.ID,
+			UUID:          def.UUID,
+			Project:       def.Project,
+			CheckGroup:    def.GroupName,
+			CheckName:     def.Name,
+			CheckType:     def.Type,
+			LastRun:       def.LastRun,
+			IsHealthy:     def.IsHealthy,
+			Message:       def.LastMessage,
+			IsEnabled:     def.Enabled,
+			LastAlertSent: def.LastAlertSent,
+			Host:          host,
+			Periodicity:   def.Duration,
+			URL:           url,
+		}
+	}
 
 	return results, nil
 }
 
-func getCheckByUUID(mongoDB *db.MongoDB, uuid string) (models.CheckStatus, error) {
+func getCheckByUUID(repo db.Repository, uuid string) (models.CheckStatus, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	logrus.Debugf("Getting check by UUID: %s", uuid)
 
-	var result models.CheckStatus
-	err := mongoDB.Database.Collection("check_definitions").FindOne(ctx, bson.M{"uuid": uuid}).Decode(&result)
-
+	def, err := repo.GetCheckDefinitionByUUID(ctx, uuid)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			logrus.Warnf("Check %s not found in database, returning error", uuid)
-			return result, err
-		}
+		// We can't easily check for "no documents" error type generically without custom error package
+		// But for now we just return the error.
+		return models.CheckStatus{}, err
+	}
 
-		logrus.Errorf("Error getting check by UUID %s: %v", uuid, err)
-		return result, err
+	host := ""
+	url := ""
+	if def.Config != nil {
+		host = def.Config.GetTarget()
+		if httpConf, ok := def.Config.(*models.HTTPCheckConfig); ok {
+			url = httpConf.URL
+		}
+	}
+
+	// Convert CheckDefinition to CheckStatus
+	result := models.CheckStatus{
+		ID:            def.ID,
+		UUID:          def.UUID,
+		Project:       def.Project,
+		CheckGroup:    def.GroupName,
+		CheckName:     def.Name,
+		CheckType:     def.Type,
+		LastRun:       def.LastRun,
+		IsHealthy:     def.IsHealthy,
+		Message:       def.LastMessage,
+		IsEnabled:     def.Enabled,
+		LastAlertSent: def.LastAlertSent,
+		Host:          host,
+		Periodicity:   def.Duration,
+		URL:           url,
 	}
 
 	return result, nil
 }
 
-func toggleCheck(mongoDB *db.MongoDB, uuid string, enabled bool) error {
+func toggleCheck(repo db.Repository, uuid string, enabled bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	logrus.Infof("Toggling check %s to enabled=%v", uuid, enabled)
 
-	filter := bson.M{
-		"uuid": uuid,
-	}
-
-	update := bson.M{
-		"$set": bson.M{
-			"enabled":    enabled,
-			"updated_at": time.Now(),
-		},
-	}
-
-	result, err := mongoDB.Collection("check_definitions").UpdateOne(ctx, filter, update)
-	if err != nil {
+	if err := repo.ToggleCheckDefinition(ctx, uuid, enabled); err != nil {
 		logrus.Errorf("Error toggling check %s: %v", uuid, err)
 		return err
 	}
-
-	if result.MatchedCount == 0 {
-		return fmt.Errorf("check definition with UUID %s not found", uuid)
-	}
-
-	logrus.Infof("Successfully toggled check %s to enabled=%v (matched: %d, modified: %d)",
-		uuid, enabled, result.MatchedCount, result.ModifiedCount)
 
 	return nil
 }
 
 func handleDashboard(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 
-	checks, err := getAllCheckStatuses(mongoDB)
+	checks, err := getAllCheckStatuses(repo)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "dashboard.html", gin.H{
 			"error": err.Error(),
@@ -520,6 +539,7 @@ func convertToViewModel(check models.CheckStatus) models.CheckViewModel {
 		Message:     check.Message,
 		Host:        check.Host,
 		Periodicity: check.Periodicity,
+		URL:         check.URL,
 	}
 }
 
@@ -532,7 +552,7 @@ func convertToViewModels(checks []models.CheckStatus) []models.CheckViewModel {
 }
 
 // Handle WebSocket connections
-func handleWebSocket(c *gin.Context, mongoDB *db.MongoDB) {
+func handleWebSocket(c *gin.Context, repo db.Repository) {
 	logrus.Debugf("Received WebSocket connection request from: %s", c.Request.RemoteAddr)
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -563,7 +583,7 @@ func handleWebSocket(c *gin.Context, mongoDB *db.MongoDB) {
 	pingTicker := time.NewTicker(15 * time.Second)
 
 	// Send initial data
-	err = sendInitialData(conn, mongoDB)
+	err = sendInitialData(conn, repo)
 	if err != nil {
 		logrus.Errorf("Failed to send initial data: %v", err)
 		conn.Close()
@@ -628,7 +648,7 @@ func handleWebSocket(c *gin.Context, mongoDB *db.MongoDB) {
 
 					switch action {
 					case "getChecks":
-						sendInitialData(conn, mongoDB)
+						sendInitialData(conn, repo)
 					case "ack":
 						// Just a keepalive, no need to do anything
 					case "toggleCheck":
@@ -636,7 +656,7 @@ func handleWebSocket(c *gin.Context, mongoDB *db.MongoDB) {
 						uuid, uuidOk := request["uuid"].(string)
 						enabled, enabledOk := request["enabled"].(bool)
 						if uuidOk && enabledOk {
-							err := toggleCheck(mongoDB, uuid, enabled)
+							err := toggleCheck(repo, uuid, enabled)
 							if err != nil {
 								logrus.Errorf("Failed to toggle check: %v", err)
 							}
@@ -665,42 +685,11 @@ func handleWebSocket(c *gin.Context, mongoDB *db.MongoDB) {
 }
 
 // Send initial checks data to a WebSocket client
-func sendInitialData(conn *websocket.Conn, mongoDB *db.MongoDB) error {
-	checks, err := getAllCheckStatuses(mongoDB)
+func sendInitialData(conn *websocket.Conn, repo db.Repository) error {
+	checks, err := getAllCheckStatuses(repo)
 	if err != nil {
 		return fmt.Errorf("failed to get check statuses: %w", err)
 	}
-
-	// // If no data, add some fake checks for development
-	// if len(checks) == 0 && gin.Mode() != gin.ReleaseMode {
-	// 	logrus.Warn("No check statuses found in database. Adding test data.")
-
-	// 	// Add test data for development only
-	// 	checks = append(checks, models.CheckStatus{
-	// 		Project:     "Test Project",
-	// 		CheckName:   "Test Check 1",
-	// 		CheckType:   "HTTP",
-	// 		IsHealthy:   true,
-	// 		IsEnabled:   true,
-	// 		LastRun:     time.Now(),
-	// 		UUID:        "test-uuid-1",
-	// 		Host:        "example.com",
-	// 		Periodicity: "1m",
-	// 	})
-
-	// 	checks = append(checks, models.CheckStatus{
-	// 		Project:     "Test Project",
-	// 		CheckName:   "Test Check 2",
-	// 		CheckType:   "TCP",
-	// 		IsHealthy:   false,
-	// 		IsEnabled:   true,
-	// 		LastRun:     time.Now(),
-	// 		UUID:        "test-uuid-2",
-	// 		Message:     "Connection refused",
-	// 		Host:        "example.org:8080",
-	// 		Periodicity: "5m",
-	// 	})
-	// }
 
 	// Convert to view models
 	viewModels := convertToViewModels(checks)
@@ -737,7 +726,7 @@ func sendInitialData(conn *websocket.Conn, mongoDB *db.MongoDB) error {
 
 // http route to upodate LastPing status of Passive Checks
 func updateLastPingStatus(c *gin.Context) {
-	mongoDB := c.MustGet("mongodb").(*db.MongoDB)
+	repo := c.MustGet("repo").(db.Repository)
 
 	uuid := c.Param("uuid")
 	if uuid == "" {
@@ -750,32 +739,33 @@ func updateLastPingStatus(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	filter := bson.M{
-		"uuid": uuid,
-		"type": "passive", // Only allow updating passive checks
-	}
-
-	update := bson.M{
-		"$set": bson.M{
-			"last_run":   time.Now(),
-			"is_healthy": true,
-		},
-	}
-
-	result, err := mongoDB.Collection("check_definitions").UpdateOne(ctx, filter, update)
+	// Passive check logic requires fetching the check first to ensure it is passive?
+	// Let's use GetCheckDefinitionByUUID first.
+	def, err := repo.GetCheckDefinitionByUUID(ctx, uuid)
 	if err != nil {
-		logrus.Errorf("Error updating last ping for check %s: %v", uuid, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Check not found"})
 		return
 	}
 
-	if result.MatchedCount == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("passive check with UUID %s not found", uuid)})
+	if def.Type != "passive" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Check is not passive"})
 		return
 	}
 
-	logrus.Infof("Successfully updated last ping for check %s (matched: %d, modified: %d)",
-		uuid, result.MatchedCount, result.ModifiedCount)
+	// Update status
+	status := models.CheckStatus{
+		UUID:          uuid,
+		LastRun:       time.Now(),
+		IsHealthy:     true,
+		LastAlertSent: def.LastAlertSent, // preserve
+		Message:       "Passive check ping received",
+	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	if err := repo.UpdateCheckStatus(ctx, status); err != nil {
+		logrus.Errorf("Failed to update last ping for %s: %v", uuid, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update check status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Pong received"})
 }

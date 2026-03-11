@@ -17,43 +17,179 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 		logger = logrus.WithField("function", "CheckerFactory")
 	}
 
-	switch checkDef.Type {
-	case "http":
-		logger.Debugf("Creating HTTP check for URL: %s", checkDef.URL)
+	if checkDef.Config == nil {
+		logger.Warnf("Check definition %s has nil config", checkDef.UUID)
+		return nil
+	}
+
+	switch config := checkDef.Config.(type) {
+	case *models.HTTPCheckConfig:
+		logger.Debugf("Creating HTTP check for URL: %s", config.URL)
 		return &checks.HTTPCheck{
-			URL:                 checkDef.URL,
-			Timeout:             checkDef.Timeout,
-			Answer:              checkDef.Answer,
-			Code:                checkDef.Code,
-			Auth:                struct{ User, Password string }{checkDef.Auth.User, checkDef.Auth.Password},
-			Headers:             checkDef.Headers,
-			SkipCheckSSL:        checkDef.SkipCheckSSL,
-			SSLExpirationPeriod: checkDef.SSLExpirationPeriod,
-			StopFollowRedirects: checkDef.StopFollowRedirects,
+			URL:                 config.URL,
+			Timeout:             config.Timeout,
+			Answer:              config.Answer,
+			Code:                config.Code,
+			Auth:                struct{ User, Password string }{config.Auth.User, config.Auth.Password},
+			Headers:             config.Headers,
+			SkipCheckSSL:        config.SkipCheckSSL,
+			SSLExpirationPeriod: config.SSLExpirationPeriod,
+			StopFollowRedirects: config.StopFollowRedirects,
 			Logger:              logger,
 		}
-	case "tcp":
-		logger.Debugf("Creating TCP check for host: %s, port: %d", checkDef.Host, checkDef.Port)
+	case *models.TCPCheckConfig:
+		logger.Debugf("Creating TCP check for host: %s, port: %d", config.Host, config.Port)
 		return &checks.TCPCheck{
-			Host:    checkDef.Host,
-			Port:    checkDef.Port,
-			Timeout: checkDef.Timeout,
+			Host:    config.Host,
+			Port:    config.Port,
+			Timeout: config.Timeout,
 		}
-	case "icmp":
-		logger.Debugf("Creating ICMP check for host: %s", checkDef.Host)
+	case *models.ICMPCheckConfig:
+		logger.Debugf("Creating ICMP check for host: %s", config.Host)
 		return &checks.ICMPCheck{
-			Host:    checkDef.Host,
-			Count:   checkDef.Count,
-			Timeout: checkDef.Timeout,
+			Host:    config.Host,
+			Count:   config.Count,
+			Timeout: config.Timeout,
 		}
-	case "passive":
-		logger.Debugf("Creating Passive check for host: %s", checkDef.Host)
+	case *models.PassiveCheckConfig:
+		logger.Debugf("Creating Passive check")
 		return &checks.PassiveCheck{
-			Timeout: checkDef.Timeout,
+			Timeout: config.Timeout,
+		}
+	case *models.MySQLCheckConfig:
+		switch checkDef.Type {
+		case "mysql_query":
+			logger.Debugf("Creating MySQL query check for host: %s, port: %d", config.Host, config.Port)
+			return &checks.MySQLCheck{
+				Host:    config.Host,
+				Port:    config.Port,
+				Timeout: config.Timeout,
+				Config: checks.MySQLQueryConfig{
+					MySQLConfig: checks.MySQLConfig{
+						UserName: config.UserName,
+						Password: config.Password,
+						DBName:   config.DBName,
+					},
+					Query:    config.Query,
+					Response: config.Response,
+				},
+				Logger: logger,
+			}
+		case "mysql_query_unixtime":
+			logger.Debugf("Creating MySQL unixtime check for host: %s, port: %d", config.Host, config.Port)
+			return &checks.MySQLTimeCheck{
+				Host:    config.Host,
+				Port:    config.Port,
+				Timeout: config.Timeout,
+				Config: checks.MySQLTimeQueryConfig{
+					MySQLConfig: checks.MySQLConfig{
+						UserName: config.UserName,
+						Password: config.Password,
+						DBName:   config.DBName,
+					},
+					Query:      config.Query,
+					Difference: config.Difference,
+				},
+				Logger: logger,
+			}
+		case "mysql_replication":
+			logger.Debugf("Creating MySQL replication check for host: %s, port: %d", config.Host, config.Port)
+			return &checks.MySQLReplicationCheck{
+				Host:    config.Host,
+				Port:    config.Port,
+				Timeout: config.Timeout,
+				Config: checks.MySQLReplicationConfig{
+					MySQLConfig: checks.MySQLConfig{
+						UserName: config.UserName,
+						Password: config.Password,
+						DBName:   config.DBName,
+					},
+					TableName:  config.TableName,
+					Lag:        config.Lag,
+					ServerList: config.ServerList,
+				},
+				Logger: logger,
+			}
+		default:
+			logger.Warnf("Unknown MySQL check type: %s", checkDef.Type)
+			return nil
+		}
+
+	case *models.PostgreSQLCheckConfig:
+		switch checkDef.Type {
+		case "pgsql_query":
+			logger.Debugf("Creating PostgreSQL query check for host: %s, port: %d", config.Host, config.Port)
+			return &checks.PostgreSQLCheck{
+				Host:    config.Host,
+				Port:    config.Port,
+				Timeout: config.Timeout,
+				Config: checks.PostgreSQLQueryConfig{
+					PostgreSQLConfig: checks.PostgreSQLConfig{
+						UserName: config.UserName,
+						Password: config.Password,
+						DBName:   config.DBName,
+						SSLMode:  config.SSLMode,
+					},
+					Query:    config.Query,
+					Response: config.Response,
+				},
+				Logger: logger,
+			}
+		case "pgsql_query_unixtime", "pgsql_query_timestamp":
+			timeType := "timestamp"
+			if checkDef.Type == "pgsql_query_unixtime" {
+				timeType = "unixtime"
+			}
+			logger.Debugf("Creating PostgreSQL %s check for host: %s, port: %d", timeType, config.Host, config.Port)
+			return &checks.PostgreSQLTimeCheck{
+				Host:     config.Host,
+				Port:     config.Port,
+				Timeout:  config.Timeout,
+				TimeType: timeType,
+				Config: checks.PostgreSQLTimeQueryConfig{
+					PostgreSQLConfig: checks.PostgreSQLConfig{
+						UserName: config.UserName,
+						Password: config.Password,
+						DBName:   config.DBName,
+						SSLMode:  config.SSLMode,
+					},
+					Query:      config.Query,
+					Difference: config.Difference,
+				},
+				Logger: logger,
+			}
+		case "pgsql_replication", "pgsql_replication_status":
+			checkType := "replication"
+			if checkDef.Type == "pgsql_replication_status" {
+				checkType = "replication_status"
+			}
+			logger.Debugf("Creating PostgreSQL %s check for host: %s, port: %d", checkType, config.Host, config.Port)
+			return &checks.PostgreSQLReplicationCheck{
+				Host:      config.Host,
+				Port:      config.Port,
+				Timeout:   config.Timeout,
+				CheckType: checkType,
+				Config: checks.PostgreSQLReplicationConfig{
+					PostgreSQLConfig: checks.PostgreSQLConfig{
+						UserName: config.UserName,
+						Password: config.Password,
+						DBName:   config.DBName,
+						SSLMode:  config.SSLMode,
+					},
+					TableName:        config.TableName,
+					Lag:              config.Lag,
+					ServerList:       config.ServerList,
+					AnalyticReplicas: config.AnalyticReplicas,
+				},
+				Logger: logger,
+			}
+		default:
+			logger.Warnf("Unknown PostgreSQL check type: %s", checkDef.Type)
+			return nil
 		}
 
 	default:
-		logger.Warnf("Unknown check type: %s", checkDef.Type)
+		logger.Warnf("Unknown check config type: %T for type %s", checkDef.Config, checkDef.Type)
 		return nil
 	}
 }
@@ -71,25 +207,20 @@ func ActorFactory(checkDef models.CheckDefinition) (actors.Actor, error) {
 	case "log":
 		logger.Debugf("Creating Log actor")
 		return &actors.LogActor{}, nil
-	case "alert":
-		switch checkDef.AlertType {
-		case "telegram":
-			logger.Debugf("Creating Telegram actor")
-			// Ensure Telegram is properly implemented in the actors package
-			// return &actors.Telegram{
-			//     Destination: checkDef.AlertDestination,
-			// }, nil
-			return nil, fmt.Errorf("telegram actor not yet implemented")
-		case "slack":
-			logger.Debugf("Creating Slack actor")
-			// Ensure Slack is properly implemented in the actors package
-			// return &actors.Slack{
-			//     Webhook: checkDef.AlertDestination,
-			// }, nil
-			return nil, fmt.Errorf("slack actor not yet implemented")
-		default:
-			return nil, fmt.Errorf("unknown alert type: %s", checkDef.AlertType)
+	case "webhook":
+		logger.Debugf("Creating Webhook actor")
+		config, ok := checkDef.ActorConfig.(*models.WebhookConfig)
+		if !ok || config == nil {
+			return nil, fmt.Errorf("webhook actor config is missing or invalid")
 		}
+
+		return &actors.WebhookActor{
+			URL:     config.URL,
+			Method:  config.Method,
+			Payload: config.Payload,
+			Headers: config.Headers,
+			Logger:  logger,
+		}, nil
 	case "":
 		logger.Debug("No actor type specified, skipping actor creation")
 		return nil, nil

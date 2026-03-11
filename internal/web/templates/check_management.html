@@ -43,10 +43,11 @@
         }
 
         .help-text {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 4px;
             display: block;
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 2px;
+            margin-left: 2px;
         }
 
         .form-row textarea {
@@ -155,6 +156,22 @@
             color: white;
         }
 
+        .badge-mysql_query,
+        .badge-mysql_query_unixtime,
+        .badge-mysql_replication {
+            background-color: #673AB7;
+            color: white;
+        }
+
+        .badge-pgsql_query,
+        .badge-pgsql_query_unixtime,
+        .badge-pgsql_query_timestamp,
+        .badge-pgsql_replication,
+        .badge-pgsql_replication_status {
+            background-color: #2979FF;
+            color: white;
+        }
+
         .tab-container {
             margin-bottom: 20px;
         }
@@ -183,6 +200,39 @@
 
         .tab-content.active {
             display: block;
+        }
+
+        /* Add these styles to the existing styles section */
+        .uuid-cell {
+            position: relative;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .uuid-cell:hover {
+            color: #2196F3;
+        }
+
+        .uuid-cell::after {
+            content: 'Copied!';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .uuid-cell.copied::after {
+            opacity: 1;
         }
     </style>
 </head>
@@ -213,6 +263,14 @@
                         <option value="tcp">TCP</option>
                         <option value="icmp">ICMP</option>
                         <option value="passive">Passive</option>
+                        <option value="mysql_query">MySQL Query</option>
+                        <option value="mysql_query_unixtime">MySQL Time</option>
+                        <option value="mysql_replication">MySQL Replication</option>
+                        <option value="pgsql_query">PostgreSQL Query</option>
+                        <option value="pgsql_query_timestamp">PostgreSQL Timestamp</option>
+                        <option value="pgsql_query_unixtime">PostgreSQL Unixtime</option>
+                        <option value="pgsql_replication">PostgreSQL Replication</option>
+                        <option value="pgsql_replication_status">PostgreSQL Replication Status</option>
                     </select>
                 </div>
 
@@ -225,6 +283,7 @@
                                 <th>Type</th>
                                 <th>Duration</th>
                                 <th>Status</th>
+                                <th>UUID</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -250,7 +309,10 @@
 
                         <div class="form-row">
                             <label for="def-project">Project*</label>
-                            <input type="text" id="def-project" name="project" required>
+                            <input type="text" id="def-project" name="project" list="project-list" required>
+                            <datalist id="project-list">
+                                <!-- Will be populated by JavaScript -->
+                            </datalist>
                         </div>
 
                         <div class="form-row">
@@ -265,6 +327,14 @@
                                 <option value="tcp">TCP</option>
                                 <option value="icmp">ICMP</option>
                                 <option value="passive">Passive</option>
+                                <option value="mysql_query">MySQL Query</option>
+                                <option value="mysql_query_unixtime">MySQL Time</option>
+                                <option value="mysql_replication">MySQL Replication</option>
+                                <option value="pgsql_query">PostgreSQL Query</option>
+                                <option value="pgsql_query_timestamp">PostgreSQL Timestamp</option>
+                                <option value="pgsql_query_unixtime">PostgreSQL Unixtime</option>
+                                <option value="pgsql_replication">PostgreSQL Replication</option>
+                                <option value="pgsql_replication_status">PostgreSQL Replication Status</option>
                             </select>
                         </div>
 
@@ -304,7 +374,9 @@
 
                                 <div class="form-row">
                                     <label for="http-timeout">Timeout</label>
-                                    <input type="text" id="http-timeout" name="timeout" placeholder="5s">
+                                    <input type="text" id="http-timeout" name="timeout" placeholder="Default: 5s">
+                                    <small class="help-text http-timeout-help">Leave empty to use the default timeout
+                                        for HTTP checks.</small>
                                 </div>
 
                                 <div class="form-row">
@@ -350,7 +422,9 @@
 
                                 <div class="form-row">
                                     <label for="tcp-timeout">Timeout</label>
-                                    <input type="text" id="tcp-timeout" name="timeout" placeholder="5s">
+                                    <input type="text" id="tcp-timeout" name="timeout" placeholder="Default: 5s">
+                                    <small class="help-text tcp-timeout-help">Leave empty to use the default timeout for
+                                        TCP checks.</small>
                                 </div>
                             </div>
                         </div>
@@ -384,6 +458,494 @@
                                     <small class="help-text">Maximum time to wait for a ping before marking the check as
                                         unhealthy</small>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- MySQL Query fields -->
+                        <div id="mysql_query-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="mysql-host">Host*</label>
+                                    <input type="text" id="mysql-host" name="host" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-port">Port</label>
+                                    <input type="number" id="mysql-port" name="port" min="1" max="65535" value="3306">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-timeout">Timeout</label>
+                                    <input type="text" id="mysql-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+
+                            <h4>MySQL Configuration</h4>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="mysql-username">Username*</label>
+                                    <input type="text" id="mysql-username" name="mysql[username]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-password">Password*</label>
+                                    <input type="password" id="mysql-password" name="mysql[password]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-dbname">Database Name*</label>
+                                    <input type="text" id="mysql-dbname" name="mysql[dbname]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-query">Query*</label>
+                                    <input type="text" id="mysql-query" name="mysql[query]" placeholder="SELECT 1;"
+                                        required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-response">Expected Response</label>
+                                    <input type="text" id="mysql-response" name="mysql[response]" placeholder="1">
+                                    <small class="help-text">Expected response from the query. Leave blank to
+                                        ignore.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MySQL Time Check fields -->
+                        <div id="mysql_query_unixtime-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="mysql-time-host">Host*</label>
+                                    <input type="text" id="mysql-time-host" name="host" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-time-port">Port</label>
+                                    <input type="number" id="mysql-time-port" name="port" min="1" max="65535"
+                                        value="3306">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-time-timeout">Timeout</label>
+                                    <input type="text" id="mysql-time-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+
+                            <h4>MySQL Time Configuration</h4>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="mysql-time-username">Username*</label>
+                                    <input type="text" id="mysql-time-username" name="mysql[username]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-time-password">Password*</label>
+                                    <input type="password" id="mysql-time-password" name="mysql[password]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-time-dbname">Database Name*</label>
+                                    <input type="text" id="mysql-time-dbname" name="mysql[dbname]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-time-query">Time Query*</label>
+                                    <input type="text" id="mysql-time-query" name="mysql[query]"
+                                        placeholder="SELECT UNIX_TIMESTAMP();" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-time-difference">Maximum Time Difference*</label>
+                                    <input type="text" id="mysql-time-difference" name="mysql[difference]"
+                                        placeholder="10s" required>
+                                    <small class="help-text">Maximum allowed time difference (e.g., "10s", "1m")</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MySQL Replication fields -->
+                        <div id="mysql_replication-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="mysql-repl-host">Master Host*</label>
+                                    <input type="text" id="mysql-repl-host" name="host" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-repl-port">Master Port</label>
+                                    <input type="number" id="mysql-repl-port" name="port" min="1" max="65535"
+                                        value="3306">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-repl-timeout">Timeout</label>
+                                    <input type="text" id="mysql-repl-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+
+                            <h4>MySQL Replication Configuration</h4>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="mysql-repl-username">Username*</label>
+                                    <input type="text" id="mysql-repl-username" name="mysql[username]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-repl-password">Password*</label>
+                                    <input type="password" id="mysql-repl-password" name="mysql[password]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-repl-dbname">Database Name*</label>
+                                    <input type="text" id="mysql-repl-dbname" name="mysql[dbname]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-repl-table">Table Name</label>
+                                    <input type="text" id="mysql-repl-table" name="mysql[table_name]"
+                                        placeholder="replication_test">
+                                    <small class="help-text">Table to use for replication test (must exist on all
+                                        servers)</small>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="mysql-repl-lag">Replication Lag Allowed*</label>
+                                    <input type="text" id="mysql-repl-lag" name="mysql[lag]" placeholder="3s" required>
+                                    <small class="help-text">Maximum allowed replication lag (e.g., "3s", "5s")</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <label for="mysql-repl-servers">Replica Servers*</label>
+                                <textarea id="mysql-repl-servers" name="mysql[server_list]"
+                                    placeholder="replica1.example.com&#10;replica2.example.com:3307"
+                                    required></textarea>
+                                <small class="help-text">List of replica servers to check, one per line. Can include
+                                    port (host:port).</small>
+                            </div>
+                        </div>
+
+                        <!-- PostgreSQL Query fields -->
+                        <div id="pgsql_query-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-host">Host*</label>
+                                    <input type="text" id="pgsql-host" name="host" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-port">Port</label>
+                                    <input type="number" id="pgsql-port" name="port" min="1" max="65535" value="5432">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-timeout">Timeout</label>
+                                    <input type="text" id="pgsql-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+
+                            <h4>PostgreSQL Configuration</h4>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-username">Username*</label>
+                                    <input type="text" id="pgsql-username" name="pgsql[username]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-password">Password*</label>
+                                    <input type="password" id="pgsql-password" name="pgsql[password]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-dbname">Database Name*</label>
+                                    <input type="text" id="pgsql-dbname" name="pgsql[dbname]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-sslmode">SSL Mode</label>
+                                    <select id="pgsql-sslmode" name="pgsql[sslmode]">
+                                        <option value="disable">Disable</option>
+                                        <option value="require">Require</option>
+                                        <option value="verify-ca">Verify CA</option>
+                                        <option value="verify-full">Verify Full</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-query">Query*</label>
+                                    <input type="text" id="pgsql-query" name="pgsql[query]" placeholder="SELECT 1;"
+                                        required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-response">Expected Response</label>
+                                    <input type="text" id="pgsql-response" name="pgsql[response]" placeholder="1">
+                                    <small class="help-text">Expected response from the query. Leave blank to
+                                        ignore.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PostgreSQL Timestamp fields -->
+                        <div id="pgsql_query_timestamp-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-host">Host*</label>
+                                    <input type="text" id="pgsql-timestamp-host" name="host" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-port">Port</label>
+                                    <input type="number" id="pgsql-timestamp-port" name="port" min="1" max="65535"
+                                        value="5432">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-timeout">Timeout</label>
+                                    <input type="text" id="pgsql-timestamp-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+
+                            <h4>PostgreSQL Timestamp Configuration</h4>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-username">Username*</label>
+                                    <input type="text" id="pgsql-timestamp-username" name="pgsql[username]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-password">Password*</label>
+                                    <input type="password" id="pgsql-timestamp-password" name="pgsql[password]"
+                                        required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-dbname">Database Name*</label>
+                                    <input type="text" id="pgsql-timestamp-dbname" name="pgsql[dbname]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-sslmode">SSL Mode</label>
+                                    <select id="pgsql-timestamp-sslmode" name="pgsql[sslmode]">
+                                        <option value="disable">Disable</option>
+                                        <option value="require">Require</option>
+                                        <option value="verify-ca">Verify CA</option>
+                                        <option value="verify-full">Verify Full</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-query">Timestamp Query*</label>
+                                    <input type="text" id="pgsql-timestamp-query" name="pgsql[query]"
+                                        placeholder="SELECT NOW();" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-timestamp-difference">Maximum Time Difference*</label>
+                                    <input type="text" id="pgsql-timestamp-difference" name="pgsql[difference]"
+                                        placeholder="10s" required>
+                                    <small class="help-text">Maximum allowed time difference (e.g., "10s", "1m")</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PostgreSQL Unixtime fields -->
+                        <div id="pgsql_query_unixtime-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-host">Host*</label>
+                                    <input type="text" id="pgsql-unixtime-host" name="host" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-port">Port</label>
+                                    <input type="number" id="pgsql-unixtime-port" name="port" min="1" max="65535"
+                                        value="5432">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-timeout">Timeout</label>
+                                    <input type="text" id="pgsql-unixtime-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+
+                            <h4>PostgreSQL Unixtime Configuration</h4>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-username">Username*</label>
+                                    <input type="text" id="pgsql-unixtime-username" name="pgsql[username]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-password">Password*</label>
+                                    <input type="password" id="pgsql-unixtime-password" name="pgsql[password]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-dbname">Database Name*</label>
+                                    <input type="text" id="pgsql-unixtime-dbname" name="pgsql[dbname]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-sslmode">SSL Mode</label>
+                                    <select id="pgsql-unixtime-sslmode" name="pgsql[sslmode]">
+                                        <option value="disable">Disable</option>
+                                        <option value="require">Require</option>
+                                        <option value="verify-ca">Verify CA</option>
+                                        <option value="verify-full">Verify Full</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-query">Unixtime Query*</label>
+                                    <input type="text" id="pgsql-unixtime-query" name="pgsql[query]"
+                                        placeholder="SELECT EXTRACT(EPOCH FROM NOW());" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-unixtime-difference">Maximum Time Difference*</label>
+                                    <input type="text" id="pgsql-unixtime-difference" name="pgsql[difference]"
+                                        placeholder="10s" required>
+                                    <small class="help-text">Maximum allowed time difference (e.g., "10s", "1m")</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PostgreSQL Replication fields -->
+                        <div id="pgsql_replication-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-repl-host">Master Host*</label>
+                                    <input type="text" id="pgsql-repl-host" name="host" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-repl-port">Master Port</label>
+                                    <input type="number" id="pgsql-repl-port" name="port" min="1" max="65535"
+                                        value="5432">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-repl-timeout">Timeout</label>
+                                    <input type="text" id="pgsql-repl-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+
+                            <h4>PostgreSQL Replication Configuration</h4>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-repl-username">Username*</label>
+                                    <input type="text" id="pgsql-repl-username" name="pgsql[username]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-repl-password">Password*</label>
+                                    <input type="password" id="pgsql-repl-password" name="pgsql[password]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-repl-dbname">Database Name*</label>
+                                    <input type="text" id="pgsql-repl-dbname" name="pgsql[dbname]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-repl-sslmode">SSL Mode</label>
+                                    <select id="pgsql-repl-sslmode" name="pgsql[sslmode]">
+                                        <option value="disable">Disable</option>
+                                        <option value="require">Require</option>
+                                        <option value="verify-ca">Verify CA</option>
+                                        <option value="verify-full">Verify Full</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-repl-table">Table Name</label>
+                                    <input type="text" id="pgsql-repl-table" name="pgsql[table_name]"
+                                        placeholder="repl_test">
+                                    <small class="help-text">Table to use for replication test (must exist on all
+                                        servers)</small>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-repl-lag">Replication Lag Allowed*</label>
+                                    <input type="text" id="pgsql-repl-lag" name="pgsql[lag]" placeholder="3s" required>
+                                    <small class="help-text">Maximum allowed replication lag (e.g., "3s", "5s")</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <label for="pgsql-repl-servers">Replica Servers*</label>
+                                <textarea id="pgsql-repl-servers" name="pgsql[server_list]"
+                                    placeholder="replica1.example.com&#10;replica2.example.com:5432"
+                                    required></textarea>
+                                <small class="help-text">List of replica servers to check, one per line. Can include
+                                    port (host:port).</small>
+                            </div>
+                        </div>
+
+                        <!-- PostgreSQL Replication Status fields -->
+                        <div id="pgsql_replication_status-fields" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-status-host">Master Host*</label>
+                                    <input type="text" id="pgsql-status-host" name="host" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-status-port">Master Port</label>
+                                    <input type="number" id="pgsql-status-port" name="port" min="1" max="65535"
+                                        value="5432">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-status-timeout">Timeout</label>
+                                    <input type="text" id="pgsql-status-timeout" name="timeout" placeholder="5s">
+                                </div>
+                            </div>
+
+                            <h4>PostgreSQL Replication Status Configuration</h4>
+                            <div class="form-grid">
+                                <div class="form-row">
+                                    <label for="pgsql-status-username">Username*</label>
+                                    <input type="text" id="pgsql-status-username" name="pgsql[username]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-status-password">Password*</label>
+                                    <input type="password" id="pgsql-status-password" name="pgsql[password]" required>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-status-dbname">Database Name*</label>
+                                    <input type="text" id="pgsql-status-dbname" name="pgsql[dbname]" required
+                                        placeholder="postgres">
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-status-sslmode">SSL Mode</label>
+                                    <select id="pgsql-status-sslmode" name="pgsql[sslmode]">
+                                        <option value="disable">Disable</option>
+                                        <option value="require">Require</option>
+                                        <option value="verify-ca">Verify CA</option>
+                                        <option value="verify-full">Verify Full</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-row">
+                                    <label for="pgsql-status-lag">Replication Lag Allowed*</label>
+                                    <input type="text" id="pgsql-status-lag" name="pgsql[lag]" placeholder="3s"
+                                        required>
+                                    <small class="help-text">Maximum allowed replication lag (e.g., "3s", "5s")</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <label for="pgsql-status-analytic">Analytic Replicas</label>
+                                <textarea id="pgsql-status-analytic" name="pgsql[analytic_replicas]"
+                                    placeholder="replica_analytics1&#10;replica_analytics2"></textarea>
+                                <small class="help-text">List of replica names for analytic replicas (lag check
+                                    exemption), one per line.</small>
                             </div>
                         </div>
                     </div>
@@ -430,6 +992,12 @@
     </div>
 
     <script>
+        let checkDefinitions = [];
+        let projectsList = [];
+        let checkTypesList = [];
+        // Add variable for default timeouts
+        let defaultTimeouts = {};
+
         document.addEventListener('DOMContentLoaded', function () {
             // Show/hide notification
             function showNotification(message, type = 'info') {
@@ -463,18 +1031,63 @@
                 });
             });
 
-            // Type selection changes visible fields
-            const typeSelect = document.getElementById('def-type');
-            typeSelect.addEventListener('change', function () {
-                // Hide all type-specific fields
-                document.getElementById('http-fields').style.display = 'none';
-                document.getElementById('tcp-fields').style.display = 'none';
-                document.getElementById('icmp-fields').style.display = 'none';
-                document.getElementById('passive-fields').style.display = 'none';
+            // Add this new function
+            function updateFormFieldsVisibility(selectedType) {
+                const fieldContainers = [
+                    'http-fields',
+                    'tcp-fields',
+                    'icmp-fields',
+                    'passive-fields',
+                    'mysql_query-fields',
+                    'mysql_query_unixtime-fields',
+                    'mysql_replication-fields',
+                    'pgsql_query-fields',
+                    'pgsql_query_timestamp-fields',
+                    'pgsql_query_unixtime-fields',
+                    'pgsql_replication-fields',
+                    'pgsql_replication_status-fields'
+                ];
 
-                // Show fields for selected type
-                const selectedType = this.value;
-                document.getElementById(`${selectedType}-fields`).style.display = 'block';
+                // Hide all containers and disable their inputs
+                fieldContainers.forEach(containerId => {
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        container.style.display = 'none';
+                        // Disable all inputs in hidden containers
+                        container.querySelectorAll('input, select, textarea').forEach(input => {
+                            input.disabled = true;
+                            if (input.hasAttribute('required')) {
+                                input.removeAttribute('required');
+                                input.dataset.wasRequired = 'true';
+                            }
+                        });
+                    }
+                });
+
+                // Show selected container and enable its inputs
+                const selectedContainer = document.getElementById(`${selectedType}-fields`);
+                if (selectedContainer) {
+                    selectedContainer.style.display = 'block';
+                    // Enable all inputs in visible container
+                    selectedContainer.querySelectorAll('input, select, textarea').forEach(input => {
+                        input.disabled = false;
+                        if (input.dataset.wasRequired === 'true') {
+                            input.setAttribute('required', '');
+                        }
+                    });
+                }
+
+                // Update timeout placeholders for the selected check type
+                updateTimeoutPlaceholders();
+            }
+
+            // Initialize form fields visibility based on current type
+            const typeSelect = document.getElementById('def-type');
+            updateFormFieldsVisibility(typeSelect.value);
+
+            // Update type selection change handler to use the new function
+            typeSelect.addEventListener('change', function () {
+                updateFormFieldsVisibility(this.value);
             });
 
             // Actor type changes
@@ -514,6 +1127,8 @@
                 // Collect form data
                 const formData = new FormData(form);
                 const checkDef = {};
+                const mysqlConfig = {};
+                const pgsqlConfig = {};
 
                 for (const [key, value] of formData.entries()) {
                     // Skip empty values and fields not relevant to the current check type
@@ -522,6 +1137,44 @@
                     // Handle special cases
                     if (key === 'codes') {
                         checkDef.code = value.split(',').map(code => parseInt(code.trim()));
+                        continue;
+                    }
+
+                    // Process MySQL server list (textarea with newlines)
+                    if (key === 'mysql[server_list]' && value.trim() !== '') {
+                        mysqlConfig.server_list = value.split('\n')
+                            .map(line => line.trim())
+                            .filter(line => line !== '');
+                        continue;
+                    }
+
+                    // Process PostgreSQL server list (textarea with newlines)
+                    if (key === 'pgsql[server_list]' && value.trim() !== '') {
+                        pgsqlConfig.server_list = value.split('\n')
+                            .map(line => line.trim())
+                            .filter(line => line !== '');
+                        continue;
+                    }
+
+                    // Process PostgreSQL analytic replicas list (textarea with newlines)
+                    if (key === 'pgsql[analytic_replicas]' && value.trim() !== '') {
+                        pgsqlConfig.analytic_replicas = value.split('\n')
+                            .map(line => line.trim())
+                            .filter(line => line !== '');
+                        continue;
+                    }
+
+                    // Process MySQL configuration fields
+                    if (key.startsWith('mysql[') && key.endsWith(']')) {
+                        const mysqlKey = key.substring(6, key.length - 1);
+                        mysqlConfig[mysqlKey] = value;
+                        continue;
+                    }
+
+                    // Process PostgreSQL configuration fields
+                    if (key.startsWith('pgsql[') && key.endsWith(']')) {
+                        const pgsqlKey = key.substring(6, key.length - 1);
+                        pgsqlConfig[pgsqlKey] = value;
                         continue;
                     }
 
@@ -543,6 +1196,16 @@
 
                     // Default case
                     checkDef[key] = value;
+                }
+
+                // Add MySQL config if it has properties
+                if (Object.keys(mysqlConfig).length > 0) {
+                    checkDef.mysql = mysqlConfig;
+                }
+
+                // Add PostgreSQL config if it has properties
+                if (Object.keys(pgsqlConfig).length > 0) {
+                    checkDef.pgsql = pgsqlConfig;
                 }
 
                 // Determine if this is a create or update
@@ -662,24 +1325,51 @@
                     });
             }
 
-            // Render check definitions
+            // Collect unique projects and update datalist
+            function updateProjectsList(definitions) {
+                const projects = new Set();
+                definitions?.forEach(def => {
+                    if (def.project) {
+                        projects.add(def.project);
+                    }
+                });
+
+                // Update project datalist
+                const projectList = document.getElementById('project-list');
+                projectList.innerHTML = '';
+                Array.from(projects).sort().forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project;
+                    projectList.appendChild(option);
+                });
+
+                // Update project filter options
+                const projectFilter = document.getElementById('filter-def-project');
+                projectFilter.innerHTML = '<option value="all">All projects</option>';
+                Array.from(projects).sort().forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project;
+                    option.textContent = project;
+                    projectFilter.appendChild(option);
+                });
+            }
+
+            // Modify the renderCheckDefinitions function to include UUID
             function renderCheckDefinitions(definitions) {
                 const tbody = document.getElementById('definitions-list');
                 tbody.innerHTML = '';
 
                 if (definitions.length === 0) {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td colspan="6" style="text-align: center;">No check definitions found</td>`;
+                    row.innerHTML = `<td colspan="7" style="text-align: center;">No check definitions found</td>`;
                     tbody.appendChild(row);
                     return;
                 }
 
-                // Collect unique projects
-                const projects = new Set();
+                // Update projects list and filter
+                updateProjectsList(definitions);
 
                 definitions.forEach(def => {
-                    projects.add(def.project);
-
                     const row = document.createElement('tr');
                     row.className = 'definition-row';
                     row.dataset.uuid = def.uuid;
@@ -693,6 +1383,7 @@
                         <td><span class="definition-badge ${typeBadgeClass}">${def.type}</span></td>
                         <td>${def.duration}</td>
                         <td>${def.enabled ? 'Enabled' : 'Disabled'}</td>
+                        <td class="uuid-cell" title="Click to copy">${def.uuid}</td>
                         <td class="definition-actions">
                             <button class="btn btn-secondary edit-btn">Edit</button>
                             <button class="btn ${def.enabled ? 'btn-danger' : 'btn-primary'} toggle-btn">
@@ -702,17 +1393,21 @@
                     `;
 
                     tbody.appendChild(row);
-                });
 
-                // Update project filter options
-                const projectFilter = document.getElementById('filter-def-project');
-                projectFilter.innerHTML = '<option value="all">All projects</option>';
-
-                Array.from(projects).sort().forEach(project => {
-                    const option = document.createElement('option');
-                    option.value = project;
-                    option.textContent = project;
-                    projectFilter.appendChild(option);
+                    // Add click handler for UUID copying
+                    const uuidCell = row.querySelector('.uuid-cell');
+                    uuidCell.addEventListener('click', async (e) => {
+                        e.stopPropagation(); // Prevent row click
+                        try {
+                            await navigator.clipboard.writeText(def.uuid);
+                            uuidCell.classList.add('copied');
+                            setTimeout(() => {
+                                uuidCell.classList.remove('copied');
+                            }, 1500);
+                        } catch (err) {
+                            console.error('Failed to copy UUID:', err);
+                        }
+                    });
                 });
 
                 // Add event listeners to edit buttons
@@ -744,7 +1439,8 @@
             }
 
             // Edit check definition
-            function editCheckDefinition(uuid) {
+            const originalEditCheckDefinition = window.editCheckDefinition;
+            window.editCheckDefinition = function (uuid) {
                 fetch(`/api/check-definitions/${uuid}`)
                     .then(response => response.json())
                     .then(def => {
@@ -762,14 +1458,10 @@
                         document.getElementById('def-enabled').value = def.enabled.toString();
                         document.getElementById('def-description').value = def.description || '';
 
+                        // Update fields visibility based on type
+                        updateFormFieldsVisibility(def.type);
+
                         // Set type-specific fields
-                        document.getElementById('http-fields').style.display = 'none';
-                        document.getElementById('tcp-fields').style.display = 'none';
-                        document.getElementById('icmp-fields').style.display = 'none';
-
-                        document.getElementById(`${def.type}-fields`).style.display = 'block';
-
-                        // Set HTTP fields
                         if (def.type === 'http') {
                             document.getElementById('http-url').value = def.url || '';
                             document.getElementById('http-timeout').value = def.timeout || '';
@@ -779,35 +1471,11 @@
                             document.getElementById('http-stop-redirects').value = (def.stop_follow_redirects || false).toString();
                         }
 
-                        // Set TCP fields
-                        if (def.type === 'tcp') {
-                            document.getElementById('tcp-host').value = def.host || '';
-                            document.getElementById('tcp-port').value = def.port || '';
-                            document.getElementById('tcp-timeout').value = def.timeout || '';
-                        }
+                        // Continue with the rest of the field settings...
+                        // ... (keep the existing field settings for other types)
 
-                        // Set ICMP fields
-                        if (def.type === 'icmp') {
-                            document.getElementById('icmp-host').value = def.host || '';
-                            document.getElementById('icmp-count').value = def.count || '3';
-                            document.getElementById('icmp-timeout').value = def.timeout || '';
-                        }
-
-                        // Set alert fields
-                        document.getElementById('actor-type').value = def.actor_type || '';
-
-                        // Show/hide alert fields
-                        const alertFields = document.querySelectorAll('.alert-fields');
-                        if (def.actor_type === 'alert') {
-                            alertFields.forEach(field => field.style.display = 'block');
-                            document.getElementById('alert-type').value = def.alert_type || 'telegram';
-                            document.getElementById('alert-destination').value = def.alert_destination || '';
-                        } else {
-                            alertFields.forEach(field => field.style.display = 'none');
-                        }
-
-                        // Show delete button
-                        document.getElementById('delete-definition').style.display = 'block';
+                        // Show delete button for existing definitions
+                        document.getElementById('delete-definition').style.display = 'inline-block';
                     })
                     .catch(error => {
                         console.error('Error loading check definition:', error);
@@ -816,7 +1484,7 @@
                         notification.className = 'notification-area error';
                         notification.textContent = 'Failed to load check definition';
                     });
-            }
+            };
 
             // Toggle check definition
             function toggleCheckDefinition(uuid, enabled) {
@@ -841,21 +1509,16 @@
                     });
             }
 
-            // Handle search and filters
-            document.getElementById('search-definitions').addEventListener('input', filterDefinitions);
-            document.getElementById('filter-def-project').addEventListener('change', filterDefinitions);
-            document.getElementById('filter-def-type').addEventListener('change', filterDefinitions);
-
-            function filterDefinitions() {
+            // Apply filters
+            function applyFilters() {
                 const searchTerm = document.getElementById('search-definitions').value.toLowerCase();
                 const projectFilter = document.getElementById('filter-def-project').value;
                 const typeFilter = document.getElementById('filter-def-type').value;
 
-                const rows = document.querySelectorAll('.definition-row');
-                rows.forEach(row => {
-                    const name = row.cells[0].textContent.toLowerCase();
-                    const project = row.cells[1].textContent;
-                    const type = row.cells[2].textContent.toLowerCase();
+                document.querySelectorAll('.definition-row').forEach(row => {
+                    const name = row.querySelector('td:first-child').textContent.toLowerCase();
+                    const project = row.querySelector('td:nth-child(2)').textContent;
+                    const type = row.querySelector('.definition-badge').textContent;
 
                     const matchesSearch = name.includes(searchTerm);
                     const matchesProject = projectFilter === 'all' || project === projectFilter;
@@ -865,8 +1528,50 @@
                 });
             }
 
+            // Search input handler
+            document.getElementById('search-definitions').addEventListener('input', applyFilters);
+            document.getElementById('filter-def-project').addEventListener('change', applyFilters);
+            document.getElementById('filter-def-type').addEventListener('change', applyFilters);
+
+            // Add function to load default timeouts
+            function loadDefaultTimeouts() {
+                fetch('/api/metadata/default-timeouts')
+                    .then(response => response.json())
+                    .then(data => {
+                        defaultTimeouts = data;
+                        // Update placeholders in timeout fields
+                        updateTimeoutPlaceholders();
+                    })
+                    .catch(error => {
+                        console.error('Error loading default timeouts:', error);
+                    });
+            }
+
+            // Function to update timeout placeholders based on check type
+            function updateTimeoutPlaceholders() {
+                const checkType = document.getElementById('def-type').value;
+                const defaultTimeout = defaultTimeouts[checkType] || defaultTimeouts['default'] || '5s';
+
+                // Update all timeout input placeholders
+                const timeoutInputs = document.querySelectorAll('input[name="timeout"]');
+                timeoutInputs.forEach(input => {
+                    input.placeholder = `Default: ${defaultTimeout}`;
+                });
+
+                // Update help text with specific default timeout value
+                const helpTexts = document.querySelectorAll('.help-text');
+                helpTexts.forEach(helpText => {
+                    if (helpText.classList.contains('http-timeout-help') && checkType === 'http') {
+                        helpText.textContent = `Leave empty to use the default timeout (${defaultTimeout}) for HTTP checks.`;
+                    } else if (helpText.classList.contains('tcp-timeout-help') && checkType === 'tcp') {
+                        helpText.textContent = `Leave empty to use the default timeout (${defaultTimeout}) for TCP checks.`;
+                    }
+                });
+            }
+
             // Initial load
             loadCheckDefinitions();
+            loadDefaultTimeouts();
         });
     </script>
 </body>

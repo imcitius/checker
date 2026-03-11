@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -29,31 +30,261 @@ type CheckDefinition struct {
 	// Scheduling
 	Duration string `bson:"duration" json:"duration"` // e.g. "1m", "5m", "1h"
 
-	// Check-specific configuration
-	URL                 string              `bson:"url,omitempty" json:"url,omitempty"`
-	Timeout             string              `bson:"timeout,omitempty" json:"timeout,omitempty"`
-	Answer              string              `bson:"answer,omitempty" json:"answer,omitempty"`
-	AnswerPresent       bool                `bson:"answer_present,omitempty" json:"answer_present,omitempty"`
-	Code                []int               `bson:"code,omitempty" json:"code,omitempty"`
-	Host                string              `bson:"host,omitempty" json:"host,omitempty"`
-	Port                int                 `bson:"port,omitempty" json:"port,omitempty"`
-	Count               int                 `bson:"count,omitempty" json:"count,omitempty"`
-	Headers             []map[string]string `bson:"headers,omitempty" json:"headers,omitempty"`
-	Cookies             []map[string]string `bson:"cookies,omitempty" json:"cookies,omitempty"`
-	SkipCheckSSL        bool                `bson:"skip_check_ssl,omitempty" json:"skip_check_ssl,omitempty"`
-	SSLExpirationPeriod string              `bson:"ssl_expiration_period,omitempty" json:"ssl_expiration_period,omitempty"`
-	StopFollowRedirects bool                `bson:"stop_follow_redirects,omitempty" json:"stop_follow_redirects,omitempty"`
+	// Polymorphic configuration
+	Config CheckConfig `bson:"-" json:"config"`
 
-	// Alert configuration
-	ActorType        string `bson:"actor_type,omitempty" json:"actor_type,omitempty"`
-	AlertType        string `bson:"alert_type,omitempty" json:"alert_type,omitempty"`
-	AlertDestination string `bson:"alert_destination,omitempty" json:"alert_destination,omitempty"`
+	// Alert/Actor configuration
+	ActorType        string      `bson:"actor_type,omitempty" json:"actor_type,omitempty"`
+	AlertType        string      `bson:"alert_type,omitempty" json:"alert_type,omitempty"`
+	AlertDestination string      `bson:"alert_destination,omitempty" json:"alert_destination,omitempty"`
+	ActorConfig      interface{} `bson:"-" json:"actor_config,omitempty"` // Polymorphic Actor Config
+}
 
-	// Authentication
-	Auth struct {
-		User     string `bson:"user,omitempty" json:"user,omitempty"`
-		Password string `bson:"password,omitempty" json:"password,omitempty"`
-	} `bson:"auth,omitempty" json:"auth,omitempty"`
+// UnmarshalBSON implements a custom BSON unmarshaler to handle polymorphism
+func (cd *CheckDefinition) UnmarshalBSON(data []byte) error {
+	// 1. Decode common fields into a temporary struct
+	type Alias CheckDefinition
+	aux := &struct {
+		*Alias `bson:",inline"`
+	}{
+		Alias: (*Alias)(cd),
+	}
+
+	if err := bson.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// 2. Decode Check Config
+	var raw bson.Raw
+	if err := bson.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	switch cd.Type {
+	case "http":
+		var conf HTTPCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+	case "tcp":
+		var conf TCPCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+	case "icmp":
+		var conf ICMPCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+	case "passive":
+		var conf PassiveCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+	case "mysql_query", "mysql_query_unixtime", "mysql_replication":
+		// Handle MySQL flattened structure
+		type MySQLFlatAndNested struct {
+			Host        string `bson:"host"`
+			Port        int    `bson:"port"`
+			Timeout     string `bson:"timeout"`
+			MySQLNested struct {
+				UserName   string   `bson:"username"`
+				Password   string   `bson:"password"`
+				DBName     string   `bson:"dbname"`
+				Query      string   `bson:"query"`
+				Response   string   `bson:"response"`
+				Difference string   `bson:"difference"`
+				TableName  string   `bson:"table_name"`
+				Lag        string   `bson:"lag"`
+				ServerList []string `bson:"server_list"`
+			} `bson:"mysql"`
+		}
+		var mfn MySQLFlatAndNested
+		if err := bson.Unmarshal(data, &mfn); err != nil {
+			return err
+		}
+		cd.Config = &MySQLCheckConfig{
+			Host:       mfn.Host,
+			Port:       mfn.Port,
+			Timeout:    mfn.Timeout,
+			UserName:   mfn.MySQLNested.UserName,
+			Password:   mfn.MySQLNested.Password,
+			DBName:     mfn.MySQLNested.DBName,
+			Query:      mfn.MySQLNested.Query,
+			Response:   mfn.MySQLNested.Response,
+			Difference: mfn.MySQLNested.Difference,
+			TableName:  mfn.MySQLNested.TableName,
+			Lag:        mfn.MySQLNested.Lag,
+			ServerList: mfn.MySQLNested.ServerList,
+		}
+
+	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
+		type PgSQLFlatAndNested struct {
+			Host        string `bson:"host"`
+			Port        int    `bson:"port"`
+			Timeout     string `bson:"timeout"`
+			PgSQLNested struct {
+				UserName         string   `bson:"username"`
+				Password         string   `bson:"password"`
+				DBName           string   `bson:"dbname"`
+				SSLMode          string   `bson:"sslmode"`
+				Query            string   `bson:"query"`
+				Response         string   `bson:"response"`
+				Difference       string   `bson:"difference"`
+				TableName        string   `bson:"table_name"`
+				Lag              string   `bson:"lag"`
+				ServerList       []string `bson:"server_list"`
+				AnalyticReplicas []string `bson:"analytic_replicas"`
+			} `bson:"pgsql"`
+		}
+		var pfn PgSQLFlatAndNested
+		if err := bson.Unmarshal(data, &pfn); err != nil {
+			return err
+		}
+		cd.Config = &PostgreSQLCheckConfig{
+			Host:             pfn.Host,
+			Port:             pfn.Port,
+			Timeout:          pfn.Timeout,
+			UserName:         pfn.PgSQLNested.UserName,
+			Password:         pfn.PgSQLNested.Password,
+			DBName:           pfn.PgSQLNested.DBName,
+			SSLMode:          pfn.PgSQLNested.SSLMode,
+			Query:            pfn.PgSQLNested.Query,
+			Response:         pfn.PgSQLNested.Response,
+			Difference:       pfn.PgSQLNested.Difference,
+			TableName:        pfn.PgSQLNested.TableName,
+			Lag:              pfn.PgSQLNested.Lag,
+			ServerList:       pfn.PgSQLNested.ServerList,
+			AnalyticReplicas: pfn.PgSQLNested.AnalyticReplicas,
+		}
+	}
+
+	// 3. Decode Actor Config
+	if cd.ActorType == "webhook" {
+		type WebhookNested struct {
+			Webhook struct {
+				URL     string            `bson:"url"`
+				Method  string            `bson:"method"`
+				Payload string            `bson:"payload"`
+				Headers map[string]string `bson:"headers"`
+			} `bson:"webhook"`
+		}
+		var wn WebhookNested
+		if err := bson.Unmarshal(data, &wn); err != nil {
+			return err
+		}
+		cd.ActorConfig = &WebhookConfig{
+			URL:     wn.Webhook.URL,
+			Method:  wn.Webhook.Method,
+			Payload: wn.Webhook.Payload,
+			Headers: wn.Webhook.Headers,
+		}
+	}
+
+	return nil
+}
+
+// MarshalBSON implements custom BSON marshaling to flatten the structure
+func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
+	doc := bson.M{
+		"_id":               cd.ID,
+		"uuid":              cd.UUID,
+		"name":              cd.Name,
+		"project":           cd.Project,
+		"group_name":        cd.GroupName,
+		"type":              cd.Type,
+		"description":       cd.Description,
+		"enabled":           cd.Enabled,
+		"created_at":        cd.CreatedAt,
+		"updated_at":        cd.UpdatedAt,
+		"last_run":          cd.LastRun,
+		"is_healthy":        cd.IsHealthy,
+		"last_message":      cd.LastMessage,
+		"last_alert_sent":   cd.LastAlertSent,
+		"duration":          cd.Duration,
+		"actor_type":        cd.ActorType,
+		"alert_type":        cd.AlertType,
+		"alert_destination": cd.AlertDestination,
+	}
+
+	// Flatten Check Config
+	if cd.Config != nil {
+		switch c := cd.Config.(type) {
+		case *HTTPCheckConfig:
+			doc["url"] = c.URL
+			doc["timeout"] = c.Timeout
+			doc["answer"] = c.Answer
+			doc["answer_present"] = c.AnswerPresent
+			doc["code"] = c.Code
+			doc["headers"] = c.Headers
+			doc["cookies"] = c.Cookies
+			doc["skip_check_ssl"] = c.SkipCheckSSL
+			doc["ssl_expiration_period"] = c.SSLExpirationPeriod
+			doc["stop_follow_redirects"] = c.StopFollowRedirects
+			doc["auth"] = c.Auth
+		case *TCPCheckConfig:
+			doc["host"] = c.Host
+			doc["port"] = c.Port
+			doc["timeout"] = c.Timeout
+		case *ICMPCheckConfig:
+			doc["host"] = c.Host
+			doc["count"] = c.Count
+			doc["timeout"] = c.Timeout
+		case *PassiveCheckConfig:
+			doc["timeout"] = c.Timeout
+		case *MySQLCheckConfig:
+			doc["host"] = c.Host
+			doc["port"] = c.Port
+			doc["timeout"] = c.Timeout
+			doc["mysql"] = bson.M{
+				"username":    c.UserName,
+				"password":    c.Password,
+				"dbname":      c.DBName,
+				"query":       c.Query,
+				"response":    c.Response,
+				"difference":  c.Difference,
+				"table_name":  c.TableName,
+				"lag":         c.Lag,
+				"server_list": c.ServerList,
+			}
+		case *PostgreSQLCheckConfig:
+			doc["host"] = c.Host
+			doc["port"] = c.Port
+			doc["timeout"] = c.Timeout
+			doc["pgsql"] = bson.M{
+				"username":          c.UserName,
+				"password":          c.Password,
+				"dbname":            c.DBName,
+				"sslmode":           c.SSLMode,
+				"query":             c.Query,
+				"response":          c.Response,
+				"difference":        c.Difference,
+				"table_name":        c.TableName,
+				"lag":               c.Lag,
+				"server_list":       c.ServerList,
+				"analytic_replicas": c.AnalyticReplicas,
+			}
+		}
+	}
+
+	// Flatten Actor Config
+	if cd.ActorConfig != nil {
+		switch c := cd.ActorConfig.(type) {
+		case *WebhookConfig:
+			doc["webhook"] = bson.M{
+				"url":     c.URL,
+				"method":  c.Method,
+				"payload": c.Payload,
+				"headers": c.Headers,
+			}
+		}
+	}
+
+	return bson.Marshal(doc)
 }
 
 // CheckDefinitionViewModel is used for the web UI
@@ -70,41 +301,25 @@ type CheckDefinitionViewModel struct {
 	UpdatedAt   string `json:"updated_at"`
 	Duration    string `json:"duration"`
 
-	// Config fields (simplified for UI)
-	URL              string `json:"url,omitempty"`
-	Timeout          string `json:"timeout,omitempty"`
-	Host             string `json:"host,omitempty"`
-	Port             int    `json:"port,omitempty"`
+	// Config fields
+	URL     string `json:"url,omitempty"`
+	Timeout string `json:"timeout,omitempty"`
+	Host    string `json:"host,omitempty"`
+	Port    int    `json:"port,omitempty"`
+	PgSQL   struct {
+		UserName   string   `json:"username,omitempty"`
+		DBName     string   `json:"dbname,omitempty"`
+		Query      string   `json:"query,omitempty"`
+		ServerList []string `json:"server_list,omitempty"`
+	} `json:"pgsql,omitempty"`
+	MySQL struct {
+		UserName   string   `json:"username,omitempty"`
+		DBName     string   `json:"dbname,omitempty"`
+		Query      string   `json:"query,omitempty"`
+		ServerList []string `json:"server_list,omitempty"`
+	} `json:"mysql,omitempty"`
+
 	ActorType        string `json:"actor_type,omitempty"`
 	AlertType        string `json:"alert_type,omitempty"`
 	AlertDestination string `json:"alert_destination,omitempty"`
-}
-
-// ToConfigFormat converts the database model to the format expected by the checker factory
-func (cd *CheckDefinition) ToConfigFormat() map[string]interface{} {
-	// This function converts the database model to the format expected by the checker factory
-	config := map[string]interface{}{
-		"type":                  cd.Type,
-		"url":                   cd.URL,
-		"timeout":               cd.Timeout,
-		"answer":                cd.Answer,
-		"answer_present":        cd.AnswerPresent,
-		"code":                  cd.Code,
-		"host":                  cd.Host,
-		"port":                  cd.Port,
-		"count":                 cd.Count,
-		"headers":               cd.Headers,
-		"cookies":               cd.Cookies,
-		"skip_check_ssl":        cd.SkipCheckSSL,
-		"ssl_expiration_period": cd.SSLExpirationPeriod,
-		"stop_follow_redirects": cd.StopFollowRedirects,
-		"actor_type":            cd.ActorType,
-		"alert_type":            cd.AlertType,
-		"auth": map[string]string{
-			"user":     cd.Auth.User,
-			"password": cd.Auth.Password,
-		},
-	}
-
-	return config
 }
