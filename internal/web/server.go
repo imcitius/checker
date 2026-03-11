@@ -403,6 +403,24 @@ func getAllCheckStatuses(repo db.Repository) ([]models.CheckStatus, error) {
 		return nil, err
 	}
 
+	// Fetch active silences to mark silenced checks in the UI
+	silences, silenceErr := repo.GetActiveSilences(ctx)
+	if silenceErr != nil {
+		logrus.Errorf("Failed to get active silences: %v", silenceErr)
+	}
+
+	// Build lookup sets for silenced checks and projects
+	silencedChecks := make(map[string]bool)
+	silencedProjects := make(map[string]bool)
+	for _, s := range silences {
+		switch s.Scope {
+		case "check":
+			silencedChecks[s.Target] = true
+		case "project":
+			silencedProjects[s.Target] = true
+		}
+	}
+
 	// Convert CheckDefinition to CheckStatus
 	results := make([]models.CheckStatus, len(definitions))
 	for i, def := range definitions {
@@ -430,6 +448,7 @@ func getAllCheckStatuses(repo db.Repository) ([]models.CheckStatus, error) {
 			Host:          host,
 			Periodicity:   def.Duration,
 			URL:           url,
+			IsSilenced:    silencedChecks[def.UUID] || silencedProjects[def.Project],
 		}
 	}
 
@@ -527,6 +546,7 @@ func convertToViewModel(check models.CheckStatus) models.CheckViewModel {
 		Host:        check.Host,
 		Periodicity: check.Periodicity,
 		URL:         check.URL,
+		IsSilenced:  check.IsSilenced,
 	}
 }
 

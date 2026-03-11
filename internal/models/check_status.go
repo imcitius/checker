@@ -22,4 +22,5 @@ type CheckStatus struct {
 	Host          string             `bson:"host" json:"host"`
 	Periodicity   string             `bson:"periodicity" json:"periodicity"`
 	URL           string             `bson:"url" json:"url"`
+	IsSilenced    bool               `bson:"is_silenced" json:"is_silenced"`
 }

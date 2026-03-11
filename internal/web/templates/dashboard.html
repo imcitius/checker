@@ -98,6 +98,10 @@
                 <div class="stat-value">0</div>
                 <div class="stat-label">Disabled</div>
             </div>
+            <div class="stat-card" id="silenced-checks">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Silenced</div>
+            </div>
         </div>
 
         <!-- Checks Table -->
@@ -818,6 +822,26 @@
         .checks-table thead {
             background: linear-gradient(to bottom, #f8f9fa, #f1f3f5);
             border-bottom: 2px solid #e9ecef;
+        }
+
+        /* Silenced badge */
+        .silenced-badge {
+            display: inline-block;
+            background-color: #868e96;
+            color: white;
+            font-size: 0.65em;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-left: 6px;
+            vertical-align: middle;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .check-status-indicator.silenced {
+            background-color: #868e96;
+            color: #868e96;
         }
     </style>
 

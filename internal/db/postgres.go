@@ -443,6 +443,28 @@ func (db *PostgresDB) DeactivateSilence(ctx context.Context, scope, target strin
 	return err
 }
 
+func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT id, scope, target, silenced_by, silenced_at, expires_at, reason
+		FROM alert_silences
+		WHERE active = true AND (expires_at IS NULL OR expires_at > NOW())`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var silences []models.AlertSilence
+	for rows.Next() {
+		var s models.AlertSilence
+		if err := rows.Scan(&s.ID, &s.Scope, &s.Target, &s.SilencedBy, &s.SilencedAt, &s.ExpiresAt, &s.Reason); err != nil {
+			return nil, err
+		}
+		s.Active = true
+		silences = append(silences, s)
+	}
+	return silences, rows.Err()
+}
+
 func (db *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project string) (bool, error) {
 	var exists bool
 	err := db.Pool.QueryRow(ctx,

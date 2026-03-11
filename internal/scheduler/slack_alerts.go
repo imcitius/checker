@@ -122,4 +122,11 @@ func (sa *SlackAlerter) HandleRecovery(ctx context.Context, checkDef models.Chec
 	if err := sa.repo.UpdateSlackThread(ctx, checkDef.UUID, "", ""); err != nil {
 		logrus.Errorf("Failed to clear Slack thread on check_definitions for check %s: %v", checkDef.UUID, err)
 	}
+
+	// Deactivate check-level silence on recovery so new alerts can fire if the check fails again
+	if err := sa.repo.DeactivateSilence(ctx, "check", checkDef.UUID); err != nil {
+		logrus.Errorf("Failed to deactivate silence for check %s: %v", checkDef.UUID, err)
+	} else {
+		logrus.Infof("Deactivated check-level silence for recovered check %s", checkDef.UUID)
+	}
 }
