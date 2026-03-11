@@ -7,3 +7,6 @@ var templateFS embed.FS
 
 //go:embed static/*
 var staticFS embed.FS
+
+//go:embed all:spa
+var spaFS embed.FS
