@@ -103,6 +103,23 @@ func (c *SlackClient) SendSilenceConfirmation(ctx context.Context, channelID, th
 	return nil
 }
 
+// SendUnsilenceConfirmation posts a thread reply confirming a silence was removed.
+func (c *SlackClient) SendUnsilenceConfirmation(ctx context.Context, channelID, threadTS, scope, target, user string) error {
+	blocks := BuildUnsilenceConfirmationBlocks(scope, target, user)
+	fallback := fmt.Sprintf("🔊 Silence removed: %s %s by <@%s>", scope, target, user)
+
+	_, _, err := c.api.PostMessageContext(ctx, channelID,
+		slack.MsgOptionBlocks(blocks...),
+		slack.MsgOptionText(fallback, false),
+		slack.MsgOptionTS(threadTS),
+	)
+	if err != nil {
+		return fmt.Errorf("SendUnsilenceConfirmation: %w", err)
+	}
+
+	return nil
+}
+
 // SendAlertReply posts an alert message as a thread reply to an existing message.
 // It returns the reply message timestamp.
 func (c *SlackClient) SendAlertReply(ctx context.Context, channelID, threadTS string, info CheckAlertInfo) (string, error) {

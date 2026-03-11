@@ -33,6 +33,12 @@ func typeEmoji(checkType string) string {
 	}
 }
 
+// SeverityEmoji returns the header emoji based on severity/health status.
+// Exported for use by handlers that need to construct fallback text.
+func SeverityEmoji(info CheckAlertInfo) string {
+	return severityEmoji(info)
+}
+
 // severityEmoji returns the header emoji based on severity/health status.
 func severityEmoji(info CheckAlertInfo) string {
 	if info.IsHealthy {

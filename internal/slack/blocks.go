@@ -60,18 +60,50 @@ func BuildAlertBlocks(info CheckAlertInfo) []slack.Block {
 	}
 	contextBlock := slack.NewContextBlock("", contextElements...)
 
-	// e. Actions block with buttons
-	silenceCheckBtn := slack.NewButtonBlockElement(
-		"silence_check", info.UUID,
-		slack.NewTextBlockObject(slack.PlainTextType, "Silence this check (1h)", true, false),
-	)
-	silenceCheckBtn.Style = slack.StyleDanger
+	// e. Actions block with silence duration selects and acknowledge button
+	silenceDurations := []struct {
+		Label string
+		Value string
+	}{
+		{"30 minutes", "30m"},
+		{"1 hour", "1h"},
+		{"4 hours", "4h"},
+		{"8 hours", "8h"},
+		{"24 hours", "24h"},
+		{"Indefinite", "indefinite"},
+	}
 
-	silenceProjectBtn := slack.NewButtonBlockElement(
-		"silence_project", info.Project,
-		slack.NewTextBlockObject(slack.PlainTextType, "Silence project (1h)", true, false),
+	// Silence check dropdown
+	checkOptions := make([]*slack.OptionBlockObject, len(silenceDurations))
+	for i, d := range silenceDurations {
+		checkOptions[i] = slack.NewOptionBlockObject(
+			fmt.Sprintf("%s|%s", info.UUID, d.Value),
+			slack.NewTextBlockObject(slack.PlainTextType, d.Label, false, false),
+			nil,
+		)
+	}
+	silenceCheckSelect := slack.NewOptionsSelectBlockElement(
+		slack.OptTypeStatic,
+		slack.NewTextBlockObject(slack.PlainTextType, "🔇 Silence check...", false, false),
+		"silence_check",
+		checkOptions...,
 	)
-	silenceProjectBtn.Style = slack.StyleDanger
+
+	// Silence project dropdown
+	projectOptions := make([]*slack.OptionBlockObject, len(silenceDurations))
+	for i, d := range silenceDurations {
+		projectOptions[i] = slack.NewOptionBlockObject(
+			fmt.Sprintf("%s|%s", info.Project, d.Value),
+			slack.NewTextBlockObject(slack.PlainTextType, d.Label, false, false),
+			nil,
+		)
+	}
+	silenceProjectSelect := slack.NewOptionsSelectBlockElement(
+		slack.OptTypeStatic,
+		slack.NewTextBlockObject(slack.PlainTextType, "🔇 Silence project...", false, false),
+		"silence_project",
+		projectOptions...,
+	)
 
 	ackBtn := slack.NewButtonBlockElement(
 		"ack_alert", info.UUID,
@@ -80,8 +112,8 @@ func BuildAlertBlocks(info CheckAlertInfo) []slack.Block {
 	ackBtn.Style = slack.StylePrimary
 
 	actionsBlock := slack.NewActionBlock("alert_actions",
-		silenceCheckBtn,
-		silenceProjectBtn,
+		silenceCheckSelect,
+		silenceProjectSelect,
 		ackBtn,
 	)
 
@@ -147,6 +179,31 @@ func BuildResolvedOriginalBlocks(info CheckAlertInfo) []slack.Block {
 	return []slack.Block{header, fieldsSection, ctx}
 }
 
+// BuildUnsilenceConfirmationBlocks constructs Block Kit blocks for an un-silence confirmation reply.
+func BuildUnsilenceConfirmationBlocks(scope, target, user string) []slack.Block {
+	header := slack.NewHeaderBlock(
+		slack.NewTextBlockObject(slack.PlainTextType, "🔊 Silence Removed", true, false),
+	)
+
+	targetDisplay := target
+	if targetDisplay == "" {
+		targetDisplay = "all"
+	}
+
+	bodyText := fmt.Sprintf("<@%s> removed silence on *%s* `%s`", user, scope, targetDisplay)
+	body := slack.NewSectionBlock(
+		slack.NewTextBlockObject(slack.MarkdownType, bodyText, false, false),
+		nil, nil,
+	)
+
+	now := time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
+	ctx := slack.NewContextBlock("",
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("Removed at %s", now), false, false),
+	)
+
+	return []slack.Block{header, body, ctx}
+}
+
 // BuildSilenceConfirmationBlocks constructs Block Kit blocks for a silence confirmation reply.
 func BuildSilenceConfirmationBlocks(scope, target, duration, user string) []slack.Block {
 	headerText := "🔇 Silence Applied"
@@ -174,8 +231,9 @@ func BuildSilenceConfirmationBlocks(scope, target, duration, user string) []slac
 }
 
 // BuildSilencedOriginalBlocks constructs Block Kit blocks for updating the original
-// alert message after a silence is applied. Shows a "Silenced" badge and removes action buttons.
-func BuildSilencedOriginalBlocks(info CheckAlertInfo, silencedBy string) []slack.Block {
+// alert message after a silence is applied. Shows a "Silenced" badge with un-silence button.
+// The silenceScope should be "check" or "project", and silenceTarget is the UUID or project name.
+func BuildSilencedOriginalBlocks(info CheckAlertInfo, silencedBy, silenceScope, silenceTarget string) []slack.Block {
 	emoji := severityEmoji(info)
 
 	headerText := fmt.Sprintf("%s 🔇 SILENCED: %s", emoji, info.Name)
@@ -198,7 +256,15 @@ func BuildSilencedOriginalBlocks(info CheckAlertInfo, silencedBy string) []slack
 		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("UUID: `%s`", info.UUID), false, false),
 	)
 
-	return []slack.Block{header, fieldsSection, ctx}
+	// Un-silence button so users can remove the silence
+	unsilenceBtn := slack.NewButtonBlockElement(
+		"unsilence", fmt.Sprintf("%s|%s", silenceScope, silenceTarget),
+		slack.NewTextBlockObject(slack.PlainTextType, "🔊 Un-silence", true, false),
+	)
+	unsilenceBtn.Style = slack.StylePrimary
+	actionsBlock := slack.NewActionBlock("silence_actions", unsilenceBtn)
+
+	return []slack.Block{header, fieldsSection, ctx, actionsBlock}
 }
 
 // BuildAcknowledgedOriginalBlocks constructs Block Kit blocks for updating the original

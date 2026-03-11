@@ -436,6 +436,13 @@ func (db *PostgresDB) CreateSilence(ctx context.Context, silence models.AlertSil
 	return err
 }
 
+func (db *PostgresDB) DeactivateSilence(ctx context.Context, scope, target string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE alert_silences SET active = false WHERE scope = $1 AND target = $2 AND active = true`,
+		scope, target)
+	return err
+}
+
 func (db *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project string) (bool, error) {
 	var exists bool
 	err := db.Pool.QueryRow(ctx,

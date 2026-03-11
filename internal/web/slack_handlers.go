@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -66,12 +67,22 @@ type SlackMessage struct {
 	Blocks json.RawMessage `json:"blocks"`
 }
 
-// SlackAction represents a single action (button click) from the interaction.
+// SlackAction represents a single action (button click or select) from the interaction.
 type SlackAction struct {
-	ActionID string `json:"action_id"`
-	BlockID  string `json:"block_id"`
-	Value    string `json:"value"`
-	Type     string `json:"type"`
+	ActionID       string              `json:"action_id"`
+	BlockID        string              `json:"block_id"`
+	Value          string              `json:"value"`
+	Type           string              `json:"type"`
+	SelectedOption *SlackOptionObject  `json:"selected_option,omitempty"`
+}
+
+// SlackOptionObject represents a selected option from a static select menu.
+type SlackOptionObject struct {
+	Value string `json:"value"`
+	Text  struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	} `json:"text"`
 }
 
 // SlackContainer represents the container metadata for the interaction.
@@ -131,28 +142,67 @@ func (h *SlackInteractiveHandler) HandleInteraction(w http.ResponseWriter, r *ht
 		h.handleSilenceProject(ctx, w, payload, action)
 	case "ack_alert":
 		h.handleAckAlert(ctx, w, payload, action)
+	case "unsilence":
+		h.handleUnsilence(ctx, w, payload, action)
 	default:
 		logrus.Infof("slack interactive: unknown action_id: %s", action.ActionID)
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
+// parseSilenceDuration parses a duration string from a select option value.
+// Format: "target|duration" where duration is "30m", "1h", "4h", "8h", "24h", or "indefinite".
+func parseSilenceDuration(optionValue string) (target string, duration time.Duration, durationLabel string, indefinite bool) {
+	parts := strings.SplitN(optionValue, "|", 2)
+	if len(parts) != 2 {
+		return optionValue, 1 * time.Hour, "1h", false
+	}
+	target = parts[0]
+	durationStr := parts[1]
+
+	switch durationStr {
+	case "30m":
+		return target, 30 * time.Minute, "30m", false
+	case "1h":
+		return target, 1 * time.Hour, "1h", false
+	case "4h":
+		return target, 4 * time.Hour, "4h", false
+	case "8h":
+		return target, 8 * time.Hour, "8h", false
+	case "24h":
+		return target, 24 * time.Hour, "24h", false
+	case "indefinite":
+		return target, 0, "indefinitely", true
+	default:
+		return target, 1 * time.Hour, "1h", false
+	}
+}
+
 // handleSilenceCheck creates a check-scoped silence and updates the original message.
 func (h *SlackInteractiveHandler) handleSilenceCheck(ctx context.Context, w http.ResponseWriter, payload SlackInteractionPayload, action SlackAction) {
-	checkUUID := action.Value
 	userID := payload.User.ID
 	channelID := payload.Channel.ID
 	messageTs := payload.Message.Ts
-	duration := 1 * time.Hour
 
-	expiresAt := time.Now().Add(duration)
+	// Parse target and duration from selected option
+	optionValue := ""
+	if action.SelectedOption != nil {
+		optionValue = action.SelectedOption.Value
+	} else {
+		optionValue = action.Value
+	}
+	checkUUID, duration, durationLabel, indefinite := parseSilenceDuration(optionValue)
+
 	silence := models.AlertSilence{
 		Scope:      "check",
 		Target:     checkUUID,
 		SilencedBy: userID,
-		ExpiresAt:  &expiresAt,
-		Reason:     "Silenced via Slack button",
+		Reason:     fmt.Sprintf("Silenced via Slack for %s", durationLabel),
 		Active:     true,
+	}
+	if !indefinite {
+		expiresAt := time.Now().Add(duration)
+		silence.ExpiresAt = &expiresAt
 	}
 
 	if h.repo != nil {
@@ -165,17 +215,17 @@ func (h *SlackInteractiveHandler) handleSilenceCheck(ctx context.Context, w http
 
 	// Post silence confirmation in thread
 	if h.slackClient != nil {
-		if err := h.slackClient.SendSilenceConfirmation(ctx, channelID, messageTs, "check", checkUUID, "1h", userID); err != nil {
+		if err := h.slackClient.SendSilenceConfirmation(ctx, channelID, messageTs, "check", checkUUID, durationLabel, userID); err != nil {
 			logrus.Errorf("slack interactive: failed to send silence confirmation: %s", err)
 		}
 
-		// Update original message to show "Silenced" badge, remove buttons
+		// Update original message to show "Silenced" badge with un-silence button
 		info := slack.CheckAlertInfo{
 			UUID:    checkUUID,
 			Name:    extractCheckNameFromMessage(payload),
 			Project: extractProjectFromMessage(payload),
 		}
-		blocks := slack.BuildSilencedOriginalBlocks(info, userID)
+		blocks := slack.BuildSilencedOriginalBlocks(info, userID, "check", checkUUID)
 		fallback := fmt.Sprintf("🔇 SILENCED: %s", info.Name)
 		if err := h.slackClient.UpdateMessage(ctx, channelID, messageTs, blocks, fallback); err != nil {
 			logrus.Errorf("slack interactive: failed to update original message: %s", err)
@@ -187,20 +237,29 @@ func (h *SlackInteractiveHandler) handleSilenceCheck(ctx context.Context, w http
 
 // handleSilenceProject creates a project-scoped silence and updates the original message.
 func (h *SlackInteractiveHandler) handleSilenceProject(ctx context.Context, w http.ResponseWriter, payload SlackInteractionPayload, action SlackAction) {
-	projectName := action.Value
 	userID := payload.User.ID
 	channelID := payload.Channel.ID
 	messageTs := payload.Message.Ts
-	duration := 1 * time.Hour
 
-	expiresAt := time.Now().Add(duration)
+	// Parse target and duration from selected option
+	optionValue := ""
+	if action.SelectedOption != nil {
+		optionValue = action.SelectedOption.Value
+	} else {
+		optionValue = action.Value
+	}
+	projectName, duration, durationLabel, indefinite := parseSilenceDuration(optionValue)
+
 	silence := models.AlertSilence{
 		Scope:      "project",
 		Target:     projectName,
 		SilencedBy: userID,
-		ExpiresAt:  &expiresAt,
-		Reason:     "Silenced via Slack button",
+		Reason:     fmt.Sprintf("Silenced via Slack for %s", durationLabel),
 		Active:     true,
+	}
+	if !indefinite {
+		expiresAt := time.Now().Add(duration)
+		silence.ExpiresAt = &expiresAt
 	}
 
 	if h.repo != nil {
@@ -213,19 +272,73 @@ func (h *SlackInteractiveHandler) handleSilenceProject(ctx context.Context, w ht
 
 	// Post silence confirmation in thread
 	if h.slackClient != nil {
-		if err := h.slackClient.SendSilenceConfirmation(ctx, channelID, messageTs, "project", projectName, "1h", userID); err != nil {
+		if err := h.slackClient.SendSilenceConfirmation(ctx, channelID, messageTs, "project", projectName, durationLabel, userID); err != nil {
 			logrus.Errorf("slack interactive: failed to send silence confirmation: %s", err)
 		}
 
-		// Update original message to show "Silenced" badge, remove buttons
+		// Update original message to show "Silenced" badge with un-silence button
 		info := slack.CheckAlertInfo{
 			Name:    extractCheckNameFromMessage(payload),
 			Project: projectName,
 		}
-		blocks := slack.BuildSilencedOriginalBlocks(info, userID)
+		blocks := slack.BuildSilencedOriginalBlocks(info, userID, "project", projectName)
 		fallback := fmt.Sprintf("🔇 SILENCED: %s", info.Name)
 		if err := h.slackClient.UpdateMessage(ctx, channelID, messageTs, blocks, fallback); err != nil {
 			logrus.Errorf("slack interactive: failed to update original message: %s", err)
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleUnsilence deactivates active silences and restores the original alert message with action buttons.
+func (h *SlackInteractiveHandler) handleUnsilence(ctx context.Context, w http.ResponseWriter, payload SlackInteractionPayload, action SlackAction) {
+	userID := payload.User.ID
+	channelID := payload.Channel.ID
+	messageTs := payload.Message.Ts
+
+	// Parse scope and target from action value: "scope|target"
+	parts := strings.SplitN(action.Value, "|", 2)
+	if len(parts) != 2 {
+		logrus.Errorf("slack interactive: invalid unsilence value: %s", action.Value)
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	scope := parts[0]
+	target := parts[1]
+
+	if h.repo != nil {
+		if err := h.repo.DeactivateSilence(ctx, scope, target); err != nil {
+			logrus.Errorf("slack interactive: failed to deactivate silence: %s", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if h.slackClient != nil {
+		// Post un-silence confirmation in thread (rich blocks version)
+		if err := h.slackClient.SendUnsilenceConfirmation(ctx, channelID, messageTs, scope, target, userID); err != nil {
+			logrus.Errorf("slack interactive: failed to send unsilence confirmation: %s", err)
+		}
+
+		// Restore the original alert message with action buttons
+		checkUUID := ""
+		project := ""
+		if scope == "check" {
+			checkUUID = target
+			project = extractProjectFromMessage(payload)
+		} else {
+			project = target
+		}
+		info := slack.CheckAlertInfo{
+			UUID:    checkUUID,
+			Name:    extractCheckNameFromMessage(payload),
+			Project: project,
+		}
+		restoredBlocks := slack.BuildAlertBlocks(info)
+		fallbackText := fmt.Sprintf("%s ALERT: %s", slack.SeverityEmoji(info), info.Name)
+		if err := h.slackClient.UpdateMessage(ctx, channelID, messageTs, restoredBlocks, fallbackText); err != nil {
+			logrus.Errorf("slack interactive: failed to restore original message: %s", err)
 		}
 	}
 

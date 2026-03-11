@@ -81,21 +81,27 @@ func TestBuildAlertBlocks_CriticalUnhealthy(t *testing.T) {
 		t.Fatalf("expected 3 action elements, got %d", len(actions.Elements.ElementSet))
 	}
 
-	// Verify action IDs
-	btn0 := actions.Elements.ElementSet[0].(*slack.ButtonBlockElement)
-	if btn0.ActionID != "silence_check" {
-		t.Errorf("button 0 action_id = %q, want %q", btn0.ActionID, "silence_check")
+	// Verify action elements: two static selects + one button
+	sel0 := actions.Elements.ElementSet[0].(*slack.SelectBlockElement)
+	if sel0.ActionID != "silence_check" {
+		t.Errorf("select 0 action_id = %q, want %q", sel0.ActionID, "silence_check")
 	}
-	if btn0.Value != "abc-123" {
-		t.Errorf("button 0 value = %q, want %q", btn0.Value, "abc-123")
+	// Verify it has 6 duration options
+	if len(sel0.Options) != 6 {
+		t.Errorf("silence_check select has %d options, want 6", len(sel0.Options))
+	}
+	// First option value should encode the check UUID with 30m duration
+	if sel0.Options[0].Value != "abc-123|30m" {
+		t.Errorf("silence_check first option value = %q, want %q", sel0.Options[0].Value, "abc-123|30m")
 	}
 
-	btn1 := actions.Elements.ElementSet[1].(*slack.ButtonBlockElement)
-	if btn1.ActionID != "silence_project" {
-		t.Errorf("button 1 action_id = %q, want %q", btn1.ActionID, "silence_project")
+	sel1 := actions.Elements.ElementSet[1].(*slack.SelectBlockElement)
+	if sel1.ActionID != "silence_project" {
+		t.Errorf("select 1 action_id = %q, want %q", sel1.ActionID, "silence_project")
 	}
-	if btn1.Value != "backend" {
-		t.Errorf("button 1 value = %q, want %q", btn1.Value, "backend")
+	// First option value should encode the project name with 30m duration
+	if sel1.Options[0].Value != "backend|30m" {
+		t.Errorf("silence_project first option value = %q, want %q", sel1.Options[0].Value, "backend|30m")
 	}
 
 	btn2 := actions.Elements.ElementSet[2].(*slack.ButtonBlockElement)
@@ -281,6 +287,88 @@ func TestBuildSilenceConfirmationBlocks_EmptyTarget(t *testing.T) {
 
 	body := blocks[1].(*slack.SectionBlock)
 	assertContains(t, body.Text.Text, "all")
+}
+
+func TestBuildSilencedOriginalBlocks_HasUnsilenceButton(t *testing.T) {
+	info := CheckAlertInfo{
+		UUID:      "abc-123",
+		Name:      "API Health Check",
+		Project:   "backend",
+		Group:     "http",
+		CheckType: "http",
+	}
+
+	blocks := BuildSilencedOriginalBlocks(info, "U12345", "check", "abc-123")
+
+	// Should have 4 blocks: header, fields, context, actions (with un-silence button)
+	if len(blocks) != 4 {
+		t.Fatalf("expected 4 blocks, got %d", len(blocks))
+	}
+
+	header := blocks[0].(*slack.HeaderBlock)
+	assertContains(t, header.Text.Text, "🔇")
+	assertContains(t, header.Text.Text, "SILENCED")
+
+	// Verify actions block has un-silence button
+	actions := blocks[3].(*slack.ActionBlock)
+	if len(actions.Elements.ElementSet) != 1 {
+		t.Fatalf("expected 1 action element (unsilence button), got %d", len(actions.Elements.ElementSet))
+	}
+	unsilenceBtn := actions.Elements.ElementSet[0].(*slack.ButtonBlockElement)
+	if unsilenceBtn.ActionID != "unsilence" {
+		t.Errorf("unsilence button action_id = %q, want %q", unsilenceBtn.ActionID, "unsilence")
+	}
+	if unsilenceBtn.Value != "check|abc-123" {
+		t.Errorf("unsilence button value = %q, want %q", unsilenceBtn.Value, "check|abc-123")
+	}
+}
+
+func TestBuildUnsilenceConfirmationBlocks(t *testing.T) {
+	blocks := BuildUnsilenceConfirmationBlocks("check", "abc-123", "U12345")
+
+	// Should have 3 blocks: header, body, context
+	if len(blocks) != 3 {
+		t.Fatalf("expected 3 blocks, got %d", len(blocks))
+	}
+
+	header := blocks[0].(*slack.HeaderBlock)
+	assertContains(t, header.Text.Text, "🔊")
+	assertContains(t, header.Text.Text, "Silence Removed")
+
+	body := blocks[1].(*slack.SectionBlock)
+	assertContains(t, body.Text.Text, "U12345")
+	assertContains(t, body.Text.Text, "check")
+	assertContains(t, body.Text.Text, "abc-123")
+}
+
+func TestBuildAlertBlocks_SilenceDurationOptions(t *testing.T) {
+	info := CheckAlertInfo{
+		UUID:      "abc-123",
+		Name:      "Test Check",
+		Project:   "myproject",
+		Group:     "http",
+		CheckType: "http",
+		IsHealthy: false,
+	}
+
+	blocks := BuildAlertBlocks(info)
+	actions := blocks[4].(*slack.ActionBlock)
+
+	// Check silence_check select has all 6 duration options
+	sel := actions.Elements.ElementSet[0].(*slack.SelectBlockElement)
+	expectedValues := []string{
+		"abc-123|30m",
+		"abc-123|1h",
+		"abc-123|4h",
+		"abc-123|8h",
+		"abc-123|24h",
+		"abc-123|indefinite",
+	}
+	for i, expected := range expectedValues {
+		if sel.Options[i].Value != expected {
+			t.Errorf("silence_check option[%d] value = %q, want %q", i, sel.Options[i].Value, expected)
+		}
+	}
 }
 
 func TestTypeEmoji(t *testing.T) {
