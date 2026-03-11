@@ -17,8 +17,11 @@ type SlackAlerter struct {
 	defaultChannel string
 }
 
-// NewSlackAlerter creates a new SlackAlerter.
+// NewSlackAlerter creates a new SlackAlerter. Returns nil if the client is nil.
 func NewSlackAlerter(client *slack.SlackClient, repo db.Repository, defaultChannel string) *SlackAlerter {
+	if client == nil {
+		return nil
+	}
 	return &SlackAlerter{
 		client:         client,
 		repo:           repo,
@@ -53,6 +56,7 @@ func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefi
 		CheckType: checkDef.Type,
 		Message:   status.Message,
 		IsHealthy: false,
+		Frequency: checkDef.Duration,
 	}
 
 	// Check for existing unresolved thread (ongoing failure)
@@ -104,6 +108,7 @@ func (sa *SlackAlerter) HandleRecovery(ctx context.Context, checkDef models.Chec
 		CheckType: checkDef.Type,
 		Message:   "Check is healthy again",
 		IsHealthy: true,
+		Frequency: checkDef.Duration,
 	}
 
 	if err := sa.client.SendResolve(ctx, alertInfo, thread.ThreadTs, thread.ChannelID); err != nil {
