@@ -155,6 +155,11 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	}
 	router.StaticFS("/static", http.FS(subStatic))
 
+	// Health check endpoint (public — used by Railway/load balancers)
+	router.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	// Public auth routes (no auth required)
 	router.GET("/auth/login", authMgr.HandleLogin)
 	router.GET("/auth/callback", authMgr.HandleCallback)
