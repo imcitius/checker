@@ -28,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
             total: document.querySelector('#total-checks .stat-value'),
             healthy: document.querySelector('#healthy-checks .stat-value'),
             unhealthy: document.querySelector('#unhealthy-checks .stat-value'),
-            disabled: document.querySelector('#disabled-checks .stat-value')
+            disabled: document.querySelector('#disabled-checks .stat-value'),
+            silenced: document.querySelector('#silenced-checks .stat-value')
         },
         notificationArea: document.getElementById('notification-area')
     };
@@ -367,13 +368,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!check) return false;
                 const enabled = check.Enabled !== undefined ? check.Enabled : (check.enabled !== undefined ? check.enabled : true);
                 return !enabled;
+            }).length,
+            silenced: state.checks.filter(check => {
+                if (!check) return false;
+                return check.IsSilenced === true;
             }).length
         };
 
         console.log('[Stats] Stats calculated:', stats);
 
         // Check if DOM elements exist before updating
-        if (!elements.stats.total || !elements.stats.healthy || !elements.stats.unhealthy || !elements.stats.disabled) {
+        if (!elements.stats.total || !elements.stats.healthy || !elements.stats.unhealthy || !elements.stats.disabled || !elements.stats.silenced) {
             console.error('[Stats] One or more stat elements not found in DOM');
             return;
         }
@@ -383,6 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.stats.healthy.textContent = stats.healthy;
             elements.stats.unhealthy.textContent = stats.unhealthy;
             elements.stats.disabled.textContent = stats.disabled;
+            if (elements.stats.silenced) {
+                elements.stats.silenced.textContent = stats.silenced;
+            }
             console.log('[Stats] Updated DOM with stats');
         } catch (err) {
             console.error('[Stats] Error updating stats in DOM:', err);
@@ -592,10 +600,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const statusTextEl = mainRow.querySelector('.check-status-text');
+                const isSilenced = check.IsSilenced || false;
                 if (statusTextEl) {
                     // Set status text appropriately for disabled checks
                     if (!enabled) {
                         statusTextEl.textContent = 'Disabled';
+                    } else if (isSilenced) {
+                        statusTextEl.innerHTML = (lastResult ? 'Healthy' : 'Unhealthy') + ' <span class="silenced-badge" title="Alerts are silenced for this check">SILENCED</span>';
                     } else {
                         statusTextEl.textContent = lastResult ? 'Healthy' : 'Unhealthy';
                     }
@@ -1390,7 +1401,9 @@ function normalizeCheckData(check) {
         Message: check.Message || check.message || '',
         Host: connectionValue,
         URL: check.URL || check.url || check.Url || '',
-        Periodicity: check.Periodicity || check.periodicity || check.Duration || check.duration || ''
+        Periodicity: check.Periodicity || check.periodicity || check.Duration || check.duration || '',
+        IsSilenced: check.IsSilenced !== undefined ? check.IsSilenced :
+            (check.is_silenced !== undefined ? check.is_silenced : false)
     };
 
     // Log normalized data
