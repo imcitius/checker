@@ -33,7 +33,8 @@ func mainChecker() {
 				config.Config.SlackApp.DefaultChannel,
 			)
 			scheduler.SetSlackClient(slackClient)
-			config.Log.Info("Slack App client initialized and passed to scheduler")
+			web.SetSlackClient(slackClient)
+			config.Log.Info("Slack App client initialized and passed to scheduler and web")
 
 			// Initialize database repository for Slack thread tracking and silence checks
 			if config.Config.SlackApp.DatabaseURL != "" {
@@ -46,6 +47,7 @@ func mainChecker() {
 					} else {
 						repository := db.NewPostgresDB(sqlDB)
 						scheduler.SetRepository(repository)
+						web.SetRepository(repository)
 						config.Log.Info("Database repository initialized for Slack thread tracking and silences")
 					}
 				}

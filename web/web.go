@@ -2,16 +2,36 @@ package web
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"golang.org/x/sync/semaphore"
 	"io"
-	"my/checker/config"
-	"my/checker/slack"
 	"net/http"
 	_ "net/http/pprof"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/sync/semaphore"
+
+	"my/checker/config"
+	"my/checker/internal/db"
+	internalslack "my/checker/internal/slack"
+	internalweb "my/checker/internal/web"
+	"my/checker/slack"
 )
 
 var Config = &config.Config
+
+var (
+	slackClient *internalslack.SlackClient
+	repo        db.Repository
+)
+
+// SetSlackClient sets the Slack client used for interactive message handling.
+func SetSlackClient(c *internalslack.SlackClient) {
+	slackClient = c
+}
+
+// SetRepository sets the database repository used for interactive message handling.
+func SetRepository(r db.Repository) {
+	repo = r
+}
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -70,6 +90,15 @@ func Serve(_ chan bool, sem *semaphore.Weighted) {
 		slackHandler := slack.NewInteractionHandler(Config.SlackApp.SigningSecret)
 		http.HandleFunc("/api/slack/commands", slackHandler.HandleSlashCommand)
 		config.Log.Info("Slack slash command endpoint registered at /api/slack/commands")
+
+		// Slack interactive message endpoint (button clicks from alert messages)
+		interactiveHandler := internalweb.NewSlackInteractiveHandler(
+			Config.SlackApp.SigningSecret,
+			slackClient,
+			repo,
+		)
+		http.HandleFunc("/api/slack/interactive", interactiveHandler.HandleInteraction)
+		config.Log.Info("Slack interactive endpoint registered at /api/slack/interactive")
 	}
 
 	if err := server.ListenAndServe(); err != nil {

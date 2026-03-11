@@ -152,6 +152,35 @@ func (c *SlackClient) UpdateMessageColor(ctx context.Context, channelID, message
 	return nil
 }
 
+// SigningSecret returns the configured Slack signing secret.
+func (c *SlackClient) SigningSecret() string {
+	return c.signingSecret
+}
+
+// UpdateMessage updates an existing Slack message with new blocks and fallback text.
+func (c *SlackClient) UpdateMessage(ctx context.Context, channelID, messageTs string, blocks []slack.Block, fallbackText string) error {
+	_, _, _, err := c.api.UpdateMessageContext(ctx, channelID, messageTs,
+		slack.MsgOptionBlocks(blocks...),
+		slack.MsgOptionText(fallbackText, false),
+	)
+	if err != nil {
+		return fmt.Errorf("UpdateMessage: %w", err)
+	}
+	return nil
+}
+
+// PostThreadReply posts a text message as a thread reply and returns the reply timestamp.
+func (c *SlackClient) PostThreadReply(ctx context.Context, channelID, threadTS, text string) (string, error) {
+	_, ts, err := c.api.PostMessageContext(ctx, channelID,
+		slack.MsgOptionText(text, false),
+		slack.MsgOptionTS(threadTS),
+	)
+	if err != nil {
+		return "", fmt.Errorf("PostThreadReply: %w", err)
+	}
+	return ts, nil
+}
+
 // PostEphemeral posts an ephemeral message visible only to the specified user.
 func (c *SlackClient) PostEphemeral(ctx context.Context, channelID, userID, text string) error {
 	_, err := c.api.PostEphemeralContext(ctx, channelID, userID,
