@@ -55,7 +55,10 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 	case *models.PassiveCheckConfig:
 		logger.Debugf("Creating Passive check")
 		return &checks.PassiveCheck{
-			Timeout: config.Timeout,
+			LastPing:    checkDef.LastRun,
+			Timeout:     config.Timeout,
+			ErrorHeader: fmt.Sprintf("Passive check '%s' [%s/%s]", checkDef.Name, checkDef.Project, checkDef.GroupName),
+			Logger:      logger,
 		}
 	case *models.MySQLCheckConfig:
 		switch checkDef.Type {

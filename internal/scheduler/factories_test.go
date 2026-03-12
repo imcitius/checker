@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"testing"
+	"time"
 
 	"checker/internal/actors"
 	"checker/internal/checks"
@@ -291,6 +292,47 @@ func TestCheckerFactory_PostgreSQLReplication(t *testing.T) {
 
 	if replChecker.CheckType != "replication_status" {
 		t.Fatalf("Expected CheckType to be 'replication_status', got '%s'", replChecker.CheckType)
+	}
+}
+
+// TestCheckerFactory_Passive verifies that CheckerFactory returns a PassiveCheck with all required fields populated.
+func TestCheckerFactory_Passive(t *testing.T) {
+	logger := logrus.WithField("test", "TestCheckerFactory_Passive")
+	lastRun := time.Now().Add(-2 * time.Minute)
+	checkDef := models.CheckDefinition{
+		ID:        primitive.NewObjectID(),
+		UUID:      "test-uuid",
+		Name:      "my-passive-check",
+		Project:   "my-project",
+		GroupName: "my-group",
+		Type:      "passive",
+		LastRun:   lastRun,
+		Config: &models.PassiveCheckConfig{
+			Timeout: "15m",
+		},
+	}
+
+	checker := CheckerFactory(checkDef, logger)
+	if checker == nil {
+		t.Fatal("CheckerFactory returned nil for passive check")
+	}
+
+	passiveCheck, ok := checker.(*checks.PassiveCheck)
+	if !ok {
+		t.Fatalf("Expected *checks.PassiveCheck, got %T", checker)
+	}
+
+	if passiveCheck.Timeout != "15m" {
+		t.Errorf("Expected Timeout '15m', got '%s'", passiveCheck.Timeout)
+	}
+	if passiveCheck.Logger == nil {
+		t.Error("Expected Logger to be set, got nil")
+	}
+	if passiveCheck.ErrorHeader == "" {
+		t.Error("Expected ErrorHeader to be set, got empty string")
+	}
+	if !passiveCheck.LastPing.Equal(lastRun) {
+		t.Errorf("Expected LastPing to be %v, got %v", lastRun, passiveCheck.LastPing)
 	}
 }
 
