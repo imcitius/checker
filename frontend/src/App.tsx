@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Dashboard } from '@/pages/Dashboard'
 import { Management } from '@/pages/Management'
 import { Login } from '@/pages/Login'
+import { VersionBadge } from '@/components/VersionBadge'
 
 export function App() {
   return (
@@ -11,6 +12,7 @@ export function App() {
         <Route path="/manage" element={<Management />} />
         <Route path="/login" element={<Login />} />
       </Routes>
+      <VersionBadge />
     </BrowserRouter>
   )
 }
