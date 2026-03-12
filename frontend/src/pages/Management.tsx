@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api, type CheckDefinition } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Pencil, Trash2, Search, RefreshCw, Upload, Download } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, RefreshCw, Upload, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
@@ -28,6 +28,9 @@ import { useChecks } from '@/hooks/useChecks'
 import { useRef } from 'react'
 import { ImportDialog } from '@/components/ImportDialog'
 import { api as apiClient } from '@/lib/api'
+
+type SortColumn = 'name' | 'project' | 'type' | 'duration' | 'enabled'
+type SortDirection = 'asc' | 'desc'
 
 const EMPTY_FORM: Partial<CheckDefinition> = {
   name: '',
@@ -51,6 +54,10 @@ export function Management() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [projectFilter, setProjectFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+
+  // Sort state
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   // Dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -107,6 +114,65 @@ export function Management() {
     }
     return true
   })
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc')
+      } else {
+        // Third click resets sorting
+        setSortColumn(null)
+        setSortDirection('asc')
+      }
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+
+  const sorted = useMemo(() => {
+    if (!sortColumn) return filtered
+    return [...filtered].sort((a, b) => {
+      let aVal: string | boolean
+      let bVal: string | boolean
+      switch (sortColumn) {
+        case 'name':
+          aVal = a.name.toLowerCase()
+          bVal = b.name.toLowerCase()
+          break
+        case 'project':
+          aVal = a.project.toLowerCase()
+          bVal = b.project.toLowerCase()
+          break
+        case 'type':
+          aVal = a.type.toLowerCase()
+          bVal = b.type.toLowerCase()
+          break
+        case 'duration':
+          aVal = a.duration.toLowerCase()
+          bVal = b.duration.toLowerCase()
+          break
+        case 'enabled':
+          aVal = a.enabled
+          bVal = b.enabled
+          break
+        default:
+          return 0
+      }
+      if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+        const cmp = aVal === bVal ? 0 : aVal ? -1 : 1
+        return sortDirection === 'asc' ? cmp : -cmp
+      }
+      const cmp = (aVal as string).localeCompare(bVal as string)
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+  }, [filtered, sortColumn, sortDirection])
+
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />
+    if (sortDirection === 'asc') return <ArrowUp className="h-3 w-3 ml-1" />
+    return <ArrowDown className="h-3 w-3 ml-1" />
+  }
 
   const handleCreate = () => {
     setEditingCheck({ ...EMPTY_FORM })
@@ -228,11 +294,21 @@ export function Management() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-[hsl(215_14%_10%)] text-muted-foreground text-xs">
-                    <th className="text-left px-3 py-2 font-medium">Name</th>
-                    <th className="text-left px-3 py-2 font-medium">Project</th>
-                    <th className="text-left px-3 py-2 font-medium">Type</th>
-                    <th className="text-left px-3 py-2 font-medium">Frequency</th>
-                    <th className="text-left px-3 py-2 font-medium">Enabled</th>
+                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('name')}>
+                      <span className="inline-flex items-center">Name<SortIcon column="name" /></span>
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('project')}>
+                      <span className="inline-flex items-center">Project<SortIcon column="project" /></span>
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('type')}>
+                      <span className="inline-flex items-center">Type<SortIcon column="type" /></span>
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('duration')}>
+                      <span className="inline-flex items-center">Frequency<SortIcon column="duration" /></span>
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('enabled')}>
+                      <span className="inline-flex items-center">Enabled<SortIcon column="enabled" /></span>
+                    </th>
                     <th className="text-right px-3 py-2 font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -243,14 +319,14 @@ export function Management() {
                         Loading...
                       </td>
                     </tr>
-                  ) : filtered.length === 0 ? (
+                  ) : sorted.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center py-8 text-muted-foreground">
                         No check definitions found
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((def) => (
+                    sorted.map((def) => (
                       <tr
                         key={def.uuid}
                         className="border-b border-border/50 hover:bg-[hsl(215_14%_14%)] transition-colors"
