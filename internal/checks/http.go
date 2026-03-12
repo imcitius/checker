@@ -209,13 +209,15 @@ func checkSSL(resp *http.Response, check *HTTPCheck) error {
 		return fmt.Errorf("SSL certificate will expire in 0s (threshold: 0s)")
 	}
 
+	// Only check the leaf (server) certificate, not intermediate CA certificates.
+	// PeerCertificates[0] is always the leaf certificate in Go's TLS.
+	// Intermediate certs may have different expiry dates and should not trigger alerts.
+	cert := resp.TLS.PeerCertificates[0]
 	now := time.Now()
-	for _, cert := range resp.TLS.PeerCertificates {
-		timeUntilExpiry := cert.NotAfter.Sub(now)
-		if timeUntilExpiry <= sslExpPeriod {
-			check.Logger.Debugf("Certificate Subject=%v, NotBefore=%v, NotAfter=%v", cert.Subject, cert.NotBefore, cert.NotAfter)
-			return fmt.Errorf("SSL certificate will expire in %v (threshold: %v)", timeUntilExpiry, sslExpPeriod)
-		}
+	timeUntilExpiry := cert.NotAfter.Sub(now)
+	if timeUntilExpiry <= sslExpPeriod {
+		check.Logger.Debugf("Certificate Subject=%v, NotBefore=%v, NotAfter=%v", cert.Subject, cert.NotBefore, cert.NotAfter)
+		return fmt.Errorf("SSL certificate will expire in %v (threshold: %v)", timeUntilExpiry, sslExpPeriod)
 	}
 	return nil
 }
