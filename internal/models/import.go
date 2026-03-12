@@ -57,6 +57,12 @@ type CheckImportDefaults struct {
 	ActorType        string `json:"actor_type" yaml:"actor_type"`
 }
 
+// AuthImportConfig holds HTTP Basic Auth credentials for import
+type AuthImportConfig struct {
+	User     string `json:"user,omitempty" yaml:"user,omitempty"`
+	Password string `json:"password,omitempty" yaml:"password,omitempty"`
+}
+
 // CheckImportItem represents a single check in the import payload.
 // It's a flat structure matching the CheckDefinitionViewModel shape.
 type CheckImportItem struct {
@@ -70,8 +76,17 @@ type CheckImportItem struct {
 	Duration    string `json:"duration" yaml:"duration"`
 
 	// HTTP config
-	URL     string `json:"url,omitempty" yaml:"url,omitempty"`
-	Timeout string `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	URL                 string              `json:"url,omitempty" yaml:"url,omitempty"`
+	Timeout             string              `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Answer              string              `json:"answer,omitempty" yaml:"answer,omitempty"`
+	AnswerPresent       *bool               `json:"answer_present,omitempty" yaml:"answer_present,omitempty"`
+	Code                []int               `json:"code,omitempty" yaml:"code,omitempty"`
+	Headers             []map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Cookies             []map[string]string `json:"cookies,omitempty" yaml:"cookies,omitempty"`
+	SkipCheckSSL        *bool               `json:"skip_check_ssl,omitempty" yaml:"skip_check_ssl,omitempty"`
+	SSLExpirationPeriod string              `json:"ssl_expiration_period,omitempty" yaml:"ssl_expiration_period,omitempty"`
+	StopFollowRedirects *bool               `json:"stop_follow_redirects,omitempty" yaml:"stop_follow_redirects,omitempty"`
+	Auth                *AuthImportConfig   `json:"auth,omitempty" yaml:"auth,omitempty"`
 
 	// TCP/ICMP config
 	Host string `json:"host,omitempty" yaml:"host,omitempty"`

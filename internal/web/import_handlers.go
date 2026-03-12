@@ -280,12 +280,11 @@ func executeImport(ctx context.Context, repo db.Repository, payload *models.Chec
 			name:      check.Name,
 		}
 
-		// Convert import item to view model, then to domain model
-		vm := importItemToViewModel(check)
+		// Convert import item directly to domain model
+		def := importItemToCheckDefinition(check)
 
 		if existing, found := existingByKey[key]; found {
 			// Update existing check
-			def := convertFromCheckDefViewModel(vm)
 			def.UUID = existing.UUID
 			def.CreatedAt = existing.CreatedAt
 			def.UpdatedAt = time.Now()
@@ -311,16 +310,9 @@ func executeImport(ctx context.Context, repo db.Repository, payload *models.Chec
 			}
 		} else {
 			// Create new check
-			def := convertFromCheckDefViewModel(vm)
 			def.UUID = uuid.New().String()
 			def.CreatedAt = time.Now()
 			def.UpdatedAt = time.Now()
-
-			enabled := true
-			if check.Enabled != nil {
-				enabled = *check.Enabled
-			}
-			def.Enabled = enabled
 
 			id, err := repo.CreateCheckDefinition(ctx, def)
 			if err != nil {
@@ -387,46 +379,102 @@ func executeImport(ctx context.Context, repo db.Repository, payload *models.Chec
 	return result, nil
 }
 
-// importItemToViewModel converts an import item to a CheckDefinitionViewModel
-// so we can reuse the existing convertFromCheckDefViewModel function.
-func importItemToViewModel(item models.CheckImportItem) models.CheckDefinitionViewModel {
-	vm := models.CheckDefinitionViewModel{
+// importItemToCheckDefinition converts an import item directly to a CheckDefinition,
+// creating the appropriate typed Config for each check type.
+func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefinition {
+	def := models.CheckDefinition{
 		Name:             item.Name,
 		Project:          item.Project,
 		GroupName:        item.GroupName,
 		Type:             item.Type,
 		Description:      item.Description,
 		Duration:         item.Duration,
-		URL:              item.URL,
-		Timeout:          item.Timeout,
-		Host:             item.Host,
-		Port:             item.Port,
 		ActorType:        item.ActorType,
 		AlertType:        item.AlertType,
 		AlertDestination: item.AlertDestination,
 	}
 
 	if item.Enabled != nil {
-		vm.Enabled = *item.Enabled
+		def.Enabled = *item.Enabled
 	} else {
-		vm.Enabled = true
+		def.Enabled = true
 	}
 
-	if item.PgSQL != nil {
-		vm.PgSQL.UserName = item.PgSQL.UserName
-		vm.PgSQL.DBName = item.PgSQL.DBName
-		vm.PgSQL.Query = item.PgSQL.Query
-		vm.PgSQL.ServerList = item.PgSQL.ServerList
+	// Create type-specific config
+	switch item.Type {
+	case "http":
+		httpCfg := &models.HTTPCheckConfig{
+			URL:                 item.URL,
+			Timeout:             item.Timeout,
+			Answer:              item.Answer,
+			Code:                item.Code,
+			Headers:             item.Headers,
+			Cookies:             item.Cookies,
+			SSLExpirationPeriod: item.SSLExpirationPeriod,
+		}
+		if item.AnswerPresent != nil {
+			httpCfg.AnswerPresent = *item.AnswerPresent
+		} else if item.Answer != "" {
+			// Default to true when answer is specified but answer_present is not
+			httpCfg.AnswerPresent = true
+		}
+		if item.SkipCheckSSL != nil {
+			httpCfg.SkipCheckSSL = *item.SkipCheckSSL
+		}
+		if item.StopFollowRedirects != nil {
+			httpCfg.StopFollowRedirects = *item.StopFollowRedirects
+		}
+		if item.Auth != nil {
+			httpCfg.Auth = models.AuthConfig{
+				User:     item.Auth.User,
+				Password: item.Auth.Password,
+			}
+		}
+		def.Config = httpCfg
+	case "tcp":
+		def.Config = &models.TCPCheckConfig{
+			Host:    item.Host,
+			Port:    item.Port,
+			Timeout: item.Timeout,
+		}
+	case "icmp":
+		def.Config = &models.ICMPCheckConfig{
+			Host:    item.Host,
+			Timeout: item.Timeout,
+		}
+	case "passive":
+		def.Config = &models.PassiveCheckConfig{
+			Timeout: item.Timeout,
+		}
+	case "mysql_query", "mysql_query_unixtime", "mysql_replication":
+		cfg := &models.MySQLCheckConfig{
+			Host:    item.Host,
+			Port:    item.Port,
+			Timeout: item.Timeout,
+		}
+		if item.MySQL != nil {
+			cfg.UserName = item.MySQL.UserName
+			cfg.DBName = item.MySQL.DBName
+			cfg.Query = item.MySQL.Query
+			cfg.ServerList = item.MySQL.ServerList
+		}
+		def.Config = cfg
+	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
+		cfg := &models.PostgreSQLCheckConfig{
+			Host:    item.Host,
+			Port:    item.Port,
+			Timeout: item.Timeout,
+		}
+		if item.PgSQL != nil {
+			cfg.UserName = item.PgSQL.UserName
+			cfg.DBName = item.PgSQL.DBName
+			cfg.Query = item.PgSQL.Query
+			cfg.ServerList = item.PgSQL.ServerList
+		}
+		def.Config = cfg
 	}
 
-	if item.MySQL != nil {
-		vm.MySQL.UserName = item.MySQL.UserName
-		vm.MySQL.DBName = item.MySQL.DBName
-		vm.MySQL.Query = item.MySQL.Query
-		vm.MySQL.ServerList = item.MySQL.ServerList
-	}
-
-	return vm
+	return def
 }
 
 // ExportCheckDefinitions exports all check definitions as YAML.
@@ -489,6 +537,29 @@ func ExportCheckDefinitions(c *gin.Context) {
 			case *models.HTTPCheckConfig:
 				item.URL = cfg.URL
 				item.Timeout = cfg.Timeout
+				item.Answer = cfg.Answer
+				if cfg.AnswerPresent {
+					ap := true
+					item.AnswerPresent = &ap
+				}
+				item.Code = cfg.Code
+				item.Headers = cfg.Headers
+				item.Cookies = cfg.Cookies
+				if cfg.SkipCheckSSL {
+					sc := true
+					item.SkipCheckSSL = &sc
+				}
+				item.SSLExpirationPeriod = cfg.SSLExpirationPeriod
+				if cfg.StopFollowRedirects {
+					sfr := true
+					item.StopFollowRedirects = &sfr
+				}
+				if cfg.Auth.User != "" || cfg.Auth.Password != "" {
+					item.Auth = &models.AuthImportConfig{
+						User:     cfg.Auth.User,
+						Password: cfg.Auth.Password,
+					}
+				}
 			case *models.TCPCheckConfig:
 				item.Host = cfg.Host
 				item.Port = cfg.Port

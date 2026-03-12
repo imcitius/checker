@@ -36,6 +36,11 @@ checks:
     port: 443
     timeout: 5s
 
+  - name: "Cron Job Monitor"
+    type: passive
+    timeout: 15m
+    duration: 1m
+
   - name: "Database"
     type: pgsql_query
     host: db.example.com
