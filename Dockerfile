@@ -1,28 +1,32 @@
-# Global build arg — pass via: docker build --build-arg GIT_SHA=$(git rev-parse HEAD) .
-ARG GIT_SHA=unknown
+# Stage 0: Extract git SHA from repo (no build-arg needed)
+FROM alpine:3.21 AS git-info
+RUN apk add --no-cache git
+WORKDIR /repo
+COPY .git .git
+RUN git rev-parse HEAD > /git-sha
 
 # Stage 1: Build frontend
 FROM node:22-alpine AS frontend-builder
-ARG GIT_SHA
+COPY --from=git-info /git-sha /tmp/git-sha
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
-ENV VITE_GIT_SHA=${GIT_SHA}
-RUN npm run build
+RUN VITE_GIT_SHA=$(cat /tmp/git-sha) npm run build
 # Write the SHA to a .version file so the Go backend can read it
-RUN echo "${GIT_SHA}" > dist/.version
+RUN cp /tmp/git-sha dist/.version
 
 # Stage 2: Build Go binary
 FROM golang:1.25-alpine AS builder
-ARG GIT_SHA
+COPY --from=git-info /git-sha /tmp/git-sha
 RUN apk add --no-cache git
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend-builder /frontend/dist ./internal/web/spa/
-RUN CGO_ENABLED=0 GOOS=linux go build \
+RUN GIT_SHA=$(cat /tmp/git-sha) && \
+    CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X main.Version=${GIT_SHA} -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     -o checker ./cmd/app
 
