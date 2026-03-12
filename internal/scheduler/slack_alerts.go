@@ -10,9 +10,17 @@ import (
 	"checker/internal/slack"
 )
 
+// SlackSender abstracts the Slack client methods used by SlackAlerter.
+// This enables testing without a real Slack connection.
+type SlackSender interface {
+	PostAlert(ctx context.Context, channelID string, info slack.CheckAlertInfo) (string, error)
+	SendAlertReply(ctx context.Context, channelID, threadTS string, info slack.CheckAlertInfo) (string, error)
+	SendResolve(ctx context.Context, info slack.CheckAlertInfo, originalThreadTS, channelID string) error
+}
+
 // SlackAlerter sends Slack App alerts with thread tracking and silence support.
 type SlackAlerter struct {
-	client         *slack.SlackClient
+	client         SlackSender
 	repo           db.Repository
 	defaultChannel string
 }
@@ -29,9 +37,20 @@ func NewSlackAlerter(client *slack.SlackClient, repo db.Repository, defaultChann
 	}
 }
 
-// SendAlert posts a Slack alert for a failing check. If an unresolved thread exists,
-// it posts a thread reply instead of a new message.
-func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefinition, status models.CheckStatus) {
+// newSlackAlerterWithSender creates a SlackAlerter with a custom SlackSender (for testing).
+func newSlackAlerterWithSender(sender SlackSender, repo db.Repository, defaultChannel string) *SlackAlerter {
+	return &SlackAlerter{
+		client:         sender,
+		repo:           repo,
+		defaultChannel: defaultChannel,
+	}
+}
+
+// SendAlert posts a Slack alert for a failing check. If an unresolved thread exists
+// and this is NOT a new incident, it posts a thread reply. If isNewIncident is true
+// (check transitioned from healthy to unhealthy), any stale unresolved threads are
+// resolved first and a fresh thread is created.
+func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefinition, status models.CheckStatus, isNewIncident bool) {
 	// Check if silenced
 	silenced, err := sa.repo.IsCheckSilenced(ctx, checkDef.UUID, checkDef.Project)
 	if err != nil {
@@ -62,13 +81,25 @@ func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefi
 	// Check for existing unresolved thread (ongoing failure)
 	thread, err := sa.repo.GetUnresolvedThread(ctx, checkDef.UUID)
 	if err == nil && thread.ThreadTs != "" {
-		replyTs, err := sa.client.SendAlertReply(ctx, thread.ChannelID, thread.ThreadTs, alertInfo)
-		if err != nil {
-			logrus.Errorf("Failed to send Slack App thread reply for check %s: %v", checkDef.UUID, err)
+		if isNewIncident {
+			// This is a new failure incident but there's a stale unresolved thread
+			// from a previous incident. This can happen if HandleRecovery was missed
+			// (e.g., due to stale in-memory state or a Slack API failure).
+			// Resolve the stale thread so we create a fresh one below.
+			logrus.Warnf("Check %s has a stale unresolved thread from a previous incident, resolving it before creating new thread", checkDef.UUID)
+			if resolveErr := sa.repo.ResolveThread(ctx, checkDef.UUID); resolveErr != nil {
+				logrus.Errorf("Failed to resolve stale thread for check %s: %v", checkDef.UUID, resolveErr)
+			}
+		} else {
+			// Ongoing failure — reply to existing thread
+			replyTs, replyErr := sa.client.SendAlertReply(ctx, thread.ChannelID, thread.ThreadTs, alertInfo)
+			if replyErr != nil {
+				logrus.Errorf("Failed to send Slack App thread reply for check %s: %v", checkDef.UUID, replyErr)
+				return
+			}
+			logrus.Infof("Slack App thread reply sent for check %s (thread: %s, reply: %s)", checkDef.UUID, thread.ThreadTs, replyTs)
 			return
 		}
-		logrus.Infof("Slack App thread reply sent for check %s (thread: %s, reply: %s)", checkDef.UUID, thread.ThreadTs, replyTs)
-		return
 	}
 
 	// New failure: post new top-level alert
@@ -111,10 +142,14 @@ func (sa *SlackAlerter) HandleRecovery(ctx context.Context, checkDef models.Chec
 		Frequency: checkDef.Duration,
 	}
 
+	// Send Slack resolution message (cosmetic — failure here should NOT prevent
+	// the DB thread from being resolved, which is what matters for future decisions).
 	if err := sa.client.SendResolve(ctx, alertInfo, thread.ThreadTs, thread.ChannelID); err != nil {
-		logrus.Errorf("Failed to post Slack resolution for check %s: %v", checkDef.UUID, err)
+		logrus.Errorf("Failed to post Slack resolution for check %s: %v (will still resolve thread in DB)", checkDef.UUID, err)
 	}
 
+	// Always resolve the thread in DB — this is the critical state change that ensures
+	// future failures create a new thread instead of replying to this resolved one.
 	if err := sa.repo.ResolveThread(ctx, checkDef.UUID); err != nil {
 		logrus.Errorf("Failed to resolve Slack thread for check %s: %v", checkDef.UUID, err)
 	}

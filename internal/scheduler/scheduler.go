@@ -270,14 +270,25 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 		Periodicity: checkDef.Duration,
 	}
 
+	// Read current health state from DB BEFORE updating, for accurate state
+	// transition detection. The in-memory checkDef.IsHealthy may be stale
+	// (only refreshed every 10s via Sync), which can cause HandleRecovery
+	// to be missed if a check recovers and re-fails between syncs.
+	var previouslyHealthy bool
+	if prevDef, prevErr := repo.GetCheckDefinitionByUUID(context.Background(), checkDef.UUID); prevErr == nil {
+		previouslyHealthy = prevDef.IsHealthy
+	} else {
+		previouslyHealthy = checkDef.IsHealthy // fallback to in-memory
+	}
+
 	// Update status in database
 	if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 		logger.WithError(err).Error("Failed to update check status")
 		return err
 	}
 
-	// Detect state transition for Slack recovery
-	wasUnhealthy := !checkDef.IsHealthy
+	// Detect state transition for Slack recovery using the DB-sourced previous state
+	wasUnhealthy := !previouslyHealthy
 
 	// Handle alerts if check fails
 	if !isHealthy {
@@ -295,7 +306,11 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 
 		// Slack App alert (runs alongside existing alerts)
 		if slackAlerter != nil {
-			slackAlerter.SendAlert(context.Background(), checkDef, checkStatus)
+			// isNewIncident is true when the check transitions from healthy to unhealthy.
+			// This tells SendAlert to create a fresh thread instead of replying to any
+			// stale unresolved thread left over from a previous incident.
+			isNewIncident := previouslyHealthy
+			slackAlerter.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
 		}
 	}
 
