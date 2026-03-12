@@ -17,6 +17,7 @@ import { StatusBar } from '@/components/StatusBar'
 import { useChecks } from '@/hooks/useChecks'
 import { useEventLog } from '@/hooks/useEventLog'
 import { useKeyboard } from '@/hooks/useKeyboard'
+import { api } from '@/lib/api'
 import type { Check } from '@/lib/websocket'
 
 const COLLAPSED_KEY = 'checker-collapsed-groups'
@@ -115,10 +116,7 @@ export function Dashboard() {
 
   const handleToggleCheck = useCallback(async (uuid: string, enabled: boolean) => {
     try {
-      await fetch(`/api/check-definitions/${uuid}/toggle`, {
-        method: 'PATCH',
-        credentials: 'include',
-      })
+      await api.toggleCheck(uuid, enabled)
     } catch (err) {
       console.error('Failed to toggle check:', err)
     }

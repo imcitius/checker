@@ -222,7 +222,9 @@ func DeleteCheckDefinition(c *gin.Context) {
 	})
 }
 
-// ToggleCheckDefinitionStatus enables or disables a check definition
+// ToggleCheckDefinitionStatus enables or disables a check definition.
+// If the "enabled" query parameter is provided, the check is set to that value.
+// Otherwise, the current enabled state is flipped (true toggle).
 func ToggleCheckDefinitionStatus(c *gin.Context) {
 	repo := c.MustGet("repo").(db.Repository)
 	uuid := c.Param("uuid")
@@ -234,10 +236,25 @@ func ToggleCheckDefinitionStatus(c *gin.Context) {
 		return
 	}
 
-	enabled := c.Query("enabled") == "true"
-
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
+
+	var enabled bool
+	if enabledParam := c.Query("enabled"); enabledParam != "" {
+		// Explicit enabled value provided — use it
+		enabled = enabledParam == "true"
+	} else {
+		// No explicit value — fetch current state and flip it
+		def, err := repo.GetCheckDefinitionByUUID(ctx, uuid)
+		if err != nil {
+			logrus.Errorf("Failed to get check definition %s for toggle: %v", uuid, err)
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "Check definition not found",
+			})
+			return
+		}
+		enabled = !def.Enabled
+	}
 
 	if err := repo.ToggleCheckDefinition(ctx, uuid, enabled); err != nil {
 		logrus.Errorf("Failed to toggle check definition %s: %v", uuid, err)

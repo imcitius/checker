@@ -101,10 +101,11 @@ export const api = {
     }),
   deleteCheck: (uuid: string) =>
     request<void>(`/api/check-definitions/${uuid}`, { method: 'DELETE' }),
-  toggleCheck: (uuid: string) =>
-    request<{ enabled: boolean }>(`/api/check-definitions/${uuid}/toggle`, {
-      method: 'PATCH',
-    }),
+  toggleCheck: (uuid: string, enabled?: boolean) =>
+    request<{ enabled: boolean }>(
+      `/api/check-definitions/${uuid}/toggle${enabled !== undefined ? `?enabled=${enabled}` : ''}`,
+      { method: 'PATCH' }
+    ),
   getProjects: () => request<string[]>('/api/metadata/projects'),
   getCheckTypes: () => request<string[]>('/api/metadata/check-types'),
   getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),
