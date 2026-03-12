@@ -178,6 +178,11 @@ func (r *mockRepo) GetActiveSilences(_ context.Context) ([]models.AlertSilence, 
 func (r *mockRepo) GetUnhealthyChecks(_ context.Context) ([]models.CheckDefinition, error) {
 	return nil, nil
 }
+func (r *mockRepo) CreateAlertEvent(_ context.Context, _ models.AlertEvent) error { return nil }
+func (r *mockRepo) ResolveAlertEvent(_ context.Context, _ string) error           { return nil }
+func (r *mockRepo) GetAlertHistory(_ context.Context, _, _ int, _ models.AlertHistoryFilters) ([]models.AlertEvent, int, error) {
+	return nil, 0, nil
+}
 func (r *mockRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.Config) error {
 	return nil
 }

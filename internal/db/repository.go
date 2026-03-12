@@ -33,4 +33,9 @@ type Repository interface {
 	DeactivateSilence(ctx context.Context, scope, target string) error
 	GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error)
 	GetUnhealthyChecks(ctx context.Context) ([]models.CheckDefinition, error)
+
+	// Alert history
+	CreateAlertEvent(ctx context.Context, event models.AlertEvent) error
+	ResolveAlertEvent(ctx context.Context, checkUUID string) error
+	GetAlertHistory(ctx context.Context, limit, offset int, filters models.AlertHistoryFilters) ([]models.AlertEvent, int, error)
 }

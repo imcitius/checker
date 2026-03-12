@@ -500,6 +500,75 @@ func (db *PostgresDB) GetUnhealthyChecks(ctx context.Context) ([]models.CheckDef
 	return checks, nil
 }
 
+// Alert history
+
+func (db *PostgresDB) CreateAlertEvent(ctx context.Context, event models.AlertEvent) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO alert_history (check_uuid, check_name, project, group_name, check_type, message, alert_type)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		event.CheckUUID, event.CheckName, event.Project, event.GroupName, event.CheckType, event.Message, event.AlertType)
+	return err
+}
+
+func (db *PostgresDB) ResolveAlertEvent(ctx context.Context, checkUUID string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE alert_history SET is_resolved = true, resolved_at = NOW()
+		 WHERE check_uuid = $1 AND is_resolved = false`, checkUUID)
+	return err
+}
+
+func (db *PostgresDB) GetAlertHistory(ctx context.Context, limit, offset int, filters models.AlertHistoryFilters) ([]models.AlertEvent, int, error) {
+	// Build WHERE clause dynamically
+	where := ""
+	args := []interface{}{}
+	argIdx := 1
+
+	if filters.Project != "" {
+		where += fmt.Sprintf(" AND project = $%d", argIdx)
+		args = append(args, filters.Project)
+		argIdx++
+	}
+	if filters.CheckUUID != "" {
+		where += fmt.Sprintf(" AND check_uuid = $%d", argIdx)
+		args = append(args, filters.CheckUUID)
+		argIdx++
+	}
+	if filters.IsResolved != nil {
+		where += fmt.Sprintf(" AND is_resolved = $%d", argIdx)
+		args = append(args, *filters.IsResolved)
+		argIdx++
+	}
+
+	// Get total count
+	countQuery := "SELECT COUNT(*) FROM alert_history WHERE 1=1" + where
+	var total int
+	if err := db.Pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	query := fmt.Sprintf(
+		"SELECT id, check_uuid, check_name, project, group_name, check_type, message, alert_type, created_at, resolved_at, is_resolved FROM alert_history WHERE 1=1%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		where, argIdx, argIdx+1)
+	args = append(args, limit, offset)
+
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var events []models.AlertEvent
+	for rows.Next() {
+		var e models.AlertEvent
+		if err := rows.Scan(&e.ID, &e.CheckUUID, &e.CheckName, &e.Project, &e.GroupName, &e.CheckType, &e.Message, &e.AlertType, &e.CreatedAt, &e.ResolvedAt, &e.IsResolved); err != nil {
+			return nil, 0, err
+		}
+		events = append(events, e)
+	}
+	return events, total, rows.Err()
+}
+
 func unmarshalConfig(checkType string, data []byte) (models.CheckConfig, error) {
 	switch checkType {
 	case "http":

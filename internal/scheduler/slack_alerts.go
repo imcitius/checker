@@ -115,6 +115,20 @@ func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefi
 	if err := sa.repo.CreateSlackThread(ctx, checkDef.UUID, channelID, messageTs, messageTs); err != nil {
 		logrus.Errorf("Failed to track Slack thread for check %s: %v", checkDef.UUID, err)
 	}
+
+	// Record alert event in history
+	alertEvent := models.AlertEvent{
+		CheckUUID: checkDef.UUID,
+		CheckName: checkDef.Name,
+		Project:   checkDef.Project,
+		GroupName: checkDef.GroupName,
+		CheckType: checkDef.Type,
+		Message:   status.Message,
+		AlertType: "slack",
+	}
+	if err := sa.repo.CreateAlertEvent(ctx, alertEvent); err != nil {
+		logrus.Errorf("Failed to record alert event for check %s: %v", checkDef.UUID, err)
+	}
 }
 
 // HandleRecovery resolves an existing Slack thread when a check recovers.
@@ -152,6 +166,11 @@ func (sa *SlackAlerter) HandleRecovery(ctx context.Context, checkDef models.Chec
 	// future failures create a new thread instead of replying to this resolved one.
 	if err := sa.repo.ResolveThread(ctx, checkDef.UUID); err != nil {
 		logrus.Errorf("Failed to resolve Slack thread for check %s: %v", checkDef.UUID, err)
+	}
+
+	// Resolve alert event in history
+	if err := sa.repo.ResolveAlertEvent(ctx, checkDef.UUID); err != nil {
+		logrus.Errorf("Failed to resolve alert event for check %s: %v", checkDef.UUID, err)
 	}
 
 	if err := sa.repo.UpdateSlackThread(ctx, checkDef.UUID, "", ""); err != nil {
