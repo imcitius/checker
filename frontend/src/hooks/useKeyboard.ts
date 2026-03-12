@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface KeyboardActions {
   onNavigateDown: () => void
@@ -11,8 +11,11 @@ interface KeyboardActions {
 }
 
 export function useKeyboard(actions: KeyboardActions) {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+  const actionsRef = useRef(actions)
+  actionsRef.current = actions
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement
       const isInput =
         target.tagName === 'INPUT' ||
@@ -23,7 +26,7 @@ export function useKeyboard(actions: KeyboardActions) {
       // Cmd+K — command palette (always active)
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        actions.onCommandPalette()
+        actionsRef.current.onCommandPalette()
         return
       }
 
@@ -33,7 +36,7 @@ export function useKeyboard(actions: KeyboardActions) {
           ;(target as HTMLInputElement).blur()
           return
         }
-        actions.onCollapse()
+        actionsRef.current.onCollapse()
         return
       }
 
@@ -43,31 +46,28 @@ export function useKeyboard(actions: KeyboardActions) {
       switch (e.key) {
         case 'j':
           e.preventDefault()
-          actions.onNavigateDown()
+          actionsRef.current.onNavigateDown()
           break
         case 'k':
           e.preventDefault()
-          actions.onNavigateUp()
+          actionsRef.current.onNavigateUp()
           break
         case 'Enter':
           e.preventDefault()
-          actions.onExpand()
+          actionsRef.current.onExpand()
           break
         case '/':
           e.preventDefault()
-          actions.onFocusSearch()
+          actionsRef.current.onFocusSearch()
           break
         case 'g':
           e.preventDefault()
-          actions.onToggleGroup()
+          actionsRef.current.onToggleGroup()
           break
       }
-    },
-    [actions]
-  )
+    }
 
-  useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
+  }, [])
 }
