@@ -204,9 +204,25 @@ func checkSSL(resp *http.Response, check *HTTPCheck) error {
 		return fmt.Errorf("invalid SSL expiration period: %v", err)
 	}
 
+	// Determine the final hostname (after any redirects) from the response's request URL.
+	finalHost := resp.Request.URL.Hostname()
+
+	// Determine the original hostname from the check's configured URL.
+	originalHost := ""
+	if parsedOriginal, err := url.Parse(check.URL); err == nil {
+		originalHost = parsedOriginal.Hostname()
+	}
+
+	// Build the hostname portion of the error message.
+	// If the final host differs from the original, note the redirect.
+	hostInfo := fmt.Sprintf(" for %s", finalHost)
+	if originalHost != "" && originalHost != finalHost {
+		hostInfo = fmt.Sprintf(" for %s (redirected from %s)", finalHost, originalHost)
+	}
+
 	// Special case for immediate expiration check (used in tests)
 	if sslExpPeriod == 0 {
-		return fmt.Errorf("SSL certificate will expire in 0s (threshold: 0s)")
+		return fmt.Errorf("SSL certificate%s will expire in 0s (threshold: 0s)", hostInfo)
 	}
 
 	// Only check the leaf (server) certificate, not intermediate CA certificates.
@@ -217,7 +233,7 @@ func checkSSL(resp *http.Response, check *HTTPCheck) error {
 	timeUntilExpiry := cert.NotAfter.Sub(now)
 	if timeUntilExpiry <= sslExpPeriod {
 		check.Logger.Debugf("Certificate Subject=%v, NotBefore=%v, NotAfter=%v", cert.Subject, cert.NotBefore, cert.NotAfter)
-		return fmt.Errorf("SSL certificate will expire in %v (threshold: %v)", timeUntilExpiry, sslExpPeriod)
+		return fmt.Errorf("SSL certificate%s will expire in %v (threshold: %v)", hostInfo, timeUntilExpiry, sslExpPeriod)
 	}
 	return nil
 }

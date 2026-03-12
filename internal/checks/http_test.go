@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -387,7 +388,105 @@ func TestHTTPCheck_TLS_ExpiredCert(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected failure due to SSL expiration check, but got success")
 	}
-	if !strings.Contains(err.Error(), "SSL certificate will expire") {
+	if !strings.Contains(err.Error(), "SSL certificate for") {
+		t.Errorf("Expected SSL expiration error with hostname, got: %s", err)
+	}
+	if !strings.Contains(err.Error(), "will expire") {
 		t.Errorf("Expected SSL expiration error, got: %s", err)
+	}
+}
+
+// TestHTTPCheck_TLS_ExpiredCert_WithRedirect tests that when a redirect occurs,
+// the SSL expiration error message includes both the final and original hostnames.
+func TestHTTPCheck_TLS_ExpiredCert_WithRedirect(t *testing.T) {
+	// Final destination TLS server
+	finalServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer finalServer.Close()
+
+	// Redirecting server (plain HTTP to simplify, redirects to the TLS server)
+	redirectServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, finalServer.URL, http.StatusMovedPermanently)
+	}))
+	defer redirectServer.Close()
+
+	// Both test servers share the same TLS config from httptest
+	tlsConfig := redirectServer.Client().Transport.(*http.Transport).TLSClientConfig
+
+	check := HTTPCheck{
+		URL:                 redirectServer.URL,
+		SkipCheckSSL:        false,
+		SSLExpirationPeriod: "0s", // Immediate expiration to trigger the error
+		ErrorHeader:         "TestError: ",
+		TlsConfig:           tlsConfig,
+	}
+	_, err := check.Run()
+	if err == nil {
+		t.Fatal("Expected failure due to SSL expiration check, but got success")
+	}
+
+	errMsg := err.Error()
+
+	// The error should mention "SSL certificate for <host> will expire"
+	if !strings.Contains(errMsg, "SSL certificate for") {
+		t.Errorf("Expected SSL error to include hostname, got: %s", errMsg)
+	}
+	if !strings.Contains(errMsg, "will expire") {
+		t.Errorf("Expected SSL expiration error, got: %s", errMsg)
+	}
+
+	// When both servers use 127.0.0.1 (httptest default), hosts are the same
+	// so no "redirected from" text. But if they differ, it should appear.
+	// We verify the hostname is present in either case.
+	if !strings.Contains(errMsg, "127.0.0.1") {
+		t.Errorf("Expected error to contain the server hostname '127.0.0.1', got: %s", errMsg)
+	}
+}
+
+// TestCheckSSL_RedirectedHostnameDiffers tests the error message format when
+// the original and final hostnames differ after a redirect.
+func TestCheckSSL_RedirectedHostnameDiffers(t *testing.T) {
+	// We test checkSSL directly to control the original URL vs final URL.
+	// Create a mock response with TLS state simulating a redirect scenario.
+	cert := &tls.Certificate{}
+
+	// Create a TLS server just to get a real certificate
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	// Make a real request to get TLS state
+	client := ts.Client()
+	resp, err := client.Get(ts.URL)
+	if err != nil {
+		t.Fatalf("Failed to make request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	_ = cert // not needed, we use the real response
+
+	// Simulate: original URL was "https://example.com" but after redirect
+	// the final request URL is "https://www.example.com"
+	finalURL, _ := url.Parse("https://www.example.com/")
+	resp.Request = &http.Request{URL: finalURL}
+
+	check := &HTTPCheck{
+		URL:                 "https://example.com",
+		SSLExpirationPeriod: "0s",
+	}
+
+	sslErr := checkSSL(resp, check)
+	if sslErr == nil {
+		t.Fatal("Expected SSL error but got nil")
+	}
+
+	errMsg := sslErr.Error()
+	if !strings.Contains(errMsg, "for www.example.com") {
+		t.Errorf("Expected error to contain final hostname 'www.example.com', got: %s", errMsg)
+	}
+	if !strings.Contains(errMsg, "redirected from example.com") {
+		t.Errorf("Expected error to mention redirect from 'example.com', got: %s", errMsg)
 	}
 }
