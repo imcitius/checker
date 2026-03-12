@@ -29,6 +29,7 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 			URL:                 config.URL,
 			Timeout:             config.Timeout,
 			Answer:              config.Answer,
+			AnswerPresent:       config.AnswerPresent,
 			Code:                config.Code,
 			Auth:                struct{ User, Password string }{config.Auth.User, config.Auth.Password},
 			Headers:             config.Headers,

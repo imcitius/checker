@@ -81,9 +81,10 @@ func TestHTTPCheck_AnswerPresent_Success(t *testing.T) {
 	defer ts.Close()
 
 	check := HTTPCheck{
-		URL:         ts.URL,
-		Answer:      "quick.*fox",
-		ErrorHeader: "TestError: ",
+		URL:           ts.URL,
+		Answer:        "quick.*fox",
+		AnswerPresent: true,
+		ErrorHeader:   "TestError: ",
 	}
 	_, err := check.Run()
 	if err != nil {
@@ -100,9 +101,10 @@ func TestHTTPCheck_AnswerPresent_Failure(t *testing.T) {
 	defer ts.Close()
 
 	check := HTTPCheck{
-		URL:         ts.URL,
-		Answer:      "Hello",
-		ErrorHeader: "TestError: ",
+		URL:           ts.URL,
+		Answer:        "Hello",
+		AnswerPresent: true,
+		ErrorHeader:   "TestError: ",
 	}
 	_, err := check.Run()
 	if err == nil {
@@ -142,15 +144,62 @@ func TestHTTPCheck_InvalidRegex(t *testing.T) {
 	defer ts.Close()
 
 	check := HTTPCheck{
-		URL:         ts.URL,
-		Answer:      "[invalid regex",
-		ErrorHeader: "TestError: ",
+		URL:           ts.URL,
+		Answer:        "[invalid regex",
+		AnswerPresent: true,
+		ErrorHeader:   "TestError: ",
 	}
 	_, err := check.Run()
 	if err == nil {
 		t.Fatal("Expected failure because the regex pattern is invalid")
 	}
 	expectedErr := "error processing answer regex"
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Expected error containing %q, got %q", expectedErr, err.Error())
+	}
+}
+
+// TestHTTPCheck_AnswerAbsent_PatternNotFound_Success tests that when AnswerPresent is false
+// and the pattern is NOT found in the response, the check succeeds.
+func TestHTTPCheck_AnswerAbsent_PatternNotFound_Success(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("The lazy dog."))
+	}))
+	defer ts.Close()
+
+	check := HTTPCheck{
+		URL:           ts.URL,
+		Answer:        "fox",
+		AnswerPresent: false,
+		ErrorHeader:   "TestError: ",
+	}
+	_, err := check.Run()
+	if err != nil {
+		t.Fatalf("Expected success because pattern should be absent, got failure: %s", err)
+	}
+}
+
+// TestHTTPCheck_AnswerAbsent_PatternFound_Failure tests that when AnswerPresent is false
+// and the pattern IS found in the response, the check fails.
+func TestHTTPCheck_AnswerAbsent_PatternFound_Failure(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("The quick brown fox."))
+	}))
+	defer ts.Close()
+
+	check := HTTPCheck{
+		URL:           ts.URL,
+		Answer:        "fox",
+		AnswerPresent: false,
+		ErrorHeader:   "TestError: ",
+	}
+	_, err := check.Run()
+	if err == nil {
+		t.Fatal("Expected failure because pattern was found but should be absent")
+	}
+	expectedErr := "unexpected pattern 'fox' found in response"
 	if !strings.Contains(err.Error(), expectedErr) {
 		t.Errorf("Expected error containing %q, got %q", expectedErr, err.Error())
 	}

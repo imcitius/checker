@@ -19,8 +19,9 @@ type HTTPCheck struct {
 	Scheme  string // e.g., "http", "https"
 	Method  string // e.g., "GET", "POST", "PUT"
 	Timeout string // e.g., "5s"
-	Answer  string // regex pattern to check in the response body
-	Code    []int  // expected HTTP status codes; default is [200]
+	Answer        string // regex pattern to check in the response body
+	AnswerPresent bool   // if true, answer pattern must be found; if false, answer pattern must NOT be found
+	Code          []int  // expected HTTP status codes; default is [200]
 	Auth    struct {
 		User     string
 		Password string
@@ -167,7 +168,11 @@ func (check *HTTPCheck) Run() (time.Duration, error) {
 	// Validate answer content using regex if an answer pattern is provided.
 	if check.Answer != "" {
 		if len(bodyBytes) == 0 {
-			return time.Since(start), fmt.Errorf("HTTP response body is empty")
+			if check.AnswerPresent {
+				return time.Since(start), fmt.Errorf("HTTP response body is empty")
+			}
+			// Body is empty and we expected pattern to be absent — that's a pass.
+			return time.Since(start), nil
 		}
 
 		matched, err := regexp.Match(check.Answer, bodyBytes)
@@ -175,12 +180,15 @@ func (check *HTTPCheck) Run() (time.Duration, error) {
 			return time.Since(start), fmt.Errorf("error processing answer regex: %v", err)
 		}
 
-		if !matched {
+		if check.AnswerPresent && !matched {
 			answerText := string(bodyBytes)
 			if len(answerText) > 350 {
 				answerText = fmt.Sprintf("response too long (%d bytes)", len(answerText))
 			}
 			return time.Since(start), fmt.Errorf("expected pattern '%s' not found in response: %s", check.Answer, answerText)
+		}
+		if !check.AnswerPresent && matched {
+			return time.Since(start), fmt.Errorf("unexpected pattern '%s' found in response", check.Answer)
 		}
 	}
 

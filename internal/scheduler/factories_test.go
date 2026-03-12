@@ -51,6 +51,9 @@ func TestCheckerFactory_Http(t *testing.T) {
 	if httpCheck.Answer != "ok" {
 		t.Errorf("Expected Answer to be 'ok', got '%s'", httpCheck.Answer)
 	}
+	if httpCheck.AnswerPresent != true {
+		t.Errorf("Expected AnswerPresent to be true, got %v", httpCheck.AnswerPresent)
+	}
 	if !httpCheck.SkipCheckSSL == checkDef.Config.(*models.HTTPCheckConfig).SkipCheckSSL {
 		t.Errorf("Expected SkipCheckSSL to be %v, got %v", checkDef.Config.(*models.HTTPCheckConfig).SkipCheckSSL, httpCheck.SkipCheckSSL)
 	}
