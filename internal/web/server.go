@@ -170,6 +170,15 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	// Version endpoint (public — used to verify build/deploy identity)
+	router.GET("/api/version", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"version":          AppVersion,
+			"build_time":       BuildTime,
+			"frontend_version": FrontendVersion(),
+		})
+	})
+
 	// Public auth routes (no auth required)
 	router.GET("/auth/login", authMgr.HandleLogin)
 	router.GET("/auth/callback", authMgr.HandleCallback)

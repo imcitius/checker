@@ -20,7 +20,16 @@ import (
 	"checker/internal/web"
 )
 
+// Injected at build time via -ldflags.
+var (
+	Version   string // git SHA
+	BuildTime string // build timestamp
+)
+
 func main() {
+	// Pass build-time version info to the web package.
+	web.AppVersion = Version
+	web.BuildTime = BuildTime
 	// Set up logging
 	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,

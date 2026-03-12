@@ -5,13 +5,14 @@ build: build-frontend build-go
 
 # Build the React frontend and copy to internal/web/spa/
 build-frontend:
-	cd frontend && npm run build
+	cd frontend && VITE_GIT_SHA=$$(git rev-parse HEAD) npm run build
 	rm -rf internal/web/spa
 	cp -r frontend/dist internal/web/spa
+	git rev-parse HEAD > internal/web/spa/.version
 
 # Build the Go binary (expects internal/web/spa/ to exist)
 build-go:
-	go build -o app ./cmd/app
+	go build -ldflags="-s -w -X main.Version=$$(git rev-parse HEAD) -X main.BuildTime=$$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o app ./cmd/app
 
 # Clean build artifacts
 clean:
