@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api, type CheckDefinition } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +33,19 @@ import { api as apiClient } from '@/lib/api'
 type SortColumn = 'name' | 'project' | 'type' | 'duration' | 'enabled'
 type SortDirection = 'asc' | 'desc'
 
+const VALID_SORT_COLUMNS: readonly string[] = ['name', 'project', 'type', 'duration', 'enabled'] as const
+const VALID_SORT_DIRECTIONS: readonly string[] = ['asc', 'desc'] as const
+
+function parseSortColumn(value: string | null): SortColumn | null {
+  if (value && VALID_SORT_COLUMNS.includes(value)) return value as SortColumn
+  return null
+}
+
+function parseSortDirection(value: string | null): SortDirection {
+  if (value && VALID_SORT_DIRECTIONS.includes(value)) return value as SortDirection
+  return 'asc'
+}
+
 const EMPTY_FORM: Partial<CheckDefinition> = {
   name: '',
   project: '',
@@ -55,9 +69,10 @@ export function Management() {
   const [projectFilter, setProjectFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // Sort state
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  // Sort state — persisted in URL search params
+  const [searchParams, setSearchParams] = useSearchParams()
+  const sortColumn = parseSortColumn(searchParams.get('sort'))
+  const sortDirection = parseSortDirection(searchParams.get('dir'))
 
   // Dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -116,18 +131,23 @@ export function Management() {
   })
 
   const handleSort = (column: SortColumn) => {
-    if (sortColumn === column) {
-      if (sortDirection === 'asc') {
-        setSortDirection('desc')
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (sortColumn === column) {
+        if (sortDirection === 'asc') {
+          next.set('sort', column)
+          next.set('dir', 'desc')
+        } else {
+          // Third click resets sorting — clear params
+          next.delete('sort')
+          next.delete('dir')
+        }
       } else {
-        // Third click resets sorting
-        setSortColumn(null)
-        setSortDirection('asc')
+        next.set('sort', column)
+        next.set('dir', 'asc')
       }
-    } else {
-      setSortColumn(column)
-      setSortDirection('asc')
-    }
+      return next
+    }, { replace: true })
   }
 
   const sorted = useMemo(() => {
