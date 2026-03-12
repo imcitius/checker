@@ -172,7 +172,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
               </span>
             </div>
 
-            {validation.errors.length > 0 && (
+            {validation.errors && validation.errors.length > 0 && (
               <div className="rounded-md bg-destructive/10 border border-destructive/30 p-3 space-y-1">
                 <p className="text-sm font-medium text-destructive">Validation Errors:</p>
                 {validation.errors.map((e, i) => (

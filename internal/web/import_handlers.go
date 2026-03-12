@@ -165,7 +165,7 @@ func resolveChecks(payload *models.CheckImportPayload) []models.CheckImportItem 
 
 // validateChecks returns validation errors for each check.
 func validateChecks(checks []models.CheckImportItem) []models.CheckImportError {
-	var errors []models.CheckImportError
+	errors := make([]models.CheckImportError, 0)
 
 	for i, check := range checks {
 		if check.Name == "" {
