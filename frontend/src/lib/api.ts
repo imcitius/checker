@@ -86,6 +86,47 @@ export interface CheckImportValidation {
   count: number
 }
 
+export interface AlertEvent {
+  ID: number
+  CheckUUID: string
+  CheckName: string
+  Project: string
+  GroupName: string
+  CheckType: string
+  Message: string
+  AlertType: string
+  CreatedAt: string
+  ResolvedAt: string | null
+  IsResolved: boolean
+}
+
+export interface AlertsResponse {
+  alerts: AlertEvent[]
+  total: number
+}
+
+export interface AlertSilence {
+  ID: number
+  Scope: string
+  Target: string
+  SilencedBy: string
+  SilencedAt: string
+  ExpiresAt: string | null
+  Reason: string
+  Active: boolean
+}
+
+export interface SilencesResponse {
+  silences: AlertSilence[]
+}
+
+export interface CreateSilenceRequest {
+  scope: 'check' | 'project'
+  target: string
+  duration: string
+  reason?: string
+}
+
 export const api = {
   getChecks: () => request<CheckDefinition[]>('/api/check-definitions'),
   getCheck: (uuid: string) => request<CheckDefinition>(`/api/check-definitions/${uuid}`),
@@ -106,6 +147,25 @@ export const api = {
       `/api/check-definitions/${uuid}/toggle${enabled !== undefined ? `?enabled=${enabled}` : ''}`,
       { method: 'PATCH' }
     ),
+  // Alerts & Silences
+  getAlerts: (params?: { limit?: number; offset?: number; project?: string; status?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    if (params?.offset) searchParams.set('offset', String(params.offset))
+    if (params?.project) searchParams.set('project', params.project)
+    if (params?.status) searchParams.set('status', params.status)
+    const query = searchParams.toString()
+    return request<AlertsResponse>(`/api/alerts${query ? '?' + query : ''}`)
+  },
+  getSilences: () => request<SilencesResponse>('/api/silences'),
+  createSilence: (data: CreateSilenceRequest) =>
+    request<{ message: string; silence: AlertSilence }>('/api/silences', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteSilence: (id: number) =>
+    request<{ message: string }>(`/api/silences/${id}`, { method: 'DELETE' }),
+
   getProjects: () => request<string[]>('/api/metadata/projects'),
   getCheckTypes: () => request<string[]>('/api/metadata/check-types'),
   getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),

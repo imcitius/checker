@@ -1,4 +1,4 @@
-import { Search, Settings, LogOut, User, Keyboard } from 'lucide-react'
+import { Search, Settings, LogOut, User, Keyboard, Bell } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import {
@@ -77,6 +77,15 @@ export function TopBar({
               >
                 <Settings className="h-4 w-4 mr-1" />
                 Manage
+              </Button>
+            </Link>
+            <Link to="/alerts">
+              <Button
+                variant={location.pathname === '/alerts' ? 'secondary' : 'ghost'}
+                size="sm"
+              >
+                <Bell className="h-4 w-4 mr-1" />
+                Alerts
               </Button>
             </Link>
           </nav>

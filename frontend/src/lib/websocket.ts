@@ -1,6 +1,22 @@
+export interface AlertEvent {
+  ID: number
+  CheckUUID: string
+  CheckName: string
+  Project: string
+  GroupName: string
+  CheckType: string
+  Message: string
+  AlertType: string
+  CreatedAt: string
+  ResolvedAt: string | null
+  IsResolved: boolean
+}
+
 export type WSMessage =
   | { type: 'checks'; checks: Check[]; count: number; timestamp: number }
   | { type: 'update'; check: Check }
+  | { type: 'alert_new'; alert: AlertEvent }
+  | { type: 'alert_resolved'; check_uuid: string }
 
 export interface Check {
   ID: string
