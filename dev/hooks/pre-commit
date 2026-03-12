@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: automatically rebuild the embedded SPA when frontend
+# source files are part of the commit.
+#
+# Install with: make install-hooks
+#
+set -euo pipefail
+
+# Check if any staged files are under frontend/ (excluding node_modules and dist)
+FRONTEND_CHANGED=$(git diff --cached --name-only -- 'frontend/' | grep -v 'frontend/node_modules/' | grep -v 'frontend/dist/' || true)
+
+if [ -z "$FRONTEND_CHANGED" ]; then
+    exit 0
+fi
+
+echo "🔨 Frontend source files changed — rebuilding embedded SPA..."
+
+# Ensure node_modules are installed
+if [ ! -d "frontend/node_modules" ]; then
+    echo "   Installing frontend dependencies..."
+    (cd frontend && npm ci --silent)
+fi
+
+# Build the frontend
+(cd frontend && npm run build --silent)
+
+# Copy built assets into the Go embed directory
+rm -rf internal/web/spa
+cp -r frontend/dist internal/web/spa
+
+# Stage the updated SPA files so they're included in this commit
+git add internal/web/spa/
+
+echo "✅ Embedded SPA rebuilt and staged."

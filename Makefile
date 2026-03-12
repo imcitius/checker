@@ -1,4 +1,4 @@
-.PHONY: build build-frontend build-go clean dev
+.PHONY: build build-frontend build-go clean dev install-hooks setup
 
 # Build everything: frontend + Go binary
 build: build-frontend build-go
@@ -24,3 +24,14 @@ dev-frontend:
 # Run Go backend
 dev-go:
 	go run ./cmd/app
+
+# Install git hooks (pre-commit: auto-rebuild embedded SPA on frontend changes)
+install-hooks:
+	@mkdir -p $$(git rev-parse --git-dir)/hooks
+	@cp dev/hooks/pre-commit $$(git rev-parse --git-dir)/hooks/pre-commit
+	@chmod +x $$(git rev-parse --git-dir)/hooks/pre-commit
+	@echo "Git hooks installed."
+
+# First-time project setup: install dependencies and hooks
+setup: install-hooks
+	cd frontend && npm install
