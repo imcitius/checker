@@ -8,6 +8,7 @@ import (
 	"checker/internal/db"
 	"checker/internal/models"
 	"checker/internal/slack"
+	"checker/internal/web"
 )
 
 // SlackSender abstracts the Slack client methods used by SlackAlerter.
@@ -129,6 +130,9 @@ func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefi
 	if err := sa.repo.CreateAlertEvent(ctx, alertEvent); err != nil {
 		logrus.Errorf("Failed to record alert event for check %s: %v", checkDef.UUID, err)
 	}
+
+	// Broadcast new alert to connected WebSocket clients
+	web.BroadcastAlertNew(alertEvent)
 }
 
 // HandleRecovery resolves an existing Slack thread when a check recovers.
@@ -172,6 +176,9 @@ func (sa *SlackAlerter) HandleRecovery(ctx context.Context, checkDef models.Chec
 	if err := sa.repo.ResolveAlertEvent(ctx, checkDef.UUID); err != nil {
 		logrus.Errorf("Failed to resolve alert event for check %s: %v", checkDef.UUID, err)
 	}
+
+	// Broadcast alert resolved to connected WebSocket clients
+	web.BroadcastAlertResolved(checkDef.UUID)
 
 	if err := sa.repo.UpdateSlackThread(ctx, checkDef.UUID, "", ""); err != nil {
 		logrus.Errorf("Failed to clear Slack thread on check_definitions for check %s: %v", checkDef.UUID, err)

@@ -64,6 +64,19 @@ func (s *stubRepo) CreateSilence(_ context.Context, _ models.AlertSilence) error
 func (s *stubRepo) IsCheckSilenced(_ context.Context, _, _ string) (bool, error) {
 	return false, nil
 }
+func (s *stubRepo) DeactivateSilence(_ context.Context, _, _ string) error { return nil }
+func (s *stubRepo) DeactivateSilenceByID(_ context.Context, _ int) error   { return nil }
+func (s *stubRepo) GetActiveSilences(_ context.Context) ([]models.AlertSilence, error) {
+	return nil, nil
+}
+func (s *stubRepo) GetUnhealthyChecks(_ context.Context) ([]models.CheckDefinition, error) {
+	return nil, nil
+}
+func (s *stubRepo) CreateAlertEvent(_ context.Context, _ models.AlertEvent) error { return nil }
+func (s *stubRepo) ResolveAlertEvent(_ context.Context, _ string) error           { return nil }
+func (s *stubRepo) GetAlertHistory(_ context.Context, _, _ int, _ models.AlertHistoryFilters) ([]models.AlertEvent, int, error) {
+	return nil, 0, nil
+}
 
 func TestCreateCheckDefinition_GeneratesUUID(t *testing.T) {
 	gin.SetMode(gin.TestMode)

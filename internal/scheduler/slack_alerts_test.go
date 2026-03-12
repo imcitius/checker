@@ -183,6 +183,7 @@ func (r *mockRepo) ResolveAlertEvent(_ context.Context, _ string) error         
 func (r *mockRepo) GetAlertHistory(_ context.Context, _, _ int, _ models.AlertHistoryFilters) ([]models.AlertEvent, int, error) {
 	return nil, 0, nil
 }
+func (r *mockRepo) DeactivateSilenceByID(_ context.Context, _ int) error { return nil }
 func (r *mockRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.Config) error {
 	return nil
 }

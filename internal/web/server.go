@@ -129,6 +129,63 @@ func BroadcastChecksUpdate(repo db.Repository) {
 	}
 }
 
+// BroadcastAlertNew sends a new alert event to all connected WebSocket clients.
+func BroadcastAlertNew(alert models.AlertEvent) {
+	clientsMux.Lock()
+	defer clientsMux.Unlock()
+
+	if len(clients) == 0 {
+		return
+	}
+
+	disconnectedClients := []*websocket.Conn{}
+
+	for client := range clients {
+		err := client.WriteJSON(map[string]interface{}{
+			"type":  "alert_new",
+			"alert": alert,
+		})
+		if err != nil {
+			disconnectedClients = append(disconnectedClients, client)
+			logrus.Debugf("Failed to send alert_new to WebSocket client: %v", err)
+		}
+	}
+
+	for _, client := range disconnectedClients {
+		delete(clients, client)
+		client.Close()
+	}
+}
+
+// BroadcastAlertResolved notifies all connected WebSocket clients that alerts
+// for the given check UUID have been resolved.
+func BroadcastAlertResolved(checkUUID string) {
+	clientsMux.Lock()
+	defer clientsMux.Unlock()
+
+	if len(clients) == 0 {
+		return
+	}
+
+	disconnectedClients := []*websocket.Conn{}
+
+	for client := range clients {
+		err := client.WriteJSON(map[string]interface{}{
+			"type":       "alert_resolved",
+			"check_uuid": checkUUID,
+		})
+		if err != nil {
+			disconnectedClients = append(disconnectedClients, client)
+			logrus.Debugf("Failed to send alert_resolved to WebSocket client: %v", err)
+		}
+	}
+
+	for _, client := range disconnectedClients {
+		delete(clients, client)
+		client.Close()
+	}
+}
+
 // RunServer starts the web server and returns an error if it fails
 func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slackClient *slack.SlackClient, authMgr *auth.AuthManager) error {
 	// Create a router with default middleware
@@ -246,6 +303,17 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		bulkGroup.POST("/import", ImportCheckDefinitions)
 		bulkGroup.POST("/import/validate", ValidateImportPayload)
 		bulkGroup.GET("/export", ExportCheckDefinitions)
+	}
+
+	// Alert history endpoints
+	protected.GET("/api/alerts", ListAlerts)
+
+	// Silence management endpoints
+	silencesGroup := protected.Group("/api/silences")
+	{
+		silencesGroup.GET("", ListSilences)
+		silencesGroup.POST("", CreateSilence)
+		silencesGroup.DELETE("/:id", DeleteSilence)
 	}
 
 	// Metadata endpoints

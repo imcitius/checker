@@ -443,6 +443,18 @@ func (db *PostgresDB) DeactivateSilence(ctx context.Context, scope, target strin
 	return err
 }
 
+func (db *PostgresDB) DeactivateSilenceByID(ctx context.Context, id int) error {
+	cmdTag, err := db.Pool.Exec(ctx,
+		`UPDATE alert_silences SET active = false WHERE id = $1 AND active = true`, id)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("silence not found or already inactive")
+	}
+	return nil
+}
+
 func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
 	rows, err := db.Pool.Query(ctx,
 		`SELECT id, scope, target, silenced_by, silenced_at, expires_at, reason
