@@ -1,4 +1,5 @@
 .stoneforge
+.git
 *.md
 main
 .gitignore
