@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
 import { useAlerts } from '@/hooks/useAlerts'
 import { api } from '@/lib/api'
@@ -34,11 +35,8 @@ import {
   Clock,
   Shield,
   Trash2,
-  Settings,
-  LogOut,
-  User,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useRef } from 'react'
 
 function timeAgo(dateStr: string): string {
   const now = Date.now()
@@ -111,10 +109,15 @@ export function Alerts() {
 
   const [projects, setProjects] = useState<string[]>([])
   const [silencesOpen, setSilencesOpen] = useState(true)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [checkTypes, setCheckTypes] = useState<string[]>([])
 
   // Fetch projects list for filters
   useEffect(() => {
     api.getProjects().then(setProjects).catch(() => {})
+    api.getCheckTypes().then(setCheckTypes).catch(() => {})
   }, [])
 
   // Build a set of silenced check UUIDs and project names for quick lookup
@@ -159,93 +162,26 @@ export function Alerts() {
     }
   }
 
+  // Map status filter for alerts page (active/resolved vs healthy/unhealthy)
+  const alertStatusFilter = statusFilter === 'healthy' ? 'resolved' : statusFilter === 'unhealthy' ? 'active' : statusFilter
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="min-h-screen pb-8">
-        {/* Navigation Bar */}
-        <header className="sticky top-0 z-40 border-b bg-[hsl(215_25%_11%)] scanline-bg">
-          <div className="mx-auto max-w-[1600px] px-4 py-2">
-            <div className="flex items-center gap-4">
-              {/* Logo */}
-              <Link to="/" className="flex items-center gap-2 shrink-0">
-                <div className="h-7 w-7 rounded bg-healthy/20 flex items-center justify-center">
-                  <span className="text-healthy font-mono font-bold text-sm">C</span>
-                </div>
-                <span className="font-semibold text-foreground hidden sm:inline">Checker</span>
-              </Link>
-
-              {/* Nav */}
-              <nav className="flex items-center gap-1 shrink-0">
-                <Link to="/">
-                  <Button variant="ghost" size="sm">
-                    Dashboard
-                  </Button>
-                </Link>
-                <Link to="/manage">
-                  <Button variant="ghost" size="sm">
-                    <Settings className="h-4 w-4 mr-1" />
-                    Manage
-                  </Button>
-                </Link>
-                <Link to="/alerts">
-                  <Button variant="secondary" size="sm">
-                    <Bell className="h-4 w-4 mr-1" />
-                    Alerts
-                  </Button>
-                </Link>
-              </nav>
-
-              <div className="flex-1" />
-
-              {/* Filters */}
-              <div className="hidden lg:flex items-center gap-2">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-8 w-[120px] text-xs">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={projectFilter} onValueChange={setProjectFilter}>
-                  <SelectTrigger className="h-8 w-[130px] text-xs">
-                    <SelectValue placeholder="Project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Projects</SelectItem>
-                    {projects.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {p}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* User menu */}
-              <div className="flex items-center gap-2 shrink-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <User className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <a href="/auth/logout">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                      </a>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </div>
-        </header>
+        <TopBar
+          search={search}
+          onSearchChange={setSearch}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          projectFilter={projectFilter}
+          onProjectFilterChange={setProjectFilter}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          projects={projects}
+          checkTypes={checkTypes}
+          searchRef={searchRef}
+          onOpenCommandPalette={() => {}}
+        />
 
         <main className="mx-auto max-w-[1600px] px-4 py-4 space-y-4">
           {/* Page header */}
@@ -268,40 +204,12 @@ export function Alerts() {
             </Button>
           </div>
 
-          {/* Mobile filters */}
-          <div className="flex lg:hidden items-center gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 text-xs flex-1">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger className="h-8 text-xs flex-1">
-                <SelectValue placeholder="Project" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                {projects.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Alert history table */}
           <div className="rounded-lg border bg-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-[hsl(215_14%_10%)] text-muted-foreground text-xs">
+                  <tr className="border-b bg-muted/50 text-muted-foreground text-xs">
                     <th className="text-left px-3 py-2 font-medium w-10">Status</th>
                     <th className="text-left px-3 py-2 font-medium">Check Name</th>
                     <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Project</th>
@@ -340,7 +248,7 @@ export function Alerts() {
                             border-b border-border/50 transition-all duration-500
                             ${isActive
                               ? 'bg-unhealthy/5 hover:bg-unhealthy/10'
-                              : 'opacity-60 hover:opacity-80 hover:bg-[hsl(215_14%_14%)]'
+                              : 'opacity-60 hover:opacity-80 hover:bg-muted/30'
                             }
                             ${isRecent ? 'bg-warning/10 animate-pulse' : ''}
                           `}
@@ -494,7 +402,7 @@ export function Alerts() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-[hsl(215_14%_10%)] text-muted-foreground text-xs">
+                      <tr className="border-b bg-muted/50 text-muted-foreground text-xs">
                         <th className="text-left px-3 py-2 font-medium">Scope</th>
                         <th className="text-left px-3 py-2 font-medium">Target</th>
                         <th className="text-left px-3 py-2 font-medium hidden sm:table-cell">Silenced By</th>
@@ -523,7 +431,7 @@ export function Alerts() {
                         silences.map((silence) => (
                           <tr
                             key={silence.ID}
-                            className="border-b border-border/50 hover:bg-[hsl(215_14%_14%)] transition-colors"
+                            className="border-b border-border/50 hover:bg-muted/30 transition-colors"
                           >
                             <td className="px-3 py-2">
                               <Badge

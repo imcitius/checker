@@ -7,7 +7,7 @@ interface StatusBarProps {
 
 export function StatusBar({ wsStatus }: StatusBarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t bg-[hsl(215_25%_9%)] z-40">
+    <div className="fixed bottom-0 left-0 right-0 border-t bg-card z-40">
       <div className="mx-auto max-w-[1600px] px-4 py-1 flex items-center gap-3 text-xs font-mono text-muted-foreground">
         <span className="text-disabled">{'>'}_</span>
         <span

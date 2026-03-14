@@ -31,7 +31,7 @@ export function CheckList({
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-muted-foreground border-b bg-[hsl(215_14%_10%)]">
+      <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-muted-foreground border-b bg-muted/50">
         <span className="w-2.5" />
         <span className="w-[180px] shrink-0">Name</span>
         <span className="w-[52px] shrink-0">Type</span>

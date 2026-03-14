@@ -26,7 +26,7 @@ export function EventLog({ entries }: EventLogProps) {
 
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
-      <div className="px-3 py-1.5 border-b bg-[hsl(215_14%_10%)]">
+      <div className="px-3 py-1.5 border-b bg-muted/50">
         <span className="text-xs text-muted-foreground font-mono">
           <span className="text-disabled">{'>'}_</span> Event Log
         </span>

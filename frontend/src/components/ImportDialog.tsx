@@ -152,7 +152,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
               </Button>
             </div>
             <textarea
-              className="w-full h-80 font-mono text-xs bg-[hsl(215_14%_8%)] border border-border rounded-md p-3 resize-y focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+              className="w-full h-80 font-mono text-xs bg-muted/50 border border-border rounded-md p-3 resize-y focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
               value={yamlContent}
               onChange={(e) => setYamlContent(e.target.value)}
               placeholder="Paste your YAML here..."
@@ -193,7 +193,7 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
             <div className="rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-[hsl(215_14%_10%)] text-muted-foreground text-xs">
+                  <tr className="border-b bg-muted/50 text-muted-foreground text-xs">
                     <th className="text-left px-3 py-2 font-medium">#</th>
                     <th className="text-left px-3 py-2 font-medium">Name</th>
                     <th className="text-left px-3 py-2 font-medium">Project</th>

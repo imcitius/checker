@@ -1,4 +1,4 @@
-import { Search, Settings, LogOut, User, Keyboard, Bell } from 'lucide-react'
+import { Search, Settings, LogOut, User, Keyboard, Bell, Sun, Moon, Monitor } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import {
@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { useTheme } from '@/lib/theme'
 
 interface TopBarProps {
   search: string
@@ -47,9 +48,10 @@ export function TopBar({
   onOpenCommandPalette,
 }: TopBarProps) {
   const location = useLocation()
+  const { theme, setTheme } = useTheme()
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-[hsl(215_25%_11%)] scanline-bg">
+    <header className="sticky top-0 z-40 border-b bg-card scanline-bg">
       <div className="mx-auto max-w-[1600px] px-4 py-2">
         <div className="flex items-center gap-4">
           {/* Logo */}
@@ -146,8 +148,8 @@ export function TopBar({
             </Select>
           </div>
 
-          {/* Command palette hint + User menu */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Command palette hint + Theme toggle + User menu */}
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               variant="ghost"
               size="sm"
@@ -158,6 +160,35 @@ export function TopBar({
               <kbd className="text-[10px]">⌘K</kbd>
             </Button>
 
+            {/* Theme toggle */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Sun className="h-4 w-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+                  <span className="sr-only">Toggle theme</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setTheme('light')}>
+                  <Sun className="mr-2 h-4 w-4" />
+                  Light
+                  {theme === 'light' && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('dark')}>
+                  <Moon className="mr-2 h-4 w-4" />
+                  Dark
+                  {theme === 'dark' && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('system')}>
+                  <Monitor className="mr-2 h-4 w-4" />
+                  System
+                  {theme === 'system' && <span className="ml-auto text-xs text-muted-foreground">✓</span>}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* User menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">

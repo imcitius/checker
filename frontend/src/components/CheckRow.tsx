@@ -39,8 +39,8 @@ export const CheckRow = memo(function CheckRow({
     <div
       className={cn(
         'flex items-center gap-3 px-3 py-1.5 cursor-pointer transition-colors text-sm',
-        'hover:bg-[hsl(215_14%_14%)]',
-        isSelected && 'bg-[hsl(215_14%_16%)] ring-1 ring-info/30',
+        'hover:bg-muted/50',
+        isSelected && 'bg-muted ring-1 ring-info/30',
         !check.Enabled && 'opacity-60'
       )}
       onClick={onSelect}

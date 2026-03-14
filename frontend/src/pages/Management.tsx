@@ -12,8 +12,13 @@ import {
 } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Pencil, Trash2, RefreshCw, Upload, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import {
+  Plus, Pencil, Trash2, RefreshCw, Upload, Download,
+  ArrowUp, ArrowDown, ArrowUpDown, Copy, Power, PowerOff,
+  CheckSquare, Square, MinusSquare,
+} from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
 import { useChecks } from '@/hooks/useChecks'
@@ -21,6 +26,7 @@ import { useRef } from 'react'
 import { ImportDialog } from '@/components/ImportDialog'
 import { CheckEditDrawer } from '@/components/CheckEditDrawer'
 import { api as apiClient } from '@/lib/api'
+import { toast } from 'sonner'
 
 type SortColumn = 'name' | 'project' | 'type' | 'duration' | 'enabled'
 type SortDirection = 'asc' | 'desc'
@@ -69,11 +75,16 @@ export function Management() {
   // Dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
   const [editingCheck, setEditingCheck] = useState<Partial<CheckDefinition>>(EMPTY_FORM)
   const [deletingUUID, setDeletingUUID] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+
+  // Bulk selection
+  const [selectedUUIDs, setSelectedUUIDs] = useState<Set<string>>(new Set())
+  const [bulkActing, setBulkActing] = useState(false)
 
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -92,6 +103,15 @@ export function Management() {
       setDefinitions(defs)
       setProjects(projs)
       setCheckTypes(types)
+      // Clear selection of items that no longer exist
+      setSelectedUUIDs((prev) => {
+        const validUUIDs = new Set(defs.map((d) => d.uuid))
+        const next = new Set<string>()
+        for (const uuid of prev) {
+          if (validUUIDs.has(uuid)) next.add(uuid)
+        }
+        return next
+      })
     } catch (err) {
       console.error('Failed to fetch data:', err)
     } finally {
@@ -130,7 +150,6 @@ export function Management() {
           next.set('sort', column)
           next.set('dir', 'desc')
         } else {
-          // Third click resets sorting — clear params
           next.delete('sort')
           next.delete('dir')
         }
@@ -196,6 +215,15 @@ export function Management() {
     setEditDialogOpen(true)
   }
 
+  const handleClone = (def: CheckDefinition) => {
+    const cloned = { ...def }
+    delete (cloned as Partial<CheckDefinition> & { uuid?: string }).uuid
+    delete (cloned as Partial<CheckDefinition> & { id?: string }).id
+    cloned.name = `${def.name} (copy)`
+    setEditingCheck(cloned)
+    setEditDialogOpen(true)
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -239,7 +267,6 @@ export function Management() {
       const yamlContent = await apiClient.exportChecks(
         projectFilter !== 'all' ? projectFilter : undefined
       )
-      // Create a blob and download
       const blob = new Blob([yamlContent], { type: 'application/x-yaml' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -251,6 +278,88 @@ export function Management() {
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Failed to export:', err)
+    }
+  }
+
+  // Bulk selection helpers
+  const filteredUUIDs = useMemo(() => new Set(sorted.map((d) => d.uuid)), [sorted])
+  const selectedInView = useMemo(
+    () => new Set([...selectedUUIDs].filter((uuid) => filteredUUIDs.has(uuid))),
+    [selectedUUIDs, filteredUUIDs]
+  )
+
+  const allSelected = sorted.length > 0 && selectedInView.size === sorted.length
+  const someSelected = selectedInView.size > 0 && !allSelected
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedUUIDs((prev) => {
+        const next = new Set(prev)
+        for (const uuid of filteredUUIDs) next.delete(uuid)
+        return next
+      })
+    } else {
+      setSelectedUUIDs((prev) => {
+        const next = new Set(prev)
+        for (const uuid of filteredUUIDs) next.add(uuid)
+        return next
+      })
+    }
+  }
+
+  const toggleSelect = (uuid: string) => {
+    setSelectedUUIDs((prev) => {
+      const next = new Set(prev)
+      if (next.has(uuid)) next.delete(uuid)
+      else next.add(uuid)
+      return next
+    })
+  }
+
+  // Bulk actions
+  const handleBulkEnable = async () => {
+    setBulkActing(true)
+    try {
+      await Promise.all([...selectedInView].map((uuid) => api.toggleCheck(uuid, true)))
+      toast.success(`Enabled ${selectedInView.size} checks`)
+      setSelectedUUIDs(new Set())
+      fetchData()
+    } catch (err) {
+      console.error('Bulk enable failed:', err)
+      toast.error('Failed to enable some checks')
+    } finally {
+      setBulkActing(false)
+    }
+  }
+
+  const handleBulkDisable = async () => {
+    setBulkActing(true)
+    try {
+      await Promise.all([...selectedInView].map((uuid) => api.toggleCheck(uuid, false)))
+      toast.success(`Disabled ${selectedInView.size} checks`)
+      setSelectedUUIDs(new Set())
+      fetchData()
+    } catch (err) {
+      console.error('Bulk disable failed:', err)
+      toast.error('Failed to disable some checks')
+    } finally {
+      setBulkActing(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    setBulkActing(true)
+    try {
+      await Promise.all([...selectedInView].map((uuid) => api.deleteCheck(uuid)))
+      toast.success(`Deleted ${selectedInView.size} checks`)
+      setSelectedUUIDs(new Set())
+      setBulkDeleteDialogOpen(false)
+      fetchData()
+    } catch (err) {
+      console.error('Bulk delete failed:', err)
+      toast.error('Failed to delete some checks')
+    } finally {
+      setBulkActing(false)
     }
   }
 
@@ -275,8 +384,63 @@ export function Management() {
         <main className="mx-auto max-w-[1600px] px-4 py-4 space-y-4">
           {/* Actions bar */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Check Definitions</h2>
             <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Check Definitions</h2>
+              {selectedInView.size > 0 && (
+                <Badge variant="info" className="text-xs">
+                  {selectedInView.size} selected
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Bulk actions */}
+              {selectedInView.size > 0 && (
+                <div className="flex items-center gap-1 mr-2 border-r pr-3 border-border">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkEnable}
+                        disabled={bulkActing}
+                      >
+                        <Power className="h-4 w-4 mr-1 text-healthy" />
+                        Enable
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Enable {selectedInView.size} selected checks</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkDisable}
+                        disabled={bulkActing}
+                      >
+                        <PowerOff className="h-4 w-4 mr-1 text-warning" />
+                        Disable
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Disable {selectedInView.size} selected checks</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBulkDeleteDialogOpen(true)}
+                        disabled={bulkActing}
+                        className="text-unhealthy hover:text-unhealthy"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete {selectedInView.size} selected checks</TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
               <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -301,7 +465,22 @@ export function Management() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-[hsl(215_14%_10%)] text-muted-foreground text-xs">
+                  <tr className="border-b bg-muted/50 text-muted-foreground text-xs">
+                    {/* Checkbox header */}
+                    <th className="px-3 py-2 w-10">
+                      <button
+                        onClick={toggleSelectAll}
+                        className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {allSelected ? (
+                          <CheckSquare className="h-4 w-4" />
+                        ) : someSelected ? (
+                          <MinusSquare className="h-4 w-4" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                      </button>
+                    </th>
                     <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('name')}>
                       <span className="inline-flex items-center">Name<SortIcon column="name" /></span>
                     </th>
@@ -323,60 +502,98 @@ export function Management() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <td colSpan={7} className="text-center py-8 text-muted-foreground">
                         Loading...
                       </td>
                     </tr>
                   ) : sorted.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <td colSpan={7} className="text-center py-8 text-muted-foreground">
                         No check definitions found
                       </td>
                     </tr>
                   ) : (
-                    sorted.map((def) => (
-                      <tr
-                        key={def.uuid}
-                        className="border-b border-border/50 hover:bg-[hsl(215_14%_14%)] transition-colors"
-                      >
-                        <td className="px-3 py-2">
-                          <div className="font-medium">{def.name}</div>
-                          <div className="font-mono text-[10px] text-muted-foreground">{def.uuid}</div>
-                        </td>
-                        <td className="px-3 py-2 text-muted-foreground">{def.project}</td>
-                        <td className="px-3 py-2">
-                          <Badge variant="secondary" className="text-[10px]">
-                            {def.type}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2 font-mono text-muted-foreground">{def.duration}</td>
-                        <td className="px-3 py-2">
-                          <Switch
-                            checked={def.enabled}
-                            onCheckedChange={() => handleToggle(def.uuid)}
-                            className="scale-75"
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(def)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-unhealthy hover:text-unhealthy"
-                              onClick={() => {
-                                setDeletingUUID(def.uuid)
-                                setDeleteDialogOpen(true)
-                              }}
+                    sorted.map((def) => {
+                      const isSelected = selectedUUIDs.has(def.uuid)
+                      return (
+                        <tr
+                          key={def.uuid}
+                          className={`border-b border-border/50 transition-colors ${
+                            isSelected
+                              ? 'bg-primary/5 hover:bg-primary/10'
+                              : 'hover:bg-muted/30'
+                          }`}
+                        >
+                          {/* Checkbox */}
+                          <td className="px-3 py-2">
+                            <button
+                              onClick={() => toggleSelect(def.uuid)}
+                              className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              {isSelected ? (
+                                <CheckSquare className="h-4 w-4 text-primary" />
+                              ) : (
+                                <Square className="h-4 w-4" />
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="font-medium">{def.name}</div>
+                            <div className="font-mono text-[10px] text-muted-foreground">{def.uuid}</div>
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground">{def.project}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant="secondary" className="text-[10px]">
+                              {def.type}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2 font-mono text-muted-foreground">{def.duration}</td>
+                          <td className="px-3 py-2">
+                            <Switch
+                              checked={def.enabled}
+                              onCheckedChange={() => handleToggle(def.uuid)}
+                              className="scale-75"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(def)}>
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Clone check</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(def)}>
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit check</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-unhealthy hover:text-unhealthy"
+                                    onClick={() => {
+                                      setDeletingUUID(def.uuid)
+                                      setDeleteDialogOpen(true)
+                                    }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete check</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
                   )}
                 </tbody>
               </table>
@@ -411,6 +628,26 @@ export function Management() {
               </Button>
               <Button variant="destructive" onClick={handleDelete}>
                 Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Delete Confirmation */}
+        <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete {selectedInView.size} Checks</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete {selectedInView.size} selected checks? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkActing}>
+                {bulkActing ? 'Deleting...' : `Delete ${selectedInView.size} Checks`}
               </Button>
             </DialogFooter>
           </DialogContent>

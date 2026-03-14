@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import {
   CommandDialog,
@@ -9,9 +10,11 @@ import {
   CommandItem,
   CommandShortcut,
 } from '@/components/ui/command'
+import { Button } from '@/components/ui/button'
 import { TopBar } from '@/components/TopBar'
 import { MetricsRow } from '@/components/MetricsRow'
 import { CheckList } from '@/components/CheckList'
+import { HealthMap } from '@/components/HealthMap'
 import { EventLog } from '@/components/EventLog'
 import { StatusBar } from '@/components/StatusBar'
 import { useChecks } from '@/hooks/useChecks'
@@ -19,8 +22,13 @@ import { useEventLog } from '@/hooks/useEventLog'
 import { useKeyboard } from '@/hooks/useKeyboard'
 import { api } from '@/lib/api'
 import type { Check } from '@/lib/websocket'
+import { LayoutGrid, List, Settings, Bell, Sun, Moon } from 'lucide-react'
+import { useTheme } from '@/lib/theme'
 
 const COLLAPSED_KEY = 'checker-collapsed-groups'
+const VIEW_MODE_KEY = 'checker-view-mode'
+
+type ViewMode = 'list' | 'grid'
 
 function loadCollapsed(): Set<string> {
   try {
@@ -35,9 +43,23 @@ function saveCollapsed(set: Set<string>) {
   localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...set]))
 }
 
+function loadViewMode(): ViewMode {
+  return (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || 'list'
+}
+
 export function Dashboard() {
   const { checks, previousChecks, stats, wsStatus, getGrouped } = useChecks()
   const { entries } = useEventLog(checks, previousChecks)
+  const navigate = useNavigate()
+  const { theme, setTheme } = useTheme()
+
+  // View mode
+  const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode)
+
+  const handleSetViewMode = (mode: ViewMode) => {
+    setViewMode(mode)
+    localStorage.setItem(VIEW_MODE_KEY, mode)
+  }
 
   // Filters
   const [search, setSearch] = useState('')
@@ -196,15 +218,49 @@ export function Dashboard() {
         <main className="mx-auto max-w-[1600px] px-4 py-4 space-y-4">
           <MetricsRow stats={stats} />
 
-          <CheckList
-            groups={groups}
-            collapsedGroups={collapsedGroups}
-            onToggleGroup={toggleGroup}
-            selectedUUID={selectedUUID}
-            expandedUUID={expandedUUID}
-            onSelectCheck={handleSelectCheck}
-            onToggleCheck={handleToggleCheck}
-          />
+          {/* View mode toggle */}
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              {filtered.length} check{filtered.length !== 1 ? 's' : ''}
+              {search || statusFilter !== 'all' || projectFilter !== 'all' || typeFilter !== 'all'
+                ? ' (filtered)'
+                : ''}
+            </div>
+            <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted/50">
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => handleSetViewMode('list')}
+              >
+                <List className="h-3.5 w-3.5 mr-1" />
+                List
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => handleSetViewMode('grid')}
+              >
+                <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+                Map
+              </Button>
+            </div>
+          </div>
+
+          {viewMode === 'list' ? (
+            <CheckList
+              groups={groups}
+              collapsedGroups={collapsedGroups}
+              onToggleGroup={toggleGroup}
+              selectedUUID={selectedUUID}
+              expandedUUID={expandedUUID}
+              onSelectCheck={handleSelectCheck}
+              onToggleCheck={handleToggleCheck}
+            />
+          ) : (
+            <HealthMap groups={groups} onSelectCheck={handleSelectCheck} />
+          )}
 
           <EventLog entries={entries} />
         </main>
@@ -216,12 +272,79 @@ export function Dashboard() {
           <CommandInput placeholder="Type a command or search..." />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
+
+            {/* Search checks by name */}
+            <CommandGroup heading="Checks">
+              {filtered.slice(0, 10).map((check) => (
+                <CommandItem
+                  key={check.UUID}
+                  onSelect={() => {
+                    setSelectedUUID(check.UUID)
+                    setExpandedUUID(check.UUID)
+                    setCommandOpen(false)
+                  }}
+                >
+                  <span
+                    className={`inline-block h-2 w-2 rounded-full mr-2 shrink-0 ${
+                      !check.Enabled
+                        ? 'bg-disabled'
+                        : check.LastResult
+                          ? 'bg-healthy'
+                          : 'bg-unhealthy'
+                    }`}
+                  />
+                  <span className="truncate">{check.Name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{check.CheckType}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+
             <CommandGroup heading="Navigation">
+              <CommandItem onSelect={() => { navigate('/'); setCommandOpen(false) }}>
+                Dashboard
+              </CommandItem>
+              <CommandItem onSelect={() => { navigate('/manage'); setCommandOpen(false) }}>
+                <Settings className="mr-2 h-4 w-4" />
+                Manage Checks
+              </CommandItem>
+              <CommandItem onSelect={() => { navigate('/alerts'); setCommandOpen(false) }}>
+                <Bell className="mr-2 h-4 w-4" />
+                Alerts
+              </CommandItem>
+            </CommandGroup>
+
+            <CommandGroup heading="Actions">
               <CommandItem onSelect={() => { searchRef.current?.focus(); setCommandOpen(false) }}>
                 Focus Search
                 <CommandShortcut>/</CommandShortcut>
               </CommandItem>
+              <CommandItem onSelect={() => { handleSetViewMode(viewMode === 'list' ? 'grid' : 'list'); setCommandOpen(false) }}>
+                <LayoutGrid className="mr-2 h-4 w-4" />
+                Toggle Health Map
+              </CommandItem>
+              <CommandItem onSelect={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setCommandOpen(false) }}>
+                {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                Toggle Theme
+              </CommandItem>
             </CommandGroup>
+
+            <CommandGroup heading="Filters">
+              <CommandItem onSelect={() => { setStatusFilter('unhealthy'); setCommandOpen(false) }}>
+                Show Only Failing
+              </CommandItem>
+              <CommandItem onSelect={() => { setStatusFilter('healthy'); setCommandOpen(false) }}>
+                Show Only Healthy
+              </CommandItem>
+              {projects.map((p) => (
+                <CommandItem key={p} onSelect={() => { setProjectFilter(p); setCommandOpen(false) }}>
+                  Filter: {p}
+                </CommandItem>
+              ))}
+              <CommandItem onSelect={() => { setStatusFilter('all'); setSearch(''); setProjectFilter('all'); setTypeFilter('all'); setCommandOpen(false) }}>
+                Clear All Filters
+              </CommandItem>
+            </CommandGroup>
+
             <CommandGroup heading="Shortcuts">
               <CommandItem disabled>
                 Navigate Down
@@ -242,14 +365,6 @@ export function Dashboard() {
               <CommandItem disabled>
                 Toggle Group
                 <CommandShortcut>g</CommandShortcut>
-              </CommandItem>
-            </CommandGroup>
-            <CommandGroup heading="Filters">
-              <CommandItem onSelect={() => { setStatusFilter('unhealthy'); setCommandOpen(false) }}>
-                Show Only Failing
-              </CommandItem>
-              <CommandItem onSelect={() => { setStatusFilter('all'); setSearch(''); setProjectFilter('all'); setTypeFilter('all'); setCommandOpen(false) }}>
-                Clear All Filters
               </CommandItem>
             </CommandGroup>
           </CommandList>

@@ -8,7 +8,7 @@ interface CheckDetailsProps {
 
 export function CheckDetails({ check }: CheckDetailsProps) {
   return (
-    <div className="px-6 py-3 bg-[hsl(215_14%_10%)] border-t border-border/50 animate-slide-in">
+    <div className="px-6 py-3 bg-muted/30 border-t border-border/50 animate-slide-in">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
         <div>
           <span className="text-muted-foreground">UUID</span>

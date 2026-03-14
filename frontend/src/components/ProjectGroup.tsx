@@ -33,7 +33,7 @@ export function ProjectGroup({
 }: ProjectGroupProps) {
   return (
     <Collapsible open={isOpen} onOpenChange={onToggle}>
-      <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-1.5 hover:bg-[hsl(215_14%_14%)] transition-colors text-sm group">
+      <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-1.5 hover:bg-muted/50 transition-colors text-sm group">
         <ChevronRight
           className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', isOpen && 'rotate-90')}
         />
