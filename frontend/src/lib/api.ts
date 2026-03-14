@@ -38,14 +38,26 @@ export interface CheckDefinition {
   port?: number
   pgsql?: {
     username?: string
+    password?: string
     dbname?: string
+    sslmode?: string
     query?: string
+    response?: string
+    difference?: string
+    table_name?: string
+    lag?: string
     server_list?: string[]
+    analytic_replicas?: string[]
   }
   mysql?: {
     username?: string
+    password?: string
     dbname?: string
     query?: string
+    response?: string
+    difference?: string
+    table_name?: string
+    lag?: string
     server_list?: string[]
   }
   actor_type?: string
