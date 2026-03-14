@@ -21,12 +21,14 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Pencil, Trash2, Search, RefreshCw, Upload, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, RefreshCw, Upload, Download, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
 import { useChecks } from '@/hooks/useChecks'
 import { useRef } from 'react'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { KeyValueEditor } from '@/components/KeyValueEditor'
 import { ImportDialog } from '@/components/ImportDialog'
 import { api as apiClient } from '@/lib/api'
 
@@ -196,11 +198,25 @@ export function Management() {
 
   const handleCreate = () => {
     setEditingCheck({ ...EMPTY_FORM })
+    setAdvancedOpen(false)
     setEditDialogOpen(true)
   }
 
   const handleEdit = (def: CheckDefinition) => {
     setEditingCheck({ ...def })
+    // Auto-open advanced section if any advanced fields are populated
+    const hasAdvanced = !!(
+      def.answer ||
+      (def.code && def.code.length > 0) ||
+      (def.headers && def.headers.length > 0) ||
+      (def.cookies && def.cookies.length > 0) ||
+      def.skip_check_ssl ||
+      def.ssl_expiration_period ||
+      def.stop_follow_redirects ||
+      def.auth?.user ||
+      def.auth?.password
+    )
+    setAdvancedOpen(hasAdvanced)
     setEditDialogOpen(true)
   }
 
@@ -262,8 +278,52 @@ export function Management() {
     }
   }
 
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+
+  // Helper: convert []map[string]string from API to {key, value}[] for editor
+  const kvFromApi = (data?: Record<string, string>[]): { key: string; value: string }[] => {
+    if (!data || data.length === 0) return []
+    return data.map((entry) => {
+      const key = Object.keys(entry)[0] || ''
+      return { key, value: entry[key] || '' }
+    })
+  }
+
+  // Helper: convert {key, value}[] from editor to []map[string]string for API
+  // Keeps empty keys during editing so rows don't disappear while typing
+  const kvToApi = (pairs: { key: string; value: string }[]): Record<string, string>[] => {
+    return pairs.map((p) => ({ [p.key]: p.value }))
+  }
+
   const updateForm = (field: string, value: string | number | boolean) => {
     setEditingCheck((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const updateAuth = (field: 'user' | 'password', value: string) => {
+    setEditingCheck((prev) => ({
+      ...prev,
+      auth: { ...prev.auth, [field]: value },
+    }))
+  }
+
+  const [statusCodesInput, setStatusCodesInput] = useState('')
+
+  // Sync status codes input from form state when dialog opens
+  useEffect(() => {
+    if (editDialogOpen) {
+      setStatusCodesInput(editingCheck.code?.join(', ') || '')
+    }
+  }, [editDialogOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleStatusCodesChange = (input: string) => {
+    setStatusCodesInput(input)
+    // Parse valid codes for the form data
+    const codes = input
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => /^\d+$/.test(s))
+      .map((s) => parseInt(s, 10))
+    setEditingCheck((prev) => ({ ...prev, code: codes.length > 0 ? codes : undefined }))
   }
 
   return (
@@ -482,12 +542,128 @@ export function Management() {
 
               {/* Type-specific fields */}
               {(editingCheck.type === 'http') && (
-                <div>
+                <div className="space-y-3">
                   <h4 className="text-sm font-medium mb-2">HTTP Configuration</h4>
                   <div>
                     <label className="text-xs text-muted-foreground">URL</label>
                     <Input value={editingCheck.url || ''} onChange={(e) => updateForm('url', e.target.value)} />
                   </div>
+
+                  <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full justify-start gap-1 px-0 text-xs text-muted-foreground hover:text-foreground">
+                        {advancedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        Advanced Settings
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 pt-2">
+                      {/* Response Validation */}
+                      <div className="space-y-3">
+                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Response Validation</h5>
+                        <div>
+                          <label className="text-xs text-muted-foreground">Expected Status Codes (comma-separated)</label>
+                          <Input
+                            placeholder="200, 201, 301"
+                            value={statusCodesInput}
+                            onChange={(e) => handleStatusCodesChange(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground">Response Body Match</label>
+                          <Input
+                            placeholder="String to search in response body"
+                            value={editingCheck.answer || ''}
+                            onChange={(e) => updateForm('answer', e.target.value)}
+                          />
+                        </div>
+                        {editingCheck.answer && (
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={editingCheck.answer_present ?? true}
+                              onCheckedChange={(v) => updateForm('answer_present', v)}
+                            />
+                            <label className="text-xs">
+                              {editingCheck.answer_present !== false ? 'Assert answer IS present' : 'Assert answer is NOT present'}
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      {/* Request Configuration */}
+                      <div className="space-y-3">
+                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Request Configuration</h5>
+                        <KeyValueEditor
+                          label="HTTP Headers"
+                          pairs={kvFromApi(editingCheck.headers)}
+                          onChange={(pairs) => setEditingCheck((prev) => ({ ...prev, headers: kvToApi(pairs) }))}
+                          keyPlaceholder="Header name"
+                          valuePlaceholder="Header value"
+                        />
+                        <KeyValueEditor
+                          label="Cookies"
+                          pairs={kvFromApi(editingCheck.cookies)}
+                          onChange={(pairs) => setEditingCheck((prev) => ({ ...prev, cookies: kvToApi(pairs) }))}
+                          keyPlaceholder="Cookie name"
+                          valuePlaceholder="Cookie value"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={editingCheck.stop_follow_redirects ?? false}
+                            onCheckedChange={(v) => updateForm('stop_follow_redirects', v)}
+                          />
+                          <label className="text-xs">Stop Follow Redirects</label>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* SSL Settings */}
+                      <div className="space-y-3">
+                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">SSL Settings</h5>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={editingCheck.skip_check_ssl ?? false}
+                            onCheckedChange={(v) => updateForm('skip_check_ssl', v)}
+                          />
+                          <label className="text-xs">Skip SSL Verification</label>
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground">SSL Expiration Alert Period</label>
+                          <Input
+                            placeholder="168h"
+                            value={editingCheck.ssl_expiration_period || ''}
+                            onChange={(e) => updateForm('ssl_expiration_period', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Authentication */}
+                      <div className="space-y-3">
+                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Authentication</h5>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs text-muted-foreground">Basic Auth Username</label>
+                            <Input
+                              value={editingCheck.auth?.user || ''}
+                              onChange={(e) => updateAuth('user', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">Basic Auth Password</label>
+                            <Input
+                              type="password"
+                              value={editingCheck.auth?.password || ''}
+                              onChange={(e) => updateAuth('password', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
               )}
 

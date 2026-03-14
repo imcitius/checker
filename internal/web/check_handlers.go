@@ -354,6 +354,20 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 		case *models.HTTPCheckConfig:
 			vm.URL = c.URL
 			vm.Timeout = c.Timeout
+			vm.Answer = c.Answer
+			vm.AnswerPresent = c.AnswerPresent
+			vm.Code = c.Code
+			vm.Headers = c.Headers
+			vm.Cookies = c.Cookies
+			vm.SkipCheckSSL = c.SkipCheckSSL
+			vm.SSLExpirationPeriod = c.SSLExpirationPeriod
+			vm.StopFollowRedirects = c.StopFollowRedirects
+			if c.Auth.User != "" || c.Auth.Password != "" {
+				vm.Auth = &models.AuthConfig{
+					User:     c.Auth.User,
+					Password: c.Auth.Password,
+				}
+			}
 		case *models.TCPCheckConfig:
 			vm.Host = c.Host
 			vm.Port = c.Port
@@ -398,10 +412,25 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 	// Populate Config
 	switch vm.Type {
 	case "http":
-		def.Config = &models.HTTPCheckConfig{
-			URL:     vm.URL,
-			Timeout: vm.Timeout,
+		httpConfig := &models.HTTPCheckConfig{
+			URL:                 vm.URL,
+			Timeout:             vm.Timeout,
+			Answer:              vm.Answer,
+			AnswerPresent:       vm.AnswerPresent,
+			Code:                vm.Code,
+			Headers:             vm.Headers,
+			Cookies:             vm.Cookies,
+			SkipCheckSSL:        vm.SkipCheckSSL,
+			SSLExpirationPeriod: vm.SSLExpirationPeriod,
+			StopFollowRedirects: vm.StopFollowRedirects,
 		}
+		if vm.Auth != nil {
+			httpConfig.Auth = models.AuthConfig{
+				User:     vm.Auth.User,
+				Password: vm.Auth.Password,
+			}
+		}
+		def.Config = httpConfig
 	case "tcp":
 		def.Config = &models.TCPCheckConfig{
 			Host:    vm.Host,
