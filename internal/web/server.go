@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -422,6 +423,21 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 				"files":   []string{"styles.css", "script.js"},
 				"time":    time.Now().String(),
 			})
+		})
+	}
+
+	// SPA catch-all: serve index.html for any unmatched GET request that
+	// accepts HTML (i.e. browser navigation). This lets client-side routing
+	// handle paths like /alerts, /settings, etc. without adding explicit
+	// server-side routes for each one. API calls and other non-HTML requests
+	// still receive a proper 404 JSON response.
+	if spaHandler != nil {
+		router.NoRoute(authMgr.Middleware(), func(c *gin.Context) {
+			if c.Request.Method == "GET" && strings.Contains(c.GetHeader("Accept"), "text/html") {
+				serveSPA(spaRoot)(c)
+				return
+			}
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		})
 	}
 
