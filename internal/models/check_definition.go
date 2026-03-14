@@ -301,21 +301,52 @@ type CheckDefinitionViewModel struct {
 	UpdatedAt   string `json:"updated_at"`
 	Duration    string `json:"duration"`
 
-	// Config fields
+	// Config fields — shared
 	URL     string `json:"url,omitempty"`
 	Timeout string `json:"timeout,omitempty"`
 	Host    string `json:"host,omitempty"`
 	Port    int    `json:"port,omitempty"`
-	PgSQL   struct {
-		UserName   string   `json:"username,omitempty"`
-		DBName     string   `json:"dbname,omitempty"`
-		Query      string   `json:"query,omitempty"`
-		ServerList []string `json:"server_list,omitempty"`
+
+	// HTTP advanced fields
+	Answer              string              `json:"answer,omitempty"`
+	AnswerPresent       bool                `json:"answer_present,omitempty"`
+	Code                []int               `json:"code,omitempty"`
+	Headers             []map[string]string `json:"headers,omitempty"`
+	Cookies             []map[string]string `json:"cookies,omitempty"`
+	SkipCheckSSL        bool                `json:"skip_check_ssl,omitempty"`
+	SSLExpirationPeriod string              `json:"ssl_expiration_period,omitempty"`
+	StopFollowRedirects bool                `json:"stop_follow_redirects,omitempty"`
+	Auth                struct {
+		User     string `json:"user,omitempty"`
+		Password string `json:"password,omitempty"`
+	} `json:"auth,omitempty"`
+
+	// ICMP fields
+	Count int `json:"count,omitempty"`
+
+	// Database config fields
+	PgSQL struct {
+		UserName         string   `json:"username,omitempty"`
+		Password         string   `json:"password,omitempty"`
+		DBName           string   `json:"dbname,omitempty"`
+		SSLMode          string   `json:"sslmode,omitempty"`
+		Query            string   `json:"query,omitempty"`
+		Response         string   `json:"response,omitempty"`
+		Difference       string   `json:"difference,omitempty"`
+		TableName        string   `json:"table_name,omitempty"`
+		Lag              string   `json:"lag,omitempty"`
+		ServerList       []string `json:"server_list,omitempty"`
+		AnalyticReplicas []string `json:"analytic_replicas,omitempty"`
 	} `json:"pgsql,omitempty"`
 	MySQL struct {
 		UserName   string   `json:"username,omitempty"`
+		Password   string   `json:"password,omitempty"`
 		DBName     string   `json:"dbname,omitempty"`
 		Query      string   `json:"query,omitempty"`
+		Response   string   `json:"response,omitempty"`
+		Difference string   `json:"difference,omitempty"`
+		TableName  string   `json:"table_name,omitempty"`
+		Lag        string   `json:"lag,omitempty"`
 		ServerList []string `json:"server_list,omitempty"`
 	} `json:"mysql,omitempty"`
 

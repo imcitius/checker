@@ -36,6 +36,22 @@ export interface CheckDefinition {
   timeout?: string
   host?: string
   port?: number
+  // HTTP advanced fields
+  answer?: string
+  answer_present?: boolean
+  code?: number[]
+  headers?: Record<string, string>[]
+  cookies?: Record<string, string>[]
+  skip_check_ssl?: boolean
+  ssl_expiration_period?: string
+  stop_follow_redirects?: boolean
+  auth?: {
+    user?: string
+    password?: string
+  }
+  // ICMP fields
+  count?: number
+  // Database config
   pgsql?: {
     username?: string
     password?: string

@@ -354,20 +354,52 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 		case *models.HTTPCheckConfig:
 			vm.URL = c.URL
 			vm.Timeout = c.Timeout
+			vm.Answer = c.Answer
+			vm.AnswerPresent = c.AnswerPresent
+			vm.Code = c.Code
+			vm.Headers = c.Headers
+			vm.Cookies = c.Cookies
+			vm.SkipCheckSSL = c.SkipCheckSSL
+			vm.SSLExpirationPeriod = c.SSLExpirationPeriod
+			vm.StopFollowRedirects = c.StopFollowRedirects
+			vm.Auth.User = c.Auth.User
+			vm.Auth.Password = c.Auth.Password
 		case *models.TCPCheckConfig:
 			vm.Host = c.Host
 			vm.Port = c.Port
 			vm.Timeout = c.Timeout
+		case *models.ICMPCheckConfig:
+			vm.Host = c.Host
+			vm.Count = c.Count
+			vm.Timeout = c.Timeout
 		case *models.MySQLCheckConfig:
+			vm.Host = c.Host
+			vm.Port = c.Port
+			vm.Timeout = c.Timeout
 			vm.MySQL.UserName = c.UserName
+			vm.MySQL.Password = c.Password
 			vm.MySQL.DBName = c.DBName
 			vm.MySQL.Query = c.Query
+			vm.MySQL.Response = c.Response
+			vm.MySQL.Difference = c.Difference
+			vm.MySQL.TableName = c.TableName
+			vm.MySQL.Lag = c.Lag
 			vm.MySQL.ServerList = c.ServerList
 		case *models.PostgreSQLCheckConfig:
+			vm.Host = c.Host
+			vm.Port = c.Port
+			vm.Timeout = c.Timeout
 			vm.PgSQL.UserName = c.UserName
+			vm.PgSQL.Password = c.Password
 			vm.PgSQL.DBName = c.DBName
+			vm.PgSQL.SSLMode = c.SSLMode
 			vm.PgSQL.Query = c.Query
+			vm.PgSQL.Response = c.Response
+			vm.PgSQL.Difference = c.Difference
+			vm.PgSQL.TableName = c.TableName
+			vm.PgSQL.Lag = c.Lag
 			vm.PgSQL.ServerList = c.ServerList
+			vm.PgSQL.AnalyticReplicas = c.AnalyticReplicas
 		}
 	}
 
@@ -399,8 +431,20 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 	switch vm.Type {
 	case "http":
 		def.Config = &models.HTTPCheckConfig{
-			URL:     vm.URL,
-			Timeout: vm.Timeout,
+			URL:                 vm.URL,
+			Timeout:             vm.Timeout,
+			Answer:              vm.Answer,
+			AnswerPresent:       vm.AnswerPresent,
+			Code:                vm.Code,
+			Headers:             vm.Headers,
+			Cookies:             vm.Cookies,
+			SkipCheckSSL:        vm.SkipCheckSSL,
+			SSLExpirationPeriod: vm.SSLExpirationPeriod,
+			StopFollowRedirects: vm.StopFollowRedirects,
+			Auth: models.AuthConfig{
+				User:     vm.Auth.User,
+				Password: vm.Auth.Password,
+			},
 		}
 	case "tcp":
 		def.Config = &models.TCPCheckConfig{
@@ -408,19 +452,43 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 			Port:    vm.Port,
 			Timeout: vm.Timeout,
 		}
+	case "icmp":
+		def.Config = &models.ICMPCheckConfig{
+			Host:    vm.Host,
+			Count:   vm.Count,
+			Timeout: vm.Timeout,
+		}
 	case "mysql_query", "mysql_query_unixtime", "mysql_replication":
 		def.Config = &models.MySQLCheckConfig{
+			Host:       vm.Host,
+			Port:       vm.Port,
+			Timeout:    vm.Timeout,
 			UserName:   vm.MySQL.UserName,
+			Password:   vm.MySQL.Password,
 			DBName:     vm.MySQL.DBName,
 			Query:      vm.MySQL.Query,
+			Response:   vm.MySQL.Response,
+			Difference: vm.MySQL.Difference,
+			TableName:  vm.MySQL.TableName,
+			Lag:        vm.MySQL.Lag,
 			ServerList: vm.MySQL.ServerList,
 		}
 	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
 		def.Config = &models.PostgreSQLCheckConfig{
-			UserName:   vm.PgSQL.UserName,
-			DBName:     vm.PgSQL.DBName,
-			Query:      vm.PgSQL.Query,
-			ServerList: vm.PgSQL.ServerList,
+			Host:             vm.Host,
+			Port:             vm.Port,
+			Timeout:          vm.Timeout,
+			UserName:         vm.PgSQL.UserName,
+			Password:         vm.PgSQL.Password,
+			DBName:           vm.PgSQL.DBName,
+			SSLMode:          vm.PgSQL.SSLMode,
+			Query:            vm.PgSQL.Query,
+			Response:         vm.PgSQL.Response,
+			Difference:       vm.PgSQL.Difference,
+			TableName:        vm.PgSQL.TableName,
+			Lag:              vm.PgSQL.Lag,
+			ServerList:       vm.PgSQL.ServerList,
+			AnalyticReplicas: vm.PgSQL.AnalyticReplicas,
 		}
 	}
 
