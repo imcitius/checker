@@ -29,7 +29,7 @@ type HTTPCheck struct {
 	Headers             []map[string]string // optional headers to add to the HTTP request
 	Cookies             []http.Cookie       // optional cookies to add to the HTTP request
 	SkipCheckSSL        bool                // if true, skip SSL certificate check
-	SSLExpirationPeriod string              // duration string (e.g., "720h") for checking impending certificate expiration
+	SSLExpirationPeriod string              // duration string (e.g., "168h") for checking impending certificate expiration
 	StopFollowRedirects bool                // if true, do not follow HTTP redirects
 	ErrorHeader         string              // a prefix for error messages
 	TlsConfig           *tls.Config         // optional custom TLS configuration
@@ -78,7 +78,7 @@ func (check *HTTPCheck) init() (*http.Client, error) {
 		check.Code = []int{http.StatusOK}
 	}
 	if check.SSLExpirationPeriod == "" {
-		check.SSLExpirationPeriod = "720h" // default to 30 days
+		check.SSLExpirationPeriod = "168h" // default to 7 days
 	}
 
 	if check.StopFollowRedirects {
