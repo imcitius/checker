@@ -36,6 +36,8 @@ type SortDirection = 'asc' | 'desc'
 const VALID_SORT_COLUMNS: readonly string[] = ['name', 'project', 'type', 'duration', 'enabled'] as const
 const VALID_SORT_DIRECTIONS: readonly string[] = ['asc', 'desc'] as const
 
+const LS_SORT_KEY = 'manage_sort'
+
 function parseSortColumn(value: string | null): SortColumn | null {
   if (value && VALID_SORT_COLUMNS.includes(value)) return value as SortColumn
   return null
@@ -44,6 +46,28 @@ function parseSortColumn(value: string | null): SortColumn | null {
 function parseSortDirection(value: string | null): SortDirection {
   if (value && VALID_SORT_DIRECTIONS.includes(value)) return value as SortDirection
   return 'asc'
+}
+
+function readSortFromLocalStorage(): { column: SortColumn | null; direction: SortDirection } {
+  try {
+    const raw = localStorage.getItem(LS_SORT_KEY)
+    if (!raw) return { column: null, direction: 'asc' }
+    const parsed = JSON.parse(raw)
+    return {
+      column: parseSortColumn(parsed.column ?? null),
+      direction: parseSortDirection(parsed.direction ?? null),
+    }
+  } catch {
+    return { column: null, direction: 'asc' }
+  }
+}
+
+function writeSortToLocalStorage(column: SortColumn | null, direction: SortDirection) {
+  if (column) {
+    localStorage.setItem(LS_SORT_KEY, JSON.stringify({ column, direction }))
+  } else {
+    localStorage.removeItem(LS_SORT_KEY)
+  }
 }
 
 const EMPTY_FORM: Partial<CheckDefinition> = {
@@ -69,10 +93,38 @@ export function Management() {
   const [projectFilter, setProjectFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // Sort state — persisted in URL search params
+  // Sort state — persisted in both URL search params and localStorage.
+  // URL params take priority (for shared/bookmarked URLs), falling back to localStorage
+  // so sort survives cross-page navigation.
   const [searchParams, setSearchParams] = useSearchParams()
-  const sortColumn = parseSortColumn(searchParams.get('sort'))
-  const sortDirection = parseSortDirection(searchParams.get('dir'))
+  const urlSortColumn = parseSortColumn(searchParams.get('sort'))
+  const urlSortDirection = parseSortDirection(searchParams.get('dir'))
+  const lsSort = useMemo(() => readSortFromLocalStorage(), [])
+
+  // If URL has sort params, use them and sync to localStorage.
+  // Otherwise fall back to localStorage values and seed the URL params.
+  const [lsFallbackApplied, setLsFallbackApplied] = useState(false)
+
+  const sortColumn = urlSortColumn ?? (lsFallbackApplied ? null : lsSort.column)
+  const sortDirection = urlSortColumn ? urlSortDirection : (lsFallbackApplied ? 'asc' : lsSort.direction)
+
+  // On mount: if URL has no sort params but localStorage does, seed URL params from localStorage
+  useEffect(() => {
+    if (!urlSortColumn && lsSort.column) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('sort', lsSort.column!)
+        next.set('dir', lsSort.direction)
+        return next
+      }, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Keep localStorage in sync whenever URL sort params change
+  useEffect(() => {
+    writeSortToLocalStorage(urlSortColumn, urlSortDirection)
+  }, [urlSortColumn, urlSortDirection])
 
   // Dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -138,9 +190,10 @@ export function Management() {
           next.set('sort', column)
           next.set('dir', 'desc')
         } else {
-          // Third click resets sorting — clear params
+          // Third click resets sorting — clear both URL params and localStorage
           next.delete('sort')
           next.delete('dir')
+          setLsFallbackApplied(true)
         }
       } else {
         next.set('sort', column)
