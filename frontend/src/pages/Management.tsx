@@ -21,7 +21,9 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Pencil, Trash2, Search, RefreshCw, Upload, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Plus, Pencil, Trash2, RefreshCw, Upload, Download, ArrowUp, ArrowDown, ArrowUpDown, ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
@@ -29,6 +31,21 @@ import { useChecks } from '@/hooks/useChecks'
 import { useRef } from 'react'
 import { ImportDialog } from '@/components/ImportDialog'
 import { api as apiClient } from '@/lib/api'
+
+const MANAGE_COLLAPSED_KEY = 'checker-manage-collapsed-groups'
+
+function loadCollapsed(): Set<string> {
+  try {
+    const val = localStorage.getItem(MANAGE_COLLAPSED_KEY)
+    return val ? new Set(JSON.parse(val)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function saveCollapsed(set: Set<string>) {
+  localStorage.setItem(MANAGE_COLLAPSED_KEY, JSON.stringify([...set]))
+}
 
 type SortColumn = 'name' | 'project' | 'type' | 'duration' | 'enabled'
 type SortDirection = 'asc' | 'desc'
@@ -82,6 +99,19 @@ export function Management() {
   const [saving, setSaving] = useState(false)
 
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+
+  // Group collapse state
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsed)
+
+  const toggleGroup = useCallback((name: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      saveCollapsed(next)
+      return next
+    })
+  }, [])
 
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -150,9 +180,9 @@ export function Management() {
     }, { replace: true })
   }
 
-  const sorted = useMemo(() => {
-    if (!sortColumn) return filtered
-    return [...filtered].sort((a, b) => {
+  const sortChecks = useCallback((checks: CheckDefinition[]) => {
+    if (!sortColumn) return checks
+    return [...checks].sort((a, b) => {
       let aVal: string | boolean
       let bVal: string | boolean
       switch (sortColumn) {
@@ -186,7 +216,24 @@ export function Management() {
       const cmp = (aVal as string).localeCompare(bVal as string)
       return sortDirection === 'asc' ? cmp : -cmp
     })
-  }, [filtered, sortColumn, sortDirection])
+  }, [sortColumn, sortDirection])
+
+  const groupedSorted = useMemo(() => {
+    // Group filtered checks by project
+    const groups = new Map<string, CheckDefinition[]>()
+    for (const def of filtered) {
+      const project = def.project || 'default'
+      if (!groups.has(project)) groups.set(project, [])
+      groups.get(project)!.push(def)
+    }
+    // Sort checks within each group, then sort groups alphabetically
+    return Array.from(groups.entries())
+      .map(([name, checks]) => ({
+        name,
+        checks: sortChecks(checks),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [filtered, sortChecks])
 
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />
@@ -309,91 +356,112 @@ export function Management() {
           </div>
 
           {/* Table */}
-          <div className="rounded-lg border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-[hsl(215_14%_10%)] text-muted-foreground text-xs">
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('name')}>
-                      <span className="inline-flex items-center">Name<SortIcon column="name" /></span>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('project')}>
-                      <span className="inline-flex items-center">Project<SortIcon column="project" /></span>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('type')}>
-                      <span className="inline-flex items-center">Type<SortIcon column="type" /></span>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('duration')}>
-                      <span className="inline-flex items-center">Frequency<SortIcon column="duration" /></span>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('enabled')}>
-                      <span className="inline-flex items-center">Enabled<SortIcon column="enabled" /></span>
-                    </th>
-                    <th className="text-right px-3 py-2 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                        Loading...
-                      </td>
-                    </tr>
-                  ) : sorted.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                        No check definitions found
-                      </td>
-                    </tr>
-                  ) : (
-                    sorted.map((def) => (
-                      <tr
-                        key={def.uuid}
-                        className="border-b border-border/50 hover:bg-[hsl(215_14%_14%)] transition-colors"
-                      >
-                        <td className="px-3 py-2">
-                          <div className="font-medium">{def.name}</div>
-                          <div className="font-mono text-[10px] text-muted-foreground">{def.uuid}</div>
-                        </td>
-                        <td className="px-3 py-2 text-muted-foreground">{def.project}</td>
-                        <td className="px-3 py-2">
-                          <Badge variant="secondary" className="text-[10px]">
-                            {def.type}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2 font-mono text-muted-foreground">{def.duration}</td>
-                        <td className="px-3 py-2">
-                          <Switch
-                            checked={def.enabled}
-                            onCheckedChange={() => handleToggle(def.uuid)}
-                            className="scale-75"
-                          />
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(def)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-unhealthy hover:text-unhealthy"
-                              onClick={() => {
-                                setDeletingUUID(def.uuid)
-                                setDeleteDialogOpen(true)
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          {loading ? (
+            <div className="rounded-lg border bg-card text-center py-8 text-muted-foreground text-sm">
+              Loading...
             </div>
-          </div>
+          ) : groupedSorted.length === 0 ? (
+            <div className="rounded-lg border bg-card text-center py-8 text-muted-foreground text-sm">
+              No check definitions found
+            </div>
+          ) : (
+            <div className="rounded-lg border bg-card overflow-hidden">
+              {/* Table header */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-[hsl(215_14%_10%)] text-muted-foreground text-xs">
+                      <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('name')}>
+                        <span className="inline-flex items-center">Name<SortIcon column="name" /></span>
+                      </th>
+                      <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('type')}>
+                        <span className="inline-flex items-center">Type<SortIcon column="type" /></span>
+                      </th>
+                      <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('duration')}>
+                        <span className="inline-flex items-center">Frequency<SortIcon column="duration" /></span>
+                      </th>
+                      <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('enabled')}>
+                        <span className="inline-flex items-center">Enabled<SortIcon column="enabled" /></span>
+                      </th>
+                      <th className="text-right px-3 py-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                </table>
+              </div>
+
+              {/* Grouped rows */}
+              {groupedSorted.map((group) => (
+                <Collapsible
+                  key={group.name}
+                  open={!collapsedGroups.has(group.name)}
+                  onOpenChange={() => toggleGroup(group.name)}
+                >
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full px-3 py-1.5 hover:bg-[hsl(215_14%_14%)] transition-colors text-sm group border-b border-border/50">
+                    <ChevronRight
+                      className={cn(
+                        'h-3.5 w-3.5 text-muted-foreground transition-transform',
+                        !collapsedGroups.has(group.name) && 'rotate-90'
+                      )}
+                    />
+                    <span className="font-semibold text-foreground">{group.name}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {group.checks.length} check{group.checks.length !== 1 ? 's' : ''}
+                    </span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {group.checks.map((def) => (
+                            <tr
+                              key={def.uuid}
+                              className="border-b border-border/50 hover:bg-[hsl(215_14%_14%)] transition-colors"
+                            >
+                              <td className="px-3 py-2">
+                                <div className="font-medium">{def.name}</div>
+                                <div className="font-mono text-[10px] text-muted-foreground">{def.uuid}</div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {def.type}
+                                </Badge>
+                              </td>
+                              <td className="px-3 py-2 font-mono text-muted-foreground">{def.duration}</td>
+                              <td className="px-3 py-2">
+                                <Switch
+                                  checked={def.enabled}
+                                  onCheckedChange={() => handleToggle(def.uuid)}
+                                  className="scale-75"
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(def)}>
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-unhealthy hover:text-unhealthy"
+                                    onClick={() => {
+                                      setDeletingUUID(def.uuid)
+                                      setDeleteDialogOpen(true)
+                                    }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+            </div>
+          )}
         </main>
 
         <StatusBar wsStatus={wsStatus} />
