@@ -20,7 +20,6 @@ func TestPostgresDB_Integration(t *testing.T) {
 	}
 
 	// Setup config
-	// Setup config
 	cfg := &config.Config{}
 	cfg.DB.Protocol = "postgres"
 	cfg.DB.Host = "localhost:5432"
