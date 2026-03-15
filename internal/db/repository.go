@@ -9,6 +9,7 @@ import (
 
 // Repository defines the interface for database interactions
 type Repository interface {
+	Close()
 	GetAllCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error)
 	GetEnabledCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error)
 	GetCheckDefinitionByUUID(ctx context.Context, uuid string) (models.CheckDefinition, error)
@@ -23,6 +24,7 @@ type Repository interface {
 	GetAllProjects(ctx context.Context) ([]string, error)
 	GetAllCheckTypes(ctx context.Context) ([]string, error)
 	ConvertConfigToCheckDefinitions(ctx context.Context, config *config.Config) error
+	CountCheckDefinitions(ctx context.Context) (int, error)
 	GetAllDefaultTimeouts() map[string]string
 
 	// Slack thread tracking

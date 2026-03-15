@@ -80,6 +80,8 @@ type mockRepo struct {
 	getThreadErr     error
 }
 
+func (r *mockRepo) Close() {}
+
 type createdThread struct {
 	checkUUID string
 	channelID string
@@ -187,6 +189,7 @@ func (r *mockRepo) DeactivateSilenceByID(_ context.Context, _ int) error { retur
 func (r *mockRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.Config) error {
 	return nil
 }
+func (r *mockRepo) CountCheckDefinitions(_ context.Context) (int, error) { return 0, nil }
 func (r *mockRepo) SetMaintenanceWindow(_ context.Context, _ string, _ *time.Time) error {
 	return nil
 }

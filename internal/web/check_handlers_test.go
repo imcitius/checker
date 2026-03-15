@@ -54,7 +54,8 @@ func (s *stubRepo) GetAllCheckTypes(_ context.Context) ([]string, error) { retur
 func (s *stubRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.Config) error {
 	return nil
 }
-func (s *stubRepo) GetAllDefaultTimeouts() map[string]string { return nil }
+func (s *stubRepo) CountCheckDefinitions(_ context.Context) (int, error) { return 0, nil }
+func (s *stubRepo) GetAllDefaultTimeouts() map[string]string             { return nil }
 func (s *stubRepo) CreateSlackThread(_ context.Context, _, _, _, _ string) error {
 	return nil
 }

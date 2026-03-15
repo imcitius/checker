@@ -17,6 +17,8 @@ type mockEscalationRepo struct {
 	notifications []models.EscalationNotification
 }
 
+func (m *mockEscalationRepo) Close() {}
+
 func newMockEscalationRepo() *mockEscalationRepo {
 	return &mockEscalationRepo{
 		policies: make(map[string]models.EscalationPolicy),
@@ -99,7 +101,8 @@ func (m *mockEscalationRepo) GetAllCheckTypes(_ context.Context) ([]string, erro
 func (m *mockEscalationRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.Config) error {
 	return nil
 }
-func (m *mockEscalationRepo) GetAllDefaultTimeouts() map[string]string { return nil }
+func (m *mockEscalationRepo) CountCheckDefinitions(_ context.Context) (int, error) { return 0, nil }
+func (m *mockEscalationRepo) GetAllDefaultTimeouts() map[string]string              { return nil }
 func (m *mockEscalationRepo) CreateSlackThread(_ context.Context, _, _, _, _ string) error {
 	return nil
 }

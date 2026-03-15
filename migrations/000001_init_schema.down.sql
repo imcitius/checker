@@ -1,1 +1,1 @@
-DROP TABLE IF NOT EXISTS check_definitions;
+DROP TABLE IF EXISTS check_definitions;

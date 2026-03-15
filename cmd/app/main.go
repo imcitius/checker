@@ -26,6 +26,16 @@ var (
 	BuildTime string // build timestamp
 )
 
+// newRepository creates the appropriate Repository implementation based on DB driver config.
+func newRepository(cfg *config.Config) (db.Repository, error) {
+	switch cfg.DB.Driver {
+	case "sqlite":
+		return db.NewSQLiteDB(cfg.DB.DSN)
+	default: // "postgres"
+		return db.NewPostgresDB(cfg)
+	}
+}
+
 func main() {
 	// Pass build-time version info to the web package.
 	web.AppVersion = Version
@@ -82,14 +92,27 @@ func main() {
 			}
 			logrus.Infof("Configuration loaded successfully from %s", configPath)
 
-			// 2. Initialize Database (PostgreSQL)
-			logrus.Info("Connecting to Database")
-			// We now use PostgresDB as the implementation of Repository
-			repo, err := db.NewPostgresDB(cfg)
+			// 2. Initialize Database
+			logrus.Infof("Connecting to database (driver: %s)", cfg.DB.Driver)
+			repo, err := newRepository(cfg)
 			if err != nil {
 				return fmt.Errorf("failed to connect to Database: %w", err)
 			}
 			logrus.Info("Database connection established")
+
+			// Auto-seed demo data for SQLite on first start
+			if cfg.DB.Driver == "sqlite" {
+				count, err := repo.CountCheckDefinitions(ctx)
+				if err != nil {
+					logrus.Warnf("Failed to count check definitions: %v", err)
+				} else if count == 0 {
+					logrus.Info("Demo mode: seeding checks from demo/seed.yaml")
+					if err := seedFromFile(repo, "demo/seed.yaml"); err != nil {
+						logrus.Warnf("Failed to seed demo data: %v", err)
+						// non-fatal — app still starts, just empty
+					}
+				}
+			}
 
 			// Ensure Database is closed on exit
 			defer func() {

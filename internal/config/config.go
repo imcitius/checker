@@ -24,6 +24,8 @@ type Config struct {
 	ServerPort string `yaml:"server_port"`
 
 	DB struct {
+		Driver      string `yaml:"driver"`             // "postgres" or "sqlite" (default: postgres)
+		DSN         string `yaml:"dsn"`                // for sqlite: file path (default: ./checker.db)
 		Protocol    string `yaml:"protocol"`
 		Host        string `yaml:"host"`
 		Username    string `yaml:"username"`
@@ -179,6 +181,12 @@ func LoadConfig(filename string) (*Config, error) {
 }
 
 func (cfg *Config) applyEnvOverrides() {
+	if v := os.Getenv("DB_DRIVER"); v != "" {
+		cfg.DB.Driver = v
+	}
+	if v := os.Getenv("DB_DSN"); v != "" {
+		cfg.DB.DSN = v
+	}
 	if v := os.Getenv("DATABASE_URL"); v != "" {
 		cfg.DB.DatabaseURL = v
 	}
@@ -244,6 +252,12 @@ func (cfg *Config) setDefaults() {
 	}
 
 	// Set DB defaults.
+	if cfg.DB.Driver == "" {
+		cfg.DB.Driver = "postgres"
+	}
+	if cfg.DB.Driver == "sqlite" && cfg.DB.DSN == "" {
+		cfg.DB.DSN = "./checker.db"
+	}
 	if cfg.DB.Protocol == "" {
 		cfg.DB.Protocol = "mongodb"
 	}
