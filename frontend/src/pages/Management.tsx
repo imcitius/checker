@@ -426,7 +426,7 @@ export function Management() {
 
         <main className="mx-auto max-w-[1600px] px-4 py-4 space-y-4">
           {/* Actions bar */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">Check Definitions</h2>
               {selectedInView.size > 0 && (
@@ -435,28 +435,78 @@ export function Management() {
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Bulk actions */}
+              {selectedInView.size > 0 && (
+                <div className="flex items-center gap-1 mr-2 sm:border-r sm:pr-3 border-border">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkEnable}
+                        disabled={bulkActing}
+                        className="min-h-[44px]"
+                      >
+                        <Power className="h-4 w-4 mr-1 text-healthy" />
+                        Enable
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Enable {selectedInView.size} selected checks</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkDisable}
+                        disabled={bulkActing}
+                        className="min-h-[44px]"
+                      >
+                        <PowerOff className="h-4 w-4 mr-1 text-warning" />
+                        Disable
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Disable {selectedInView.size} selected checks</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBulkDeleteDialogOpen(true)}
+                        disabled={bulkActing}
+                        className="text-unhealthy hover:text-unhealthy min-h-[44px]"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete {selectedInView.size} selected checks</TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
+              <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="min-h-[44px]">
                 <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button variant="outline" size="sm" onClick={handleExport}>
+              <Button variant="outline" size="sm" onClick={handleExport} className="min-h-[44px]">
                 <Download className="h-4 w-4 mr-1" />
-                Export
+                <span className="hidden sm:inline">Export</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
+              <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)} className="min-h-[44px]">
                 <Upload className="h-4 w-4 mr-1" />
-                Import YAML
+                <span className="hidden sm:inline">Import YAML</span>
               </Button>
-              <Button size="sm" onClick={handleCreate}>
+              <Button size="sm" onClick={handleCreate} className="min-h-[44px]">
                 <Plus className="h-4 w-4 mr-1" />
-                New Check
+                <span className="hidden sm:inline">New Check</span>
               </Button>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="rounded-lg border bg-card overflow-hidden">
+          {/* Desktop table — hidden on mobile */}
+          <div className="rounded-lg border bg-card overflow-hidden hidden sm:block">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -593,6 +643,66 @@ export function Management() {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Mobile card view — shown only on small screens */}
+          <div className="sm:hidden space-y-2">
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : sorted.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No check definitions found</div>
+            ) : (
+              sorted.map((def) => {
+                const isSelected = selectedUUIDs.has(def.uuid)
+                return (
+                  <div
+                    key={def.uuid}
+                    className={`rounded-lg border bg-card p-4 active:bg-muted/50 transition-colors cursor-pointer ${
+                      isSelected ? 'bg-primary/5 border-primary/30' : ''
+                    }`}
+                    onClick={() => handleEdit(def)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm truncate">{def.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{def.project}</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {def.type}
+                        </Badge>
+                        <div
+                          className={`h-2.5 w-2.5 rounded-full ${def.enabled ? 'bg-healthy' : 'bg-disabled'}`}
+                          title={def.enabled ? 'Enabled' : 'Disabled'}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-muted-foreground font-mono">{def.duration}</span>
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" onClick={() => handleClone(def)}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" onClick={() => handleEdit(def)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 min-h-[44px] min-w-[44px] text-unhealthy hover:text-unhealthy"
+                          onClick={() => {
+                            setDeletingUUID(def.uuid)
+                            setDeleteDialogOpen(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </main>
 

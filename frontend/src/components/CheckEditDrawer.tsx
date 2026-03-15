@@ -406,8 +406,8 @@ export function CheckEditDrawer({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[80vw] min-w-[600px] max-h-[85vh] p-0 flex flex-col gap-0"
-        style={{ maxWidth: 'min(80vw, 1200px)' }}
+        className="w-full h-full sm:w-auto sm:h-auto max-w-[100vw] sm:max-w-[80vw] min-w-0 sm:min-w-[600px] max-h-[100vh] sm:max-h-[85vh] p-0 flex flex-col gap-0 rounded-none sm:rounded-lg"
+        style={{ maxWidth: 'min(100vw, 1200px)' }}
       >
         {/* Header */}
         <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4 border-b">
@@ -422,7 +422,7 @@ export function CheckEditDrawer({
           {/* ─── General ─── */}
           <section className="space-y-4">
             <SectionHeader>General</SectionHeader>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">Name *</label>
                 <Input
@@ -446,7 +446,7 @@ export function CheckEditDrawer({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">Type</label>
                 <Select
@@ -516,7 +516,7 @@ export function CheckEditDrawer({
               )}
 
               {isTCP && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-muted-foreground">Host *</label>
                     <Input
@@ -548,7 +548,7 @@ export function CheckEditDrawer({
 
               {isDB && (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="text-xs text-muted-foreground">Host *</label>
                       <Input
@@ -573,7 +573,7 @@ export function CheckEditDrawer({
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="text-xs text-muted-foreground">Username</label>
                       <Input
@@ -637,7 +637,7 @@ export function CheckEditDrawer({
                   {/* HTTP Advanced */}
                   {isHTTP && (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-muted-foreground">
                             Expected Status Codes (comma-separated)
@@ -664,7 +664,7 @@ export function CheckEditDrawer({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-muted-foreground">Response Body Match</label>
                           <Input
@@ -682,7 +682,7 @@ export function CheckEditDrawer({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={editingCheck.skip_check_ssl ?? false}
@@ -717,7 +717,7 @@ export function CheckEditDrawer({
 
                       <div className="space-y-2">
                         <label className="text-xs text-muted-foreground font-medium">Basic Auth</label>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="text-xs text-muted-foreground">Username</label>
                             <Input
@@ -766,7 +766,7 @@ export function CheckEditDrawer({
                           placeholder="SELECT 1"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-muted-foreground">Expected Response</label>
                           <Input
@@ -787,7 +787,7 @@ export function CheckEditDrawer({
                       <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">
                         Replication Settings
                       </h4>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-muted-foreground">Table Name</label>
                           <Input

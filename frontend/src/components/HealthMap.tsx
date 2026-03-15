@@ -29,7 +29,7 @@ const HealthTile = memo(function HealthTile({
       <TooltipTrigger asChild>
         <button
           className={cn(
-            'h-8 w-8 rounded-sm transition-all cursor-pointer border',
+            'h-10 w-10 sm:h-8 sm:w-8 rounded-sm transition-all cursor-pointer border',
             'hover:scale-110 hover:z-10',
             status === 'healthy' && 'bg-healthy/80 border-healthy/40 hover:bg-healthy',
             status === 'unhealthy' && 'bg-unhealthy/80 border-unhealthy/40 hover:bg-unhealthy animate-pulse-unhealthy',
@@ -89,7 +89,7 @@ export function HealthMap({ groups, onSelectCheck }: HealthMapProps) {
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-[repeat(auto-fill,2.75rem)] sm:grid-cols-[repeat(auto-fill,2rem)] gap-1.5">
             {group.checks.map((check) => (
               <HealthTile
                 key={check.UUID}

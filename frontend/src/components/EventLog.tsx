@@ -39,7 +39,7 @@ export function EventLog({ entries }: EventLogProps) {
               <span className="text-muted-foreground shrink-0">
                 {entry.timestamp.toLocaleTimeString('en-US', { hour12: false })}
               </span>
-              <span className="text-foreground truncate shrink-0 w-[140px]">{entry.checkName}</span>
+              <span className="text-foreground truncate shrink-0 max-w-[100px] sm:max-w-[140px] sm:w-[140px]">{entry.checkName}</span>
               <span className="text-muted-foreground shrink-0">&rarr;</span>
               <span
                 className={cn(
