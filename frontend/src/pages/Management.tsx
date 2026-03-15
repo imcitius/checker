@@ -123,6 +123,28 @@ export function Management() {
     fetchData()
   }, [fetchData])
 
+  // Handle command-palette deep-link actions (?action=create / ?action=import)
+  useEffect(() => {
+    const action = searchParams.get('action')
+    if (action === 'create') {
+      setEditingCheck({ ...EMPTY_FORM })
+      setEditDialogOpen(true)
+      // Remove the action param so it doesn't re-trigger
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('action')
+        return next
+      }, { replace: true })
+    } else if (action === 'import') {
+      setImportDialogOpen(true)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('action')
+        return next
+      }, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
+
   const filtered = definitions.filter((d) => {
     if (search) {
       const q = search.toLowerCase()
@@ -378,7 +400,6 @@ export function Management() {
           projects={projects}
           checkTypes={checkTypes}
           searchRef={searchRef}
-          onOpenCommandPalette={() => {}}
         />
 
         <main className="mx-auto max-w-[1600px] px-4 py-4 space-y-4">

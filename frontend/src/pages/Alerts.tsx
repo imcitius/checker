@@ -180,7 +180,6 @@ export function Alerts() {
           projects={projects}
           checkTypes={checkTypes}
           searchRef={searchRef}
-          onOpenCommandPalette={() => {}}
         />
 
         <main className="mx-auto max-w-[1600px] px-4 py-4 space-y-4">

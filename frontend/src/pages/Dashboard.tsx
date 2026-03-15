@@ -1,15 +1,6 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import {
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandShortcut,
-} from '@/components/ui/command'
 import { Button } from '@/components/ui/button'
 import { TopBar } from '@/components/TopBar'
 import { MetricsRow } from '@/components/MetricsRow'
@@ -22,8 +13,7 @@ import { useEventLog } from '@/hooks/useEventLog'
 import { useKeyboard } from '@/hooks/useKeyboard'
 import { api } from '@/lib/api'
 import type { Check } from '@/lib/websocket'
-import { LayoutGrid, List, Settings, Bell, Sun, Moon } from 'lucide-react'
-import { useTheme } from '@/lib/theme'
+import { LayoutGrid, List } from 'lucide-react'
 
 const COLLAPSED_KEY = 'checker-collapsed-groups'
 const VIEW_MODE_KEY = 'checker-view-mode'
@@ -50,8 +40,6 @@ function loadViewMode(): ViewMode {
 export function Dashboard() {
   const { checks, previousChecks, stats, wsStatus, getGrouped } = useChecks()
   const { entries } = useEventLog(checks, previousChecks)
-  const navigate = useNavigate()
-  const { theme, setTheme } = useTheme()
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode)
@@ -69,14 +57,26 @@ export function Dashboard() {
   const searchRef = useRef<HTMLInputElement>(null)
 
   // Selection
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedUUID, setSelectedUUID] = useState<string | null>(null)
   const [expandedUUID, setExpandedUUID] = useState<string | null>(null)
 
+  // Handle command-palette deep-link: ?check=UUID
+  useEffect(() => {
+    const checkUUID = searchParams.get('check')
+    if (checkUUID && checks.length > 0) {
+      setSelectedUUID(checkUUID)
+      setExpandedUUID(checkUUID)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('check')
+        return next
+      }, { replace: true })
+    }
+  }, [searchParams, checks.length, setSearchParams])
+
   // Group collapse state
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsed)
-
-  // Command palette
-  const [commandOpen, setCommandOpen] = useState(false)
 
   // Derive unique projects and types from checks
   const projects = useMemo(
@@ -193,7 +193,7 @@ export function Dashboard() {
       if (selectedGroup) toggleGroup(selectedGroup)
     },
     onCommandPalette: () => {
-      setCommandOpen((prev) => !prev)
+      // Handled globally by CommandPalette component
     },
   })
 
@@ -212,7 +212,6 @@ export function Dashboard() {
           projects={projects}
           checkTypes={checkTypes}
           searchRef={searchRef}
-          onOpenCommandPalette={() => setCommandOpen(true)}
         />
 
         <main className="mx-auto max-w-[1600px] px-4 py-4 space-y-4">
@@ -267,108 +266,6 @@ export function Dashboard() {
 
         <StatusBar wsStatus={wsStatus} />
 
-        {/* Command Palette */}
-        <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
-          <CommandInput placeholder="Type a command or search..." />
-          <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-
-            {/* Search checks by name */}
-            <CommandGroup heading="Checks">
-              {filtered.slice(0, 10).map((check) => (
-                <CommandItem
-                  key={check.UUID}
-                  onSelect={() => {
-                    setSelectedUUID(check.UUID)
-                    setExpandedUUID(check.UUID)
-                    setCommandOpen(false)
-                  }}
-                >
-                  <span
-                    className={`inline-block h-2 w-2 rounded-full mr-2 shrink-0 ${
-                      !check.Enabled
-                        ? 'bg-disabled'
-                        : check.LastResult
-                          ? 'bg-healthy'
-                          : 'bg-unhealthy'
-                    }`}
-                  />
-                  <span className="truncate">{check.Name}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{check.CheckType}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-
-            <CommandGroup heading="Navigation">
-              <CommandItem onSelect={() => { navigate('/'); setCommandOpen(false) }}>
-                Dashboard
-              </CommandItem>
-              <CommandItem onSelect={() => { navigate('/manage'); setCommandOpen(false) }}>
-                <Settings className="mr-2 h-4 w-4" />
-                Manage Checks
-              </CommandItem>
-              <CommandItem onSelect={() => { navigate('/alerts'); setCommandOpen(false) }}>
-                <Bell className="mr-2 h-4 w-4" />
-                Alerts
-              </CommandItem>
-            </CommandGroup>
-
-            <CommandGroup heading="Actions">
-              <CommandItem onSelect={() => { searchRef.current?.focus(); setCommandOpen(false) }}>
-                Focus Search
-                <CommandShortcut>/</CommandShortcut>
-              </CommandItem>
-              <CommandItem onSelect={() => { handleSetViewMode(viewMode === 'list' ? 'grid' : 'list'); setCommandOpen(false) }}>
-                <LayoutGrid className="mr-2 h-4 w-4" />
-                Toggle Health Map
-              </CommandItem>
-              <CommandItem onSelect={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setCommandOpen(false) }}>
-                {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-                Toggle Theme
-              </CommandItem>
-            </CommandGroup>
-
-            <CommandGroup heading="Filters">
-              <CommandItem onSelect={() => { setStatusFilter('unhealthy'); setCommandOpen(false) }}>
-                Show Only Failing
-              </CommandItem>
-              <CommandItem onSelect={() => { setStatusFilter('healthy'); setCommandOpen(false) }}>
-                Show Only Healthy
-              </CommandItem>
-              {projects.map((p) => (
-                <CommandItem key={p} onSelect={() => { setProjectFilter(p); setCommandOpen(false) }}>
-                  Filter: {p}
-                </CommandItem>
-              ))}
-              <CommandItem onSelect={() => { setStatusFilter('all'); setSearch(''); setProjectFilter('all'); setTypeFilter('all'); setCommandOpen(false) }}>
-                Clear All Filters
-              </CommandItem>
-            </CommandGroup>
-
-            <CommandGroup heading="Shortcuts">
-              <CommandItem disabled>
-                Navigate Down
-                <CommandShortcut>j</CommandShortcut>
-              </CommandItem>
-              <CommandItem disabled>
-                Navigate Up
-                <CommandShortcut>k</CommandShortcut>
-              </CommandItem>
-              <CommandItem disabled>
-                Expand/Collapse Check
-                <CommandShortcut>Enter</CommandShortcut>
-              </CommandItem>
-              <CommandItem disabled>
-                Close Details
-                <CommandShortcut>Esc</CommandShortcut>
-              </CommandItem>
-              <CommandItem disabled>
-                Toggle Group
-                <CommandShortcut>g</CommandShortcut>
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </CommandDialog>
       </div>
     </TooltipProvider>
   )

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/lib/theme'
+import { openCommandPalette } from '@/components/CommandPalette'
 
 interface TopBarProps {
   search: string
@@ -30,7 +31,7 @@ interface TopBarProps {
   projects: string[]
   checkTypes: string[]
   searchRef: React.RefObject<HTMLInputElement | null>
-  onOpenCommandPalette: () => void
+  onOpenCommandPalette?: () => void
 }
 
 export function TopBar({
@@ -154,7 +155,7 @@ export function TopBar({
               variant="ghost"
               size="sm"
               className="hidden sm:flex text-xs text-muted-foreground gap-1"
-              onClick={onOpenCommandPalette}
+              onClick={onOpenCommandPalette ?? openCommandPalette}
             >
               <Keyboard className="h-3.5 w-3.5" />
               <kbd className="text-[10px]">⌘K</kbd>
@@ -196,7 +197,7 @@ export function TopBar({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onOpenCommandPalette}>
+                <DropdownMenuItem onClick={onOpenCommandPalette ?? openCommandPalette}>
                   <Keyboard className="mr-2 h-4 w-4" />
                   Shortcuts
                 </DropdownMenuItem>
