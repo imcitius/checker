@@ -37,6 +37,7 @@ type Config struct {
 		BotToken           string `yaml:"bot_token,omitempty"`
 		CriticalChannel    string `yaml:"critical_channel,omitempty"`
 		NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
+		WebhookURL         string `yaml:"webhook_url,omitempty"`
 		RoutingKey         string `yaml:"routing_key,omitempty"`
 		// Opsgenie configs
 		APIKey string `yaml:"api_key,omitempty"`
@@ -251,6 +252,7 @@ func (cfg *Config) setDefaults() {
 			BotToken           string `yaml:"bot_token,omitempty"`
 			CriticalChannel    string `yaml:"critical_channel,omitempty"`
 			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
+			WebhookURL         string `yaml:"webhook_url,omitempty"`
 			RoutingKey         string `yaml:"routing_key,omitempty"`
 			APIKey             string `yaml:"api_key,omitempty"`
 			Region             string `yaml:"region,omitempty"`
@@ -262,6 +264,7 @@ func (cfg *Config) setDefaults() {
 			BotToken           string `yaml:"bot_token,omitempty"`
 			CriticalChannel    string `yaml:"critical_channel,omitempty"`
 			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
+			WebhookURL         string `yaml:"webhook_url,omitempty"`
 			RoutingKey         string `yaml:"routing_key,omitempty"`
 			APIKey             string `yaml:"api_key,omitempty"`
 			Region             string `yaml:"region,omitempty"`
@@ -275,6 +278,7 @@ func (cfg *Config) setDefaults() {
 			BotToken           string `yaml:"bot_token,omitempty"`
 			CriticalChannel    string `yaml:"critical_channel,omitempty"`
 			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
+			WebhookURL         string `yaml:"webhook_url,omitempty"`
 			RoutingKey         string `yaml:"routing_key,omitempty"`
 			APIKey             string `yaml:"api_key,omitempty"`
 			Region             string `yaml:"region,omitempty"`

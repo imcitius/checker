@@ -427,6 +427,22 @@ func sendAlertToChannel(channel string, status models.CheckStatus, checkDef mode
 			logrus.Errorf("Failed to send Slack alert: %v", err)
 		}
 
+	case "teams":
+		if checkDef.AlertDestination == "" {
+			logrus.Errorf("Teams webhook URL is not configured for check %s", status.UUID)
+			return
+		}
+		params := alerts.TeamsAlertParams{
+			CheckName:   status.CheckName,
+			ProjectName: status.Project,
+			Status:      "DOWN",
+			Error:       status.Message,
+			Time:        time.Now(),
+		}
+		if err := alerts.SendTeamsAlert(checkDef.AlertDestination, params); err != nil {
+			logrus.Errorf("Failed to send Teams alert: %v", err)
+		}
+
 	case "pagerduty":
 		if checkDef.AlertDestination == "" {
 			logrus.Errorf("PagerDuty routing key is not configured for check %s", status.UUID)
