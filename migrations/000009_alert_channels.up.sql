@@ -1,0 +1,8 @@
+CREATE TABLE alert_channels (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) UNIQUE NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  config JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);

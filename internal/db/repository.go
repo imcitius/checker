@@ -55,4 +55,11 @@ type Repository interface {
 	GetEscalationNotifications(ctx context.Context, checkUUID, policyName string) ([]models.EscalationNotification, error)
 	CreateEscalationNotification(ctx context.Context, notification models.EscalationNotification) error
 	DeleteEscalationNotifications(ctx context.Context, checkUUID string) error
+
+	// Alert channels
+	GetAllAlertChannels(ctx context.Context) ([]models.AlertChannel, error)
+	GetAlertChannelByName(ctx context.Context, name string) (models.AlertChannel, error)
+	CreateAlertChannel(ctx context.Context, channel models.AlertChannel) error
+	UpdateAlertChannel(ctx context.Context, channel models.AlertChannel) error
+	DeleteAlertChannel(ctx context.Context, name string) error
 }

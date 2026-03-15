@@ -217,6 +217,17 @@ func (r *mockRepo) CreateEscalationNotification(_ context.Context, _ models.Esca
 }
 func (r *mockRepo) DeleteEscalationNotifications(_ context.Context, _ string) error { return nil }
 
+// Alert channel stubs (not used in slack alert tests)
+func (r *mockRepo) GetAllAlertChannels(_ context.Context) ([]models.AlertChannel, error) {
+	return nil, nil
+}
+func (r *mockRepo) GetAlertChannelByName(_ context.Context, _ string) (models.AlertChannel, error) {
+	return models.AlertChannel{}, fmt.Errorf("not found")
+}
+func (r *mockRepo) CreateAlertChannel(_ context.Context, _ models.AlertChannel) error { return nil }
+func (r *mockRepo) UpdateAlertChannel(_ context.Context, _ models.AlertChannel) error { return nil }
+func (r *mockRepo) DeleteAlertChannel(_ context.Context, _ string) error              { return nil }
+
 // --- Tests ---
 
 func TestSendAlert_NewFailure_CreatesNewThread(t *testing.T) {

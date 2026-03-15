@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Search, Settings, LogOut, User, Keyboard, Bell, Sun, Moon, Monitor, Menu, X } from 'lucide-react'
+import { Search, Settings, LogOut, User, Keyboard, Bell, Sun, Moon, Monitor, Menu, X, Cog } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import {
@@ -139,6 +139,16 @@ export function TopBar({
                 >
                   <Bell className="h-4 w-4 mr-1" />
                   Alerts
+                </Button>
+              </Link>
+              <Link to="/settings">
+                <Button
+                  variant={location.pathname === '/settings' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="min-h-[44px]"
+                >
+                  <Cog className="h-4 w-4 mr-1" />
+                  Settings
                 </Button>
               </Link>
             </nav>
@@ -324,6 +334,15 @@ export function TopBar({
                 >
                   <Bell className="h-4 w-4 mr-2" />
                   Alerts
+                </Button>
+              </Link>
+              <Link to="/settings" onClick={() => setMobileMenuOpen(false)}>
+                <Button
+                  variant={location.pathname === '/settings' ? 'secondary' : 'ghost'}
+                  className="w-full justify-start min-h-[44px]"
+                >
+                  <Cog className="h-4 w-4 mr-2" />
+                  Settings
                 </Button>
               </Link>
             </nav>

@@ -157,6 +157,21 @@ export interface CreateSilenceRequest {
   reason?: string
 }
 
+export interface AlertChannel {
+  id: number
+  name: string
+  type: string
+  config: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface AlertChannelInput {
+  name: string
+  type: string
+  config: Record<string, unknown>
+}
+
 export const api = {
   getChecks: () => request<CheckDefinition[]>('/api/check-definitions'),
   getCheck: (uuid: string) => request<CheckDefinition>(`/api/check-definitions/${uuid}`),
@@ -205,6 +220,28 @@ export const api = {
     }),
   deleteSilence: (id: number) =>
     request<{ message: string }>(`/api/silences/${id}`, { method: 'DELETE' }),
+
+  // Alert channels
+  getAlertChannels: () => request<AlertChannel[]>('/api/alert-channels'),
+  createAlertChannel: (data: AlertChannelInput) =>
+    request<{ message: string; name: string }>('/api/alert-channels', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateAlertChannel: (name: string, data: AlertChannelInput) =>
+    request<{ message: string; name: string }>(`/api/alert-channels/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteAlertChannel: (name: string) =>
+    request<{ message: string }>(`/api/alert-channels/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+    }),
+  testAlertChannel: (name: string) =>
+    request<{ message: string; success: boolean; tested_at: string }>(
+      `/api/alert-channels/${encodeURIComponent(name)}/test`,
+      { method: 'POST' }
+    ),
 
   getProjects: () => request<string[]>('/api/metadata/projects'),
   getCheckTypes: () => request<string[]>('/api/metadata/check-types'),

@@ -149,6 +149,21 @@ func (m *mockEscalationRepo) DeleteEscalationPolicy(_ context.Context, name stri
 	return nil
 }
 
+// Alert channel stubs (not used in escalation tests)
+func (m *mockEscalationRepo) GetAllAlertChannels(_ context.Context) ([]models.AlertChannel, error) {
+	return nil, nil
+}
+func (m *mockEscalationRepo) GetAlertChannelByName(_ context.Context, _ string) (models.AlertChannel, error) {
+	return models.AlertChannel{}, fmt.Errorf("not found")
+}
+func (m *mockEscalationRepo) CreateAlertChannel(_ context.Context, _ models.AlertChannel) error {
+	return nil
+}
+func (m *mockEscalationRepo) UpdateAlertChannel(_ context.Context, _ models.AlertChannel) error {
+	return nil
+}
+func (m *mockEscalationRepo) DeleteAlertChannel(_ context.Context, _ string) error { return nil }
+
 // --- Tests ---
 
 func TestProcessEscalation_NoPolicyName(t *testing.T) {

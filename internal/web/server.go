@@ -264,6 +264,7 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	if spaHandler != nil {
 		protected.GET("/", serveSPA(spaRoot))
 		protected.GET("/manage", serveSPA(spaRoot))
+		protected.GET("/settings", serveSPA(spaRoot))
 	} else {
 		// Legacy template-based routes (fallback when SPA not built)
 		protected.GET("/", handleDashboard)
@@ -329,6 +330,16 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		escalationGroup.POST("", CreateEscalationPolicy)
 		escalationGroup.PUT("/:name", UpdateEscalationPolicy)
 		escalationGroup.DELETE("/:name", DeleteEscalationPolicy)
+	}
+
+	// Alert channel endpoints
+	alertChannelGroup := protected.Group("/api/alert-channels")
+	{
+		alertChannelGroup.GET("", ListAlertChannels)
+		alertChannelGroup.POST("", CreateAlertChannel)
+		alertChannelGroup.PUT("/:name", UpdateAlertChannel)
+		alertChannelGroup.DELETE("/:name", DeleteAlertChannel)
+		alertChannelGroup.POST("/:name/test", TestAlertChannel)
 	}
 
 	// Metadata endpoints

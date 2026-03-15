@@ -820,3 +820,69 @@ func (db *PostgresDB) DeleteEscalationNotifications(ctx context.Context, checkUU
 		`DELETE FROM escalation_notifications WHERE check_uuid=$1`, checkUUID)
 	return err
 }
+
+// Alert channels
+
+func (db *PostgresDB) GetAllAlertChannels(ctx context.Context) ([]models.AlertChannel, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT id, name, type, config, created_at, updated_at
+		 FROM alert_channels
+		 ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var channels []models.AlertChannel
+	for rows.Next() {
+		var ch models.AlertChannel
+		if err := rows.Scan(&ch.ID, &ch.Name, &ch.Type, &ch.Config, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
+			return nil, err
+		}
+		channels = append(channels, ch)
+	}
+	return channels, rows.Err()
+}
+
+func (db *PostgresDB) GetAlertChannelByName(ctx context.Context, name string) (models.AlertChannel, error) {
+	var ch models.AlertChannel
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id, name, type, config, created_at, updated_at
+		 FROM alert_channels WHERE name=$1`, name).
+		Scan(&ch.ID, &ch.Name, &ch.Type, &ch.Config, &ch.CreatedAt, &ch.UpdatedAt)
+	if err != nil {
+		return ch, fmt.Errorf("alert channel not found: %w", err)
+	}
+	return ch, nil
+}
+
+func (db *PostgresDB) CreateAlertChannel(ctx context.Context, channel models.AlertChannel) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO alert_channels (name, type, config) VALUES ($1, $2, $3)`,
+		channel.Name, channel.Type, channel.Config)
+	return err
+}
+
+func (db *PostgresDB) UpdateAlertChannel(ctx context.Context, channel models.AlertChannel) error {
+	cmdTag, err := db.Pool.Exec(ctx,
+		`UPDATE alert_channels SET type=$2, config=$3, updated_at=NOW() WHERE name=$1`,
+		channel.Name, channel.Type, channel.Config)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("alert channel not found")
+	}
+	return nil
+}
+
+func (db *PostgresDB) DeleteAlertChannel(ctx context.Context, name string) error {
+	cmdTag, err := db.Pool.Exec(ctx, `DELETE FROM alert_channels WHERE name=$1`, name)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("alert channel not found")
+	}
+	return nil
+}
