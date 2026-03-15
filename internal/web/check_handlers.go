@@ -348,8 +348,9 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 		ActorType:        def.ActorType,
 		AlertType:        def.AlertType,
 		AlertDestination: def.AlertDestination,
-		RetryCount:       def.RetryCount,
-		RetryInterval:    def.RetryInterval,
+		RetryCount:           def.RetryCount,
+		RetryInterval:       def.RetryInterval,
+		EscalationPolicyName: def.EscalationPolicyName,
 	}
 
 	// Set maintenance window
@@ -441,8 +442,9 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 		ActorType:        vm.ActorType,
 		AlertType:        vm.AlertType,
 		AlertDestination: vm.AlertDestination,
-		RetryCount:       vm.RetryCount,
-		RetryInterval:    vm.RetryInterval,
+		RetryCount:           vm.RetryCount,
+		RetryInterval:       vm.RetryInterval,
+		EscalationPolicyName: vm.EscalationPolicyName,
 	}
 
 	// Create ID if present (parsed later usually)

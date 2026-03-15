@@ -378,6 +378,9 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 			isNewIncident := previouslyHealthy
 			slackAlerter.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
 		}
+
+		// Process escalation policy (if assigned)
+		processEscalation(repo, checkDef, checkStatus, slackAlerter)
 	}
 
 	// Handle recovery when check transitions from unhealthy to healthy
@@ -389,6 +392,9 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 		if slackAlerter != nil {
 			slackAlerter.HandleRecovery(context.Background(), checkDef)
 		}
+
+		// Clear escalation notifications on recovery (reset for next incident)
+		clearEscalationNotifications(repo, checkDef.UUID)
 	}
 
 	return nil

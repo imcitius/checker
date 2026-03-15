@@ -322,6 +322,15 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		silencesGroup.DELETE("/:id", DeleteSilence)
 	}
 
+	// Escalation policy endpoints
+	escalationGroup := protected.Group("/api/escalation-policies")
+	{
+		escalationGroup.GET("", ListEscalationPolicies)
+		escalationGroup.POST("", CreateEscalationPolicy)
+		escalationGroup.PUT("/:name", UpdateEscalationPolicy)
+		escalationGroup.DELETE("/:name", DeleteEscalationPolicy)
+	}
+
 	// Metadata endpoints
 	metadataGroup := protected.Group("/api/metadata")
 	{

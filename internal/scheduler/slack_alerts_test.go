@@ -196,6 +196,26 @@ func (r *mockRepo) BulkToggleCheckDefinitions(_ context.Context, _ []string, _ b
 func (r *mockRepo) BulkDeleteCheckDefinitions(_ context.Context, _ []string) (int64, error) {
 	return 0, nil
 }
+func (r *mockRepo) GetAllEscalationPolicies(_ context.Context) ([]models.EscalationPolicy, error) {
+	return nil, nil
+}
+func (r *mockRepo) GetEscalationPolicyByName(_ context.Context, _ string) (models.EscalationPolicy, error) {
+	return models.EscalationPolicy{}, nil
+}
+func (r *mockRepo) CreateEscalationPolicy(_ context.Context, _ models.EscalationPolicy) error {
+	return nil
+}
+func (r *mockRepo) UpdateEscalationPolicy(_ context.Context, _ models.EscalationPolicy) error {
+	return nil
+}
+func (r *mockRepo) DeleteEscalationPolicy(_ context.Context, _ string) error { return nil }
+func (r *mockRepo) GetEscalationNotifications(_ context.Context, _, _ string) ([]models.EscalationNotification, error) {
+	return nil, nil
+}
+func (r *mockRepo) CreateEscalationNotification(_ context.Context, _ models.EscalationNotification) error {
+	return nil
+}
+func (r *mockRepo) DeleteEscalationNotifications(_ context.Context, _ string) error { return nil }
 
 // --- Tests ---
 

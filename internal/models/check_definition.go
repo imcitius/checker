@@ -50,6 +50,9 @@ type CheckDefinition struct {
 
 	// Maintenance window
 	MaintenanceUntil *time.Time `bson:"maintenance_until,omitempty" json:"maintenance_until,omitempty"`
+
+	// Escalation policy
+	EscalationPolicyName string `bson:"escalation_policy_name,omitempty" json:"escalation_policy_name,omitempty"`
 }
 
 // UnmarshalBSON implements a custom BSON unmarshaler to handle polymorphism
@@ -253,7 +256,8 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 		"re_alert_interval":  cd.ReAlertInterval,
 		"retry_count":        cd.RetryCount,
 		"retry_interval":     cd.RetryInterval,
-		"maintenance_until":  cd.MaintenanceUntil,
+		"maintenance_until":          cd.MaintenanceUntil,
+		"escalation_policy_name":     cd.EscalationPolicyName,
 	}
 
 	// Flatten Check Config
@@ -436,4 +440,7 @@ type CheckDefinitionViewModel struct {
 
 	// Maintenance window
 	MaintenanceUntil *string `json:"maintenance_until,omitempty"`
+
+	// Escalation policy
+	EscalationPolicyName string `json:"escalation_policy_name,omitempty"`
 }

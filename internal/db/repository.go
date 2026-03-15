@@ -43,4 +43,16 @@ type Repository interface {
 	CreateAlertEvent(ctx context.Context, event models.AlertEvent) error
 	ResolveAlertEvent(ctx context.Context, checkUUID string) error
 	GetAlertHistory(ctx context.Context, limit, offset int, filters models.AlertHistoryFilters) ([]models.AlertEvent, int, error)
+
+	// Escalation policies
+	GetAllEscalationPolicies(ctx context.Context) ([]models.EscalationPolicy, error)
+	GetEscalationPolicyByName(ctx context.Context, name string) (models.EscalationPolicy, error)
+	CreateEscalationPolicy(ctx context.Context, policy models.EscalationPolicy) error
+	UpdateEscalationPolicy(ctx context.Context, policy models.EscalationPolicy) error
+	DeleteEscalationPolicy(ctx context.Context, name string) error
+
+	// Escalation notifications
+	GetEscalationNotifications(ctx context.Context, checkUUID, policyName string) ([]models.EscalationNotification, error)
+	CreateEscalationNotification(ctx context.Context, notification models.EscalationNotification) error
+	DeleteEscalationNotifications(ctx context.Context, checkUUID string) error
 }
