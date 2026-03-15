@@ -12,12 +12,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
-      - name: Download dependencies
+      - name: Download Go dependencies
         run: go mod download
+
+      - name: Build (frontend + Go binary)
+        run: make build
 
       - name: Lint
         run: go vet ./...
@@ -25,8 +34,5 @@ jobs:
       - name: Test
         run: go test -race -count=1 ./...
 
-      - name: Build binary
-        run: go build -o checker ./cmd/app
-
       - name: Build Docker image
-        run: docker build -t checker:ci .
+        run: make docker

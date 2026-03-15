@@ -644,7 +644,7 @@ function ConfigSummary({ channel }: { channel: AlertChannel }) {
       return <span>Webhook configured</span>
     case 'email': {
       const host = (cfg.smtp_host as string) || 'N/A'
-      const port = cfg.smtp_port || ''
+      const port = String(cfg.smtp_port || '')
       const to = Array.isArray(cfg.to) ? cfg.to.join(', ') : 'N/A'
       return (
         <span>

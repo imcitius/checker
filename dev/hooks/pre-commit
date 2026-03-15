@@ -29,6 +29,9 @@ fi
 rm -rf internal/web/spa
 cp -r frontend/dist internal/web/spa
 
+# Write version file for the Go backend
+git rev-parse HEAD > internal/web/spa/.version 2>/dev/null || echo "unknown" > internal/web/spa/.version
+
 # Stage the updated SPA files so they're included in this commit
 git add internal/web/spa/
 
