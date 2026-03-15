@@ -323,6 +323,11 @@ export function CheckEditDrawer({
   const isHTTP = editingCheck.type === 'http'
   const isTCP = editingCheck.type === 'tcp'
   const isICMP = editingCheck.type === 'icmp'
+  const isDNS = editingCheck.type === 'dns'
+  const isSSH = editingCheck.type === 'ssh'
+  const isRedis = editingCheck.type === 'redis'
+  const isMongoDB = editingCheck.type === 'mongodb'
+  const isDomainExpiry = editingCheck.type === 'domain_expiry'
 
   const dbKey = isMySQL ? 'mysql' : 'pgsql'
   const dbConfig = isMySQL ? editingCheck.mysql : editingCheck.pgsql
@@ -355,13 +360,15 @@ export function CheckEditDrawer({
     )
 
   const hasExistingAdvancedICMP = isICMP && !!(editingCheck.count && editingCheck.count > 0)
+  const hasExistingAdvancedSSH = isSSH && !!editingCheck.expect_banner
+  const hasExistingAdvancedRedis = isRedis && !!(editingCheck.redis_password || editingCheck.redis_db)
 
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [errors, setErrors] = useState<Set<string>>(new Set())
 
   // Sync advanced section open state when check changes
   useEffect(() => {
-    setAdvancedOpen(hasExistingAdvancedHTTP || hasExistingAdvancedDB || hasExistingAdvancedICMP)
+    setAdvancedOpen(hasExistingAdvancedHTTP || hasExistingAdvancedDB || hasExistingAdvancedICMP || hasExistingAdvancedSSH || hasExistingAdvancedRedis)
   }, [editingCheck.uuid, editingCheck.type]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateForm = (field: string, value: string | number | boolean | number[] | Record<string, string>[]) => {
@@ -386,7 +393,10 @@ export function CheckEditDrawer({
     const errs = new Set<string>()
     if (!editingCheck.name?.trim()) errs.add('name')
     if (isHTTP && !editingCheck.url?.trim()) errs.add('url')
-    if ((isTCP || isDB) && !editingCheck.host?.trim()) errs.add('host')
+    if ((isTCP || isDB || isSSH || isRedis) && !editingCheck.host?.trim()) errs.add('host')
+    if (isDNS && !editingCheck.domain?.trim()) errs.add('domain')
+    if (isDomainExpiry && !editingCheck.domain?.trim()) errs.add('domain')
+    if (isMongoDB && !editingCheck.mongodb_uri?.trim()) errs.add('mongodb_uri')
     setErrors(errs)
     return errs.size === 0
   }
@@ -397,8 +407,8 @@ export function CheckEditDrawer({
     }
   }
 
-  const hasConnection = isHTTP || isTCP || isICMP || isDB
-  const hasAdvanced = isHTTP || isDB || isICMP
+  const hasConnection = isHTTP || isTCP || isICMP || isDB || isDNS || isSSH || isRedis || isMongoDB || isDomainExpiry
+  const hasAdvanced = isHTTP || isDB || isICMP || isDNS || isSSH || isRedis
 
   // Parse expected status codes from comma-separated string
   const codeString = (editingCheck.code || []).join(', ')
@@ -460,10 +470,20 @@ export function CheckEditDrawer({
                     <SelectItem value="http">HTTP</SelectItem>
                     <SelectItem value="tcp">TCP</SelectItem>
                     <SelectItem value="icmp">ICMP</SelectItem>
+                    <SelectItem value="dns">DNS</SelectItem>
+                    <SelectItem value="ssh">SSH</SelectItem>
                     <SelectItem value="passive">Passive</SelectItem>
+                    <SelectItem value="redis">Redis</SelectItem>
+                    <SelectItem value="mongodb">MongoDB</SelectItem>
+                    <SelectItem value="domain_expiry">Domain Expiry</SelectItem>
                     <SelectItem value="mysql_query">MySQL Query</SelectItem>
+                    <SelectItem value="mysql_query_unixtime">MySQL Query (Unixtime)</SelectItem>
+                    <SelectItem value="mysql_replication">MySQL Replication</SelectItem>
                     <SelectItem value="pgsql_query">PostgreSQL Query</SelectItem>
+                    <SelectItem value="pgsql_query_unixtime">PostgreSQL Query (Unixtime)</SelectItem>
+                    <SelectItem value="pgsql_query_timestamp">PostgreSQL Query (Timestamp)</SelectItem>
                     <SelectItem value="pgsql_replication">PostgreSQL Replication</SelectItem>
+                    <SelectItem value="pgsql_replication_status">PostgreSQL Replication Status</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -613,6 +633,136 @@ export function CheckEditDrawer({
                   </div>
                 </div>
               )}
+
+              {isDNS && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground">Domain *</label>
+                      <Input
+                        value={editingCheck.domain || ''}
+                        onChange={(e) => updateForm('domain', e.target.value)}
+                        placeholder="example.com"
+                        className={errors.has('domain') ? 'border-destructive' : ''}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Record Type</label>
+                      <Select
+                        value={editingCheck.record_type || 'A'}
+                        onValueChange={(v) => updateForm('record_type', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A">A</SelectItem>
+                          <SelectItem value="AAAA">AAAA</SelectItem>
+                          <SelectItem value="CNAME">CNAME</SelectItem>
+                          <SelectItem value="MX">MX</SelectItem>
+                          <SelectItem value="TXT">TXT</SelectItem>
+                          <SelectItem value="NS">NS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground">DNS Resolver (optional)</label>
+                      <Input
+                        value={editingCheck.host || ''}
+                        onChange={(e) => updateForm('host', e.target.value)}
+                        placeholder="8.8.8.8"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Expected Value (optional)</label>
+                      <Input
+                        value={editingCheck.expected || ''}
+                        onChange={(e) => updateForm('expected', e.target.value)}
+                        placeholder="Expected value in DNS response"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isSSH && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Host *</label>
+                    <Input
+                      value={editingCheck.host || ''}
+                      onChange={(e) => updateForm('host', e.target.value)}
+                      className={errors.has('host') ? 'border-destructive' : ''}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Port</label>
+                    <Input
+                      type="number"
+                      value={editingCheck.port || 22}
+                      onChange={(e) => updateForm('port', parseInt(e.target.value) || 22)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {isRedis && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Host *</label>
+                    <Input
+                      value={editingCheck.host || ''}
+                      onChange={(e) => updateForm('host', e.target.value)}
+                      placeholder="localhost"
+                      className={errors.has('host') ? 'border-destructive' : ''}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Port</label>
+                    <Input
+                      type="number"
+                      value={editingCheck.port || 6379}
+                      onChange={(e) => updateForm('port', parseInt(e.target.value) || 6379)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {isMongoDB && (
+                <div>
+                  <label className="text-xs text-muted-foreground">Connection URI *</label>
+                  <Input
+                    value={editingCheck.mongodb_uri || ''}
+                    onChange={(e) => updateForm('mongodb_uri', e.target.value)}
+                    placeholder="mongodb://user:pass@host:27017/db"
+                    className={errors.has('mongodb_uri') ? 'border-destructive' : ''}
+                  />
+                </div>
+              )}
+
+              {isDomainExpiry && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Domain *</label>
+                    <Input
+                      value={editingCheck.domain || ''}
+                      onChange={(e) => updateForm('domain', e.target.value)}
+                      placeholder="example.com"
+                      className={errors.has('domain') ? 'border-destructive' : ''}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Warning Days Before Expiry</label>
+                    <Input
+                      type="number"
+                      value={editingCheck.expiry_warning_days || 30}
+                      onChange={(e) => updateForm('expiry_warning_days', parseInt(e.target.value) || 30)}
+                    />
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -748,6 +898,47 @@ export function CheckEditDrawer({
                         onChange={(e) => updateForm('count', parseInt(e.target.value) || 0)}
                         placeholder="Number of pings"
                       />
+                    </div>
+                  )}
+
+                  {/* SSH Advanced */}
+                  {isSSH && (
+                    <div>
+                      <label className="text-xs text-muted-foreground">Expected Banner (optional)</label>
+                      <Input
+                        value={editingCheck.expect_banner || ''}
+                        onChange={(e) => updateForm('expect_banner', e.target.value)}
+                        placeholder="SSH-2.0-OpenSSH"
+                      />
+                    </div>
+                  )}
+
+                  {/* Redis Advanced */}
+                  {isRedis && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground">Password</label>
+                        <Input
+                          type="password"
+                          value={editingCheck.redis_password || ''}
+                          onChange={(e) => updateForm('redis_password', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Database Number</label>
+                        <Input
+                          type="number"
+                          value={editingCheck.redis_db ?? 0}
+                          onChange={(e) => updateForm('redis_db', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* DNS Advanced — expected value already in connection section */}
+                  {isDNS && (
+                    <div className="text-xs text-muted-foreground">
+                      DNS advanced options are configured in the Connection section above.
                     </div>
                   )}
 

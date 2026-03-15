@@ -51,6 +51,19 @@ export interface CheckDefinition {
   }
   // ICMP fields
   count?: number
+  // DNS fields
+  domain?: string
+  record_type?: string
+  expected?: string
+  // SSH fields
+  expect_banner?: string
+  // Redis fields
+  redis_password?: string
+  redis_db?: number
+  // MongoDB fields
+  mongodb_uri?: string
+  // Domain expiry fields
+  expiry_warning_days?: number
   // Database config
   pgsql?: {
     username?: string
