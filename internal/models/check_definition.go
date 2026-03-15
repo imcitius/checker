@@ -134,6 +134,13 @@ func (cd *CheckDefinition) UnmarshalBSON(data []byte) error {
 			ServerList: mfn.MySQLNested.ServerList,
 		}
 
+	case "redis":
+		var conf RedisCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+
 	case "mongodb":
 		var conf MongoDBCheckConfig
 		if err := bson.Unmarshal(data, &conf); err != nil {
@@ -283,6 +290,12 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 				"lag":         c.Lag,
 				"server_list": c.ServerList,
 			}
+		case *RedisCheckConfig:
+			doc["host"] = c.Host
+			doc["port"] = c.Port
+			doc["timeout"] = c.Timeout
+			doc["password"] = c.Password
+			doc["db"] = c.DB
 		case *MongoDBCheckConfig:
 			doc["uri"] = c.URI
 			doc["timeout"] = c.Timeout

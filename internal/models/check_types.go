@@ -15,6 +15,7 @@ var _ CheckConfig = (*ICMPCheckConfig)(nil)
 var _ CheckConfig = (*PassiveCheckConfig)(nil)
 var _ CheckConfig = (*MySQLCheckConfig)(nil)
 var _ CheckConfig = (*PostgreSQLCheckConfig)(nil)
+var _ CheckConfig = (*RedisCheckConfig)(nil)
 var _ CheckConfig = (*MongoDBCheckConfig)(nil)
 var _ CheckConfig = (*WebhookConfig)(nil)
 var _ CheckConfig = (*DomainExpiryCheckConfig)(nil)
@@ -110,6 +111,18 @@ type PostgreSQLCheckConfig struct {
 
 func (c *PostgreSQLCheckConfig) CheckType() string { return "pgsql" }
 func (c *PostgreSQLCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
+
+// RedisCheckConfig holds configuration for Redis checks
+type RedisCheckConfig struct {
+	Host     string `bson:"host,omitempty" json:"host,omitempty"`
+	Port     int    `bson:"port,omitempty" json:"port,omitempty"`
+	Timeout  string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+	Password string `bson:"password,omitempty" json:"password,omitempty"`
+	DB       int    `bson:"db,omitempty" json:"db,omitempty"`
+}
+
+func (c *RedisCheckConfig) CheckType() string { return "redis" }
+func (c *RedisCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
 
 // MongoDBCheckConfig holds configuration for MongoDB checks
 type MongoDBCheckConfig struct {

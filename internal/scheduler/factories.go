@@ -192,6 +192,17 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 			return nil
 		}
 
+	case *models.RedisCheckConfig:
+		logger.Debugf("Creating Redis check for host: %s, port: %d", config.Host, config.Port)
+		return &checks.RedisCheck{
+			Host:     config.Host,
+			Port:     config.Port,
+			Timeout:  config.Timeout,
+			Password: config.Password,
+			DB:       config.DB,
+			Logger:   logger,
+		}
+
 	case *models.MongoDBCheckConfig:
 		logger.Debugf("Creating MongoDB check for URI: %s", config.URI)
 		return &checks.MongoDBCheck{
