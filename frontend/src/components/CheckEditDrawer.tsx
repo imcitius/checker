@@ -307,6 +307,8 @@ interface CheckEditDrawerProps {
   onCheckChange: (check: Partial<CheckDefinition>) => void
   onSave: () => void
   saving: boolean
+  existingProjects?: string[]
+  existingGroups?: string[]
 }
 
 export function CheckEditDrawer({
@@ -316,6 +318,8 @@ export function CheckEditDrawer({
   onCheckChange,
   onSave,
   saving,
+  existingProjects = [],
+  existingGroups = [],
 }: CheckEditDrawerProps) {
   const isMySQL = editingCheck.type?.includes('mysql')
   const isPgSQL = editingCheck.type?.includes('pgsql')
@@ -446,14 +450,28 @@ export function CheckEditDrawer({
                 <Input
                   value={editingCheck.project || ''}
                   onChange={(e) => updateForm('project', e.target.value)}
+                  list="project-suggestions"
+                  autoComplete="off"
                 />
+                <datalist id="project-suggestions">
+                  {existingProjects.map((p) => (
+                    <option key={p} value={p} />
+                  ))}
+                </datalist>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Group</label>
                 <Input
                   value={editingCheck.group_name || ''}
                   onChange={(e) => updateForm('group_name', e.target.value)}
+                  list="group-suggestions"
+                  autoComplete="off"
                 />
+                <datalist id="group-suggestions">
+                  {existingGroups.map((g) => (
+                    <option key={g} value={g} />
+                  ))}
+                </datalist>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">

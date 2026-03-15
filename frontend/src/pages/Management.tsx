@@ -318,6 +318,16 @@ export function Management() {
   // Flat sorted list for bulk selection helpers
   const allVisible = useMemo(() => groups.flatMap((g) => g.checks), [groups])
 
+  // Unique project and group names for combobox suggestions
+  const uniqueProjects = useMemo(() => {
+    const set = new Set(definitions.map((d) => d.project).filter(Boolean))
+    return [...set].sort()
+  }, [definitions])
+  const uniqueGroups = useMemo(() => {
+    const set = new Set(definitions.map((d) => d.group_name).filter(Boolean))
+    return [...set].sort()
+  }, [definitions])
+
 
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />
@@ -1104,6 +1114,8 @@ export function Management() {
           onCheckChange={setEditingCheck}
           onSave={handleSave}
           saving={saving}
+          existingProjects={uniqueProjects}
+          existingGroups={uniqueGroups}
         />
 
         {/* Delete Confirmation */}
