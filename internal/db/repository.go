@@ -9,6 +9,7 @@ import (
 
 // Repository defines the interface for database interactions
 type Repository interface {
+	Close()
 	GetAllCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error)
 	GetEnabledCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error)
 	GetCheckDefinitionByUUID(ctx context.Context, uuid string) (models.CheckDefinition, error)

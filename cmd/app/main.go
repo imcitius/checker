@@ -26,6 +26,16 @@ var (
 	BuildTime string // build timestamp
 )
 
+// newRepository creates the appropriate Repository implementation based on DB driver config.
+func newRepository(cfg *config.Config) (db.Repository, error) {
+	switch cfg.DB.Driver {
+	case "sqlite":
+		return db.NewSQLiteDB(cfg.DB.DSN)
+	default: // "postgres"
+		return db.NewPostgresDB(cfg)
+	}
+}
+
 func main() {
 	// Pass build-time version info to the web package.
 	web.AppVersion = Version
@@ -82,10 +92,9 @@ func main() {
 			}
 			logrus.Infof("Configuration loaded successfully from %s", configPath)
 
-			// 2. Initialize Database (PostgreSQL)
-			logrus.Info("Connecting to Database")
-			// We now use PostgresDB as the implementation of Repository
-			repo, err := db.NewPostgresDB(cfg)
+			// 2. Initialize Database
+			logrus.Infof("Connecting to database (driver: %s)", cfg.DB.Driver)
+			repo, err := newRepository(cfg)
 			if err != nil {
 				return fmt.Errorf("failed to connect to Database: %w", err)
 			}
