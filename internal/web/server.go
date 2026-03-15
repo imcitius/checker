@@ -238,7 +238,9 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	})
 
 	// Public auth routes (no auth required)
+	router.GET("/api/auth/mode", authMgr.HandleAuthMode)
 	router.GET("/auth/login", authMgr.HandleLogin)
+	router.POST("/auth/login", authMgr.HandleLogin)
 	router.GET("/auth/callback", authMgr.HandleCallback)
 	router.GET("/auth/logout", authMgr.HandleLogout)
 

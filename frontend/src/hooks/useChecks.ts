@@ -29,7 +29,7 @@ export function useChecks() {
       setChecks((prev) => {
         prevChecksRef.current = prev
         const next = new Map<string, Check>()
-        for (const check of msg.checks) {
+        for (const check of msg.checks || []) {
           next.set(check.UUID, check)
         }
         return next

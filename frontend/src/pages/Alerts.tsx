@@ -116,8 +116,8 @@ export function Alerts() {
 
   // Fetch projects list for filters
   useEffect(() => {
-    api.getProjects().then(setProjects).catch(() => {})
-    api.getCheckTypes().then(setCheckTypes).catch(() => {})
+    api.getProjects().then((p) => setProjects(p || [])).catch(() => {})
+    api.getCheckTypes().then((t) => setCheckTypes(t || [])).catch(() => {})
   }, [])
 
   // Build a set of silenced check UUIDs and project names for quick lookup

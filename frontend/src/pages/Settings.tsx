@@ -131,7 +131,7 @@ export function Settings() {
   const fetchChannels = useCallback(async () => {
     try {
       const data = await api.getAlertChannels()
-      setChannels(data || [])
+      setChannels(Array.isArray(data) ? data : [])
     } catch (err) {
       toast.error('Failed to load alert channels')
     } finally {

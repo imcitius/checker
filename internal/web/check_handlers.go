@@ -301,6 +301,9 @@ func GetCheckProjects(c *gin.Context) {
 		return
 	}
 
+	if projects == nil {
+		projects = []string{}
+	}
 	c.JSON(http.StatusOK, projects)
 }
 
@@ -320,6 +323,9 @@ func GetCheckTypes(c *gin.Context) {
 		return
 	}
 
+	if types == nil {
+		types = []string{}
+	}
 	c.JSON(http.StatusOK, types)
 }
 

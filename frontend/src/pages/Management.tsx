@@ -103,9 +103,9 @@ export function Management() {
         api.getProjects().catch(() => [] as string[]),
         api.getCheckTypes().catch(() => [] as string[]),
       ])
-      setDefinitions(defs)
-      setProjects(projs)
-      setCheckTypes(types)
+      setDefinitions(defs || [])
+      setProjects(projs || [])
+      setCheckTypes(types || [])
       // Clear selection of items that no longer exist
       setSelectedUUIDs((prev) => {
         const validUUIDs = new Set(defs.map((d) => d.uuid))

@@ -67,6 +67,7 @@ type Config struct {
 			ClientSecret string `yaml:"client_secret"`
 			RedirectURL  string `yaml:"redirect_url"`
 		} `yaml:"oidc"`
+		Password  string   `yaml:"password"`
 		APIKeys   []string `yaml:"api_keys"`
 		JWTSecret string   `yaml:"jwt_secret"`
 	} `yaml:"auth"`
@@ -216,6 +217,9 @@ func (cfg *Config) applyEnvOverrides() {
 	if v := os.Getenv("AUTH_OIDC_REDIRECT_URL"); v != "" {
 		cfg.Auth.OIDC.RedirectURL = v
 	}
+	if v := os.Getenv("AUTH_PASSWORD"); v != "" {
+		cfg.Auth.Password = v
+	}
 	if v := os.Getenv("AUTH_API_KEYS"); v != "" {
 		cfg.Auth.APIKeys = strings.Split(v, ",")
 	}
@@ -317,7 +321,7 @@ func (cfg *Config) setDefaults() {
 	}
 
 	// Generate random JWT secret if auth is enabled but no secret provided
-	if cfg.Auth.OIDC.IssuerURL != "" && cfg.Auth.JWTSecret == "" {
+	if (cfg.Auth.OIDC.IssuerURL != "" || cfg.Auth.Password != "") && cfg.Auth.JWTSecret == "" {
 		b := make([]byte, 32)
 		if _, err := rand.Read(b); err != nil {
 			logrus.Errorf("Failed to generate random JWT secret: %v", err)

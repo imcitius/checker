@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -19,7 +20,16 @@ import (
 	"checker/internal/config"
 )
 
-// AuthManager handles OIDC authentication, API key validation, and session management.
+// AuthMode represents the authentication method in use.
+type AuthMode string
+
+const (
+	AuthModeNone     AuthMode = "none"
+	AuthModePassword AuthMode = "password"
+	AuthModeOIDC     AuthMode = "oidc"
+)
+
+// AuthManager handles authentication via static password, OIDC, or API keys.
 type AuthManager struct {
 	// OIDC fields — guarded by mu for lazy initialization
 	mu           sync.RWMutex
@@ -33,10 +43,12 @@ type AuthManager struct {
 	oidcClientSecret string
 	oidcRedirectURL  string
 
-	jwtSecret []byte
-	apiKeys   map[string]bool
-	enabled   bool
-	oidcReady bool // true once OIDC provider is connected
+	jwtSecret      []byte
+	apiKeys        map[string]bool
+	staticPassword string
+	mode           AuthMode
+	enabled        bool
+	oidcReady      bool
 }
 
 // SessionClaims represents the claims stored in session JWTs.
@@ -46,26 +58,15 @@ type SessionClaims struct {
 	Name  string `json:"name"`
 }
 
-// NewAuthManager creates a new AuthManager. If OIDC is not configured, auth is disabled (pass-through).
-// OIDC provider connection is attempted with a short timeout; if it fails, the app
-// continues to start (healthcheck works, API keys work) and OIDC is retried in the background.
+// NewAuthManager creates a new AuthManager.
+// Priority: AUTH_PASSWORD (simplest) > OIDC > disabled.
 func NewAuthManager(ctx context.Context, cfg *config.Config) (*AuthManager, error) {
 	am := &AuthManager{
 		apiKeys: make(map[string]bool),
+		mode:    AuthModeNone,
 	}
 
-	if cfg.Auth.OIDC.IssuerURL == "" {
-		logrus.Info("Auth disabled (no OIDC issuer configured)")
-		return am, nil
-	}
-
-	am.oidcIssuerURL = cfg.Auth.OIDC.IssuerURL
-	am.oidcClientID = cfg.Auth.OIDC.ClientID
-	am.oidcClientSecret = cfg.Auth.OIDC.ClientSecret
-	am.oidcRedirectURL = cfg.Auth.OIDC.RedirectURL
-	am.jwtSecret = []byte(cfg.Auth.JWTSecret)
-	am.enabled = true
-
+	// Load API keys (work in all modes)
 	for _, key := range cfg.Auth.APIKeys {
 		k := strings.TrimSpace(key)
 		if k != "" {
@@ -73,18 +74,46 @@ func NewAuthManager(ctx context.Context, cfg *config.Config) (*AuthManager, erro
 		}
 	}
 
-	logrus.Infof("Auth enabled: OIDC issuer=%s, %d API keys configured", cfg.Auth.OIDC.IssuerURL, len(am.apiKeys))
-
-	// Try to connect to OIDC provider with a short timeout (don't block startup)
-	initCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	if err := am.initOIDC(initCtx); err != nil {
-		logrus.Warnf("OIDC provider not available at startup (will retry in background): %v", err)
-		go am.retryOIDCInit()
+	// Static password mode (takes priority over OIDC)
+	if cfg.Auth.Password != "" {
+		am.staticPassword = cfg.Auth.Password
+		am.jwtSecret = []byte(cfg.Auth.JWTSecret)
+		am.mode = AuthModePassword
+		am.enabled = true
+		logrus.Infof("Auth enabled: static password mode, %d API keys configured", len(am.apiKeys))
+		return am, nil
 	}
 
+	// OIDC mode
+	if cfg.Auth.OIDC.IssuerURL != "" {
+		am.oidcIssuerURL = cfg.Auth.OIDC.IssuerURL
+		am.oidcClientID = cfg.Auth.OIDC.ClientID
+		am.oidcClientSecret = cfg.Auth.OIDC.ClientSecret
+		am.oidcRedirectURL = cfg.Auth.OIDC.RedirectURL
+		am.jwtSecret = []byte(cfg.Auth.JWTSecret)
+		am.mode = AuthModeOIDC
+		am.enabled = true
+
+		logrus.Infof("Auth enabled: OIDC issuer=%s, %d API keys configured", cfg.Auth.OIDC.IssuerURL, len(am.apiKeys))
+
+		initCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if err := am.initOIDC(initCtx); err != nil {
+			logrus.Warnf("OIDC provider not available at startup (will retry in background): %v", err)
+			go am.retryOIDCInit()
+		}
+
+		return am, nil
+	}
+
+	logrus.Info("Auth disabled (no password or OIDC issuer configured)")
 	return am, nil
+}
+
+// Mode returns the current authentication mode.
+func (am *AuthManager) Mode() AuthMode {
+	return am.mode
 }
 
 // initOIDC connects to the OIDC provider. Must be called with am.mu NOT held.
@@ -167,11 +196,11 @@ func (am *AuthManager) Middleware() gin.HandlerFunc {
 			return
 		}
 
-		// 2. Check session cookie (works even if OIDC is not ready — JWTs are self-contained)
+		// 2. Check session cookie (works for both password and OIDC modes)
 		if cookie, err := c.Cookie("checker_session"); err == nil && cookie != "" {
 			email, name, err := am.parseSessionJWT(cookie)
 			if err == nil {
-				c.Set("auth_type", "oidc")
+				c.Set("auth_type", string(am.mode))
 				c.Set("user_email", email)
 				c.Set("user_name", name)
 				c.Next()
@@ -193,13 +222,67 @@ func (am *AuthManager) Middleware() gin.HandlerFunc {
 	}
 }
 
-// HandleLogin initiates the OIDC authorization code flow.
+// HandleAuthMode returns the current auth mode so the frontend can render the right login form.
+func (am *AuthManager) HandleAuthMode(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"mode": string(am.mode)})
+}
+
+// HandleLogin handles the login flow depending on auth mode.
+// Password mode: GET shows info, POST validates password and sets session cookie.
+// OIDC mode: GET redirects to OIDC provider.
 func (am *AuthManager) HandleLogin(c *gin.Context) {
 	if !am.enabled {
 		c.Redirect(http.StatusFound, "/")
 		return
 	}
 
+	switch am.mode {
+	case AuthModePassword:
+		am.handlePasswordLogin(c)
+	case AuthModeOIDC:
+		am.handleOIDCLogin(c)
+	default:
+		c.Redirect(http.StatusFound, "/")
+	}
+}
+
+func (am *AuthManager) handlePasswordLogin(c *gin.Context) {
+	if c.Request.Method != http.MethodPost {
+		// GET — frontend handles rendering, just confirm mode
+		c.JSON(http.StatusOK, gin.H{"mode": "password"})
+		return
+	}
+
+	// POST — validate password
+	var body struct {
+		Password string `json:"password"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if subtle.ConstantTimeCompare([]byte(body.Password), []byte(am.staticPassword)) != 1 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid password"})
+		return
+	}
+
+	// Create session JWT
+	sessionToken, err := am.createSessionJWT("admin@local", "Admin")
+	if err != nil {
+		logrus.Errorf("Failed to create session JWT: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create session"})
+		return
+	}
+
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("checker_session", sessionToken, 86400, "/", "", c.Request.TLS != nil, true)
+
+	logrus.Info("User authenticated via static password")
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (am *AuthManager) handleOIDCLogin(c *gin.Context) {
 	if !am.isOIDCReady() {
 		c.String(http.StatusServiceUnavailable, "Authentication service is starting up, please try again in a moment")
 		return
@@ -211,10 +294,8 @@ func (am *AuthManager) HandleLogin(c *gin.Context) {
 		return
 	}
 
-	// Store state in cookie for CSRF verification
 	c.SetCookie("checker_auth_state", state, 300, "/", "", c.Request.TLS != nil, true)
 
-	// Store redirect target
 	if redirect := c.Query("redirect"); redirect != "" {
 		c.SetCookie("checker_auth_redirect", redirect, 300, "/", "", c.Request.TLS != nil, true)
 	}
@@ -228,7 +309,7 @@ func (am *AuthManager) HandleLogin(c *gin.Context) {
 
 // HandleCallback processes the OIDC callback after user authentication.
 func (am *AuthManager) HandleCallback(c *gin.Context) {
-	if !am.enabled {
+	if !am.enabled || am.mode != AuthModeOIDC {
 		c.Redirect(http.StatusFound, "/")
 		return
 	}
@@ -249,7 +330,6 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 		return
 	}
 
-	// Clear state cookie
 	c.SetCookie("checker_auth_state", "", -1, "/", "", c.Request.TLS != nil, true)
 
 	am.mu.RLock()
@@ -257,7 +337,6 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 	verifier := am.verifier
 	am.mu.RUnlock()
 
-	// Exchange code for tokens
 	token, err := oauthCfg.Exchange(c.Request.Context(), c.Query("code"))
 	if err != nil {
 		logrus.Errorf("OIDC token exchange failed: %v", err)
@@ -265,7 +344,6 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 		return
 	}
 
-	// Extract and verify ID token
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
 		c.String(http.StatusInternalServerError, "No id_token in response")
@@ -279,7 +357,6 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 		return
 	}
 
-	// Extract claims
 	var claims struct {
 		Email string `json:"email"`
 		Name  string `json:"name"`
@@ -290,7 +367,6 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 		return
 	}
 
-	// Create session JWT
 	sessionToken, err := am.createSessionJWT(claims.Email, claims.Name)
 	if err != nil {
 		logrus.Errorf("Failed to create session JWT: %v", err)
@@ -298,11 +374,9 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 		return
 	}
 
-	// Set session cookie (24h)
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("checker_session", sessionToken, 86400, "/", "", c.Request.TLS != nil, true)
 
-	// Redirect to saved URL or home
 	redirect := "/"
 	if saved, err := c.Cookie("checker_auth_redirect"); err == nil && saved != "" {
 		redirect = saved
@@ -353,12 +427,10 @@ func (am *AuthManager) parseSessionJWT(tokenString string) (email, name string, 
 }
 
 func extractAPIKey(c *gin.Context) string {
-	// Check X-API-Key header
 	if key := c.GetHeader("X-API-Key"); key != "" {
 		return key
 	}
 
-	// Check Authorization: Bearer <key>
 	auth := c.GetHeader("Authorization")
 	if strings.HasPrefix(auth, "Bearer ") {
 		return strings.TrimPrefix(auth, "Bearer ")

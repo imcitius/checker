@@ -59,7 +59,7 @@ export function CommandPalette() {
   // ---------- fetch checks when palette opens ----------
   useEffect(() => {
     if (!open) return
-    api.getChecks().then(setChecks).catch(() => setChecks([]))
+    api.getChecks().then((d) => setChecks(d || [])).catch(() => setChecks([]))
   }, [open])
 
   const close = useCallback(() => setOpen(false), [])
