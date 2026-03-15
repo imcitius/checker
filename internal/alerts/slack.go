@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type SlackPayload struct {
@@ -33,6 +34,9 @@ func SendSlackAlert(webhookURL, message string) error {
 
 // SendSlackAppTest sends a test message using the Slack Bot API (chat.postMessage).
 func SendSlackAppTest(botToken, channelID, message string) error {
+	// Strip # prefix if user entered channel name like "#general"
+	channelID = strings.TrimPrefix(channelID, "#")
+
 	payload := map[string]string{
 		"channel": channelID,
 		"text":    message,
@@ -63,6 +67,9 @@ func SendSlackAppTest(botToken, channelID, message string) error {
 		return fmt.Errorf("failed to parse Slack response: %w", err)
 	}
 	if !result.OK {
+		if result.Error == "channel_not_found" {
+			return fmt.Errorf("slack API error: channel_not_found — use a channel ID (e.g. C01ABCDEF) or ensure the bot is invited to the channel")
+		}
 		return fmt.Errorf("slack API error: %s", result.Error)
 	}
 	return nil

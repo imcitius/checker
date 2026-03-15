@@ -78,7 +78,7 @@ const CONFIG_FIELDS: Record<ChannelType, ConfigField[]> = {
   slack: [
     { key: 'bot_token', label: 'Bot Token', type: 'password', placeholder: 'xoxb-...', required: true },
     { key: 'signing_secret', label: 'Signing Secret', type: 'password', placeholder: 'Slack app signing secret', required: true },
-    { key: 'default_channel', label: 'Default Channel ID', type: 'text', placeholder: 'e.g. C01ABCDEF', required: true },
+    { key: 'default_channel', label: 'Default Channel', type: 'text', placeholder: 'Channel ID (C01ABCDEF) or name (general)', required: true },
   ],
   slack_webhook: [
     { key: 'webhook_url', label: 'Webhook URL', type: 'password', placeholder: 'https://hooks.slack.com/services/...', required: true },
