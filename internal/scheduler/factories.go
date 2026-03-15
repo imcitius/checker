@@ -40,6 +40,9 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 		}
 	case *models.TCPCheckConfig:
 		logger.Debugf("Creating TCP check for host: %s, port: %d", config.Host, config.Port)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
 		return &checks.TCPCheck{
 			Host:    config.Host,
 			Port:    config.Port,
@@ -49,6 +52,9 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 		port := config.Port
 		if port == 0 {
 			port = checks.DefaultSSHPort
+		}
+		if config.Timeout == "" {
+			config.Timeout = "10s"
 		}
 		logger.Debugf("Creating SSH check for host: %s, port: %d", config.Host, port)
 		return &checks.SSHCheck{
@@ -60,6 +66,9 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 		}
 	case *models.ICMPCheckConfig:
 		logger.Debugf("Creating ICMP check for host: %s", config.Host)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
 		return &checks.ICMPCheck{
 			Host:    config.Host,
 			Count:   config.Count,
@@ -67,6 +76,9 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 		}
 	case *models.DNSCheckConfig:
 		logger.Debugf("Creating DNS check for domain: %s, record type: %s", config.Domain, config.RecordType)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
 		return &checks.DNSCheck{
 			Host:       config.Host,
 			Domain:     config.Domain,
@@ -217,6 +229,9 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 
 	case *models.RedisCheckConfig:
 		logger.Debugf("Creating Redis check for host: %s, port: %d", config.Host, config.Port)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
 		return &checks.RedisCheck{
 			Host:     config.Host,
 			Port:     config.Port,
@@ -228,6 +243,9 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 
 	case *models.MongoDBCheckConfig:
 		logger.Debugf("Creating MongoDB check for URI: %s", config.URI)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
 		return &checks.MongoDBCheck{
 			URI:     config.URI,
 			Timeout: config.Timeout,
@@ -236,6 +254,9 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 
 	case *models.DomainExpiryCheckConfig:
 		logger.Debugf("Creating Domain Expiry check for domain: %s", config.Domain)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
 		return &checks.DomainExpiryCheck{
 			Domain:            config.Domain,
 			ExpiryWarningDays: config.ExpiryWarningDays,
