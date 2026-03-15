@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -20,12 +21,22 @@ import (
 
 // AuthManager handles OIDC authentication, API key validation, and session management.
 type AuthManager struct {
+	// OIDC fields — guarded by mu for lazy initialization
+	mu           sync.RWMutex
 	oidcProvider *oidc.Provider
 	oauth2Config *oauth2.Config
 	verifier     *oidc.IDTokenVerifier
-	jwtSecret    []byte
-	apiKeys      map[string]bool
-	enabled      bool
+
+	// OIDC config (saved for lazy init retries)
+	oidcIssuerURL    string
+	oidcClientID     string
+	oidcClientSecret string
+	oidcRedirectURL  string
+
+	jwtSecret []byte
+	apiKeys   map[string]bool
+	enabled   bool
+	oidcReady bool // true once OIDC provider is connected
 }
 
 // SessionClaims represents the claims stored in session JWTs.
@@ -36,6 +47,8 @@ type SessionClaims struct {
 }
 
 // NewAuthManager creates a new AuthManager. If OIDC is not configured, auth is disabled (pass-through).
+// OIDC provider connection is attempted with a short timeout; if it fails, the app
+// continues to start (healthcheck works, API keys work) and OIDC is retried in the background.
 func NewAuthManager(ctx context.Context, cfg *config.Config) (*AuthManager, error) {
 	am := &AuthManager{
 		apiKeys: make(map[string]bool),
@@ -46,21 +59,10 @@ func NewAuthManager(ctx context.Context, cfg *config.Config) (*AuthManager, erro
 		return am, nil
 	}
 
-	// Connect to OIDC provider
-	provider, err := oidc.NewProvider(ctx, cfg.Auth.OIDC.IssuerURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to OIDC provider %s: %w", cfg.Auth.OIDC.IssuerURL, err)
-	}
-
-	am.oidcProvider = provider
-	am.oauth2Config = &oauth2.Config{
-		ClientID:     cfg.Auth.OIDC.ClientID,
-		ClientSecret: cfg.Auth.OIDC.ClientSecret,
-		RedirectURL:  cfg.Auth.OIDC.RedirectURL,
-		Endpoint:     provider.Endpoint(),
-		Scopes:       []string{oidc.ScopeOpenID, "email", "profile"},
-	}
-	am.verifier = provider.Verifier(&oidc.Config{ClientID: cfg.Auth.OIDC.ClientID})
+	am.oidcIssuerURL = cfg.Auth.OIDC.IssuerURL
+	am.oidcClientID = cfg.Auth.OIDC.ClientID
+	am.oidcClientSecret = cfg.Auth.OIDC.ClientSecret
+	am.oidcRedirectURL = cfg.Auth.OIDC.RedirectURL
 	am.jwtSecret = []byte(cfg.Auth.JWTSecret)
 	am.enabled = true
 
@@ -72,7 +74,73 @@ func NewAuthManager(ctx context.Context, cfg *config.Config) (*AuthManager, erro
 	}
 
 	logrus.Infof("Auth enabled: OIDC issuer=%s, %d API keys configured", cfg.Auth.OIDC.IssuerURL, len(am.apiKeys))
+
+	// Try to connect to OIDC provider with a short timeout (don't block startup)
+	initCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := am.initOIDC(initCtx); err != nil {
+		logrus.Warnf("OIDC provider not available at startup (will retry in background): %v", err)
+		go am.retryOIDCInit()
+	}
+
 	return am, nil
+}
+
+// initOIDC connects to the OIDC provider. Must be called with am.mu NOT held.
+func (am *AuthManager) initOIDC(ctx context.Context) error {
+	provider, err := oidc.NewProvider(ctx, am.oidcIssuerURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect to OIDC provider %s: %w", am.oidcIssuerURL, err)
+	}
+
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	am.oidcProvider = provider
+	am.oauth2Config = &oauth2.Config{
+		ClientID:     am.oidcClientID,
+		ClientSecret: am.oidcClientSecret,
+		RedirectURL:  am.oidcRedirectURL,
+		Endpoint:     provider.Endpoint(),
+		Scopes:       []string{oidc.ScopeOpenID, "email", "profile"},
+	}
+	am.verifier = provider.Verifier(&oidc.Config{ClientID: am.oidcClientID})
+	am.oidcReady = true
+
+	logrus.Info("OIDC provider connected successfully")
+	return nil
+}
+
+// retryOIDCInit retries OIDC initialization in the background with exponential backoff.
+func (am *AuthManager) retryOIDCInit() {
+	backoff := 5 * time.Second
+	maxBackoff := 2 * time.Minute
+
+	for {
+		time.Sleep(backoff)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		err := am.initOIDC(ctx)
+		cancel()
+
+		if err == nil {
+			return
+		}
+
+		logrus.Warnf("OIDC retry failed (next attempt in %s): %v", backoff, err)
+		backoff *= 2
+		if backoff > maxBackoff {
+			backoff = maxBackoff
+		}
+	}
+}
+
+// isOIDCReady returns whether OIDC is initialized.
+func (am *AuthManager) isOIDCReady() bool {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+	return am.oidcReady
 }
 
 // Enabled returns whether authentication is active.
@@ -99,7 +167,7 @@ func (am *AuthManager) Middleware() gin.HandlerFunc {
 			return
 		}
 
-		// 2. Check session cookie
+		// 2. Check session cookie (works even if OIDC is not ready — JWTs are self-contained)
 		if cookie, err := c.Cookie("checker_session"); err == nil && cookie != "" {
 			email, name, err := am.parseSessionJWT(cookie)
 			if err == nil {
@@ -132,6 +200,11 @@ func (am *AuthManager) HandleLogin(c *gin.Context) {
 		return
 	}
 
+	if !am.isOIDCReady() {
+		c.String(http.StatusServiceUnavailable, "Authentication service is starting up, please try again in a moment")
+		return
+	}
+
 	state, err := generateRandomState()
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to generate state")
@@ -146,13 +219,22 @@ func (am *AuthManager) HandleLogin(c *gin.Context) {
 		c.SetCookie("checker_auth_redirect", redirect, 300, "/", "", c.Request.TLS != nil, true)
 	}
 
-	c.Redirect(http.StatusFound, am.oauth2Config.AuthCodeURL(state))
+	am.mu.RLock()
+	authURL := am.oauth2Config.AuthCodeURL(state)
+	am.mu.RUnlock()
+
+	c.Redirect(http.StatusFound, authURL)
 }
 
 // HandleCallback processes the OIDC callback after user authentication.
 func (am *AuthManager) HandleCallback(c *gin.Context) {
 	if !am.enabled {
 		c.Redirect(http.StatusFound, "/")
+		return
+	}
+
+	if !am.isOIDCReady() {
+		c.String(http.StatusServiceUnavailable, "Authentication service is not ready")
 		return
 	}
 
@@ -170,8 +252,13 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 	// Clear state cookie
 	c.SetCookie("checker_auth_state", "", -1, "/", "", c.Request.TLS != nil, true)
 
+	am.mu.RLock()
+	oauthCfg := am.oauth2Config
+	verifier := am.verifier
+	am.mu.RUnlock()
+
 	// Exchange code for tokens
-	token, err := am.oauth2Config.Exchange(c.Request.Context(), c.Query("code"))
+	token, err := oauthCfg.Exchange(c.Request.Context(), c.Query("code"))
 	if err != nil {
 		logrus.Errorf("OIDC token exchange failed: %v", err)
 		c.String(http.StatusInternalServerError, "Token exchange failed")
@@ -185,7 +272,7 @@ func (am *AuthManager) HandleCallback(c *gin.Context) {
 		return
 	}
 
-	idToken, err := am.verifier.Verify(c.Request.Context(), rawIDToken)
+	idToken, err := verifier.Verify(c.Request.Context(), rawIDToken)
 	if err != nil {
 		logrus.Errorf("ID token verification failed: %v", err)
 		c.String(http.StatusInternalServerError, "Token verification failed")

@@ -5,3 +5,5 @@ main
 .gitignore
 dev/
 .github/
+/Development_plan.md
+/plans
