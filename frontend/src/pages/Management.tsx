@@ -548,14 +548,14 @@ export function Management() {
             )}
           </button>
         </td>
-        <td className="px-3 py-2">
-          <div className="font-medium">{def.name}</div>
-          <div className="font-mono text-[10px] text-muted-foreground">{def.uuid}</div>
+        <td className="px-3 py-2 overflow-hidden">
+          <div className="font-medium truncate">{def.name}</div>
+          <div className="font-mono text-[10px] text-muted-foreground truncate">{def.uuid}</div>
         </td>
-        <td className="px-3 py-2">
+        <td className="px-3 py-2 overflow-hidden">
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="font-mono text-xs text-muted-foreground truncate block max-w-[260px]">
+              <span className="font-mono text-xs text-muted-foreground truncate block">
                 {def.url || def.host || '—'}
               </span>
             </TooltipTrigger>
@@ -567,7 +567,7 @@ export function Management() {
             {def.type}
           </Badge>
         </td>
-        <td className="px-3 py-2 font-mono text-muted-foreground">{def.duration}</td>
+        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{def.duration}</td>
         <td className="px-3 py-2">
           <Switch
             checked={def.enabled}
@@ -827,10 +827,19 @@ export function Management() {
                               {/* Checks table */}
                               {!(showSubGroupHeaders && isSubGroupCollapsed) && (
                                 <div className="overflow-x-auto">
-                                  <table className="w-full text-sm">
+                                  <table className="w-full text-sm table-fixed">
+                                    <colgroup>
+                                      <col className="w-10" />
+                                      <col className="w-[200px]" />
+                                      <col />
+                                      <col className="w-[70px]" />
+                                      <col className="w-[90px]" />
+                                      <col className="w-[70px]" />
+                                      <col className="w-[100px]" />
+                                    </colgroup>
                                     <thead>
                                       <tr className="border-b border-t bg-muted/30 text-muted-foreground text-xs">
-                                        <th className="px-3 py-1.5 w-10">
+                                        <th className="px-3 py-1.5">
                                           <button
                                             onClick={() => toggleSelectGroup(sg.checks)}
                                             className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -854,10 +863,10 @@ export function Management() {
                                           <span className="inline-flex items-center">Type<SortIcon column="type" /></span>
                                         </th>
                                         <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('duration')}>
-                                          <span className="inline-flex items-center">Frequency<SortIcon column="duration" /></span>
+                                          <span className="inline-flex items-center">Freq<SortIcon column="duration" /></span>
                                         </th>
                                         <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('enabled')}>
-                                          <span className="inline-flex items-center">Enabled<SortIcon column="enabled" /></span>
+                                          <span className="inline-flex items-center">On<SortIcon column="enabled" /></span>
                                         </th>
                                         <th className="text-right px-3 py-1.5 font-medium">Actions</th>
                                       </tr>
