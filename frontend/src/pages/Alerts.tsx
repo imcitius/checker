@@ -211,7 +211,7 @@ export function Alerts() {
                   <tr className="border-b bg-muted/50 text-muted-foreground text-xs">
                     <th className="text-left px-3 py-2 font-medium w-10">Status</th>
                     <th className="text-left px-3 py-2 font-medium">Check Name</th>
-                    <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Project</th>
+                    <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Project / Group</th>
                     <th className="text-left px-3 py-2 font-medium hidden lg:table-cell">Message</th>
                     <th className="text-left px-3 py-2 font-medium">Time</th>
                     <th className="text-left px-3 py-2 font-medium hidden sm:table-cell">Duration</th>
@@ -273,13 +273,16 @@ export function Alerts() {
                               )}
                             </div>
                             <div className="text-[10px] text-muted-foreground font-mono md:hidden">
-                              {alert.Project}
+                              {alert.Project}{alert.GroupName ? ` / ${alert.GroupName}` : ''}
                             </div>
                           </td>
 
-                          {/* Project */}
+                          {/* Project / Group */}
                           <td className="px-3 py-2 text-muted-foreground hidden md:table-cell">
-                            {alert.Project}
+                            <div>{alert.Project}</div>
+                            {alert.GroupName && (
+                              <div className="text-[10px] text-muted-foreground/60">{alert.GroupName}</div>
+                            )}
                           </td>
 
                           {/* Message */}

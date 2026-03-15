@@ -320,17 +320,18 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 
 	// Create status for update
 	checkStatus := models.CheckStatus{
-		UUID:        checkDef.UUID,
-		Project:     checkDef.Project,
-		CheckGroup:  checkDef.GroupName,
-		CheckName:   checkDef.Name,
-		CheckType:   checkDef.Type,
-		LastRun:     runTime,
-		IsHealthy:   isHealthy,
-		Message:     errMessage,
-		IsEnabled:   checkDef.Enabled,
-		Host:        host,
-		Periodicity: checkDef.Duration,
+		UUID:          checkDef.UUID,
+		Project:       checkDef.Project,
+		CheckGroup:    checkDef.GroupName,
+		CheckName:     checkDef.Name,
+		CheckType:     checkDef.Type,
+		LastRun:       runTime,
+		IsHealthy:     isHealthy,
+		Message:       errMessage,
+		IsEnabled:     checkDef.Enabled,
+		Host:          host,
+		Periodicity:   checkDef.Duration,
+		LastAlertSent: checkDef.LastAlertSent,
 	}
 
 	// Read current health state from DB BEFORE updating, for accurate state
