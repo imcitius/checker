@@ -155,6 +155,13 @@ func UpdateCheckDefinition(c *gin.Context) {
 		return
 	}
 
+	if vm.Name == "" || vm.Project == "" || vm.Type == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Name, project, and type are required fields",
+		})
+		return
+	}
+
 	def := convertFromCheckDefViewModel(vm)
 
 	// Ensure UUID in URL matches body

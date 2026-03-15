@@ -55,10 +55,12 @@ func BroadcastCheckUpdate(checkStatus models.CheckViewModel) {
 	disconnectedClients := []*websocket.Conn{}
 
 	for client := range clients {
+		client.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		err := client.WriteJSON(map[string]interface{}{
 			"type":  "update",
 			"check": checkStatus,
 		})
+		client.SetWriteDeadline(time.Time{})
 		if err != nil {
 			// Client likely disconnected, mark for removal
 			disconnectedClients = append(disconnectedClients, client)
@@ -108,10 +110,12 @@ func BroadcastChecksUpdate(repo db.Repository) {
 	disconnectedClients := []*websocket.Conn{}
 
 	for client := range clients {
+		client.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		err := client.WriteJSON(map[string]interface{}{
 			"type":   "checks",
 			"checks": viewModels,
 		})
+		client.SetWriteDeadline(time.Time{})
 		if err != nil {
 			// Client likely disconnected, mark for removal
 			disconnectedClients = append(disconnectedClients, client)
@@ -142,10 +146,12 @@ func BroadcastAlertNew(alert models.AlertEvent) {
 	disconnectedClients := []*websocket.Conn{}
 
 	for client := range clients {
+		client.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		err := client.WriteJSON(map[string]interface{}{
 			"type":  "alert_new",
 			"alert": alert,
 		})
+		client.SetWriteDeadline(time.Time{})
 		if err != nil {
 			disconnectedClients = append(disconnectedClients, client)
 			logrus.Debugf("Failed to send alert_new to WebSocket client: %v", err)
@@ -171,10 +177,12 @@ func BroadcastAlertResolved(checkUUID string) {
 	disconnectedClients := []*websocket.Conn{}
 
 	for client := range clients {
+		client.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		err := client.WriteJSON(map[string]interface{}{
 			"type":       "alert_resolved",
 			"check_uuid": checkUUID,
 		})
+		client.SetWriteDeadline(time.Time{})
 		if err != nil {
 			disconnectedClients = append(disconnectedClients, client)
 			logrus.Debugf("Failed to send alert_resolved to WebSocket client: %v", err)
@@ -387,7 +395,8 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	protected.GET("/api/checks", func(c *gin.Context) {
 		statuses, err := getAllCheckStatuses(repo)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			logrus.Errorf("Failed to get check statuses: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch check statuses"})
 			return
 		}
 
@@ -406,7 +415,7 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		if err := toggleCheck(repo, uuid, enabled); err != nil {
 			logrus.Errorf("Failed to toggle check %s: %v", uuid, err)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error":   err.Error(),
+				"error":   "Failed to toggle check",
 				"uuid":    uuid,
 				"enabled": enabled,
 				"success": false,

@@ -172,7 +172,7 @@ func TestAlertChannel(c *gin.Context) {
 	if testErr != nil {
 		logrus.Errorf("Test notification failed for channel %s: %v", name, testErr)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   fmt.Sprintf("Test notification failed: %v", testErr),
+			"error":   "Test notification failed — check channel configuration and credentials",
 			"success": false,
 		})
 		return

@@ -143,32 +143,6 @@ func (c *SlackClient) PostAlert(ctx context.Context, channelID string, info Chec
 	return c.SendAlert(ctx, channelID, info)
 }
 
-// PostResolution is a backward-compatible wrapper for posting a resolution thread reply.
-func (c *SlackClient) PostResolution(ctx context.Context, channelID, threadTs string, info CheckAlertInfo) error {
-	return c.SendResolve(ctx, info, threadTs, channelID)
-}
-
-// UpdateMessageColor is a backward-compatible wrapper. With Block Kit, this is handled
-// by SendResolve which updates the original message. This method is kept for callers
-// that update the message independently.
-func (c *SlackClient) UpdateMessageColor(ctx context.Context, channelID, messageTs string, color string, info CheckAlertInfo) error {
-	resolvedInfo := info
-	resolvedInfo.IsHealthy = true
-	resolvedInfo.Severity = "resolved"
-	updatedBlocks := BuildResolvedOriginalBlocks(resolvedInfo)
-	updatedFallback := fmt.Sprintf("🟢 RESOLVED: %s", info.Name)
-
-	_, _, _, err := c.api.UpdateMessageContext(ctx, channelID, messageTs,
-		slack.MsgOptionBlocks(updatedBlocks...),
-		slack.MsgOptionText(updatedFallback, false),
-	)
-	if err != nil {
-		return fmt.Errorf("UpdateMessageColor: %w", err)
-	}
-
-	return nil
-}
-
 // SigningSecret returns the configured Slack signing secret.
 func (c *SlackClient) SigningSecret() string {
 	return c.signingSecret
