@@ -1,0 +1,180 @@
+# Demo seed file — curated checks to showcase Checker's monitoring capabilities.
+# Import via: POST /api/checks/import with Content-Type: application/x-yaml
+
+checks:
+  # ──────────────────────────────────────────────
+  # Project: Public APIs (HTTP checks)
+  # ──────────────────────────────────────────────
+  - name: "Google"
+    project: "Public APIs"
+    type: http
+    url: https://google.com
+    duration: 60s
+    timeout: 10s
+    enabled: true
+
+  - name: "GitHub API"
+    project: "Public APIs"
+    type: http
+    url: https://api.github.com
+    duration: 60s
+    timeout: 10s
+    enabled: true
+
+  - name: "Cloudflare DNS-over-HTTPS"
+    project: "Public APIs"
+    type: http
+    url: https://1.1.1.1/dns-query
+    duration: 60s
+    timeout: 10s
+    enabled: true
+
+  - name: "OpenAI API"
+    project: "Public APIs"
+    type: http
+    url: https://api.openai.com
+    duration: 60s
+    timeout: 10s
+    enabled: true
+
+  - name: "HuggingFace"
+    project: "Public APIs"
+    type: http
+    url: https://huggingface.co
+    duration: 60s
+    timeout: 10s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # Project: DNS Checks
+  # ──────────────────────────────────────────────
+  - name: "google.com A record"
+    project: "DNS Checks"
+    type: dns
+    domain: google.com
+    record_type: A
+    duration: 5m
+    timeout: 10s
+    enabled: true
+
+  - name: "github.com A record"
+    project: "DNS Checks"
+    type: dns
+    domain: github.com
+    record_type: A
+    duration: 5m
+    timeout: 10s
+    enabled: true
+
+  - name: "cloudflare.com MX record"
+    project: "DNS Checks"
+    type: dns
+    domain: cloudflare.com
+    record_type: MX
+    duration: 5m
+    timeout: 10s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # Project: SSL Certificates
+  # ──────────────────────────────────────────────
+  - name: "github.com SSL"
+    project: "SSL Certificates"
+    type: ssl_cert
+    host: github.com
+    port: 443
+    expiry_warning_days: 30
+    validate_chain: true
+    duration: 5m
+    timeout: 10s
+    enabled: true
+
+  - name: "google.com SSL"
+    project: "SSL Certificates"
+    type: ssl_cert
+    host: google.com
+    port: 443
+    expiry_warning_days: 30
+    validate_chain: true
+    duration: 5m
+    timeout: 10s
+    enabled: true
+
+  - name: "cloudflare.com SSL"
+    project: "SSL Certificates"
+    type: ssl_cert
+    host: cloudflare.com
+    port: 443
+    expiry_warning_days: 30
+    validate_chain: true
+    duration: 5m
+    timeout: 10s
+    enabled: true
+
+  - name: "letsencrypt.org SSL"
+    project: "SSL Certificates"
+    type: ssl_cert
+    host: letsencrypt.org
+    port: 443
+    expiry_warning_days: 30
+    validate_chain: true
+    duration: 5m
+    timeout: 10s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # Project: Infrastructure (TCP checks)
+  # ──────────────────────────────────────────────
+  - name: "GitHub SSH"
+    project: "Infrastructure"
+    type: tcp
+    host: github.com
+    port: 22
+    duration: 60s
+    timeout: 5s
+    enabled: true
+
+  - name: "Cloudflare DNS"
+    project: "Infrastructure"
+    type: tcp
+    host: 1.1.1.1
+    port: 53
+    duration: 60s
+    timeout: 5s
+    enabled: true
+
+  - name: "Google DNS"
+    project: "Infrastructure"
+    type: tcp
+    host: 8.8.8.8
+    port: 53
+    duration: 60s
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # Project: Domain Expiry
+  # ──────────────────────────────────────────────
+  - name: "github.com domain expiry"
+    project: "Domain Expiry"
+    type: domain_expiry
+    domain: github.com
+    expiry_warning_days: 30
+    duration: 5m
+    enabled: true
+
+  - name: "google.com domain expiry"
+    project: "Domain Expiry"
+    type: domain_expiry
+    domain: google.com
+    expiry_warning_days: 30
+    duration: 5m
+    enabled: true
+
+  - name: "cloudflare.com domain expiry"
+    project: "Domain Expiry"
+    type: domain_expiry
+    domain: cloudflare.com
+    expiry_warning_days: 30
+    duration: 5m
+    enabled: true
