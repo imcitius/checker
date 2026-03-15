@@ -21,14 +21,14 @@ RUN EFFECTIVE_SHA=$(if [ "${RAILWAY_GIT_COMMIT_SHA}" != "unknown" ]; then echo "
 FROM golang:1.25-alpine AS builder
 ARG GIT_SHA
 ARG RAILWAY_GIT_COMMIT_SHA
-RUN apk add --no-cache git
+RUN apk add --no-cache git gcc musl-dev
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend-builder /frontend/dist ./internal/web/spa/
 RUN EFFECTIVE_SHA=$(if [ "${RAILWAY_GIT_COMMIT_SHA}" != "unknown" ]; then echo "${RAILWAY_GIT_COMMIT_SHA}"; else echo "${GIT_SHA}"; fi) && \
-    CGO_ENABLED=0 GOOS=linux go build \
+    CGO_ENABLED=1 GOOS=linux go build \
     -ldflags="-s -w -X main.Version=${EFFECTIVE_SHA} -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     -o checker ./cmd/app
 
