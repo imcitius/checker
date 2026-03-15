@@ -427,6 +427,15 @@ func sendAlertToChannel(channel string, status models.CheckStatus, checkDef mode
 			logrus.Errorf("Failed to send Slack alert: %v", err)
 		}
 
+	case "pagerduty":
+		if checkDef.AlertDestination == "" {
+			logrus.Errorf("PagerDuty routing key is not configured for check %s", status.UUID)
+			return
+		}
+		if err := alerts.SendPagerDutyTrigger(checkDef.AlertDestination, status.UUID, status.CheckName, status.Message, severity); err != nil {
+			logrus.Errorf("Failed to send PagerDuty trigger: %v", err)
+		}
+
 	case "opsgenie":
 		if checkDef.AlertDestination == "" {
 			logrus.Errorf("Opsgenie alert destination is not configured for check %s", status.UUID)
@@ -522,6 +531,14 @@ func sendRecoveryAlerts(status models.CheckStatus, checkDef models.CheckDefiniti
 		}
 		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
 			logrus.Errorf("Failed to send Slack recovery alert: %v", err)
+		}
+
+	case "pagerduty":
+		if checkDef.AlertDestination == "" {
+			return
+		}
+		if err := alerts.SendPagerDutyResolve(checkDef.AlertDestination, status.UUID, status.CheckName); err != nil {
+			logrus.Errorf("Failed to send PagerDuty recovery: %v", err)
 		}
 
 	case "opsgenie":
