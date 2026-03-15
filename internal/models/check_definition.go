@@ -210,7 +210,7 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 		"is_healthy":        cd.IsHealthy,
 		"last_message":      cd.LastMessage,
 		"last_alert_sent":   cd.LastAlertSent,
-		"duration":          cd.Duration,
+		"duration":           cd.Duration,
 		"actor_type":        cd.ActorType,
 		"alert_type":        cd.AlertType,
 		"alert_destination": cd.AlertDestination,
@@ -307,7 +307,7 @@ type CheckDefinitionViewModel struct {
 	Enabled     bool   `json:"enabled"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
-	Duration    string `json:"duration"`
+	Duration string `json:"duration"`
 
 	// Config fields — shared
 	URL     string `json:"url,omitempty"`

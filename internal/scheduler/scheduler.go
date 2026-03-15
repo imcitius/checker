@@ -290,20 +290,16 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 	// Detect state transition for Slack recovery using the DB-sourced previous state
 	wasUnhealthy := !previouslyHealthy
 
+	// Parse ReAlertInterval for state-transition dedup logic
+	var reAlertInterval time.Duration
+	if checkDef.ReAlertInterval != "" {
+		reAlertInterval, _ = time.ParseDuration(checkDef.ReAlertInterval)
+	}
+
 	// Handle alerts if check fails
 	if !isHealthy {
-		// Determine re-alert interval: use re_alert_interval if set, otherwise fall back to check duration
-		var reAlertDuration time.Duration
-		if checkDef.ReAlertInterval != "" {
-			reAlertDuration, _ = time.ParseDuration(checkDef.ReAlertInterval)
-		}
-		if reAlertDuration == 0 {
-			reAlertDuration, _ = time.ParseDuration(checkDef.Duration)
-		}
-		if shouldSendAlert(reAlertDuration, checkStatus) {
-			// alertStartTime := time.Now()
+		if shouldSendAlert(previouslyHealthy, reAlertInterval, checkStatus) {
 			sendAlerts(checkStatus, checkDef, slackAlerter != nil)
-			// logger.WithField("alert_duration_ms", time.Since(alertStartTime).Milliseconds()).Info("Alert sent")
 
 			checkStatus.LastAlertSent = runTime
 			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
@@ -321,26 +317,47 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 		}
 	}
 
-	// Handle Slack recovery when check transitions from unhealthy to healthy
-	if isHealthy && wasUnhealthy && slackAlerter != nil {
-		slackAlerter.HandleRecovery(context.Background(), checkDef)
+	// Handle recovery when check transitions from unhealthy to healthy
+	if isHealthy && wasUnhealthy {
+		// Send recovery alerts for legacy channels (telegram, slack webhook)
+		sendRecoveryAlerts(checkStatus, checkDef, slackAlerter != nil)
+
+		// Handle Slack App recovery (thread resolution)
+		if slackAlerter != nil {
+			slackAlerter.HandleRecovery(context.Background(), checkDef)
+		}
 	}
 
 	return nil
 }
 
-// shouldSendAlert determines if an alert should be sent.
-func shouldSendAlert(effectiveDuration time.Duration, status models.CheckStatus) bool {
+// shouldSendAlert determines if a DOWN alert should be sent based on state transitions.
+// It only fires on healthy→unhealthy transitions, or when ReAlertInterval has elapsed
+// for ongoing failures.
+func shouldSendAlert(previouslyHealthy bool, reAlertInterval time.Duration, status models.CheckStatus) bool {
 	// If check is healthy, no need to alert.
 	if status.IsHealthy {
 		return false
 	}
-	// If no previous alert was sent, we should alert.
+
+	// State transition: healthy → unhealthy — always alert.
+	if previouslyHealthy {
+		return true
+	}
+
+	// Ongoing failure (unhealthy → unhealthy):
+	// Only re-alert if ReAlertInterval is configured.
+	if reAlertInterval <= 0 {
+		return false
+	}
+
+	// If no previous alert was sent, send one.
 	if status.LastAlertSent.IsZero() {
 		return true
 	}
-	// Check if enough time (as defined by the effective duration) has passed since last alert.
-	return time.Since(status.LastAlertSent) > effectiveDuration
+
+	// Re-alert if enough time has passed since the last alert.
+	return time.Since(status.LastAlertSent) >= reAlertInterval
 }
 
 // splitAlertDestination splits an alert destination string by colon
@@ -449,6 +466,45 @@ func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slac
 			if err := actor.Act(status.Message); err != nil {
 				logrus.Errorf("Failed to execute action: %v", err)
 			}
+		}
+	}
+}
+
+// sendRecoveryAlerts dispatches recovery notifications for legacy alert channels (telegram, slack webhook).
+// When slackAppActive is true, the "slack" alertType is skipped because the SlackAlerter handles recovery natively.
+func sendRecoveryAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
+	if checkDef.ActorType != "alert" || checkDef.AlertType == "" {
+		return
+	}
+
+	logrus.Infof("Sending %s recovery notification for check %s (%s/%s)",
+		checkDef.AlertType, status.UUID, status.Project, status.CheckName)
+
+	message := fmt.Sprintf("RECOVERY: Check %s (%s/%s) is healthy again", status.CheckName, status.Project, status.CheckGroup)
+
+	switch checkDef.AlertType {
+	case "telegram":
+		if checkDef.AlertDestination == "" {
+			return
+		}
+		parts := splitAlertDestination(checkDef.AlertDestination)
+		if len(parts) != 2 {
+			return
+		}
+		if err := alerts.SendTelegramAlert(parts[0], parts[1], message); err != nil {
+			logrus.Errorf("Failed to send Telegram recovery alert: %v", err)
+		}
+
+	case "slack":
+		if slackAppActive {
+			// Slack App handles recovery natively via HandleRecovery
+			return
+		}
+		if checkDef.AlertDestination == "" {
+			return
+		}
+		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
+			logrus.Errorf("Failed to send Slack recovery alert: %v", err)
 		}
 	}
 }
