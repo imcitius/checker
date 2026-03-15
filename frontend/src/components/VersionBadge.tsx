@@ -55,7 +55,7 @@ export function VersionBadge() {
           <div
             className={`fixed bottom-2 right-2 z-50 cursor-default select-none rounded px-1.5 py-0.5 font-mono text-xs transition-opacity hover:opacity-100 ${
               hasMismatch
-                ? 'bg-orange-500/10 text-orange-500/70'
+                ? 'bg-warning/10 text-warning/70'
                 : 'text-muted-foreground/40'
             }`}
           >
@@ -82,12 +82,12 @@ export function VersionBadge() {
               {clientSha || 'unknown'}
             </div>
             {hasMismatch && (
-              <div className="mt-1 text-orange-400">
+              <div className="mt-1 text-warning">
                 ⚠ Frontend version mismatch — client bundle differs from server-embedded version
               </div>
             )}
             {!hasMismatch && clientSha && serverFrontendSha !== 'unknown' && (
-              <div className="mt-1 text-green-400">✓ Frontend versions match</div>
+              <div className="mt-1 text-healthy">✓ Frontend versions match</div>
             )}
           </div>
         </TooltipContent>

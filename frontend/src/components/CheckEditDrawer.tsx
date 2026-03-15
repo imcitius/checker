@@ -294,7 +294,7 @@ export function CheckEditDrawer({
                 <Input
                   value={editingCheck.name || ''}
                   onChange={(e) => updateForm('name', e.target.value)}
-                  className={errors.has('name') ? 'border-red-500' : ''}
+                  className={errors.has('name') ? 'border-destructive' : ''}
                 />
               </div>
               <div>
@@ -376,7 +376,7 @@ export function CheckEditDrawer({
                     value={editingCheck.url || ''}
                     onChange={(e) => updateForm('url', e.target.value)}
                     placeholder="https://example.com/health"
-                    className={errors.has('url') ? 'border-red-500' : ''}
+                    className={errors.has('url') ? 'border-destructive' : ''}
                   />
                 </div>
               )}
@@ -388,7 +388,7 @@ export function CheckEditDrawer({
                     <Input
                       value={editingCheck.host || ''}
                       onChange={(e) => updateForm('host', e.target.value)}
-                      className={errors.has('host') ? 'border-red-500' : ''}
+                      className={errors.has('host') ? 'border-destructive' : ''}
                     />
                   </div>
                   <div>
@@ -420,7 +420,7 @@ export function CheckEditDrawer({
                       <Input
                         value={editingCheck.host || ''}
                         onChange={(e) => updateForm('host', e.target.value)}
-                        className={errors.has('host') ? 'border-red-500' : ''}
+                        className={errors.has('host') ? 'border-destructive' : ''}
                       />
                     </div>
                     <div>
