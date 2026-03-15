@@ -15,6 +15,26 @@ import (
 	"checker/internal/models"
 )
 
+// wipAndReseed deletes all existing check definitions and reseeds from the seed file.
+// Used in DEMO_MODE to ensure a clean state on every startup.
+func wipAndReseed(ctx context.Context, repo db.Repository, filePath string) error {
+	all, err := repo.GetAllCheckDefinitions(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list checks for wipe: %w", err)
+	}
+	uuids := make([]string, 0, len(all))
+	for _, c := range all {
+		uuids = append(uuids, c.UUID)
+	}
+	if len(uuids) > 0 {
+		if _, err := repo.BulkDeleteCheckDefinitions(ctx, uuids); err != nil {
+			return fmt.Errorf("failed to wipe checks: %w", err)
+		}
+		logrus.Infof("Demo mode: wiped %d existing checks", len(uuids))
+	}
+	return seedFromFile(repo, filePath)
+}
+
 // seedFromFile reads the YAML seed data and imports check definitions into the repository.
 // It prefers reading from the on-disk file at the given path (allows runtime override),
 // falling back to the embedded seed data compiled into the binary.

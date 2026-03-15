@@ -290,6 +290,20 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		handleWebSocket(c, repo)
 	})
 
+	// Demo mode: block all write operations
+	if os.Getenv("DEMO_MODE") == "true" {
+		protected.Use(func(c *gin.Context) {
+			switch c.Request.Method {
+			case "POST", "PUT", "PATCH", "DELETE":
+				c.AbortWithStatusJSON(403, gin.H{
+					"error": "This is a read-only demo instance. Write operations are disabled.",
+				})
+				return
+			}
+			c.Next()
+		})
+	}
+
 	// REST API routes
 	checkDefinitionsGroup := protected.Group("/api/check-definitions")
 	{

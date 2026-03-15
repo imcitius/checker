@@ -100,16 +100,22 @@ func main() {
 			}
 			logrus.Info("Database connection established")
 
-			// Auto-seed demo data for SQLite on first start
-			if cfg.DB.Driver == "sqlite" {
+			// Demo mode: wipe and reseed on every startup to prevent user-created checks persisting
+			if os.Getenv("DEMO_MODE") == "true" {
+				logrus.Info("Demo mode: wiping all checks and reseeding from demo/seed.yaml")
+				if err := wipAndReseed(ctx, repo, "demo/seed.yaml"); err != nil {
+					logrus.Warnf("Failed to reseed demo data: %v", err)
+					// non-fatal — app still starts
+				}
+			} else if cfg.DB.Driver == "sqlite" {
+				// Non-demo SQLite: seed only if empty
 				count, err := repo.CountCheckDefinitions(ctx)
 				if err != nil {
 					logrus.Warnf("Failed to count check definitions: %v", err)
 				} else if count == 0 {
-					logrus.Info("Demo mode: seeding checks from demo/seed.yaml")
+					logrus.Info("SQLite: seeding checks from demo/seed.yaml")
 					if err := seedFromFile(repo, "demo/seed.yaml"); err != nil {
-						logrus.Warnf("Failed to seed demo data: %v", err)
-						// non-fatal — app still starts, just empty
+						logrus.Warnf("Failed to seed data: %v", err)
 					}
 				}
 			}
