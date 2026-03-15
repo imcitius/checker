@@ -21,7 +21,7 @@ func TestPostgresDB_Integration(t *testing.T) {
 
 	// Setup config
 	cfg := &config.Config{}
-	cfg.DB.Protocol = "postgres"
+	cfg.DB.Driver = "postgres"
 	cfg.DB.Host = "localhost:5432"
 	cfg.DB.Username = "postgres"
 	cfg.DB.Password = "password"
@@ -105,7 +105,7 @@ func setupPostgresTestDB(t *testing.T) (*db.PostgresDB, context.Context) {
 	}
 
 	cfg := &config.Config{}
-	cfg.DB.Protocol = "postgres"
+	cfg.DB.Driver = "postgres"
 	cfg.DB.Host = "localhost:5432"
 	cfg.DB.Username = "postgres"
 	cfg.DB.Password = "password"

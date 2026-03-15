@@ -112,6 +112,21 @@ type CheckImportItem struct {
 	PgSQL *DBImportConfig `json:"pgsql,omitempty" yaml:"pgsql,omitempty"`
 	MySQL *DBImportConfig `json:"mysql,omitempty" yaml:"mysql,omitempty"`
 
+	// SSH config
+	ExpectBanner string `json:"expect_banner,omitempty" yaml:"expect_banner,omitempty"`
+
+	// Redis config
+	RedisPassword string `json:"redis_password,omitempty" yaml:"redis_password,omitempty"`
+	RedisDB       int    `json:"redis_db,omitempty" yaml:"redis_db,omitempty"`
+
+	// SMTP config
+	StartTLS     bool   `json:"starttls,omitempty" yaml:"starttls,omitempty"`
+	SMTPUsername string `json:"smtp_username,omitempty" yaml:"smtp_username,omitempty"`
+	SMTPPassword string `json:"smtp_password,omitempty" yaml:"smtp_password,omitempty"`
+
+	// gRPC config
+	UseTLS bool `json:"use_tls,omitempty" yaml:"use_tls,omitempty"`
+
 	// MongoDB config
 	MongoDBURI string `json:"mongodb_uri,omitempty" yaml:"mongodb_uri,omitempty"`
 

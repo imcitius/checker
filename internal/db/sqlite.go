@@ -571,9 +571,53 @@ func (s *SQLiteDB) ConvertConfigToCheckDefinitions(ctx context.Context, cfg *con
 					}
 				case "passive":
 					checkDef.Config = &models.PassiveCheckConfig{}
+				case "dns":
+					checkDef.Config = &models.DNSCheckConfig{
+						Host:    check.Host,
+						Timeout: timeout,
+					}
+				case "ssl_cert":
+					checkDef.Config = &models.SSLCertCheckConfig{
+						Host:    check.Host,
+						Port:    check.Port,
+						Timeout: timeout,
+					}
+				case "ssh":
+					checkDef.Config = &models.SSHCheckConfig{
+						Host:    check.Host,
+						Port:    check.Port,
+						Timeout: timeout,
+					}
+				case "redis":
+					checkDef.Config = &models.RedisCheckConfig{
+						Host:    check.Host,
+						Port:    check.Port,
+						Timeout: timeout,
+					}
+				case "mongodb":
+					checkDef.Config = &models.MongoDBCheckConfig{
+						URI:     check.URL,
+						Timeout: timeout,
+					}
 				case "domain_expiry":
 					checkDef.Config = &models.DomainExpiryCheckConfig{
 						Domain:  check.Host,
+						Timeout: timeout,
+					}
+				case "smtp":
+					checkDef.Config = &models.SMTPCheckConfig{
+						Host:    check.Host,
+						Port:    check.Port,
+						Timeout: timeout,
+					}
+				case "grpc_health":
+					checkDef.Config = &models.GRPCHealthCheckConfig{
+						Host:    check.Host,
+						Timeout: timeout,
+					}
+				case "websocket":
+					checkDef.Config = &models.WebSocketCheckConfig{
+						URL:     check.URL,
 						Timeout: timeout,
 					}
 				case "mysql_query", "mysql_query_unixtime", "mysql_replication":
@@ -604,12 +648,21 @@ func (s *SQLiteDB) ConvertConfigToCheckDefinitions(ctx context.Context, cfg *con
 
 func (s *SQLiteDB) GetAllDefaultTimeouts() map[string]string {
 	return map[string]string{
-		"http":    "3s",
-		"tcp":     "5s",
-		"icmp":    "5s",
-		"pgsql":   "10s",
-		"mysql":   "10s",
-		"default": "5s",
+		"http":          "3s",
+		"tcp":           "5s",
+		"icmp":          "5s",
+		"pgsql":         "10s",
+		"mysql":         "10s",
+		"dns":           "5s",
+		"ssl_cert":      "10s",
+		"ssh":           "5s",
+		"redis":         "5s",
+		"mongodb":       "10s",
+		"domain_expiry": "10s",
+		"smtp":          "10s",
+		"grpc_health":   "5s",
+		"websocket":     "5s",
+		"default":       "5s",
 	}
 }
 

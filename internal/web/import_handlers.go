@@ -527,6 +527,41 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 			ExpiryWarningDays: item.ExpiryWarningDays,
 			ValidateChain:     item.ValidateChain,
 		}
+	case "ssh":
+		def.Config = &models.SSHCheckConfig{
+			Host:         item.Host,
+			Port:         item.Port,
+			Timeout:      item.Timeout,
+			ExpectBanner: item.ExpectBanner,
+		}
+	case "redis":
+		def.Config = &models.RedisCheckConfig{
+			Host:     item.Host,
+			Port:     item.Port,
+			Timeout:  item.Timeout,
+			Password: item.RedisPassword,
+			DB:       item.RedisDB,
+		}
+	case "smtp":
+		def.Config = &models.SMTPCheckConfig{
+			Host:     item.Host,
+			Port:     item.Port,
+			Timeout:  item.Timeout,
+			StartTLS: item.StartTLS,
+			Username: item.SMTPUsername,
+			Password: item.SMTPPassword,
+		}
+	case "grpc_health":
+		def.Config = &models.GRPCHealthCheckConfig{
+			Host:    item.Host,
+			Timeout: item.Timeout,
+			UseTLS:  item.UseTLS,
+		}
+	case "websocket":
+		def.Config = &models.WebSocketCheckConfig{
+			URL:     item.URL,
+			Timeout: item.Timeout,
+		}
 	}
 
 	return def
@@ -581,6 +616,11 @@ func ExportCheckDefinitions(c *gin.Context) {
 			AlertType:        def.AlertType,
 			AlertDestination: def.AlertDestination,
 			ActorType:        def.ActorType,
+			Severity:         def.Severity,
+			AlertChannels:    def.AlertChannels,
+			ReAlertInterval:  def.ReAlertInterval,
+			RetryCount:       def.RetryCount,
+			RetryInterval:    def.RetryInterval,
 		}
 
 		enabled := def.Enabled
@@ -658,6 +698,33 @@ func ExportCheckDefinitions(c *gin.Context) {
 				item.Timeout = cfg.Timeout
 				item.ExpiryWarningDays = cfg.ExpiryWarningDays
 				item.ValidateChain = cfg.ValidateChain
+			case *models.PassiveCheckConfig:
+				item.Timeout = cfg.Timeout
+			case *models.SSHCheckConfig:
+				item.Host = cfg.Host
+				item.Port = cfg.Port
+				item.Timeout = cfg.Timeout
+				item.ExpectBanner = cfg.ExpectBanner
+			case *models.RedisCheckConfig:
+				item.Host = cfg.Host
+				item.Port = cfg.Port
+				item.Timeout = cfg.Timeout
+				item.RedisPassword = cfg.Password
+				item.RedisDB = cfg.DB
+			case *models.SMTPCheckConfig:
+				item.Host = cfg.Host
+				item.Port = cfg.Port
+				item.Timeout = cfg.Timeout
+				item.StartTLS = cfg.StartTLS
+				item.SMTPUsername = cfg.Username
+				item.SMTPPassword = cfg.Password
+			case *models.GRPCHealthCheckConfig:
+				item.Host = cfg.Host
+				item.Timeout = cfg.Timeout
+				item.UseTLS = cfg.UseTLS
+			case *models.WebSocketCheckConfig:
+				item.URL = cfg.URL
+				item.Timeout = cfg.Timeout
 			}
 		}
 

@@ -75,9 +75,6 @@ func TestLoadConfig(t *testing.T) {
 
 	// Test database configuration
 	t.Run("Database", func(t *testing.T) {
-		if cfg.DB.Protocol != "mongodb" {
-			t.Errorf("Expected DB protocol 'mongodb', got %s", cfg.DB.Protocol)
-		}
 		if cfg.DB.Host != "localhost" {
 			t.Errorf("Expected DB host 'localhost', got %s", cfg.DB.Host)
 		}

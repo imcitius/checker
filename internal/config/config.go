@@ -24,10 +24,9 @@ type Config struct {
 	ServerPort string `yaml:"server_port"`
 
 	DB struct {
-		Driver      string `yaml:"driver"`             // "postgres" or "sqlite" (default: postgres)
-		DSN         string `yaml:"dsn"`                // for sqlite: file path (default: ./checker.db)
-		Protocol    string `yaml:"protocol"`
-		Host        string `yaml:"host"`
+		Driver   string `yaml:"driver"` // "postgres" or "sqlite" (default: postgres)
+		DSN      string `yaml:"dsn"`    // for sqlite: file path (default: ./checker.db)
+		Host     string `yaml:"host"`
 		Username    string `yaml:"username"`
 		Database    string `yaml:"database"`
 		Password    string `yaml:"password,omitempty"`
@@ -150,10 +149,8 @@ type TickerWithDuration struct {
 	Duration string
 }
 
-type ActorConfig struct {
-	Type    string `yaml:"type"`
-	Message string
-}
+// ActorConfig was a legacy structure for actor configuration.
+// Removed: it was defined but never instantiated or used anywhere.
 
 // LoadConfig reads the YAML file specified by filename and returns a pointer
 // to a Config struct, or an error if reading or unmarshalling fails.
@@ -186,6 +183,9 @@ func (cfg *Config) applyEnvOverrides() {
 	}
 	if v := os.Getenv("DB_DSN"); v != "" {
 		cfg.DB.DSN = v
+	}
+	if v := os.Getenv("PORT"); v != "" {
+		cfg.ServerPort = v
 	}
 	if v := os.Getenv("DATABASE_URL"); v != "" {
 		cfg.DB.DatabaseURL = v
@@ -257,9 +257,6 @@ func (cfg *Config) setDefaults() {
 	}
 	if cfg.DB.Driver == "sqlite" && cfg.DB.DSN == "" {
 		cfg.DB.DSN = "./checker.db"
-	}
-	if cfg.DB.Protocol == "" {
-		cfg.DB.Protocol = "mongodb"
 	}
 	if cfg.DB.Host == "" {
 		cfg.DB.Host = "localhost"

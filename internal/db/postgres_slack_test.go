@@ -24,7 +24,7 @@ func setupTestDB(t *testing.T) *db.PostgresDB {
 	}
 
 	cfg := &config.Config{}
-	cfg.DB.Protocol = "postgres"
+	cfg.DB.Driver = "postgres"
 	cfg.DB.Host = "localhost:5432"
 	cfg.DB.Username = "postgres"
 	cfg.DB.Password = "password"
