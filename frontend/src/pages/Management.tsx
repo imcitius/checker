@@ -798,12 +798,12 @@ export function Management() {
                           const someSgSelected = !allSgSelected && sgUUIDs.some((uuid) => selectedUUIDs.has(uuid))
 
                           return (
-                            <div key={sg.group}>
+                            <div key={sg.group} className={showSubGroupHeaders ? 'border-t border-border/50' : ''}>
                               {/* Sub-group header (only if project has multiple groups) */}
                               {showSubGroupHeaders && (
                                 <button
                                   onClick={() => toggleGroup(subGroupKey)}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 pl-8 bg-muted/25 hover:bg-muted/40 transition-colors text-left border-t border-border/50"
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 pl-8 bg-muted/25 hover:bg-muted/40 transition-colors text-left"
                                 >
                                   <div
                                     className="flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
@@ -838,7 +838,7 @@ export function Management() {
 
                               {/* Checks table */}
                               {!(showSubGroupHeaders && isSubGroupCollapsed) && (
-                                <div className="overflow-x-auto">
+                                <div className={showSubGroupHeaders ? 'ml-4 border-l-2 border-border/40 overflow-x-auto' : 'overflow-x-auto'}>
                                   <table className="w-full text-sm table-fixed">
                                     <colgroup>
                                       <col className="w-10" />
@@ -956,7 +956,7 @@ export function Management() {
                           )}
 
                           {!(showSubGroupHeaders && isSubGroupCollapsed) && (
-                            <div className="space-y-2">
+                            <div className={showSubGroupHeaders ? 'ml-3 border-l-2 border-border/40 pl-2 space-y-2' : 'space-y-2'}>
                               {sg.checks.map((def) => {
                                 const isSelected = selectedUUIDs.has(def.uuid)
                                 return (
@@ -970,8 +970,8 @@ export function Management() {
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="min-w-0 flex-1">
                                         <div className="font-medium text-sm truncate">{def.name}</div>
-                                        {(def.url || def.host) && (
-                                          <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">{def.url || def.host}</div>
+                                        {(def.url || def.host || def.domain || def.mongodb_uri) && (
+                                          <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">{def.url || def.host || def.domain || def.mongodb_uri}</div>
                                         )}
                                       </div>
                                       <div className="flex items-center gap-2 shrink-0">
