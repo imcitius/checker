@@ -97,6 +97,8 @@ func (check *HTTPCheck) init() (*http.Client, error) {
 		return nil, fmt.Errorf("failed to build HTTP request: %v", err)
 	}
 
+	req.Header.Set("User-Agent", "Checker/1.0 (+https://github.com/imcitius/checker)")
+
 	if check.Auth.User != "" {
 		req.SetBasicAuth(check.Auth.User, check.Auth.Password)
 	}
