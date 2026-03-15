@@ -717,6 +717,54 @@ func unmarshalConfig(checkType string, data []byte) (models.CheckConfig, error) 
 			return nil, err
 		}
 		return &conf, nil
+	case "dns":
+		var conf models.DNSCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
+	case "ssh":
+		var conf models.SSHCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
+	case "redis":
+		var conf models.RedisCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
+	case "mongodb":
+		var conf models.MongoDBCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
+	case "ssl_cert":
+		var conf models.SSLCertCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
+	case "smtp":
+		var conf models.SMTPCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
+	case "grpc_health":
+		var conf models.GRPCHealthCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
+	case "websocket":
+		var conf models.WebSocketCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
 	}
 	return nil, nil
 }
