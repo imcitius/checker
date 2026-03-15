@@ -549,7 +549,7 @@ export function Management() {
           </button>
         </td>
         <td className="px-3 py-2 overflow-hidden">
-          <div className="font-medium truncate">{def.name}</div>
+          <div className="font-medium break-words">{def.name}</div>
           <div className="font-mono text-[10px] text-muted-foreground truncate">{def.uuid}</div>
         </td>
         <td className="px-3 py-2 overflow-hidden">
