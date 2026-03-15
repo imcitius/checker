@@ -264,6 +264,20 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 			Logger:            logger,
 		}
 
+	case *models.SSLCertCheckConfig:
+		logger.Debugf("Creating SSL cert check for host: %s, port: %d", config.Host, config.Port)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
+		return &checks.SSLCertCheck{
+			Host:              config.Host,
+			Port:              config.Port,
+			Timeout:           config.Timeout,
+			ExpiryWarningDays: config.ExpiryWarningDays,
+			ValidateChain:     config.ValidateChain,
+			Logger:            logger,
+		}
+
 	default:
 		logger.Warnf("Unknown check config type: %T for type %s", checkDef.Config, checkDef.Type)
 		return nil

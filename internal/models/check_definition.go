@@ -170,6 +170,34 @@ func (cd *CheckDefinition) UnmarshalBSON(data []byte) error {
 		}
 		cd.Config = &conf
 
+	case "ssl_cert":
+		var conf SSLCertCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+
+	case "smtp":
+		var conf SMTPCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+
+	case "grpc_health":
+		var conf GRPCHealthCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+
+	case "websocket":
+		var conf WebSocketCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+
 	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
 		type PgSQLFlatAndNested struct {
 			Host        string `bson:"host"`
@@ -330,6 +358,28 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 			doc["domain"] = c.Domain
 			doc["timeout"] = c.Timeout
 			doc["expiry_warning_days"] = c.ExpiryWarningDays
+		case *SSLCertCheckConfig:
+			doc["host"] = c.Host
+			doc["port"] = c.Port
+			doc["timeout"] = c.Timeout
+			doc["expiry_warning_days"] = c.ExpiryWarningDays
+			doc["validate_chain"] = c.ValidateChain
+		case *SMTPCheckConfig:
+			doc["host"] = c.Host
+			doc["port"] = c.Port
+			doc["timeout"] = c.Timeout
+			doc["check_tls"] = c.CheckTLS
+			doc["expect_banner"] = c.ExpectBanner
+		case *GRPCHealthCheckConfig:
+			doc["host"] = c.Host
+			doc["service"] = c.Service
+			doc["use_tls"] = c.UseTLS
+			doc["timeout"] = c.Timeout
+		case *WebSocketCheckConfig:
+			doc["url"] = c.URL
+			doc["send_message"] = c.SendMessage
+			doc["expect_message"] = c.ExpectMessage
+			doc["timeout"] = c.Timeout
 		case *PostgreSQLCheckConfig:
 			doc["host"] = c.Host
 			doc["port"] = c.Port
