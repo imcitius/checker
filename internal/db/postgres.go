@@ -46,8 +46,19 @@ func NewPostgresDB(cfg *config.Config) (*PostgresDB, error) {
 		logrus.Warnf("Could not create migration instance: %v", err)
 	} else {
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			logrus.Errorf("Migration failed: %v", err)
-			// decide if we want to fail hard or continue
+			// If dirty, force to previous version and retry
+			if version, dirty, vErr := m.Version(); vErr == nil && dirty {
+				logrus.Warnf("Migration dirty at version %d, forcing to %d and retrying", version, version-1)
+				if fErr := m.Force(int(version) - 1); fErr == nil {
+					if rErr := m.Up(); rErr != nil && rErr != migrate.ErrNoChange {
+						logrus.Errorf("Migration retry failed: %v", rErr)
+					}
+				} else {
+					logrus.Errorf("Migration force failed: %v", fErr)
+				}
+			} else {
+				logrus.Errorf("Migration failed: %v", err)
+			}
 		}
 	}
 
