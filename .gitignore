@@ -13,4 +13,3 @@ frontend/dist/
 internal/web/spa/*
 !internal/web/spa/.gitkeep
 /Development_plan.md
-/plans
