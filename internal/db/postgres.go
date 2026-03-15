@@ -163,6 +163,12 @@ func marshalAlertChannels(channels []string) *string {
 	return &s
 }
 
+func (db *PostgresDB) CountCheckDefinitions(ctx context.Context) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM check_definitions").Scan(&count)
+	return count, err
+}
+
 func (db *PostgresDB) GetAllCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error) {
 	rows, err := db.Pool.Query(ctx, "SELECT "+checkDefColumns+" FROM check_definitions")
 	if err != nil {

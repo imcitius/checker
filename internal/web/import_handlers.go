@@ -511,6 +511,22 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 			Timeout:           item.Timeout,
 			ExpiryWarningDays: item.ExpiryWarningDays,
 		}
+	case "dns":
+		def.Config = &models.DNSCheckConfig{
+			Host:       item.Host,
+			Domain:     item.Domain,
+			RecordType: item.RecordType,
+			Timeout:    item.Timeout,
+			Expected:   item.Expected,
+		}
+	case "ssl_cert":
+		def.Config = &models.SSLCertCheckConfig{
+			Host:              item.Host,
+			Port:              item.Port,
+			Timeout:           item.Timeout,
+			ExpiryWarningDays: item.ExpiryWarningDays,
+			ValidateChain:     item.ValidateChain,
+		}
 	}
 
 	return def
@@ -630,6 +646,18 @@ func ExportCheckDefinitions(c *gin.Context) {
 				item.Domain = cfg.Domain
 				item.Timeout = cfg.Timeout
 				item.ExpiryWarningDays = cfg.ExpiryWarningDays
+			case *models.DNSCheckConfig:
+				item.Host = cfg.Host
+				item.Domain = cfg.Domain
+				item.RecordType = cfg.RecordType
+				item.Timeout = cfg.Timeout
+				item.Expected = cfg.Expected
+			case *models.SSLCertCheckConfig:
+				item.Host = cfg.Host
+				item.Port = cfg.Port
+				item.Timeout = cfg.Timeout
+				item.ExpiryWarningDays = cfg.ExpiryWarningDays
+				item.ValidateChain = cfg.ValidateChain
 			}
 		}
 

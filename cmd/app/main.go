@@ -100,6 +100,20 @@ func main() {
 			}
 			logrus.Info("Database connection established")
 
+			// Auto-seed demo data for SQLite on first start
+			if cfg.DB.Driver == "sqlite" {
+				count, err := repo.CountCheckDefinitions(ctx)
+				if err != nil {
+					logrus.Warnf("Failed to count check definitions: %v", err)
+				} else if count == 0 {
+					logrus.Info("Demo mode: seeding checks from demo/seed.yaml")
+					if err := seedFromFile(repo, "demo/seed.yaml"); err != nil {
+						logrus.Warnf("Failed to seed demo data: %v", err)
+						// non-fatal — app still starts, just empty
+					}
+				}
+			}
+
 			// Ensure Database is closed on exit
 			defer func() {
 				logrus.Info("Closing Database connection")

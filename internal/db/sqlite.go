@@ -267,6 +267,12 @@ func placeholders(n int) string {
 // Check Definition CRUD
 // ---------------------------------------------------------------------------
 
+func (s *SQLiteDB) CountCheckDefinitions(ctx context.Context) (int, error) {
+	var count int
+	err := s.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM check_definitions").Scan(&count)
+	return count, err
+}
+
 func (s *SQLiteDB) GetAllCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error) {
 	rows, err := s.DB.QueryContext(ctx, "SELECT "+sqliteCheckDefColumns+" FROM check_definitions")
 	if err != nil {

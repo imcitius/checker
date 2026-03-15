@@ -24,6 +24,7 @@ type Repository interface {
 	GetAllProjects(ctx context.Context) ([]string, error)
 	GetAllCheckTypes(ctx context.Context) ([]string, error)
 	ConvertConfigToCheckDefinitions(ctx context.Context, config *config.Config) error
+	CountCheckDefinitions(ctx context.Context) (int, error)
 	GetAllDefaultTimeouts() map[string]string
 
 	// Slack thread tracking

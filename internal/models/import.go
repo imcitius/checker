@@ -97,9 +97,16 @@ type CheckImportItem struct {
 	Host string `json:"host,omitempty" yaml:"host,omitempty"`
 	Port int    `json:"port,omitempty" yaml:"port,omitempty"`
 
+	// DNS config
+	RecordType string `json:"record_type,omitempty" yaml:"record_type,omitempty"`
+	Expected   string `json:"expected,omitempty" yaml:"expected,omitempty"`
+
 	// Domain expiry config
 	Domain            string `json:"domain,omitempty" yaml:"domain,omitempty"`
 	ExpiryWarningDays int    `json:"expiry_warning_days,omitempty" yaml:"expiry_warning_days,omitempty"`
+
+	// SSL cert config
+	ValidateChain bool `json:"validate_chain,omitempty" yaml:"validate_chain,omitempty"`
 
 	// Database config
 	PgSQL *DBImportConfig `json:"pgsql,omitempty" yaml:"pgsql,omitempty"`
