@@ -33,15 +33,23 @@ type Config struct {
 	} `yaml:"db"`
 
 	Alerts map[string]struct {
-		Type               string `yaml:"type"`
-		BotToken           string `yaml:"bot_token,omitempty"`
-		CriticalChannel    string `yaml:"critical_channel,omitempty"`
-		NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
-		WebhookURL         string `yaml:"webhook_url,omitempty"`
-		RoutingKey         string `yaml:"routing_key,omitempty"`
+		Type               string   `yaml:"type"`
+		BotToken           string   `yaml:"bot_token,omitempty"`
+		CriticalChannel    string   `yaml:"critical_channel,omitempty"`
+		NoncriticalChannel string   `yaml:"noncritical_channel,omitempty"`
+		WebhookURL         string   `yaml:"webhook_url,omitempty"`
+		RoutingKey         string   `yaml:"routing_key,omitempty"`
 		// Opsgenie configs
 		APIKey string `yaml:"api_key,omitempty"`
 		Region string `yaml:"region,omitempty"` // "us" or "eu"
+		// Email (SMTP) configs
+		SMTPHost     string   `yaml:"smtp_host,omitempty"`
+		SMTPPort     int      `yaml:"smtp_port,omitempty"`
+		SMTPUser     string   `yaml:"smtp_user,omitempty"`
+		SMTPPassword string   `yaml:"smtp_password,omitempty"`
+		From         string   `yaml:"from,omitempty"`
+		To           []string `yaml:"to,omitempty"`
+		UseTLS       bool     `yaml:"use_tls,omitempty"`
 	} `yaml:"alerts"`
 
 	Tickers map[string]TickerWithDuration
@@ -248,40 +256,61 @@ func (cfg *Config) setDefaults() {
 	// Set Alerts defaults.
 	if cfg.Alerts == nil {
 		cfg.Alerts = make(map[string]struct {
-			Type               string `yaml:"type"`
-			BotToken           string `yaml:"bot_token,omitempty"`
-			CriticalChannel    string `yaml:"critical_channel,omitempty"`
-			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
-			WebhookURL         string `yaml:"webhook_url,omitempty"`
-			RoutingKey         string `yaml:"routing_key,omitempty"`
-			APIKey             string `yaml:"api_key,omitempty"`
-			Region             string `yaml:"region,omitempty"`
+			Type               string   `yaml:"type"`
+			BotToken           string   `yaml:"bot_token,omitempty"`
+			CriticalChannel    string   `yaml:"critical_channel,omitempty"`
+			NoncriticalChannel string   `yaml:"noncritical_channel,omitempty"`
+			WebhookURL         string   `yaml:"webhook_url,omitempty"`
+			RoutingKey         string   `yaml:"routing_key,omitempty"`
+			APIKey             string   `yaml:"api_key,omitempty"`
+			Region             string   `yaml:"region,omitempty"`
+			SMTPHost           string   `yaml:"smtp_host,omitempty"`
+			SMTPPort           int      `yaml:"smtp_port,omitempty"`
+			SMTPUser           string   `yaml:"smtp_user,omitempty"`
+			SMTPPassword       string   `yaml:"smtp_password,omitempty"`
+			From               string   `yaml:"from,omitempty"`
+			To                 []string `yaml:"to,omitempty"`
+			UseTLS             bool     `yaml:"use_tls,omitempty"`
 		})
 	}
 	if _, exists := cfg.Alerts["telegram"]; !exists {
 		cfg.Alerts["telegram"] = struct {
-			Type               string `yaml:"type"`
-			BotToken           string `yaml:"bot_token,omitempty"`
-			CriticalChannel    string `yaml:"critical_channel,omitempty"`
-			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
-			WebhookURL         string `yaml:"webhook_url,omitempty"`
-			RoutingKey         string `yaml:"routing_key,omitempty"`
-			APIKey             string `yaml:"api_key,omitempty"`
-			Region             string `yaml:"region,omitempty"`
+			Type               string   `yaml:"type"`
+			BotToken           string   `yaml:"bot_token,omitempty"`
+			CriticalChannel    string   `yaml:"critical_channel,omitempty"`
+			NoncriticalChannel string   `yaml:"noncritical_channel,omitempty"`
+			WebhookURL         string   `yaml:"webhook_url,omitempty"`
+			RoutingKey         string   `yaml:"routing_key,omitempty"`
+			APIKey             string   `yaml:"api_key,omitempty"`
+			Region             string   `yaml:"region,omitempty"`
+			SMTPHost           string   `yaml:"smtp_host,omitempty"`
+			SMTPPort           int      `yaml:"smtp_port,omitempty"`
+			SMTPUser           string   `yaml:"smtp_user,omitempty"`
+			SMTPPassword       string   `yaml:"smtp_password,omitempty"`
+			From               string   `yaml:"from,omitempty"`
+			To                 []string `yaml:"to,omitempty"`
+			UseTLS             bool     `yaml:"use_tls,omitempty"`
 		}{
 			Type: "telegram",
 		}
 	}
 	if _, exists := cfg.Alerts["slack"]; !exists {
 		cfg.Alerts["slack"] = struct {
-			Type               string `yaml:"type"`
-			BotToken           string `yaml:"bot_token,omitempty"`
-			CriticalChannel    string `yaml:"critical_channel,omitempty"`
-			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
-			WebhookURL         string `yaml:"webhook_url,omitempty"`
-			RoutingKey         string `yaml:"routing_key,omitempty"`
-			APIKey             string `yaml:"api_key,omitempty"`
-			Region             string `yaml:"region,omitempty"`
+			Type               string   `yaml:"type"`
+			BotToken           string   `yaml:"bot_token,omitempty"`
+			CriticalChannel    string   `yaml:"critical_channel,omitempty"`
+			NoncriticalChannel string   `yaml:"noncritical_channel,omitempty"`
+			WebhookURL         string   `yaml:"webhook_url,omitempty"`
+			RoutingKey         string   `yaml:"routing_key,omitempty"`
+			APIKey             string   `yaml:"api_key,omitempty"`
+			Region             string   `yaml:"region,omitempty"`
+			SMTPHost           string   `yaml:"smtp_host,omitempty"`
+			SMTPPort           int      `yaml:"smtp_port,omitempty"`
+			SMTPUser           string   `yaml:"smtp_user,omitempty"`
+			SMTPPassword       string   `yaml:"smtp_password,omitempty"`
+			From               string   `yaml:"from,omitempty"`
+			To                 []string `yaml:"to,omitempty"`
+			UseTLS             bool     `yaml:"use_tls,omitempty"`
 		}{
 			Type: "slack",
 		}

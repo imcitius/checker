@@ -21,6 +21,14 @@ const (
 	SyncInterval          = 10 * time.Second
 )
 
+// emailAlertConfig holds the global email configuration, set during scheduler startup.
+var emailAlertConfig *alerts.EmailConfig
+
+// getEmailConfig returns the global email alert configuration, or nil if not configured.
+func getEmailConfig() *alerts.EmailConfig {
+	return emailAlertConfig
+}
+
 // Scheduler manages the lifecycle of health checks
 type Scheduler struct {
 	workerPool   *WorkerPool
@@ -47,6 +55,20 @@ func NewScheduler(repo db.Repository, slackAlerter *SlackAlerter) *Scheduler {
 // RunScheduler starts the health check scheduler.
 func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, slackAlerter *SlackAlerter) error {
 	logrus.Info("Starting event-driven health check scheduler")
+
+	// Initialize email alert configuration from config
+	if emailCfg, ok := cfg.Alerts["email"]; ok && emailCfg.SMTPHost != "" {
+		emailAlertConfig = &alerts.EmailConfig{
+			SMTPHost:     emailCfg.SMTPHost,
+			SMTPPort:     emailCfg.SMTPPort,
+			SMTPUser:     emailCfg.SMTPUser,
+			SMTPPassword: emailCfg.SMTPPassword,
+			From:         emailCfg.From,
+			To:           emailCfg.To,
+			UseTLS:       emailCfg.UseTLS,
+		}
+		logrus.Info("Email alerter configured")
+	}
 
 	s := NewScheduler(repo, slackAlerter)
 
@@ -427,6 +449,25 @@ func sendAlertToChannel(channel string, status models.CheckStatus, checkDef mode
 			logrus.Errorf("Failed to send Slack alert: %v", err)
 		}
 
+	case "email":
+		emailCfg := getEmailConfig()
+		if emailCfg == nil {
+			logrus.Errorf("Email alert configuration not found for check %s", status.UUID)
+			return
+		}
+		data := alerts.EmailData{
+			Subject:      fmt.Sprintf("[ALERT] %s is DOWN", status.CheckName),
+			HeaderClass:  "header-down",
+			CheckName:    status.CheckName,
+			Project:      status.Project,
+			CheckType:    status.CheckType,
+			ErrorMessage: status.Message,
+			Timestamp:    status.LastRun.Format("2006-01-02T15:04:05Z07:00"),
+		}
+		if err := alerts.SendEmailAlert(*emailCfg, data); err != nil {
+			logrus.Errorf("Failed to send email alert: %v", err)
+		}
+
 	case "discord":
 		if checkDef.AlertDestination == "" {
 			logrus.Errorf("Discord webhook URL is not configured for check %s", status.UUID)
@@ -529,19 +570,35 @@ func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slac
 	}
 }
 
-// sendRecoveryAlerts dispatches recovery notifications for legacy alert channels (telegram, slack webhook).
+// sendRecoveryAlerts dispatches recovery notifications for alert channels.
+// Supports multi-channel dispatch via AlertChannels with backward compatibility for single-channel AlertType.
 // When slackAppActive is true, the "slack" alertType is skipped because the SlackAlerter handles recovery natively.
 func sendRecoveryAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
-	if checkDef.ActorType != "alert" || checkDef.AlertType == "" {
+	// Multi-channel recovery dispatch
+	channels := getEffectiveAlertChannels(checkDef)
+	if len(channels) > 0 {
+		for _, channel := range channels {
+			logrus.Infof("Sending %s recovery notification for check %s (%s/%s)",
+				channel, status.UUID, status.Project, status.CheckName)
+			sendRecoveryToChannel(channel, status, checkDef, slackAppActive)
+		}
 		return
 	}
 
+	// Legacy single-channel fallback
+	if checkDef.ActorType != "alert" || checkDef.AlertType == "" {
+		return
+	}
 	logrus.Infof("Sending %s recovery notification for check %s (%s/%s)",
 		checkDef.AlertType, status.UUID, status.Project, status.CheckName)
+	sendRecoveryToChannel(checkDef.AlertType, status, checkDef, slackAppActive)
+}
 
+// sendRecoveryToChannel dispatches a single recovery notification to one channel type.
+func sendRecoveryToChannel(channel string, status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
 	message := fmt.Sprintf("RECOVERY: Check %s (%s/%s) is healthy again", status.CheckName, status.Project, status.CheckGroup)
 
-	switch checkDef.AlertType {
+	switch channel {
 	case "telegram":
 		if checkDef.AlertDestination == "" {
 			return
@@ -564,6 +621,24 @@ func sendRecoveryAlerts(status models.CheckStatus, checkDef models.CheckDefiniti
 		}
 		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
 			logrus.Errorf("Failed to send Slack recovery alert: %v", err)
+		}
+
+	case "email":
+		emailCfg := getEmailConfig()
+		if emailCfg == nil {
+			logrus.Errorf("Email alert configuration not found for check %s", status.UUID)
+			return
+		}
+		data := alerts.EmailData{
+			Subject:     fmt.Sprintf("[RESOLVED] %s is UP", status.CheckName),
+			HeaderClass: "header-up",
+			CheckName:   status.CheckName,
+			Project:     status.Project,
+			CheckType:   status.CheckType,
+			Timestamp:   status.LastRun.Format("2006-01-02T15:04:05Z07:00"),
+		}
+		if err := alerts.SendEmailAlert(*emailCfg, data); err != nil {
+			logrus.Errorf("Failed to send email recovery alert: %v", err)
 		}
 
 	case "pagerduty":

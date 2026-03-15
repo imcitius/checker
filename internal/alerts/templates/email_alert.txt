@@ -1,0 +1,12 @@
+{{.Subject}}
+
+Check Name:    {{.CheckName}}
+Project:       {{.Project}}
+Check Type:    {{.CheckType}}
+{{- if .ErrorMessage}}
+Error:         {{.ErrorMessage}}
+{{- end}}
+Timestamp:     {{.Timestamp}}
+
+--
+Sent by Checker Monitoring
