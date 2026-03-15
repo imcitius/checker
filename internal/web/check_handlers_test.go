@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,7 +20,9 @@ import (
 // stubRepo implements db.Repository with minimal stubs for testing CreateCheckDefinition.
 type stubRepo struct {
 	db.Repository
-	lastCreated models.CheckDefinition
+	lastCreated          models.CheckDefinition
+	lastMaintenanceUUID  string
+	lastMaintenanceUntil *time.Time
 }
 
 func (s *stubRepo) CreateCheckDefinition(_ context.Context, def models.CheckDefinition) (string, error) {
@@ -76,6 +79,11 @@ func (s *stubRepo) CreateAlertEvent(_ context.Context, _ models.AlertEvent) erro
 func (s *stubRepo) ResolveAlertEvent(_ context.Context, _ string) error           { return nil }
 func (s *stubRepo) GetAlertHistory(_ context.Context, _, _ int, _ models.AlertHistoryFilters) ([]models.AlertEvent, int, error) {
 	return nil, 0, nil
+}
+func (s *stubRepo) SetMaintenanceWindow(_ context.Context, uuid string, until *time.Time) error {
+	s.lastMaintenanceUUID = uuid
+	s.lastMaintenanceUntil = until
+	return nil
 }
 
 func TestCreateCheckDefinition_GeneratesUUID(t *testing.T) {
@@ -145,5 +153,109 @@ func TestCreateCheckDefinition_PreservesProvidedUUID(t *testing.T) {
 
 	if repo.lastCreated.UUID != providedUUID {
 		t.Fatalf("expected UUID %s, got %s", providedUUID, repo.lastCreated.UUID)
+	}
+}
+
+func TestSetMaintenanceWindow_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	futureTime := time.Now().Add(1 * time.Hour).UTC().Format(time.RFC3339)
+	body := `{"until":"` + futureTime + `"}`
+	c.Request = httptest.NewRequest(http.MethodPut, "/api/check-definitions/test-uuid/maintenance", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("repo", db.Repository(repo))
+	c.Params = []gin.Param{{Key: "uuid", Value: "test-uuid"}}
+
+	SetMaintenanceWindow(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if repo.lastMaintenanceUUID != "test-uuid" {
+		t.Fatalf("expected UUID test-uuid, got %s", repo.lastMaintenanceUUID)
+	}
+
+	if repo.lastMaintenanceUntil == nil {
+		t.Fatal("expected maintenance_until to be set, got nil")
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp["maintenance_until"] == nil {
+		t.Fatal("expected maintenance_until in response")
+	}
+}
+
+func TestSetMaintenanceWindow_PastDate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	pastTime := time.Now().Add(-1 * time.Hour).UTC().Format(time.RFC3339)
+	body := `{"until":"` + pastTime + `"}`
+	c.Request = httptest.NewRequest(http.MethodPut, "/api/check-definitions/test-uuid/maintenance", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("repo", db.Repository(repo))
+	c.Params = []gin.Param{{Key: "uuid", Value: "test-uuid"}}
+
+	SetMaintenanceWindow(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400 for past date, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSetMaintenanceWindow_InvalidFormat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body := `{"until":"not-a-date"}`
+	c.Request = httptest.NewRequest(http.MethodPut, "/api/check-definitions/test-uuid/maintenance", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("repo", db.Repository(repo))
+	c.Params = []gin.Param{{Key: "uuid", Value: "test-uuid"}}
+
+	SetMaintenanceWindow(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400 for invalid date, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestClearMaintenanceWindow_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/check-definitions/test-uuid/maintenance", nil)
+	c.Set("repo", db.Repository(repo))
+	c.Params = []gin.Param{{Key: "uuid", Value: "test-uuid"}}
+
+	ClearMaintenanceWindow(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if repo.lastMaintenanceUUID != "test-uuid" {
+		t.Fatalf("expected UUID test-uuid, got %s", repo.lastMaintenanceUUID)
+	}
+
+	if repo.lastMaintenanceUntil != nil {
+		t.Fatal("expected maintenance_until to be nil (cleared), got non-nil")
 	}
 }

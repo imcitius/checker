@@ -23,7 +23,8 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from '@/components/ui/collapsible'
-import { Plus, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, X, ChevronDown, ChevronRight, Wrench } from 'lucide-react'
+import { api } from '@/lib/api'
 
 /** Inline string list editor — add/remove entries (used for server_list, analytic_replicas) */
 function StringListEditor({
@@ -164,6 +165,139 @@ function KeyValueEditor({
 /** Section header with a bottom border */
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return <h3 className="text-sm font-semibold border-b border-border pb-2 pt-1">{children}</h3>
+}
+
+/** Maintenance window section — quick-set buttons + custom datetime + clear */
+function MaintenanceSection({
+  uuid,
+  maintenanceUntil,
+  onMaintenanceChange,
+}: {
+  uuid: string
+  maintenanceUntil?: string | null
+  onMaintenanceChange: (v: string | null) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [customDatetime, setCustomDatetime] = useState('')
+
+  const isActive = maintenanceUntil && new Date(maintenanceUntil) > new Date()
+
+  const setWindow = async (minutes: number) => {
+    setLoading(true)
+    try {
+      const until = new Date(Date.now() + minutes * 60 * 1000).toISOString()
+      await api.setMaintenance(uuid, until)
+      onMaintenanceChange(until)
+    } catch (err) {
+      console.error('Failed to set maintenance window:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const setCustomWindow = async () => {
+    if (!customDatetime) return
+    setLoading(true)
+    try {
+      const until = new Date(customDatetime).toISOString()
+      await api.setMaintenance(uuid, until)
+      onMaintenanceChange(until)
+    } catch (err) {
+      console.error('Failed to set maintenance window:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const clearWindow = async () => {
+    setLoading(true)
+    try {
+      await api.clearMaintenance(uuid)
+      onMaintenanceChange(null)
+    } catch (err) {
+      console.error('Failed to clear maintenance window:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <section className="space-y-4">
+      <SectionHeader>
+        <span className="flex items-center gap-2">
+          <Wrench className="h-4 w-4" />
+          Maintenance Window
+        </span>
+      </SectionHeader>
+
+      {isActive && (
+        <div className="flex items-center gap-3 p-3 rounded-md bg-amber-500/10 border border-amber-500/30">
+          <Badge variant="outline" className="text-amber-600 border-amber-500/50 font-medium">
+            In Maintenance
+          </Badge>
+          <span className="text-sm text-muted-foreground">
+            Until{' '}
+            <span className="font-medium text-foreground">
+              {new Date(maintenanceUntil!).toLocaleString()}
+            </span>
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto text-destructive hover:text-destructive"
+            onClick={clearWindow}
+            disabled={loading}
+          >
+            <X className="h-3 w-3 mr-1" />
+            Clear
+          </Button>
+        </div>
+      )}
+
+      <div>
+        <label className="text-xs text-muted-foreground">Quick set</label>
+        <div className="flex gap-2 mt-1">
+          {[
+            { label: '15m', minutes: 15 },
+            { label: '1h', minutes: 60 },
+            { label: '4h', minutes: 240 },
+            { label: '24h', minutes: 1440 },
+          ].map(({ label, minutes }) => (
+            <Button
+              key={label}
+              variant="outline"
+              size="sm"
+              onClick={() => setWindow(minutes)}
+              disabled={loading}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs text-muted-foreground">Custom datetime</label>
+        <div className="flex gap-2 mt-1">
+          <Input
+            type="datetime-local"
+            value={customDatetime}
+            onChange={(e) => setCustomDatetime(e.target.value)}
+            className="flex-1"
+            min={new Date().toISOString().slice(0, 16)}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={setCustomWindow}
+            disabled={loading || !customDatetime}
+          >
+            Set
+          </Button>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 interface CheckEditDrawerProps {
@@ -729,6 +863,15 @@ export function CheckEditDrawer({
               </div>
             </div>
           </section>
+
+          {/* ─── Maintenance Window ─── */}
+          {editingCheck.uuid && (
+            <MaintenanceSection
+              uuid={editingCheck.uuid}
+              maintenanceUntil={editingCheck.maintenance_until}
+              onMaintenanceChange={(v) => updateForm('maintenance_until', v as string)}
+            />
+          )}
         </div>
 
         {/* Sticky footer */}

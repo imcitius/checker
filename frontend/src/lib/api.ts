@@ -79,6 +79,8 @@ export interface CheckDefinition {
   actor_type?: string
   alert_type?: string
   alert_destination?: string
+  // Maintenance window
+  maintenance_until?: string | null
 }
 
 export interface CheckImportResultItem {
@@ -174,6 +176,16 @@ export const api = {
     request<{ enabled: boolean }>(
       `/api/check-definitions/${uuid}/toggle${enabled !== undefined ? `?enabled=${enabled}` : ''}`,
       { method: 'PATCH' }
+    ),
+  setMaintenance: (uuid: string, until: string) =>
+    request<{ message: string; uuid: string; maintenance_until: string }>(
+      `/api/check-definitions/${uuid}/maintenance`,
+      { method: 'PUT', body: JSON.stringify({ until }) }
+    ),
+  clearMaintenance: (uuid: string) =>
+    request<{ message: string; uuid: string }>(
+      `/api/check-definitions/${uuid}/maintenance`,
+      { method: 'DELETE' }
     ),
   // Alerts & Silences
   getAlerts: (params?: { limit?: number; offset?: number; project?: string; status?: string }) => {

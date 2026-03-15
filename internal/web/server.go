@@ -296,6 +296,8 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		checkDefinitionsGroup.PUT("/:uuid", UpdateCheckDefinition)
 		checkDefinitionsGroup.DELETE("/:uuid", DeleteCheckDefinition)
 		checkDefinitionsGroup.PATCH("/:uuid/toggle", ToggleCheckDefinitionStatus)
+		checkDefinitionsGroup.PUT("/:uuid/maintenance", SetMaintenanceWindow)
+		checkDefinitionsGroup.DELETE("/:uuid/maintenance", ClearMaintenanceWindow)
 	}
 
 	// Bulk import/export endpoints (separate group to avoid /:uuid conflict)

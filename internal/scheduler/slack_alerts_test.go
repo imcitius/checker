@@ -187,6 +187,9 @@ func (r *mockRepo) DeactivateSilenceByID(_ context.Context, _ int) error { retur
 func (r *mockRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.Config) error {
 	return nil
 }
+func (r *mockRepo) SetMaintenanceWindow(_ context.Context, _ string, _ *time.Time) error {
+	return nil
+}
 
 // --- Tests ---
 

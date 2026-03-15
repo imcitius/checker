@@ -43,6 +43,9 @@ type CheckDefinition struct {
 	Severity        string   `bson:"severity,omitempty" json:"severity,omitempty"`             // "critical", "warning", "info"; default "critical"
 	AlertChannels   []string `bson:"alert_channels,omitempty" json:"alert_channels,omitempty"` // e.g. ["telegram", "slack", "pagerduty"]
 	ReAlertInterval string   `bson:"re_alert_interval,omitempty" json:"re_alert_interval,omitempty"` // e.g. "30m", empty = no re-alert
+
+	// Maintenance window
+	MaintenanceUntil *time.Time `bson:"maintenance_until,omitempty" json:"maintenance_until,omitempty"`
 }
 
 // UnmarshalBSON implements a custom BSON unmarshaler to handle polymorphism
@@ -216,7 +219,8 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 		"alert_destination": cd.AlertDestination,
 		"severity":          cd.Severity,
 		"alert_channels":    cd.AlertChannels,
-		"re_alert_interval": cd.ReAlertInterval,
+		"re_alert_interval":  cd.ReAlertInterval,
+		"maintenance_until":  cd.MaintenanceUntil,
 	}
 
 	// Flatten Check Config
@@ -366,4 +370,7 @@ type CheckDefinitionViewModel struct {
 	Severity        string   `json:"severity,omitempty"`
 	AlertChannels   []string `json:"alert_channels,omitempty"`
 	ReAlertInterval string   `json:"re_alert_interval,omitempty"`
+
+	// Maintenance window
+	MaintenanceUntil *string `json:"maintenance_until,omitempty"`
 }

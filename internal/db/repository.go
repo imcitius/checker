@@ -4,6 +4,7 @@ import (
 	"checker/internal/config"
 	"checker/internal/models"
 	"context"
+	"time"
 )
 
 // Repository defines the interface for database interactions
@@ -16,6 +17,7 @@ type Repository interface {
 	DeleteCheckDefinition(ctx context.Context, uuid string) error
 	ToggleCheckDefinition(ctx context.Context, uuid string, enabled bool) error
 	UpdateCheckStatus(ctx context.Context, status models.CheckStatus) error
+	SetMaintenanceWindow(ctx context.Context, uuid string, until *time.Time) error
 	GetAllProjects(ctx context.Context) ([]string, error)
 	GetAllCheckTypes(ctx context.Context) ([]string, error)
 	ConvertConfigToCheckDefinitions(ctx context.Context, config *config.Config) error

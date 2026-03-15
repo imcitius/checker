@@ -180,6 +180,7 @@ func UpdateCheckDefinition(c *gin.Context) {
 	def.IsHealthy = existingDef.IsHealthy
 	def.LastMessage = existingDef.LastMessage
 	def.LastAlertSent = existingDef.LastAlertSent
+	def.MaintenanceUntil = existingDef.MaintenanceUntil
 
 	// Update the definition
 	if err := repo.UpdateCheckDefinition(ctx, def); err != nil {
@@ -349,6 +350,12 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 		AlertDestination: def.AlertDestination,
 	}
 
+	// Set maintenance window
+	if def.MaintenanceUntil != nil {
+		formatted := def.MaintenanceUntil.Format(time.RFC3339)
+		vm.MaintenanceUntil = &formatted
+	}
+
 	// Populate config fields
 	if def.Config != nil {
 		switch c := def.Config.(type) {
@@ -495,4 +502,77 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 	}
 
 	return def
+}
+
+// SetMaintenanceWindow sets a maintenance window for a check definition.
+// PUT /api/check-definitions/:uuid/maintenance
+// Body: {"until": "2024-03-15T15:00:00Z"}
+func SetMaintenanceWindow(c *gin.Context) {
+	repo := c.MustGet("repo").(db.Repository)
+	checkUUID := c.Param("uuid")
+
+	if checkUUID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "UUID is required"})
+		return
+	}
+
+	var body struct {
+		Until string `json:"until"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.Until == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Field 'until' is required (RFC3339 datetime)"})
+		return
+	}
+
+	until, err := time.Parse(time.RFC3339, body.Until)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid datetime format, use RFC3339 (e.g. 2024-03-15T15:00:00Z)"})
+		return
+	}
+
+	if until.Before(time.Now()) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Maintenance window must be in the future"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := repo.SetMaintenanceWindow(ctx, checkUUID, &until); err != nil {
+		logrus.Errorf("Failed to set maintenance window for %s: %v", checkUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set maintenance window"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":           fmt.Sprintf("Maintenance window set for check %s until %s", checkUUID, until.Format(time.RFC3339)),
+		"uuid":              checkUUID,
+		"maintenance_until": until.Format(time.RFC3339),
+	})
+}
+
+// ClearMaintenanceWindow clears the maintenance window for a check definition.
+// DELETE /api/check-definitions/:uuid/maintenance
+func ClearMaintenanceWindow(c *gin.Context) {
+	repo := c.MustGet("repo").(db.Repository)
+	checkUUID := c.Param("uuid")
+
+	if checkUUID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "UUID is required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := repo.SetMaintenanceWindow(ctx, checkUUID, nil); err != nil {
+		logrus.Errorf("Failed to clear maintenance window for %s: %v", checkUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear maintenance window"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Maintenance window cleared for check %s", checkUUID),
+		"uuid":    checkUUID,
+	})
 }

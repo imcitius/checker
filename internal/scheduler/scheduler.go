@@ -156,9 +156,14 @@ func (s *Scheduler) processNextCheck() {
 	// Pop the item
 	heap.Pop(s.checkHeap)
 
-	// Submit to worker pool if enabled
+	// Submit to worker pool if enabled and not in maintenance window
 	if item.CheckDef.Enabled {
-		s.workerPool.Submit(item.CheckDef)
+		if item.CheckDef.MaintenanceUntil != nil && time.Now().Before(*item.CheckDef.MaintenanceUntil) {
+			// Skip check during maintenance window — do not execute or alert
+			logrus.Debugf("Skipping check %s — in maintenance until %s", item.CheckDef.UUID, item.CheckDef.MaintenanceUntil.Format(time.RFC3339))
+		} else {
+			s.workerPool.Submit(item.CheckDef)
+		}
 	}
 
 	// Schedule next run
