@@ -21,6 +21,10 @@ var _ CheckConfig = (*MongoDBCheckConfig)(nil)
 var _ CheckConfig = (*WebhookConfig)(nil)
 var _ CheckConfig = (*DNSCheckConfig)(nil)
 var _ CheckConfig = (*DomainExpiryCheckConfig)(nil)
+var _ CheckConfig = (*SSLCertCheckConfig)(nil)
+var _ CheckConfig = (*SMTPCheckConfig)(nil)
+var _ CheckConfig = (*GRPCHealthCheckConfig)(nil)
+var _ CheckConfig = (*WebSocketCheckConfig)(nil)
 
 // AuthConfig holds authentication credentials
 type AuthConfig struct {
@@ -178,3 +182,47 @@ type WebhookConfig struct {
 
 func (c *WebhookConfig) CheckType() string { return "webhook" }
 func (c *WebhookConfig) GetTarget() string { return c.URL }
+
+// SSLCertCheckConfig holds configuration for SSL certificate checks
+type SSLCertCheckConfig struct {
+	Host              string `bson:"host,omitempty" json:"host,omitempty"`
+	Port              int    `bson:"port,omitempty" json:"port,omitempty"`
+	Timeout           string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+	ExpiryWarningDays int    `bson:"expiry_warning_days,omitempty" json:"expiry_warning_days,omitempty"`
+	ValidateChain     bool   `bson:"validate_chain,omitempty" json:"validate_chain,omitempty"`
+}
+
+func (c *SSLCertCheckConfig) CheckType() string { return "ssl_cert" }
+func (c *SSLCertCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
+
+// SMTPCheckConfig holds configuration for SMTP checks
+type SMTPCheckConfig struct {
+	Host     string `bson:"host,omitempty" json:"host,omitempty"`
+	Port     int    `bson:"port,omitempty" json:"port,omitempty"`
+	Timeout  string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+	StartTLS bool   `bson:"starttls,omitempty" json:"starttls,omitempty"`
+	Username string `bson:"username,omitempty" json:"username,omitempty"`
+	Password string `bson:"password,omitempty" json:"password,omitempty"`
+}
+
+func (c *SMTPCheckConfig) CheckType() string { return "smtp" }
+func (c *SMTPCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
+
+// GRPCHealthCheckConfig holds configuration for gRPC health checks
+type GRPCHealthCheckConfig struct {
+	Host    string `bson:"host,omitempty" json:"host,omitempty"`
+	Timeout string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+	UseTLS  bool   `bson:"use_tls,omitempty" json:"use_tls,omitempty"`
+}
+
+func (c *GRPCHealthCheckConfig) CheckType() string { return "grpc_health" }
+func (c *GRPCHealthCheckConfig) GetTarget() string { return c.Host }
+
+// WebSocketCheckConfig holds configuration for WebSocket checks
+type WebSocketCheckConfig struct {
+	URL     string `bson:"url,omitempty" json:"url,omitempty"`
+	Timeout string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+}
+
+func (c *WebSocketCheckConfig) CheckType() string { return "websocket" }
+func (c *WebSocketCheckConfig) GetTarget() string { return c.URL }

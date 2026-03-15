@@ -422,6 +422,28 @@ type CheckDefinitionViewModel struct {
 		ServerList []string `json:"server_list,omitempty"`
 	} `json:"mysql,omitempty"`
 
+	// DNS check fields
+	RecordType string `json:"record_type,omitempty"`
+	Expected   string `json:"expected,omitempty"`
+
+	// SSH check fields
+	ExpectBanner string `json:"expect_banner,omitempty"`
+
+	// Redis check fields
+	RedisPassword string `json:"redis_password,omitempty"`
+	RedisDB       int    `json:"redis_db,omitempty"`
+
+	// SSL certificate check fields
+	ValidateChain bool `json:"validate_chain,omitempty"`
+
+	// SMTP check fields
+	StartTLS     bool   `json:"starttls,omitempty"`
+	SMTPUsername  string `json:"smtp_username,omitempty"`
+	SMTPPassword string `json:"smtp_password,omitempty"`
+
+	// gRPC health check fields
+	UseTLS bool `json:"use_tls,omitempty"`
+
 	// MongoDB config fields
 	MongoDBURI string `json:"mongodb_uri,omitempty"`
 

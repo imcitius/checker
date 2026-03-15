@@ -418,11 +418,45 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 		case *models.MongoDBCheckConfig:
 			vm.MongoDBURI = c.URI
 			vm.Timeout = c.Timeout
+		case *models.DNSCheckConfig:
+			vm.Host = c.Host
+			vm.Domain = c.Domain
+			vm.RecordType = c.RecordType
+			vm.Timeout = c.Timeout
+			vm.Expected = c.Expected
+		case *models.SSHCheckConfig:
+			vm.Host = c.Host
+			vm.Port = c.Port
+			vm.Timeout = c.Timeout
+			vm.ExpectBanner = c.ExpectBanner
+		case *models.RedisCheckConfig:
+			vm.Host = c.Host
+			vm.Port = c.Port
+			vm.Timeout = c.Timeout
+			vm.RedisPassword = c.Password
+			vm.RedisDB = c.DB
+		case *models.SSLCertCheckConfig:
+			vm.Host = c.Host
+			vm.Port = c.Port
+			vm.Timeout = c.Timeout
+			vm.ExpiryWarningDays = c.ExpiryWarningDays
+			vm.ValidateChain = c.ValidateChain
+		case *models.SMTPCheckConfig:
+			vm.Host = c.Host
+			vm.Port = c.Port
+			vm.Timeout = c.Timeout
+			vm.StartTLS = c.StartTLS
+			vm.SMTPUsername = c.Username
+			vm.SMTPPassword = c.Password
+		case *models.GRPCHealthCheckConfig:
+			vm.Host = c.Host
+			vm.Timeout = c.Timeout
+			vm.UseTLS = c.UseTLS
+		case *models.WebSocketCheckConfig:
+			vm.URL = c.URL
+			vm.Timeout = c.Timeout
 		}
 	}
-
-	// What about Webhook? ViewModel doesn't expose it yet in the original code,
-	// so we might not need to map it for now.
 
 	return vm
 }
@@ -522,6 +556,57 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 			Domain:            vm.Domain,
 			Timeout:           vm.Timeout,
 			ExpiryWarningDays: vm.ExpiryWarningDays,
+		}
+	case "dns":
+		def.Config = &models.DNSCheckConfig{
+			Host:       vm.Host,
+			Domain:     vm.Domain,
+			RecordType: vm.RecordType,
+			Timeout:    vm.Timeout,
+			Expected:   vm.Expected,
+		}
+	case "ssh":
+		def.Config = &models.SSHCheckConfig{
+			Host:         vm.Host,
+			Port:         vm.Port,
+			Timeout:      vm.Timeout,
+			ExpectBanner: vm.ExpectBanner,
+		}
+	case "redis":
+		def.Config = &models.RedisCheckConfig{
+			Host:     vm.Host,
+			Port:     vm.Port,
+			Timeout:  vm.Timeout,
+			Password: vm.RedisPassword,
+			DB:       vm.RedisDB,
+		}
+	case "ssl_cert":
+		def.Config = &models.SSLCertCheckConfig{
+			Host:              vm.Host,
+			Port:              vm.Port,
+			Timeout:           vm.Timeout,
+			ExpiryWarningDays: vm.ExpiryWarningDays,
+			ValidateChain:     vm.ValidateChain,
+		}
+	case "smtp":
+		def.Config = &models.SMTPCheckConfig{
+			Host:     vm.Host,
+			Port:     vm.Port,
+			Timeout:  vm.Timeout,
+			StartTLS: vm.StartTLS,
+			Username: vm.SMTPUsername,
+			Password: vm.SMTPPassword,
+		}
+	case "grpc_health":
+		def.Config = &models.GRPCHealthCheckConfig{
+			Host:    vm.Host,
+			Timeout: vm.Timeout,
+			UseTLS:  vm.UseTLS,
+		}
+	case "websocket":
+		def.Config = &models.WebSocketCheckConfig{
+			URL:     vm.URL,
+			Timeout: vm.Timeout,
 		}
 	}
 
