@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	MongoDBErrEmptyURI          = "empty URI"
-	MongoDBErrCannotParseTimeout = "cannot parse timeout: %s"
+	MongoDBErrEmptyURI = "empty URI"
 )
 
 // MongoDBCheck represents a MongoDB connectivity health check.
@@ -40,13 +39,9 @@ func (check *MongoDBCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "10s"
-	}
-	connectTimeout, err := time.ParseDuration(check.Timeout)
+	connectTimeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		check.Logger.WithError(err).Error("Cannot parse timeout duration")
-		return time.Since(start), fmt.Errorf(errorHeader+MongoDBErrCannotParseTimeout, err)
+		return time.Since(start), fmt.Errorf("%s%v", errorHeader, err)
 	}
 
 	// Create a context with the connection timeout

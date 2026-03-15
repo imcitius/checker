@@ -35,12 +35,9 @@ func (check *SSHCheck) Run() (time.Duration, error) {
 	start := time.Now()
 
 	// Parse timeout
-	timeout, err := time.ParseDuration(check.Timeout)
+	timeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		return time.Since(start), fmt.Errorf("invalid timeout value: %v", err)
-	}
-	if timeout <= 0 {
-		return time.Since(start), fmt.Errorf("timeout must be positive")
+		return time.Since(start), err
 	}
 
 	if check.Host == "" {
@@ -63,7 +60,7 @@ func (check *SSHCheck) Run() (time.Duration, error) {
 	conn, err := net.DialTimeout("tcp", hostPort, timeout)
 	if err != nil {
 		check.Logger.WithError(err).Debugf("SSH check %s, dial err: %+v", hostPort, err)
-		return 0, err
+		return 0, fmt.Errorf("SSH dial %s: %w", hostPort, err)
 	}
 	defer conn.Close()
 

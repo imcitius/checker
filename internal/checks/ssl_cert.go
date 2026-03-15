@@ -19,8 +19,7 @@ const (
 	ErrSSLCertExpired     = "certificate already expired on %s"
 	ErrSSLChainInvalid    = "certificate chain validation failed: %s"
 
-	SSLDefaultPort    = 443
-	SSLDefaultTimeout = "10s"
+	SSLDefaultPort = 443
 )
 
 // SSLCertCheck represents an SSL certificate health check.
@@ -47,14 +46,9 @@ func (check *SSLCertCheck) Run() (time.Duration, error) {
 		port = SSLDefaultPort
 	}
 
-	timeoutStr := check.Timeout
-	if timeoutStr == "" {
-		timeoutStr = SSLDefaultTimeout
-	}
-
-	timeout, err := time.ParseDuration(timeoutStr)
+	timeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		return time.Since(start), fmt.Errorf("invalid timeout value: %v", err)
+		return time.Since(start), err
 	}
 
 	// Ensure logger is initialized

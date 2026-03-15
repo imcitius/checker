@@ -55,7 +55,8 @@ func TestPassiveCheck_InvalidTimeout(t *testing.T) {
 	}
 }
 
-// TestPassiveCheck_EmptyTimeout tests handling of empty timeout.
+// TestPassiveCheck_EmptyTimeout tests that empty timeout uses the default (15m) and succeeds
+// when the last ping is recent.
 func TestPassiveCheck_EmptyTimeout(t *testing.T) {
 	check := PassiveCheck{
 		LastPing:    time.Now(),
@@ -65,8 +66,8 @@ func TestPassiveCheck_EmptyTimeout(t *testing.T) {
 	}
 
 	_, err := check.Run()
-	if err == nil {
-		t.Error("Expected error for empty timeout but got success")
+	if err != nil {
+		t.Errorf("Expected success with default timeout, got error: %v", err)
 	}
 }
 

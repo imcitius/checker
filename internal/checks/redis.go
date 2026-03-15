@@ -48,15 +48,9 @@ func (check *RedisCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "5s"
-	}
-	timeout, err := time.ParseDuration(check.Timeout)
+	timeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		return time.Since(start), fmt.Errorf(errorHeader+"invalid timeout: %v", err)
-	}
-	if timeout <= 0 {
-		return time.Since(start), errors.New(errorHeader + "timeout must be positive")
+		return time.Since(start), err
 	}
 
 	// Dial TCP
@@ -64,7 +58,7 @@ func (check *RedisCheck) Run() (time.Duration, error) {
 	conn, err := net.DialTimeout("tcp", hostPort, timeout)
 	if err != nil {
 		check.Logger.WithError(err).Debugf("Redis TCP dial failed: %s", hostPort)
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("redis dial %s: %w", hostPort, err)
 	}
 	defer conn.Close()
 

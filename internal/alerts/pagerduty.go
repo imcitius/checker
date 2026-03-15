@@ -1,11 +1,7 @@
 package alerts
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 )
 
 // PagerDutyEventsURL is the default PagerDuty Events API v2 endpoint.
@@ -70,20 +66,8 @@ func SendPagerDutyResolve(routingKey, dedupKey, checkName string) error {
 }
 
 func sendPagerDutyEvent(event PagerDutyEvent) error {
-	data, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("failed to marshal PagerDuty event: %v", err)
-	}
-
-	resp, err := http.Post(PagerDutyEventsURL, "application/json", bytes.NewBuffer(data))
-	if err != nil {
-		return fmt.Errorf("failed to send PagerDuty event: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("PagerDuty API returned status %d: %s", resp.StatusCode, string(body))
+	if err := postJSON(PagerDutyEventsURL, event, nil); err != nil {
+		return fmt.Errorf("pagerduty event: %w", err)
 	}
 	return nil
 }

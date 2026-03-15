@@ -1,10 +1,7 @@
 package alerts
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 )
 
@@ -73,20 +70,8 @@ func buildTeamsPayload(params TeamsAlertParams) TeamsMessageCard {
 // using the legacy MessageCard format.
 func SendTeamsAlert(webhookURL string, params TeamsAlertParams) error {
 	payload := buildTeamsPayload(params)
-
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal Teams payload: %v", err)
-	}
-
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(data))
-	if err != nil {
-		return fmt.Errorf("failed to send Teams alert: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("teams alert failed with status %d", resp.StatusCode)
+	if err := postJSON(webhookURL, payload, nil); err != nil {
+		return fmt.Errorf("teams alert: %w", err)
 	}
 	return nil
 }

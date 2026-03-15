@@ -221,7 +221,7 @@ func (s *Scheduler) Sync(ctx context.Context) error {
 
 	defs, err := s.getAllChecks(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("fetching check definitions: %w", err)
 	}
 
 	s.lock.Lock()
@@ -348,7 +348,7 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 	// Update status in database
 	if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 		logger.WithError(err).Error("Failed to update check status")
-		return err
+		return fmt.Errorf("update check status: %w", err)
 	}
 
 	// Detect state transition for Slack recovery using the DB-sourced previous state
@@ -715,6 +715,35 @@ func sendRecoveryToChannel(channel string, status models.CheckStatus, checkDef m
 			logrus.Errorf("Failed to send PagerDuty recovery: %v", err)
 		}
 
+	case "discord":
+		if checkDef.AlertDestination == "" {
+			return
+		}
+		payload := alerts.BuildDiscordPayload(alerts.DiscordAlertParams{
+			CheckName: status.CheckName,
+			Project:   status.Project,
+			CheckType: checkDef.Type,
+			Message:   message,
+			IsDown:    false,
+		})
+		if err := alerts.SendDiscordAlert(checkDef.AlertDestination, payload); err != nil {
+			logrus.Errorf("Failed to send Discord recovery alert: %v", err)
+		}
+
+	case "teams":
+		if checkDef.AlertDestination == "" {
+			return
+		}
+		params := alerts.TeamsAlertParams{
+			CheckName:   status.CheckName,
+			ProjectName: status.Project,
+			Status:      "RESOLVED",
+			Time:        time.Now(),
+		}
+		if err := alerts.SendTeamsAlert(checkDef.AlertDestination, params); err != nil {
+			logrus.Errorf("Failed to send Teams recovery alert: %v", err)
+		}
+
 	case "opsgenie":
 		if checkDef.AlertDestination == "" {
 			return
@@ -731,17 +760,3 @@ func sendRecoveryToChannel(channel string, status models.CheckStatus, checkDef m
 		}
 	}
 }
-
-// Helper to find check status (needed by web handlers mostly, but if used here strictly, keeping it)
-// It was in scheduler.go but seemingly unused by scheduler itself, only by web/tests?
-// Wait, web server probably calls methods in db package.
-// If findCheckStatus was exported, I should keep it. It was unexported.
-// It was used by nothing in the previous file iteration except itself?
-// Re-checking previous file content...
-// `findCheckStatus` was unused in `scheduler.go`. It might be used by tests in `scheduler_package`.
-// I will keep it just in case tests need it, or remove it if I am sure.
-// Tests in `scheduler_test.go` didn't seem to use it (I refactored them).
-// I will omit `findCheckStatus` and `getCheckDefinitionsByDuration` if they are not used.
-
-// Exported Accessors?
-// No, previously everything was in `RunScheduler`.

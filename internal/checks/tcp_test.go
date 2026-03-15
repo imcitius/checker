@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"errors"
 	"net"
 	"testing"
 
@@ -142,14 +143,14 @@ func TestTCPCheck_Timeout(t *testing.T) {
 	}
 }
 
-// isTimeoutError checks if the error is a timeout error
+// isTimeoutError checks if the error is a timeout error (supports wrapped errors)
 func isTimeoutError(err error) bool {
 	if err == nil {
 		return false
 	}
-	netErr, ok := err.(net.Error)
-	if !ok {
-		return false
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return netErr.Timeout()
 	}
-	return netErr.Timeout() || netErr.Temporary()
+	return false
 }

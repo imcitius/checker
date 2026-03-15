@@ -13,11 +13,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// MySQL error constants - copied from checker.go to avoid circular imports
+// MySQL error constants
 const (
-	MySQLErrEmptyHost          = "empty host"
-	MySQLErrEmptyPort          = "port is empty"
-	MySQLErrCannotParseTimeout = "cannot parse timeout: %s"
+	MySQLErrEmptyHost = "empty host"
 )
 
 // MySQLConfig contains common configuration for MySQL checks
@@ -102,10 +100,7 @@ func (check *MySQLCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "5s" // Default timeout
-	}
-	dbConnectTimeout, err := time.ParseDuration(check.Timeout)
+	dbConnectTimeout, err := parseCheckTimeout(check.Timeout, 5*time.Second)
 	if err != nil {
 		if check.Logger != nil {
 			check.Logger.Errorf("Cannot parse timeout duration: %s", check.Timeout)
@@ -131,7 +126,7 @@ func (check *MySQLCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: The data source arguments are not valid", errorHeader)
 		}
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: sql open: %w", errorHeader, err)
 	}
 	defer db.Close()
 
@@ -141,7 +136,7 @@ func (check *MySQLCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: Could not establish a connection with the database", errorHeader)
 		}
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: connect: %w", errorHeader, err)
 	}
 
 	// Execute query
@@ -150,13 +145,12 @@ func (check *MySQLCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: Could not query database", errorHeader)
 		}
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: query: %w", errorHeader, err)
 	}
 
 	// Verify response if expected
 	if check.Config.Response != "" && id != check.Config.Response {
-		err = fmt.Errorf("%s: db response does not match expected: %s (expected %s)", errorHeader, id, check.Config.Response)
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: db response does not match expected: %s (expected %s)", errorHeader, id, check.Config.Response)
 	}
 
 	return time.Since(start), nil
@@ -188,10 +182,7 @@ func (check *MySQLTimeCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "5s" // Default timeout
-	}
-	dbConnectTimeout, err := time.ParseDuration(check.Timeout)
+	dbConnectTimeout, err := parseCheckTimeout(check.Timeout, 5*time.Second)
 	if err != nil {
 		if check.Logger != nil {
 			check.Logger.Errorf("Cannot parse timeout duration: %s", check.Timeout)
@@ -226,7 +217,7 @@ func (check *MySQLTimeCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: The data source arguments are not valid", errorHeader)
 		}
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: sql open: %w", errorHeader, err)
 	}
 	defer db.Close()
 
@@ -236,7 +227,7 @@ func (check *MySQLTimeCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: Could not establish a connection with the database", errorHeader)
 		}
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: connect: %w", errorHeader, err)
 	}
 
 	// Execute query
@@ -245,7 +236,7 @@ func (check *MySQLTimeCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: Could not query database", errorHeader)
 		}
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: query: %w", errorHeader, err)
 	}
 
 	// Check time difference
@@ -296,10 +287,7 @@ func (check *MySQLReplicationCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "5s" // Default timeout
-	}
-	dbConnectTimeout, err := time.ParseDuration(check.Timeout)
+	dbConnectTimeout, err := parseCheckTimeout(check.Timeout, 5*time.Second)
 	if err != nil {
 		if check.Logger != nil {
 			check.Logger.Errorf("Cannot parse timeout duration: %s", check.Timeout)
@@ -319,7 +307,7 @@ func (check *MySQLReplicationCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: The data source arguments are not valid", errorHeader)
 		}
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: sql open: %w", errorHeader, err)
 	}
 	defer db.Close()
 
@@ -329,7 +317,7 @@ func (check *MySQLReplicationCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: Could not establish a connection with the database", errorHeader)
 		}
-		return time.Since(start), err
+		return time.Since(start), fmt.Errorf("%s: connect: %w", errorHeader, err)
 	}
 
 	// Insert test data
@@ -341,7 +329,7 @@ func (check *MySQLReplicationCheck) Run() (time.Duration, error) {
 		if check.Logger != nil {
 			check.Logger.WithError(err).Errorf("%s: Failed to insert test data", errorHeader)
 		}
-		return time.Since(start), fmt.Errorf("%s: MySQL insert error: %w", errorHeader, err)
+		return time.Since(start), fmt.Errorf("%s: insert: %w", errorHeader, err)
 	}
 
 	// Allow replication to complete
@@ -384,7 +372,7 @@ func (check *MySQLReplicationCheck) Run() (time.Duration, error) {
 			if check.Logger != nil {
 				check.Logger.WithError(err).Errorf("%s: The data source arguments are not valid for server %s", errorHeader, slaveHost)
 			}
-			return time.Since(start), err
+			return time.Since(start), fmt.Errorf("%s: slave %s sql open: %w", errorHeader, slaveHost, err)
 		}
 		defer slaveDb.Close()
 
@@ -394,7 +382,7 @@ func (check *MySQLReplicationCheck) Run() (time.Duration, error) {
 			if check.Logger != nil {
 				check.Logger.WithError(err).Errorf("%s: Could not establish a connection with the database on server %s", errorHeader, slaveHost)
 			}
-			return time.Since(start), err
+			return time.Since(start), fmt.Errorf("%s: slave %s connect: %w", errorHeader, slaveHost, err)
 		}
 
 		// Query for the test value
@@ -403,14 +391,13 @@ func (check *MySQLReplicationCheck) Run() (time.Duration, error) {
 			if check.Logger != nil {
 				check.Logger.WithError(err).Errorf("%s: Could not query database on server %s", errorHeader, slaveHost)
 			}
-			return time.Since(start), err
+			return time.Since(start), fmt.Errorf("%s: slave %s query: %w", errorHeader, slaveHost, err)
 		}
 
 		// Verify replication worked correctly
 		if id != recordValue {
-			err = fmt.Errorf("%s: replication error: db response does not match expected: %d (expected %d) on server %s after %s",
+			return time.Since(start), fmt.Errorf("%s: replication error: db response does not match expected: %d (expected %d) on server %s after %s",
 				errorHeader, id, recordValue, slaveHost, lagAllowed)
-			return time.Since(start), err
 		}
 	}
 

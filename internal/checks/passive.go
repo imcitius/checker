@@ -18,7 +18,7 @@ func (check *PassiveCheck) Run() (time.Duration, error) {
 
 	// get check status from database using store
 	// Parse timeout duration
-	timeout, err := time.ParseDuration(check.Timeout)
+	timeout, err := parseCheckTimeout(check.Timeout, 15*time.Minute)
 	if err != nil {
 		return 0, fmt.Errorf("%s: invalid timeout duration: %v", check.ErrorHeader, err)
 	}
@@ -32,31 +32,3 @@ func (check *PassiveCheck) Run() (time.Duration, error) {
 
 	return time.Since(start), nil
 }
-
-// func init() {
-// 	Checks["passive"] = func(c *config.Check, p *projects.Project) error {
-
-// 		errorHeader := fmt.Sprintf("Passive check '%s'\nerror at project: %s\nCheck UUID: %s\n", c.Name, p.Name, c.UUid)
-
-// 		timeout, err := time.ParseDuration(c.Timeout)
-// 		if err != nil {
-// 			config.Log.Fatalf("Cannot parse timeout for check %s: %s", c.UUid, c.Timeout)
-// 			return fmt.Errorf(errorHeader + "Cannot parse timeout")
-// 		}
-
-// 		// do not check too early
-// 		if time.Since(config.StartTime) < timeout {
-// 			return nil
-// 		}
-
-// 		if status.Statuses.Checks[c.UUid].LastResult {
-// 			if time.Since(status.Statuses.Checks[c.UUid].When) < timeout {
-// 				return nil
-// 			} else {
-// 				return fmt.Errorf(errorHeader+"Ping timeout, last ping at %s", status.Statuses.Checks[c.UUid].When)
-// 			}
-// 		} else {
-// 			return fmt.Errorf(errorHeader + "Bad status, no pings since start")
-// 		}
-// 	}
-// }

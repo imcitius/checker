@@ -1,11 +1,7 @@
 package alerts
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 )
 
@@ -75,21 +71,8 @@ func BuildDiscordPayload(params DiscordAlertParams) DiscordPayload {
 
 // SendDiscordAlert posts a Discord webhook message with an embed payload.
 func SendDiscordAlert(webhookURL string, payload DiscordPayload) error {
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal Discord payload: %w", err)
+	if err := postJSON(webhookURL, payload, nil); err != nil {
+		return fmt.Errorf("discord alert: %w", err)
 	}
-
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(data))
-	if err != nil {
-		return fmt.Errorf("failed to send Discord alert: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("discord alert failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
 	return nil
 }

@@ -29,13 +29,10 @@ func (check *ICMPCheck) Run() (time.Duration, error) {
 		return time.Since(start), errors.New(errorMessage)
 	}
 
-	// Parse timeout duration first to validate it
-	timeout, err := time.ParseDuration(check.Timeout)
+	// Parse timeout
+	timeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		return time.Since(start), fmt.Errorf("invalid timeout value: %v", err)
-	}
-	if timeout <= 0 {
-		return time.Since(start), fmt.Errorf("timeout must be positive")
+		return time.Since(start), err
 	}
 
 	// Ensure logger is initialized

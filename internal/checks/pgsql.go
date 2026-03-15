@@ -102,10 +102,7 @@ func (check *PostgreSQLCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "10s" // Default timeout
-	}
-	dbConnectTimeout, err := time.ParseDuration(check.Timeout)
+	dbConnectTimeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
 		check.Logger.WithError(err).Error("Cannot parse timeout duration")
 		return time.Since(start), fmt.Errorf(errorHeader+"cannot parse timeout: %v", err)
@@ -192,10 +189,7 @@ func (check *PostgreSQLTimeCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "10s" // Default timeout
-	}
-	dbConnectTimeout, err := time.ParseDuration(check.Timeout)
+	dbConnectTimeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
 		check.Logger.WithError(err).Error("Cannot parse timeout duration")
 		return time.Since(start), fmt.Errorf(errorHeader+"cannot parse timeout: %v", err)
@@ -315,10 +309,7 @@ func (check *PostgreSQLReplicationCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "10s" // Default timeout
-	}
-	dbConnectTimeout, err := time.ParseDuration(check.Timeout)
+	dbConnectTimeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
 		check.Logger.WithError(err).Error("Cannot parse timeout duration")
 		return time.Since(start), fmt.Errorf(errorHeader+"cannot parse timeout: %v", err)
@@ -490,10 +481,7 @@ func (check *PostgreSQLReplicationCheck) runReplicationStatusCheck(start time.Ti
 	}
 
 	// Parse timeout
-	if check.Timeout == "" {
-		check.Timeout = "10s" // Default timeout
-	}
-	dbConnectTimeout, err := time.ParseDuration(check.Timeout)
+	dbConnectTimeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
 		check.Logger.WithError(err).Error("Cannot parse timeout duration")
 		return time.Since(start), fmt.Errorf(errorHeader+"cannot parse timeout: %v", err)

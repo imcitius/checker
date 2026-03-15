@@ -24,13 +24,10 @@ func (check *TCPCheck) Run() (time.Duration, error) {
 		start                     = time.Now()
 	)
 
-	// Parse timeout duration first to validate it
-	timeout, err := time.ParseDuration(check.Timeout)
+	// Parse timeout
+	timeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		return time.Since(start), fmt.Errorf("invalid timeout value: %v", err)
-	}
-	if timeout <= 0 {
-		return time.Since(start), fmt.Errorf("timeout must be positive")
+		return time.Since(start), err
 	}
 
 	if check.Host == "" {
@@ -52,8 +49,7 @@ func (check *TCPCheck) Run() (time.Duration, error) {
 	conn, err := net.DialTimeout("tcp", hostPort, timeout)
 	if err != nil {
 		check.Logger.WithError(err).Debugf("TCP check %s, err: %+v", hostPort, err)
-		// Return the original error to preserve timeout information
-		return 0, err
+		return 0, fmt.Errorf("TCP dial %s: %w", hostPort, err)
 	}
 	defer conn.Close()
 	return time.Since(start), nil

@@ -40,9 +40,9 @@ func (check *WebSocketCheck) Run() (time.Duration, error) {
 		check.Logger = logrus.WithField("check", "websocket")
 	}
 
-	timeout, err := time.ParseDuration(check.Timeout)
+	timeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		return time.Since(start), fmt.Errorf(ErrCannotParseTimeout, "websocket: ", err)
+		return time.Since(start), err
 	}
 
 	dialer := websocket.Dialer{

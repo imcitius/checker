@@ -36,12 +36,9 @@ func (check *SMTPCheck) Run() (time.Duration, error) {
 	start := time.Now()
 
 	// Parse timeout
-	timeout, err := time.ParseDuration(check.Timeout)
+	timeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		return time.Since(start), fmt.Errorf(ErrCannotParseTimeout, "smtp: ", err)
-	}
-	if timeout <= 0 {
-		return time.Since(start), fmt.Errorf("timeout must be positive")
+		return time.Since(start), err
 	}
 
 	if check.Host == "" {

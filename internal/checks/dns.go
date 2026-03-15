@@ -51,12 +51,9 @@ func (check *DNSCheck) Run() (time.Duration, error) {
 	}
 
 	// Parse timeout
-	timeout, err := time.ParseDuration(check.Timeout)
+	timeout, err := parseCheckTimeout(check.Timeout, 10*time.Second)
 	if err != nil {
-		return time.Since(start), fmt.Errorf("invalid timeout value: %v", err)
-	}
-	if timeout <= 0 {
-		return time.Since(start), fmt.Errorf("timeout must be positive")
+		return time.Since(start), err
 	}
 
 	// Ensure logger is initialized

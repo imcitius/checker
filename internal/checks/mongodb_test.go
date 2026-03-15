@@ -29,7 +29,7 @@ func TestMongoDBCheck_Run(t *testing.T) {
 		}
 		_, err := check.Run()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot parse timeout")
+		assert.Contains(t, err.Error(), "invalid timeout")
 	})
 
 	t.Run("Invalid URI fails fast", func(t *testing.T) {

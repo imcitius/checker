@@ -15,7 +15,7 @@ func SendTelegramAlert(botToken, chatID, message string) error {
 
 	resp, err := http.PostForm(endpoint, data)
 	if err != nil {
-		return err
+		return fmt.Errorf("telegram alert: %w", err)
 	}
 	defer resp.Body.Close()
 

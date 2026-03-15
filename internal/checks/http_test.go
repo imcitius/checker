@@ -325,7 +325,7 @@ func TestHTTPCheck_InvalidTimeout(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected failure due to invalid timeout, but got success")
 	}
-	expectedErr := "invalid timeout value"
+	expectedErr := "invalid timeout"
 	if !strings.Contains(err.Error(), expectedErr) {
 		t.Errorf("Expected error containing %q, got %q", expectedErr, err.Error())
 	}

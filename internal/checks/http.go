@@ -66,12 +66,9 @@ func (check *HTTPCheck) init() (*http.Client, error) {
 
 	client := &http.Client{Transport: transport}
 
-	if check.Timeout == "" {
-		check.Timeout = "3s"
-	}
-	client.Timeout, err = time.ParseDuration(check.Timeout)
+	client.Timeout, err = parseCheckTimeout(check.Timeout, 3*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("invalid timeout value: %v", err)
+		return nil, err
 	}
 
 	if len(check.Code) == 0 {

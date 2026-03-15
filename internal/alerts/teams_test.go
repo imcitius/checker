@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -154,7 +155,7 @@ func TestSendTeamsAlert_ServerError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for 500 response, got nil")
 	}
-	if err.Error() != "teams alert failed with status 500" {
+	if !strings.Contains(err.Error(), "teams alert") || !strings.Contains(err.Error(), "500") {
 		t.Errorf("unexpected error message: %v", err)
 	}
 }
