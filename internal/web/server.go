@@ -306,6 +306,9 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		bulkGroup.POST("/import", ImportCheckDefinitions)
 		bulkGroup.POST("/import/validate", ValidateImportPayload)
 		bulkGroup.GET("/export", ExportCheckDefinitions)
+		bulkGroup.POST("/bulk-enable", BulkEnableChecks)
+		bulkGroup.POST("/bulk-disable", BulkDisableChecks)
+		bulkGroup.POST("/bulk-delete", BulkDeleteChecks)
 	}
 
 	// Alert history endpoints

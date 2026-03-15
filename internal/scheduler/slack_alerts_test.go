@@ -190,6 +190,12 @@ func (r *mockRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.
 func (r *mockRepo) SetMaintenanceWindow(_ context.Context, _ string, _ *time.Time) error {
 	return nil
 }
+func (r *mockRepo) BulkToggleCheckDefinitions(_ context.Context, _ []string, _ bool) (int64, error) {
+	return 0, nil
+}
+func (r *mockRepo) BulkDeleteCheckDefinitions(_ context.Context, _ []string) (int64, error) {
+	return 0, nil
+}
 
 // --- Tests ---
 

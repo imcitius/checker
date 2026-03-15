@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Plus, Pencil, Trash2, RefreshCw, Upload, Download,
   ArrowUp, ArrowDown, ArrowUpDown, Copy, Power, PowerOff,
-  CheckSquare, Square, MinusSquare,
+  CheckSquare, Square, MinusSquare, Clock, X,
 } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -25,6 +25,7 @@ import { useChecks } from '@/hooks/useChecks'
 import { useRef } from 'react'
 import { ImportDialog } from '@/components/ImportDialog'
 import { CheckEditDrawer } from '@/components/CheckEditDrawer'
+import { Input } from '@/components/ui/input'
 import { api as apiClient } from '@/lib/api'
 import { toast } from 'sonner'
 
@@ -81,6 +82,8 @@ export function Management() {
   const [saving, setSaving] = useState(false)
 
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [bulkMaintenanceDialogOpen, setBulkMaintenanceDialogOpen] = useState(false)
+  const [bulkMaintenanceUntil, setBulkMaintenanceUntil] = useState('')
 
   // Bulk selection
   const [selectedUUIDs, setSelectedUUIDs] = useState<Set<string>>(new Set())
@@ -342,13 +345,13 @@ export function Management() {
   const handleBulkEnable = async () => {
     setBulkActing(true)
     try {
-      await Promise.all([...selectedInView].map((uuid) => api.toggleCheck(uuid, true)))
-      toast.success(`Enabled ${selectedInView.size} checks`)
+      const result = await api.bulkEnable([...selectedInView])
+      toast.success(`Enabled ${result.count} checks`)
       setSelectedUUIDs(new Set())
       fetchData()
     } catch (err) {
       console.error('Bulk enable failed:', err)
-      toast.error('Failed to enable some checks')
+      toast.error('Failed to enable checks')
     } finally {
       setBulkActing(false)
     }
@@ -357,13 +360,13 @@ export function Management() {
   const handleBulkDisable = async () => {
     setBulkActing(true)
     try {
-      await Promise.all([...selectedInView].map((uuid) => api.toggleCheck(uuid, false)))
-      toast.success(`Disabled ${selectedInView.size} checks`)
+      const result = await api.bulkDisable([...selectedInView])
+      toast.success(`Disabled ${result.count} checks`)
       setSelectedUUIDs(new Set())
       fetchData()
     } catch (err) {
       console.error('Bulk disable failed:', err)
-      toast.error('Failed to disable some checks')
+      toast.error('Failed to disable checks')
     } finally {
       setBulkActing(false)
     }
@@ -372,14 +375,33 @@ export function Management() {
   const handleBulkDelete = async () => {
     setBulkActing(true)
     try {
-      await Promise.all([...selectedInView].map((uuid) => api.deleteCheck(uuid)))
-      toast.success(`Deleted ${selectedInView.size} checks`)
+      const result = await api.bulkDelete([...selectedInView])
+      toast.success(`Deleted ${result.count} checks`)
       setSelectedUUIDs(new Set())
       setBulkDeleteDialogOpen(false)
       fetchData()
     } catch (err) {
       console.error('Bulk delete failed:', err)
-      toast.error('Failed to delete some checks')
+      toast.error('Failed to delete checks')
+    } finally {
+      setBulkActing(false)
+    }
+  }
+
+  const handleBulkMaintenance = async () => {
+    if (!bulkMaintenanceUntil) return
+    setBulkActing(true)
+    try {
+      const until = new Date(bulkMaintenanceUntil).toISOString()
+      await Promise.all([...selectedInView].map((uuid) => api.setMaintenance(uuid, until)))
+      toast.success(`Set maintenance on ${selectedInView.size} checks`)
+      setSelectedUUIDs(new Set())
+      setBulkMaintenanceDialogOpen(false)
+      setBulkMaintenanceUntil('')
+      fetchData()
+    } catch (err) {
+      console.error('Bulk maintenance failed:', err)
+      toast.error('Failed to set maintenance on some checks')
     } finally {
       setBulkActing(false)
     }
@@ -414,54 +436,6 @@ export function Management() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {/* Bulk actions */}
-              {selectedInView.size > 0 && (
-                <div className="flex items-center gap-1 mr-2 border-r pr-3 border-border">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleBulkEnable}
-                        disabled={bulkActing}
-                      >
-                        <Power className="h-4 w-4 mr-1 text-healthy" />
-                        Enable
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Enable {selectedInView.size} selected checks</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleBulkDisable}
-                        disabled={bulkActing}
-                      >
-                        <PowerOff className="h-4 w-4 mr-1 text-warning" />
-                        Disable
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Disable {selectedInView.size} selected checks</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setBulkDeleteDialogOpen(true)}
-                        disabled={bulkActing}
-                        className="text-unhealthy hover:text-unhealthy"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Delete {selectedInView.size} selected checks</TooltipContent>
-                  </Tooltip>
-                </div>
-              )}
               <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -624,6 +598,91 @@ export function Management() {
 
         <StatusBar wsStatus={wsStatus} />
 
+        {/* Sticky bulk action bar */}
+        {selectedInView.size > 0 && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+            <div className="flex items-center gap-3 bg-card border border-border rounded-lg shadow-lg px-4 py-2.5">
+              <span className="text-sm font-medium whitespace-nowrap">
+                {selectedInView.size} {selectedInView.size === 1 ? 'check' : 'checks'} selected
+              </span>
+              <div className="h-5 w-px bg-border" />
+              <div className="flex items-center gap-1.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBulkEnable}
+                      disabled={bulkActing}
+                    >
+                      <Power className="h-4 w-4 mr-1 text-healthy" />
+                      Enable
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Enable {selectedInView.size} selected checks</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBulkDisable}
+                      disabled={bulkActing}
+                    >
+                      <PowerOff className="h-4 w-4 mr-1 text-warning" />
+                      Disable
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Disable {selectedInView.size} selected checks</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBulkMaintenanceDialogOpen(true)}
+                      disabled={bulkActing}
+                    >
+                      <Clock className="h-4 w-4 mr-1" />
+                      Set Maintenance
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Set maintenance window on {selectedInView.size} selected checks</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBulkDeleteDialogOpen(true)}
+                      disabled={bulkActing}
+                      className="text-unhealthy hover:text-unhealthy"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete {selectedInView.size} selected checks</TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="h-5 w-px bg-border" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setSelectedUUIDs(new Set())}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Clear selection</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+
         {/* Edit/Create Drawer */}
         <CheckEditDrawer
           open={editDialogOpen}
@@ -669,6 +728,39 @@ export function Management() {
               </Button>
               <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkActing}>
                 {bulkActing ? 'Deleting...' : `Delete ${selectedInView.size} Checks`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Maintenance Dialog */}
+        <Dialog open={bulkMaintenanceDialogOpen} onOpenChange={(open) => {
+          setBulkMaintenanceDialogOpen(open)
+          if (!open) setBulkMaintenanceUntil('')
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Set Maintenance Window</DialogTitle>
+              <DialogDescription>
+                Set a maintenance window for {selectedInView.size} selected checks.
+                Checks in maintenance will not trigger alerts.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <label className="text-sm font-medium mb-2 block">Maintenance until</label>
+              <Input
+                type="datetime-local"
+                value={bulkMaintenanceUntil}
+                onChange={(e) => setBulkMaintenanceUntil(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkMaintenanceDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleBulkMaintenance} disabled={bulkActing || !bulkMaintenanceUntil}>
+                {bulkActing ? 'Setting...' : `Set Maintenance on ${selectedInView.size} Checks`}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -210,6 +210,23 @@ export const api = {
   getCheckTypes: () => request<string[]>('/api/metadata/check-types'),
   getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),
 
+  // Bulk actions
+  bulkEnable: (uuids: string[]) =>
+    request<{ success: boolean; count: number }>('/api/checks/bulk-enable', {
+      method: 'POST',
+      body: JSON.stringify({ uuids }),
+    }),
+  bulkDisable: (uuids: string[]) =>
+    request<{ success: boolean; count: number }>('/api/checks/bulk-disable', {
+      method: 'POST',
+      body: JSON.stringify({ uuids }),
+    }),
+  bulkDelete: (uuids: string[]) =>
+    request<{ success: boolean; count: number }>('/api/checks/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ uuids }),
+    }),
+
   // Bulk import/export
   importChecks: (yamlContent: string) => {
     return fetch(`${BASE}/api/checks/import`, {

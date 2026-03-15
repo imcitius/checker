@@ -23,6 +23,8 @@ type stubRepo struct {
 	lastCreated          models.CheckDefinition
 	lastMaintenanceUUID  string
 	lastMaintenanceUntil *time.Time
+	lastBulkUUIDs        []string
+	lastBulkEnabled      bool
 }
 
 func (s *stubRepo) CreateCheckDefinition(_ context.Context, def models.CheckDefinition) (string, error) {
@@ -84,6 +86,15 @@ func (s *stubRepo) SetMaintenanceWindow(_ context.Context, uuid string, until *t
 	s.lastMaintenanceUUID = uuid
 	s.lastMaintenanceUntil = until
 	return nil
+}
+func (s *stubRepo) BulkToggleCheckDefinitions(_ context.Context, uuids []string, enabled bool) (int64, error) {
+	s.lastBulkUUIDs = uuids
+	s.lastBulkEnabled = enabled
+	return int64(len(uuids)), nil
+}
+func (s *stubRepo) BulkDeleteCheckDefinitions(_ context.Context, uuids []string) (int64, error) {
+	s.lastBulkUUIDs = uuids
+	return int64(len(uuids)), nil
 }
 
 func TestCreateCheckDefinition_GeneratesUUID(t *testing.T) {

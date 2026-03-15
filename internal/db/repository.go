@@ -18,6 +18,8 @@ type Repository interface {
 	ToggleCheckDefinition(ctx context.Context, uuid string, enabled bool) error
 	UpdateCheckStatus(ctx context.Context, status models.CheckStatus) error
 	SetMaintenanceWindow(ctx context.Context, uuid string, until *time.Time) error
+	BulkToggleCheckDefinitions(ctx context.Context, uuids []string, enabled bool) (int64, error)
+	BulkDeleteCheckDefinitions(ctx context.Context, uuids []string) (int64, error)
 	GetAllProjects(ctx context.Context) ([]string, error)
 	GetAllCheckTypes(ctx context.Context) ([]string, error)
 	ConvertConfigToCheckDefinitions(ctx context.Context, config *config.Config) error

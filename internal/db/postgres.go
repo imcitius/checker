@@ -268,6 +268,25 @@ func (db *PostgresDB) UpdateCheckStatus(ctx context.Context, status models.Check
 	return nil
 }
 
+func (db *PostgresDB) BulkToggleCheckDefinitions(ctx context.Context, uuids []string, enabled bool) (int64, error) {
+	cmdTag, err := db.Pool.Exec(ctx,
+		`UPDATE check_definitions SET enabled=$1, updated_at=$2 WHERE uuid = ANY($3)`,
+		enabled, time.Now(), uuids)
+	if err != nil {
+		return 0, err
+	}
+	return cmdTag.RowsAffected(), nil
+}
+
+func (db *PostgresDB) BulkDeleteCheckDefinitions(ctx context.Context, uuids []string) (int64, error) {
+	cmdTag, err := db.Pool.Exec(ctx,
+		`DELETE FROM check_definitions WHERE uuid = ANY($1)`, uuids)
+	if err != nil {
+		return 0, err
+	}
+	return cmdTag.RowsAffected(), nil
+}
+
 func (db *PostgresDB) SetMaintenanceWindow(ctx context.Context, uuid string, until *time.Time) error {
 	cmdTag, err := db.Pool.Exec(ctx,
 		`UPDATE check_definitions SET maintenance_until=$2, updated_at=$3 WHERE uuid=$1`,
