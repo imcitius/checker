@@ -37,7 +37,9 @@ type Config struct {
 		BotToken           string `yaml:"bot_token,omitempty"`
 		CriticalChannel    string `yaml:"critical_channel,omitempty"`
 		NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
-		// add Slack configs, etc.
+		// Opsgenie configs
+		APIKey string `yaml:"api_key,omitempty"`
+		Region string `yaml:"region,omitempty"` // "us" or "eu"
 	} `yaml:"alerts"`
 
 	Tickers map[string]TickerWithDuration
@@ -248,6 +250,8 @@ func (cfg *Config) setDefaults() {
 			BotToken           string `yaml:"bot_token,omitempty"`
 			CriticalChannel    string `yaml:"critical_channel,omitempty"`
 			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
+			APIKey             string `yaml:"api_key,omitempty"`
+			Region             string `yaml:"region,omitempty"`
 		})
 	}
 	if _, exists := cfg.Alerts["telegram"]; !exists {
@@ -256,6 +260,8 @@ func (cfg *Config) setDefaults() {
 			BotToken           string `yaml:"bot_token,omitempty"`
 			CriticalChannel    string `yaml:"critical_channel,omitempty"`
 			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
+			APIKey             string `yaml:"api_key,omitempty"`
+			Region             string `yaml:"region,omitempty"`
 		}{
 			Type: "telegram",
 		}
@@ -266,6 +272,8 @@ func (cfg *Config) setDefaults() {
 			BotToken           string `yaml:"bot_token,omitempty"`
 			CriticalChannel    string `yaml:"critical_channel,omitempty"`
 			NoncriticalChannel string `yaml:"noncritical_channel,omitempty"`
+			APIKey             string `yaml:"api_key,omitempty"`
+			Region             string `yaml:"region,omitempty"`
 		}{
 			Type: "slack",
 		}

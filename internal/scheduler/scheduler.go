@@ -427,6 +427,23 @@ func sendAlertToChannel(channel string, status models.CheckStatus, checkDef mode
 			logrus.Errorf("Failed to send Slack alert: %v", err)
 		}
 
+	case "opsgenie":
+		if checkDef.AlertDestination == "" {
+			logrus.Errorf("Opsgenie alert destination is not configured for check %s", status.UUID)
+			return
+		}
+		// AlertDestination format: "apiKey:region" (region is "us" or "eu")
+		parts := splitAlertDestination(checkDef.AlertDestination)
+		apiKey := parts[0]
+		region := "us"
+		if len(parts) >= 2 && parts[1] != "" {
+			region = parts[1]
+		}
+		client := &alerts.OpsgenieClient{APIKey: apiKey, Region: region}
+		if err := client.Trigger(status.CheckName, status.UUID, status.Message, severity); err != nil {
+			logrus.Errorf("Failed to send Opsgenie alert: %v", err)
+		}
+
 	default:
 		logrus.Warnf("Unknown alert channel: %s for check %s (severity=%s)", channel, status.UUID, severity)
 	}
@@ -505,6 +522,21 @@ func sendRecoveryAlerts(status models.CheckStatus, checkDef models.CheckDefiniti
 		}
 		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
 			logrus.Errorf("Failed to send Slack recovery alert: %v", err)
+		}
+
+	case "opsgenie":
+		if checkDef.AlertDestination == "" {
+			return
+		}
+		parts := splitAlertDestination(checkDef.AlertDestination)
+		apiKey := parts[0]
+		region := "us"
+		if len(parts) >= 2 && parts[1] != "" {
+			region = parts[1]
+		}
+		client := &alerts.OpsgenieClient{APIKey: apiKey, Region: region}
+		if err := client.Resolve(status.UUID); err != nil {
+			logrus.Errorf("Failed to send Opsgenie recovery: %v", err)
 		}
 	}
 }
