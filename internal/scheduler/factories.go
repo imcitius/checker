@@ -192,6 +192,15 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 			return nil
 		}
 
+	case *models.DomainExpiryCheckConfig:
+		logger.Debugf("Creating Domain Expiry check for domain: %s", config.Domain)
+		return &checks.DomainExpiryCheck{
+			Domain:            config.Domain,
+			ExpiryWarningDays: config.ExpiryWarningDays,
+			Timeout:           config.Timeout,
+			Logger:            logger,
+		}
+
 	default:
 		logger.Warnf("Unknown check config type: %T for type %s", checkDef.Config, checkDef.Type)
 		return nil

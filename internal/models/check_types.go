@@ -16,6 +16,7 @@ var _ CheckConfig = (*PassiveCheckConfig)(nil)
 var _ CheckConfig = (*MySQLCheckConfig)(nil)
 var _ CheckConfig = (*PostgreSQLCheckConfig)(nil)
 var _ CheckConfig = (*WebhookConfig)(nil)
+var _ CheckConfig = (*DomainExpiryCheckConfig)(nil)
 
 // AuthConfig holds authentication credentials
 type AuthConfig struct {
@@ -108,6 +109,16 @@ type PostgreSQLCheckConfig struct {
 
 func (c *PostgreSQLCheckConfig) CheckType() string { return "pgsql" }
 func (c *PostgreSQLCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
+
+// DomainExpiryCheckConfig holds configuration for domain expiry WHOIS checks
+type DomainExpiryCheckConfig struct {
+	Domain            string `bson:"domain,omitempty" json:"domain,omitempty"`
+	Timeout           string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+	ExpiryWarningDays int    `bson:"expiry_warning_days,omitempty" json:"expiry_warning_days,omitempty"`
+}
+
+func (c *DomainExpiryCheckConfig) CheckType() string { return "domain_expiry" }
+func (c *DomainExpiryCheckConfig) GetTarget() string { return c.Domain }
 
 // WebhookConfig is for the Webhook Actor (but was mixed in CheckDefinition)
 type WebhookConfig struct {

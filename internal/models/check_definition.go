@@ -134,6 +134,13 @@ func (cd *CheckDefinition) UnmarshalBSON(data []byte) error {
 			ServerList: mfn.MySQLNested.ServerList,
 		}
 
+	case "domain_expiry":
+		var conf DomainExpiryCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+
 	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
 		type PgSQLFlatAndNested struct {
 			Host        string `bson:"host"`
@@ -269,6 +276,10 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 				"lag":         c.Lag,
 				"server_list": c.ServerList,
 			}
+		case *DomainExpiryCheckConfig:
+			doc["domain"] = c.Domain
+			doc["timeout"] = c.Timeout
+			doc["expiry_warning_days"] = c.ExpiryWarningDays
 		case *PostgreSQLCheckConfig:
 			doc["host"] = c.Host
 			doc["port"] = c.Port
