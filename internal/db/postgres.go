@@ -58,111 +58,56 @@ func (db *PostgresDB) Close() {
 	db.Pool.Close()
 }
 
-func (db *PostgresDB) GetAllCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error) {
-	rows, err := db.Pool.Query(ctx, "SELECT uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config FROM check_definitions")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+// checkDefColumns is the shared SELECT column list for check_definitions queries.
+const checkDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval`
 
-	var checks []models.CheckDefinition
-	for rows.Next() {
-		var c models.CheckDefinition
-		var configJSON, actorConfigJSON []byte
-		err := rows.Scan(
-			&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &c.Enabled,
-			&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &c.IsHealthy, &c.LastMessage, &c.LastAlertSent,
-			&c.Duration, &c.ActorType, &c.AlertType, &c.AlertDestination, &configJSON, &actorConfigJSON,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// Unmarshal Polymorphic Config
-		// We need to determine the type to unmarshal into based on c.Type
-		// Similar logic to UnmarshalBSON but using JSON
-		if len(configJSON) > 0 {
-			// simplified for now, ideally we use a helper or the model's unmarshal logic if adapted
-			// But model's UnmarshalBSON is for BSON. We might need a UnmarshalJSON or do it here.
-			// For now, let's implement a helper unmarshalConfig
-			conf, err := unmarshalConfig(c.Type, configJSON)
-			if err != nil {
-				logrus.Errorf("Failed to unmarshal config for %s: %v", c.UUID, err)
-			} else {
-				c.Config = conf
-			}
-		}
-
-		if len(actorConfigJSON) > 0 && c.ActorType == "webhook" {
-			var webhookConf models.WebhookConfig
-			if err := json.Unmarshal(actorConfigJSON, &webhookConf); err == nil {
-				c.ActorConfig = &webhookConf
-			}
-		}
-
-		checks = append(checks, c)
-	}
-	return checks, nil
-}
-
-func (db *PostgresDB) GetEnabledCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error) {
-	// Similar to GetAll but with WHERE enabled = true
-	// For brevity, copy-paste logic or helper? Let's just implement it.
-	rows, err := db.Pool.Query(ctx, "SELECT uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config FROM check_definitions WHERE enabled=$1", true)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var checks []models.CheckDefinition
-	for rows.Next() {
-		var c models.CheckDefinition
-		var configJSON, actorConfigJSON []byte
-		err := rows.Scan(
-			&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &c.Enabled,
-			&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &c.IsHealthy, &c.LastMessage, &c.LastAlertSent,
-			&c.Duration, &c.ActorType, &c.AlertType, &c.AlertDestination, &configJSON, &actorConfigJSON,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if len(configJSON) > 0 {
-			conf, err := unmarshalConfig(c.Type, configJSON)
-			if err != nil {
-				logrus.Errorf("Failed to unmarshal config for %s: %v", c.UUID, err)
-			} else {
-				c.Config = conf
-			}
-		}
-		if len(actorConfigJSON) > 0 && c.ActorType == "webhook" {
-			var webhookConf models.WebhookConfig
-			if err := json.Unmarshal(actorConfigJSON, &webhookConf); err == nil {
-				c.ActorConfig = &webhookConf
-			}
-		}
-		checks = append(checks, c)
-	}
-	return checks, nil
-}
-
-func (db *PostgresDB) GetCheckDefinitionByUUID(ctx context.Context, uuid string) (models.CheckDefinition, error) {
+// scanCheckDef scans a row into a CheckDefinition, handling config unmarshaling
+// and alert_channels JSON parsing.
+func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.CheckDefinition, error) {
 	var c models.CheckDefinition
 	var configJSON, actorConfigJSON []byte
-	err := db.Pool.QueryRow(ctx, "SELECT uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config FROM check_definitions WHERE uuid=$1", uuid).Scan(
+	var alertChannelsJSON *string
+	var severity, reAlertInterval *string
+
+	err := scanner.Scan(
 		&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &c.Enabled,
 		&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &c.IsHealthy, &c.LastMessage, &c.LastAlertSent,
 		&c.Duration, &c.ActorType, &c.AlertType, &c.AlertDestination, &configJSON, &actorConfigJSON,
+		&severity, &alertChannelsJSON, &reAlertInterval,
 	)
 	if err != nil {
 		return models.CheckDefinition{}, err
 	}
+
+	// Set severity with default
+	if severity != nil && *severity != "" {
+		c.Severity = *severity
+	} else {
+		c.Severity = "critical"
+	}
+
+	// Parse alert_channels JSON array
+	if alertChannelsJSON != nil && *alertChannelsJSON != "" {
+		if err := json.Unmarshal([]byte(*alertChannelsJSON), &c.AlertChannels); err != nil {
+			logrus.Warnf("Failed to parse alert_channels for %s: %v", c.UUID, err)
+		}
+	}
+
+	// Set re_alert_interval
+	if reAlertInterval != nil {
+		c.ReAlertInterval = *reAlertInterval
+	}
+
+	// Unmarshal Polymorphic Config
 	if len(configJSON) > 0 {
 		conf, err := unmarshalConfig(c.Type, configJSON)
 		if err != nil {
-			return c, err
+			logrus.Errorf("Failed to unmarshal config for %s: %v", c.UUID, err)
+		} else {
+			c.Config = conf
 		}
-		c.Config = conf
 	}
+
 	if len(actorConfigJSON) > 0 && c.ActorType == "webhook" {
 		var webhookConf models.WebhookConfig
 		if err := json.Unmarshal(actorConfigJSON, &webhookConf); err == nil {
@@ -173,15 +118,74 @@ func (db *PostgresDB) GetCheckDefinitionByUUID(ctx context.Context, uuid string)
 	return c, nil
 }
 
+// marshalAlertChannels converts the AlertChannels slice to a JSON string for storage.
+func marshalAlertChannels(channels []string) *string {
+	if len(channels) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(channels)
+	if err != nil {
+		return nil
+	}
+	s := string(data)
+	return &s
+}
+
+func (db *PostgresDB) GetAllCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error) {
+	rows, err := db.Pool.Query(ctx, "SELECT "+checkDefColumns+" FROM check_definitions")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var checks []models.CheckDefinition
+	for rows.Next() {
+		c, err := scanCheckDef(rows)
+		if err != nil {
+			return nil, err
+		}
+		checks = append(checks, c)
+	}
+	return checks, nil
+}
+
+func (db *PostgresDB) GetEnabledCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error) {
+	rows, err := db.Pool.Query(ctx, "SELECT "+checkDefColumns+" FROM check_definitions WHERE enabled=$1", true)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var checks []models.CheckDefinition
+	for rows.Next() {
+		c, err := scanCheckDef(rows)
+		if err != nil {
+			return nil, err
+		}
+		checks = append(checks, c)
+	}
+	return checks, nil
+}
+
+func (db *PostgresDB) GetCheckDefinitionByUUID(ctx context.Context, uuid string) (models.CheckDefinition, error) {
+	row := db.Pool.QueryRow(ctx, "SELECT "+checkDefColumns+" FROM check_definitions WHERE uuid=$1", uuid)
+	return scanCheckDef(row)
+}
+
 func (db *PostgresDB) CreateCheckDefinition(ctx context.Context, def models.CheckDefinition) (string, error) {
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
+	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
+
+	if def.Severity == "" {
+		def.Severity = "critical"
+	}
 
 	// insert
-	_, err := db.Pool.Exec(ctx, `INSERT INTO check_definitions 
-    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON)
+	_, err := db.Pool.Exec(ctx, `INSERT INTO check_definitions
+    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval)
 
 	if err != nil {
 		return "", err
@@ -192,12 +196,17 @@ func (db *PostgresDB) CreateCheckDefinition(ctx context.Context, def models.Chec
 func (db *PostgresDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDefinition) error {
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
+	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
+
+	if def.Severity == "" {
+		def.Severity = "critical"
+	}
 
 	// update
 	cmdTag, err := db.Pool.Exec(ctx, `UPDATE check_definitions SET
-    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, alert_type=$15, alert_destination=$16, config=$17, actor_config=$18
+    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, alert_type=$15, alert_destination=$16, config=$17, actor_config=$18, severity=$19, alert_channels=$20, re_alert_interval=$21
     WHERE uuid=$1`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON)
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval)
 
 	if err != nil {
 		return err

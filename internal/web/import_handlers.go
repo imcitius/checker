@@ -143,6 +143,15 @@ func resolveChecks(payload *models.CheckImportPayload) []models.CheckImportItem 
 		if check.ActorType == "" && payload.Defaults.ActorType != "" {
 			check.ActorType = payload.Defaults.ActorType
 		}
+		if check.Severity == "" && payload.Defaults.Severity != "" {
+			check.Severity = payload.Defaults.Severity
+		}
+		if len(check.AlertChannels) == 0 && len(payload.Defaults.AlertChannels) > 0 {
+			check.AlertChannels = payload.Defaults.AlertChannels
+		}
+		if check.ReAlertInterval == "" && payload.Defaults.ReAlertInterval != "" {
+			check.ReAlertInterval = payload.Defaults.ReAlertInterval
+		}
 		if check.Enabled == nil {
 			if payload.Defaults.Enabled != nil {
 				check.Enabled = payload.Defaults.Enabled
@@ -392,6 +401,9 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 		ActorType:        item.ActorType,
 		AlertType:        item.AlertType,
 		AlertDestination: item.AlertDestination,
+		Severity:         item.Severity,
+		AlertChannels:    item.AlertChannels,
+		ReAlertInterval:  item.ReAlertInterval,
 	}
 
 	if item.Enabled != nil {
