@@ -167,6 +167,7 @@ func TestMiddleware_ValidSessionCookie(t *testing.T) {
 
 	am := &AuthManager{
 		enabled:   true,
+		mode:      AuthModeOIDC,
 		jwtSecret: []byte("test-secret-32-bytes-long-enough"),
 		apiKeys:   make(map[string]bool),
 	}

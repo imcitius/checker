@@ -67,7 +67,7 @@ func TestListAlertChannels(t *testing.T) {
 			{
 				ID:     1,
 				Name:   "test-slack",
-				Type:   "slack",
+				Type:   "slack_webhook",
 				Config: json.RawMessage(`{"webhook_url":"https://hooks.slack.com/services/SECRET123"}`),
 			},
 		},
@@ -239,7 +239,7 @@ func TestUpdateAlertChannel_PreservesMaskedSecret(t *testing.T) {
 			{
 				ID:     1,
 				Name:   "my-slack",
-				Type:   "slack",
+				Type:   "slack_webhook",
 				Config: json.RawMessage(`{"webhook_url":"https://hooks.slack.com/real-secret"}`),
 			},
 		},
@@ -253,7 +253,7 @@ func TestUpdateAlertChannel_PreservesMaskedSecret(t *testing.T) {
 	r.PUT("/api/alert-channels/:name", UpdateAlertChannel)
 
 	// Update with masked value — should preserve the original
-	body := `{"type":"slack","config":{"webhook_url":"ht****et"}}`
+	body := `{"type":"slack_webhook","config":{"webhook_url":"ht****et"}}`
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("PUT", "/api/alert-channels/my-slack",
 		bytes.NewBufferString(body))
@@ -282,7 +282,7 @@ func TestMaskSensitiveConfig(t *testing.T) {
 	}{
 		{
 			name:        "slack webhook masked",
-			channelType: "slack",
+			channelType: "slack_webhook",
 			config:      `{"webhook_url":"https://hooks.slack.com/services/SECRET"}`,
 			checkField:  "webhook_url",
 			shouldMask:  true,
