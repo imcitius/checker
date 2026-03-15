@@ -278,6 +278,42 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 			Logger:            logger,
 		}
 
+	case *models.SMTPCheckConfig:
+		logger.Debugf("Creating SMTP check for host: %s, port: %d", config.Host, config.Port)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
+		return &checks.SMTPCheck{
+			Host:     config.Host,
+			Port:     config.Port,
+			Timeout:  config.Timeout,
+			StartTLS: config.StartTLS,
+			Username: config.Username,
+			Password: config.Password,
+		}
+
+	case *models.GRPCHealthCheckConfig:
+		logger.Debugf("Creating gRPC health check for host: %s", config.Host)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
+		return &checks.GRPCHealthCheck{
+			Host:    config.Host,
+			UseTLS:  config.UseTLS,
+			Timeout: config.Timeout,
+			Logger:  logger,
+		}
+
+	case *models.WebSocketCheckConfig:
+		logger.Debugf("Creating WebSocket check for URL: %s", config.URL)
+		if config.Timeout == "" {
+			config.Timeout = "10s"
+		}
+		return &checks.WebSocketCheck{
+			URL:     config.URL,
+			Timeout: config.Timeout,
+		}
+
 	default:
 		logger.Warnf("Unknown check config type: %T for type %s", checkDef.Config, checkDef.Type)
 		return nil

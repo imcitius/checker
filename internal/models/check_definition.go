@@ -368,17 +368,15 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 			doc["host"] = c.Host
 			doc["port"] = c.Port
 			doc["timeout"] = c.Timeout
-			doc["check_tls"] = c.CheckTLS
-			doc["expect_banner"] = c.ExpectBanner
+			doc["starttls"] = c.StartTLS
+			doc["username"] = c.Username
+			doc["password"] = c.Password
 		case *GRPCHealthCheckConfig:
 			doc["host"] = c.Host
-			doc["service"] = c.Service
 			doc["use_tls"] = c.UseTLS
 			doc["timeout"] = c.Timeout
 		case *WebSocketCheckConfig:
 			doc["url"] = c.URL
-			doc["send_message"] = c.SendMessage
-			doc["expect_message"] = c.ExpectMessage
 			doc["timeout"] = c.Timeout
 		case *PostgreSQLCheckConfig:
 			doc["host"] = c.Host
