@@ -16,6 +16,7 @@ var _ CheckConfig = (*PassiveCheckConfig)(nil)
 var _ CheckConfig = (*MySQLCheckConfig)(nil)
 var _ CheckConfig = (*PostgreSQLCheckConfig)(nil)
 var _ CheckConfig = (*WebhookConfig)(nil)
+var _ CheckConfig = (*SSLCertCheckConfig)(nil)
 
 // AuthConfig holds authentication credentials
 type AuthConfig struct {
@@ -119,3 +120,15 @@ type WebhookConfig struct {
 
 func (c *WebhookConfig) CheckType() string { return "webhook" }
 func (c *WebhookConfig) GetTarget() string { return c.URL }
+
+// SSLCertCheckConfig holds configuration for SSL certificate checks
+type SSLCertCheckConfig struct {
+	Host              string `bson:"host,omitempty" json:"host,omitempty"`
+	Port              int    `bson:"port,omitempty" json:"port,omitempty"`
+	Timeout           string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+	ExpiryWarningDays int    `bson:"expiry_warning_days,omitempty" json:"expiry_warning_days,omitempty"`
+	ValidateChain     bool   `bson:"validate_chain,omitempty" json:"validate_chain,omitempty"`
+}
+
+func (c *SSLCertCheckConfig) CheckType() string { return "ssl_cert" }
+func (c *SSLCertCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
