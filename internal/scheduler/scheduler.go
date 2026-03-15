@@ -129,7 +129,41 @@ func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, s
 	}
 }
 
-// timeoutDurationStrHelper converts generic duration string to time.Duration safely
+// runCheckWithRetries executes runFn and, if it fails and retryCount > 0, retries
+// up to retryCount additional times with retryInterval between attempts.
+// Returns nil if any attempt succeeds, or the last error if all attempts fail.
+func runCheckWithRetries(runFn func() (time.Duration, error), retryCount int, retryInterval string, logger *logrus.Entry) error {
+	_, err := runFn()
+	if err == nil {
+		return nil
+	}
+
+	if retryCount <= 0 {
+		return err
+	}
+
+	retryWait := parseDuration(retryInterval)
+	if retryWait <= 0 {
+		retryWait = 5 * time.Second // default retry interval
+	}
+
+	lastErr := err
+	for attempt := 1; attempt <= retryCount; attempt++ {
+		logger.Infof("Check failed, retrying (%d/%d) after %s: %v", attempt, retryCount, retryWait, lastErr)
+		time.Sleep(retryWait)
+
+		_, lastErr = runFn()
+		if lastErr == nil {
+			return nil // success on retry
+		}
+	}
+
+	return lastErr
+}
+
+// parseDuration converts a duration string (e.g. "10s", "30s", "5m") to time.Duration.
+// Sub-minute intervals (e.g. "10s", "30s") are supported but will increase DB write
+// frequency proportionally — use with care in large deployments.
 func parseDuration(d string) time.Duration {
 	dur, _ := time.ParseDuration(d)
 	if dur == 0 {
@@ -258,18 +292,20 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 
 	// logger.Debug("Executing check")
 
-	// Create checker instance
-	checker := CheckerFactory(checkDef, logger)
-	if checker == nil {
-		return fmt.Errorf("failed to create checker for %s", checkDef.UUID)
-	}
-
-	// Run the check
+	// Run the check with retry logic
 	isHealthy := true
 	errMessage := ""
 	runTime := time.Now()
 
-	_, err := checker.Run()
+	runFn := func() (time.Duration, error) {
+		c := CheckerFactory(checkDef, logger)
+		if c == nil {
+			return 0, fmt.Errorf("failed to create checker for %s", checkDef.UUID)
+		}
+		return c.Run()
+	}
+
+	err := runCheckWithRetries(runFn, checkDef.RetryCount, checkDef.RetryInterval, logger)
 	if err != nil {
 		isHealthy = false
 		errMessage = err.Error()

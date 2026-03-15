@@ -58,6 +58,8 @@ type CheckImportDefaults struct {
 	Severity         string   `json:"severity,omitempty" yaml:"severity,omitempty"`
 	AlertChannels    []string `json:"alert_channels,omitempty" yaml:"alert_channels,omitempty"`
 	ReAlertInterval  string   `json:"re_alert_interval,omitempty" yaml:"re_alert_interval,omitempty"`
+	RetryCount       int      `json:"retry_count,omitempty" yaml:"retry_count,omitempty"`
+	RetryInterval    string   `json:"retry_interval,omitempty" yaml:"retry_interval,omitempty"`
 }
 
 // AuthImportConfig holds HTTP Basic Auth credentials for import
@@ -106,6 +108,8 @@ type CheckImportItem struct {
 	Severity         string   `json:"severity,omitempty" yaml:"severity,omitempty"`
 	AlertChannels    []string `json:"alert_channels,omitempty" yaml:"alert_channels,omitempty"`
 	ReAlertInterval  string   `json:"re_alert_interval,omitempty" yaml:"re_alert_interval,omitempty"`
+	RetryCount       int      `json:"retry_count,omitempty" yaml:"retry_count,omitempty"`
+	RetryInterval    string   `json:"retry_interval,omitempty" yaml:"retry_interval,omitempty"`
 }
 
 // DBImportConfig holds database-specific import fields

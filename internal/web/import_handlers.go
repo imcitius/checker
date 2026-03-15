@@ -152,6 +152,12 @@ func resolveChecks(payload *models.CheckImportPayload) []models.CheckImportItem 
 		if check.ReAlertInterval == "" && payload.Defaults.ReAlertInterval != "" {
 			check.ReAlertInterval = payload.Defaults.ReAlertInterval
 		}
+		if check.RetryCount == 0 && payload.Defaults.RetryCount > 0 {
+			check.RetryCount = payload.Defaults.RetryCount
+		}
+		if check.RetryInterval == "" && payload.Defaults.RetryInterval != "" {
+			check.RetryInterval = payload.Defaults.RetryInterval
+		}
 		if check.Enabled == nil {
 			if payload.Defaults.Enabled != nil {
 				check.Enabled = payload.Defaults.Enabled
@@ -404,6 +410,8 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 		Severity:         item.Severity,
 		AlertChannels:    item.AlertChannels,
 		ReAlertInterval:  item.ReAlertInterval,
+		RetryCount:       item.RetryCount,
+		RetryInterval:    item.RetryInterval,
 	}
 
 	if item.Enabled != nil {

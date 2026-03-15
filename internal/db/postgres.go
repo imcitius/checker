@@ -59,7 +59,7 @@ func (db *PostgresDB) Close() {
 }
 
 // checkDefColumns is the shared SELECT column list for check_definitions queries.
-const checkDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, maintenance_until`
+const checkDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until`
 
 // scanCheckDef scans a row into a CheckDefinition, handling config unmarshaling
 // and alert_channels JSON parsing.
@@ -68,13 +68,15 @@ func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.
 	var configJSON, actorConfigJSON []byte
 	var alertChannelsJSON *string
 	var severity, reAlertInterval *string
+	var retryCount *int
+	var retryInterval *string
 	var maintenanceUntil *time.Time
 
 	err := scanner.Scan(
 		&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &c.Enabled,
 		&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &c.IsHealthy, &c.LastMessage, &c.LastAlertSent,
 		&c.Duration, &c.ActorType, &c.AlertType, &c.AlertDestination, &configJSON, &actorConfigJSON,
-		&severity, &alertChannelsJSON, &reAlertInterval, &maintenanceUntil,
+		&severity, &alertChannelsJSON, &reAlertInterval, &retryCount, &retryInterval, &maintenanceUntil,
 	)
 	if err != nil {
 		return models.CheckDefinition{}, err
@@ -97,6 +99,14 @@ func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.
 	// Set re_alert_interval
 	if reAlertInterval != nil {
 		c.ReAlertInterval = *reAlertInterval
+	}
+
+	// Set retry configuration
+	if retryCount != nil {
+		c.RetryCount = *retryCount
+	}
+	if retryInterval != nil {
+		c.RetryInterval = *retryInterval
 	}
 
 	// Set maintenance_until
@@ -187,9 +197,9 @@ func (db *PostgresDB) CreateCheckDefinition(ctx context.Context, def models.Chec
 
 	// insert
 	_, err := db.Pool.Exec(ctx, `INSERT INTO check_definitions
-    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, maintenance_until)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.MaintenanceUntil)
+    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`,
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil)
 
 	if err != nil {
 		return "", err
@@ -208,9 +218,9 @@ func (db *PostgresDB) UpdateCheckDefinition(ctx context.Context, def models.Chec
 
 	// update
 	cmdTag, err := db.Pool.Exec(ctx, `UPDATE check_definitions SET
-    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, alert_type=$15, alert_destination=$16, config=$17, actor_config=$18, severity=$19, alert_channels=$20, re_alert_interval=$21, maintenance_until=$22
+    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, alert_type=$15, alert_destination=$16, config=$17, actor_config=$18, severity=$19, alert_channels=$20, re_alert_interval=$21, retry_count=$22, retry_interval=$23, maintenance_until=$24
     WHERE uuid=$1`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.MaintenanceUntil)
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil)
 
 	if err != nil {
 		return err

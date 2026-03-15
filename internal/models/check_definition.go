@@ -44,6 +44,10 @@ type CheckDefinition struct {
 	AlertChannels   []string `bson:"alert_channels,omitempty" json:"alert_channels,omitempty"` // e.g. ["telegram", "slack", "pagerduty"]
 	ReAlertInterval string   `bson:"re_alert_interval,omitempty" json:"re_alert_interval,omitempty"` // e.g. "30m", empty = no re-alert
 
+	// Retry configuration
+	RetryCount    int    `bson:"retry_count" json:"retry_count"`       // retries before declaring failure, 0 = no retry
+	RetryInterval string `bson:"retry_interval" json:"retry_interval"` // wait between retries, e.g. "5s"
+
 	// Maintenance window
 	MaintenanceUntil *time.Time `bson:"maintenance_until,omitempty" json:"maintenance_until,omitempty"`
 }
@@ -220,6 +224,8 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 		"severity":          cd.Severity,
 		"alert_channels":    cd.AlertChannels,
 		"re_alert_interval":  cd.ReAlertInterval,
+		"retry_count":        cd.RetryCount,
+		"retry_interval":     cd.RetryInterval,
 		"maintenance_until":  cd.MaintenanceUntil,
 	}
 
@@ -370,6 +376,10 @@ type CheckDefinitionViewModel struct {
 	Severity        string   `json:"severity,omitempty"`
 	AlertChannels   []string `json:"alert_channels,omitempty"`
 	ReAlertInterval string   `json:"re_alert_interval,omitempty"`
+
+	// Retry configuration
+	RetryCount    int    `json:"retry_count,omitempty"`
+	RetryInterval string `json:"retry_interval,omitempty"`
 
 	// Maintenance window
 	MaintenanceUntil *string `json:"maintenance_until,omitempty"`
