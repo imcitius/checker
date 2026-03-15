@@ -97,6 +97,12 @@ func (cd *CheckDefinition) UnmarshalBSON(data []byte) error {
 			return err
 		}
 		cd.Config = &conf
+	case "dns":
+		var conf DNSCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
 	case "mysql_query", "mysql_query_unixtime", "mysql_replication":
 		// Handle MySQL flattened structure
 		type MySQLFlatAndNested struct {
@@ -275,6 +281,12 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 			doc["timeout"] = c.Timeout
 		case *PassiveCheckConfig:
 			doc["timeout"] = c.Timeout
+		case *DNSCheckConfig:
+			doc["host"] = c.Host
+			doc["domain"] = c.Domain
+			doc["record_type"] = c.RecordType
+			doc["timeout"] = c.Timeout
+			doc["expected"] = c.Expected
 		case *MySQLCheckConfig:
 			doc["host"] = c.Host
 			doc["port"] = c.Port

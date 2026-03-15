@@ -65,6 +65,16 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 			Count:   config.Count,
 			Timeout: config.Timeout,
 		}
+	case *models.DNSCheckConfig:
+		logger.Debugf("Creating DNS check for domain: %s, record type: %s", config.Domain, config.RecordType)
+		return &checks.DNSCheck{
+			Host:       config.Host,
+			Domain:     config.Domain,
+			RecordType: config.RecordType,
+			Timeout:    config.Timeout,
+			Expected:   config.Expected,
+			Logger:     logger,
+		}
 	case *models.PassiveCheckConfig:
 		logger.Debugf("Creating Passive check")
 		return &checks.PassiveCheck{

@@ -19,6 +19,7 @@ var _ CheckConfig = (*SSHCheckConfig)(nil)
 var _ CheckConfig = (*RedisCheckConfig)(nil)
 var _ CheckConfig = (*MongoDBCheckConfig)(nil)
 var _ CheckConfig = (*WebhookConfig)(nil)
+var _ CheckConfig = (*DNSCheckConfig)(nil)
 var _ CheckConfig = (*DomainExpiryCheckConfig)(nil)
 
 // AuthConfig holds authentication credentials
@@ -112,6 +113,18 @@ type PostgreSQLCheckConfig struct {
 
 func (c *PostgreSQLCheckConfig) CheckType() string { return "pgsql" }
 func (c *PostgreSQLCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
+
+// DNSCheckConfig holds configuration for DNS checks
+type DNSCheckConfig struct {
+	Host       string `bson:"host,omitempty" json:"host,omitempty"`             // Custom DNS resolver (optional)
+	Domain     string `bson:"domain,omitempty" json:"domain,omitempty"`         // Domain to look up
+	RecordType string `bson:"record_type,omitempty" json:"record_type,omitempty"` // A, AAAA, MX, TXT, NS, CNAME
+	Timeout    string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+	Expected   string `bson:"expected,omitempty" json:"expected,omitempty"` // Expected value in results
+}
+
+func (c *DNSCheckConfig) CheckType() string { return "dns" }
+func (c *DNSCheckConfig) GetTarget() string { return c.Domain }
 
 // SSHCheckConfig holds configuration for SSH banner checks
 type SSHCheckConfig struct {
