@@ -134,6 +134,13 @@ func (cd *CheckDefinition) UnmarshalBSON(data []byte) error {
 			ServerList: mfn.MySQLNested.ServerList,
 		}
 
+	case "mongodb":
+		var conf MongoDBCheckConfig
+		if err := bson.Unmarshal(data, &conf); err != nil {
+			return err
+		}
+		cd.Config = &conf
+
 	case "domain_expiry":
 		var conf DomainExpiryCheckConfig
 		if err := bson.Unmarshal(data, &conf); err != nil {
@@ -276,6 +283,9 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 				"lag":         c.Lag,
 				"server_list": c.ServerList,
 			}
+		case *MongoDBCheckConfig:
+			doc["uri"] = c.URI
+			doc["timeout"] = c.Timeout
 		case *DomainExpiryCheckConfig:
 			doc["domain"] = c.Domain
 			doc["timeout"] = c.Timeout
@@ -378,6 +388,9 @@ type CheckDefinitionViewModel struct {
 		Lag        string   `json:"lag,omitempty"`
 		ServerList []string `json:"server_list,omitempty"`
 	} `json:"mysql,omitempty"`
+
+	// MongoDB config fields
+	MongoDBURI string `json:"mongodb_uri,omitempty"`
 
 	ActorType        string `json:"actor_type,omitempty"`
 	AlertType        string `json:"alert_type,omitempty"`

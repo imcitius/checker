@@ -410,6 +410,9 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 			vm.PgSQL.Lag = c.Lag
 			vm.PgSQL.ServerList = c.ServerList
 			vm.PgSQL.AnalyticReplicas = c.AnalyticReplicas
+		case *models.MongoDBCheckConfig:
+			vm.MongoDBURI = c.URI
+			vm.Timeout = c.Timeout
 		}
 	}
 
@@ -485,6 +488,11 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 			TableName:  vm.MySQL.TableName,
 			Lag:        vm.MySQL.Lag,
 			ServerList: vm.MySQL.ServerList,
+		}
+	case "mongodb":
+		def.Config = &models.MongoDBCheckConfig{
+			URI:     vm.MongoDBURI,
+			Timeout: vm.Timeout,
 		}
 	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
 		def.Config = &models.PostgreSQLCheckConfig{

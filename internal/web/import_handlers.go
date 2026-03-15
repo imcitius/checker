@@ -479,6 +479,11 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 			cfg.ServerList = item.MySQL.ServerList
 		}
 		def.Config = cfg
+	case "mongodb":
+		def.Config = &models.MongoDBCheckConfig{
+			URI:     item.MongoDBURI,
+			Timeout: item.Timeout,
+		}
 	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
 		cfg := &models.PostgreSQLCheckConfig{
 			Host:    item.Host,
@@ -595,6 +600,9 @@ func ExportCheckDefinitions(c *gin.Context) {
 					Query:      cfg.Query,
 					ServerList: cfg.ServerList,
 				}
+			case *models.MongoDBCheckConfig:
+				item.MongoDBURI = cfg.URI
+				item.Timeout = cfg.Timeout
 			case *models.PostgreSQLCheckConfig:
 				item.Host = cfg.Host
 				item.Port = cfg.Port

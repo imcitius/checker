@@ -15,6 +15,7 @@ var _ CheckConfig = (*ICMPCheckConfig)(nil)
 var _ CheckConfig = (*PassiveCheckConfig)(nil)
 var _ CheckConfig = (*MySQLCheckConfig)(nil)
 var _ CheckConfig = (*PostgreSQLCheckConfig)(nil)
+var _ CheckConfig = (*MongoDBCheckConfig)(nil)
 var _ CheckConfig = (*WebhookConfig)(nil)
 var _ CheckConfig = (*DomainExpiryCheckConfig)(nil)
 
@@ -109,6 +110,15 @@ type PostgreSQLCheckConfig struct {
 
 func (c *PostgreSQLCheckConfig) CheckType() string { return "pgsql" }
 func (c *PostgreSQLCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
+
+// MongoDBCheckConfig holds configuration for MongoDB checks
+type MongoDBCheckConfig struct {
+	URI     string `bson:"uri,omitempty" json:"uri,omitempty"`
+	Timeout string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+}
+
+func (c *MongoDBCheckConfig) CheckType() string { return "mongodb" }
+func (c *MongoDBCheckConfig) GetTarget() string { return c.URI }
 
 // DomainExpiryCheckConfig holds configuration for domain expiry WHOIS checks
 type DomainExpiryCheckConfig struct {

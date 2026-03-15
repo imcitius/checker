@@ -192,6 +192,14 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 			return nil
 		}
 
+	case *models.MongoDBCheckConfig:
+		logger.Debugf("Creating MongoDB check for URI: %s", config.URI)
+		return &checks.MongoDBCheck{
+			URI:     config.URI,
+			Timeout: config.Timeout,
+			Logger:  logger,
+		}
+
 	case *models.DomainExpiryCheckConfig:
 		logger.Debugf("Creating Domain Expiry check for domain: %s", config.Domain)
 		return &checks.DomainExpiryCheck{

@@ -101,6 +101,9 @@ type CheckImportItem struct {
 	PgSQL *DBImportConfig `json:"pgsql,omitempty" yaml:"pgsql,omitempty"`
 	MySQL *DBImportConfig `json:"mysql,omitempty" yaml:"mysql,omitempty"`
 
+	// MongoDB config
+	MongoDBURI string `json:"mongodb_uri,omitempty" yaml:"mongodb_uri,omitempty"`
+
 	// Alert config
 	ActorType        string   `json:"actor_type,omitempty" yaml:"actor_type,omitempty"`
 	AlertType        string   `json:"alert_type,omitempty" yaml:"alert_type,omitempty"`
