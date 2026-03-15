@@ -16,6 +16,7 @@ import {
   Plus, Pencil, Trash2, RefreshCw, Upload, Download,
   ArrowUp, ArrowDown, ArrowUpDown, Copy, Power, PowerOff,
   CheckSquare, Square, MinusSquare, Clock, X,
+  ChevronRight, ChevronDown, FolderOpen,
 } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -29,11 +30,12 @@ import { Input } from '@/components/ui/input'
 import { api as apiClient } from '@/lib/api'
 import { toast } from 'sonner'
 
-type SortColumn = 'name' | 'project' | 'type' | 'duration' | 'enabled'
+type SortColumn = 'name' | 'type' | 'group' | 'duration' | 'enabled'
 type SortDirection = 'asc' | 'desc'
 
-const VALID_SORT_COLUMNS: readonly string[] = ['name', 'project', 'type', 'duration', 'enabled'] as const
+const VALID_SORT_COLUMNS: readonly string[] = ['name', 'type', 'group', 'duration', 'enabled'] as const
 const VALID_SORT_DIRECTIONS: readonly string[] = ['asc', 'desc'] as const
+const COLLAPSED_KEY = 'checker-manage-collapsed'
 
 function parseSortColumn(value: string | null): SortColumn | null {
   if (value && VALID_SORT_COLUMNS.includes(value)) return value as SortColumn
@@ -43,6 +45,19 @@ function parseSortColumn(value: string | null): SortColumn | null {
 function parseSortDirection(value: string | null): SortDirection {
   if (value && VALID_SORT_DIRECTIONS.includes(value)) return value as SortDirection
   return 'asc'
+}
+
+function loadCollapsed(): Set<string> {
+  try {
+    const val = localStorage.getItem(COLLAPSED_KEY)
+    return val ? new Set(JSON.parse(val)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function saveCollapsed(set: Set<string>) {
+  localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...set]))
 }
 
 const EMPTY_FORM: Partial<CheckDefinition> = {
@@ -59,6 +74,13 @@ const EMPTY_FORM: Partial<CheckDefinition> = {
   port: 0,
 }
 
+interface ProjectGroup {
+  project: string
+  checks: CheckDefinition[]
+  enabledCount: number
+  disabledCount: number
+}
+
 export function Management() {
   const { wsStatus } = useChecks()
   const [definitions, setDefinitions] = useState<CheckDefinition[]>([])
@@ -72,6 +94,9 @@ export function Management() {
   const [searchParams, setSearchParams] = useSearchParams()
   const sortColumn = parseSortColumn(searchParams.get('sort'))
   const sortDirection = parseSortDirection(searchParams.get('dir'))
+
+  // Collapse state
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsed)
 
   // Dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -108,7 +133,7 @@ export function Management() {
       setCheckTypes(types || [])
       // Clear selection of items that no longer exist
       setSelectedUUIDs((prev) => {
-        const validUUIDs = new Set(defs.map((d) => d.uuid))
+        const validUUIDs = new Set((defs || []).map((d) => d.uuid))
         const next = new Set<string>()
         for (const uuid of prev) {
           if (validUUIDs.has(uuid)) next.add(uuid)
@@ -132,7 +157,6 @@ export function Management() {
     if (action === 'create') {
       setEditingCheck({ ...EMPTY_FORM })
       setEditDialogOpen(true)
-      // Remove the action param so it doesn't re-trigger
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev)
         next.delete('action')
@@ -154,7 +178,10 @@ export function Management() {
       if (
         !d.name.toLowerCase().includes(q) &&
         !d.uuid.toLowerCase().includes(q) &&
-        !d.project.toLowerCase().includes(q)
+        !d.project.toLowerCase().includes(q) &&
+        !(d.group_name || '').toLowerCase().includes(q) &&
+        !(d.url || '').toLowerCase().includes(q) &&
+        !(d.host || '').toLowerCase().includes(q)
       )
         return false
     }
@@ -186,9 +213,9 @@ export function Management() {
     }, { replace: true })
   }
 
-  const sorted = useMemo(() => {
-    if (!sortColumn) return filtered
-    return [...filtered].sort((a, b) => {
+  const sortChecks = useCallback((checks: CheckDefinition[]) => {
+    if (!sortColumn) return checks
+    return [...checks].sort((a, b) => {
       let aVal: string | boolean
       let bVal: string | boolean
       switch (sortColumn) {
@@ -196,9 +223,9 @@ export function Management() {
           aVal = a.name.toLowerCase()
           bVal = b.name.toLowerCase()
           break
-        case 'project':
-          aVal = a.project.toLowerCase()
-          bVal = b.project.toLowerCase()
+        case 'group':
+          aVal = (a.group_name || '').toLowerCase()
+          bVal = (b.group_name || '').toLowerCase()
           break
         case 'type':
           aVal = a.type.toLowerCase()
@@ -222,13 +249,44 @@ export function Management() {
       const cmp = (aVal as string).localeCompare(bVal as string)
       return sortDirection === 'asc' ? cmp : -cmp
     })
-  }, [filtered, sortColumn, sortDirection])
+  }, [sortColumn, sortDirection])
+
+  // Group by project, sort within groups
+  const groups: ProjectGroup[] = useMemo(() => {
+    const map = new Map<string, CheckDefinition[]>()
+    for (const def of filtered) {
+      const project = def.project || 'default'
+      if (!map.has(project)) map.set(project, [])
+      map.get(project)!.push(def)
+    }
+    return Array.from(map.entries())
+      .map(([project, checks]) => ({
+        project,
+        checks: sortChecks(checks),
+        enabledCount: checks.filter((c) => c.enabled).length,
+        disabledCount: checks.filter((c) => !c.enabled).length,
+      }))
+      .sort((a, b) => a.project.localeCompare(b.project))
+  }, [filtered, sortChecks])
+
+  // Flat sorted list for bulk selection helpers
+  const allVisible = useMemo(() => groups.flatMap((g) => g.checks), [groups])
 
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />
     if (sortDirection === 'asc') return <ArrowUp className="h-3 w-3 ml-1" />
     return <ArrowDown className="h-3 w-3 ml-1" />
   }
+
+  const toggleGroup = useCallback((project: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(project)) next.delete(project)
+      else next.add(project)
+      saveCollapsed(next)
+      return next
+    })
+  }, [])
 
   const handleCreate = () => {
     setEditingCheck({ ...EMPTY_FORM })
@@ -307,13 +365,13 @@ export function Management() {
   }
 
   // Bulk selection helpers
-  const filteredUUIDs = useMemo(() => new Set(sorted.map((d) => d.uuid)), [sorted])
+  const filteredUUIDs = useMemo(() => new Set(allVisible.map((d) => d.uuid)), [allVisible])
   const selectedInView = useMemo(
     () => new Set([...selectedUUIDs].filter((uuid) => filteredUUIDs.has(uuid))),
     [selectedUUIDs, filteredUUIDs]
   )
 
-  const allSelected = sorted.length > 0 && selectedInView.size === sorted.length
+  const allSelected = allVisible.length > 0 && selectedInView.size === allVisible.length
   const someSelected = selectedInView.size > 0 && !allSelected
 
   const toggleSelectAll = () => {
@@ -337,6 +395,19 @@ export function Management() {
       const next = new Set(prev)
       if (next.has(uuid)) next.delete(uuid)
       else next.add(uuid)
+      return next
+    })
+  }
+
+  const toggleSelectGroup = (group: ProjectGroup) => {
+    const groupUUIDs = group.checks.map((c) => c.uuid)
+    const allGroupSelected = groupUUIDs.every((uuid) => selectedUUIDs.has(uuid))
+    setSelectedUUIDs((prev) => {
+      const next = new Set(prev)
+      for (const uuid of groupUUIDs) {
+        if (allGroupSelected) next.delete(uuid)
+        else next.add(uuid)
+      }
       return next
     })
   }
@@ -407,6 +478,97 @@ export function Management() {
     }
   }
 
+  const renderCheckRow = (def: CheckDefinition) => {
+    const isSelected = selectedUUIDs.has(def.uuid)
+    return (
+      <tr
+        key={def.uuid}
+        className={`border-b border-border/50 transition-colors ${
+          isSelected
+            ? 'bg-primary/5 hover:bg-primary/10'
+            : 'hover:bg-muted/30'
+        }`}
+      >
+        <td className="px-3 py-2">
+          <button
+            onClick={() => toggleSelect(def.uuid)}
+            className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isSelected ? (
+              <CheckSquare className="h-4 w-4 text-primary" />
+            ) : (
+              <Square className="h-4 w-4" />
+            )}
+          </button>
+        </td>
+        <td className="px-3 py-2">
+          <div className="font-medium">{def.name}</div>
+          <div className="font-mono text-[10px] text-muted-foreground">{def.uuid}</div>
+        </td>
+        <td className="px-3 py-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="font-mono text-xs text-muted-foreground truncate block max-w-[260px]">
+                {def.url || def.host || '—'}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{def.url || def.host || 'No target'}</TooltipContent>
+          </Tooltip>
+        </td>
+        <td className="px-3 py-2 text-muted-foreground">{def.group_name || '-'}</td>
+        <td className="px-3 py-2">
+          <Badge variant="secondary" className="text-[10px]">
+            {def.type}
+          </Badge>
+        </td>
+        <td className="px-3 py-2 font-mono text-muted-foreground">{def.duration}</td>
+        <td className="px-3 py-2">
+          <Switch
+            checked={def.enabled}
+            onCheckedChange={() => handleToggle(def.uuid)}
+            className="scale-75"
+          />
+        </td>
+        <td className="px-3 py-2 text-right">
+          <div className="flex items-center justify-end gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(def)}>
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Clone check</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(def)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit check</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-unhealthy hover:text-unhealthy"
+                  onClick={() => {
+                    setDeletingUUID(def.uuid)
+                    setDeleteDialogOpen(true)
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete check</TooltipContent>
+            </Tooltip>
+          </div>
+        </td>
+      </tr>
+    )
+  }
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="min-h-screen pb-8">
@@ -429,6 +591,9 @@ export function Management() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">Check Definitions</h2>
+              <Badge variant="secondary" className="text-xs">
+                {allVisible.length} check{allVisible.length !== 1 ? 's' : ''}
+              </Badge>
               {selectedInView.size > 0 && (
                 <Badge variant="info" className="text-xs">
                   {selectedInView.size} selected
@@ -506,199 +671,202 @@ export function Management() {
           </div>
 
           {/* Desktop table — hidden on mobile */}
-          <div className="rounded-lg border bg-card overflow-hidden hidden sm:block">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50 text-muted-foreground text-xs">
-                    {/* Checkbox header */}
-                    <th className="px-3 py-2 w-10">
-                      <button
-                        onClick={toggleSelectAll}
-                        className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          <div className="hidden sm:block space-y-3">
+            {loading ? (
+              <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
+                Loading...
+              </div>
+            ) : groups.length === 0 ? (
+              <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
+                No check definitions found
+              </div>
+            ) : (
+              groups.map((group) => {
+                const isCollapsed = collapsedGroups.has(group.project)
+                const groupUUIDs = group.checks.map((c) => c.uuid)
+                const allGroupSelected = groupUUIDs.length > 0 && groupUUIDs.every((uuid) => selectedUUIDs.has(uuid))
+                const someGroupSelected = !allGroupSelected && groupUUIDs.some((uuid) => selectedUUIDs.has(uuid))
+
+                return (
+                  <div key={group.project} className="rounded-lg border bg-card overflow-hidden">
+                    {/* Project group header */}
+                    <button
+                      onClick={() => toggleGroup(group.project)}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 bg-muted/50 hover:bg-muted/80 transition-colors text-left"
+                    >
+                      <div
+                        className="flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleSelectGroup(group)
+                        }}
                       >
-                        {allSelected ? (
-                          <CheckSquare className="h-4 w-4" />
-                        ) : someSelected ? (
-                          <MinusSquare className="h-4 w-4" />
+                        {allGroupSelected ? (
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                        ) : someGroupSelected ? (
+                          <MinusSquare className="h-4 w-4 text-primary" />
                         ) : (
                           <Square className="h-4 w-4" />
                         )}
-                      </button>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('name')}>
-                      <span className="inline-flex items-center">Name<SortIcon column="name" /></span>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('project')}>
-                      <span className="inline-flex items-center">Project<SortIcon column="project" /></span>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('type')}>
-                      <span className="inline-flex items-center">Type<SortIcon column="type" /></span>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('duration')}>
-                      <span className="inline-flex items-center">Frequency<SortIcon column="duration" /></span>
-                    </th>
-                    <th className="text-left px-3 py-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('enabled')}>
-                      <span className="inline-flex items-center">Enabled<SortIcon column="enabled" /></span>
-                    </th>
-                    <th className="text-right px-3 py-2 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Loading...
-                      </td>
-                    </tr>
-                  ) : sorted.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No check definitions found
-                      </td>
-                    </tr>
-                  ) : (
-                    sorted.map((def) => {
-                      const isSelected = selectedUUIDs.has(def.uuid)
-                      return (
-                        <tr
-                          key={def.uuid}
-                          className={`border-b border-border/50 transition-colors ${
-                            isSelected
-                              ? 'bg-primary/5 hover:bg-primary/10'
-                              : 'hover:bg-muted/30'
-                          }`}
-                        >
-                          {/* Checkbox */}
-                          <td className="px-3 py-2">
-                            <button
-                              onClick={() => toggleSelect(def.uuid)}
-                              className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                      </div>
+                      {isCollapsed ? (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="font-semibold text-sm">{group.project}</span>
+                      <Badge variant="secondary" className="text-[10px] ml-1">
+                        {group.checks.length}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {group.enabledCount} enabled
+                        {group.disabledCount > 0 && (
+                          <span className="text-muted-foreground/60"> / {group.disabledCount} disabled</span>
+                        )}
+                      </span>
+                    </button>
+
+                    {/* Checks table */}
+                    {!isCollapsed && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-t bg-muted/30 text-muted-foreground text-xs">
+                              <th className="px-3 py-1.5 w-10">
+                                <button
+                                  onClick={() => toggleSelectGroup(group)}
+                                  className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  {allGroupSelected ? (
+                                    <CheckSquare className="h-3.5 w-3.5" />
+                                  ) : someGroupSelected ? (
+                                    <MinusSquare className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <Square className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              </th>
+                              <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('name')}>
+                                <span className="inline-flex items-center">Name<SortIcon column="name" /></span>
+                              </th>
+                              <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">
+                                Host
+                              </th>
+                              <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('group')}>
+                                <span className="inline-flex items-center">Group<SortIcon column="group" /></span>
+                              </th>
+                              <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('type')}>
+                                <span className="inline-flex items-center">Type<SortIcon column="type" /></span>
+                              </th>
+                              <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('duration')}>
+                                <span className="inline-flex items-center">Frequency<SortIcon column="duration" /></span>
+                              </th>
+                              <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('enabled')}>
+                                <span className="inline-flex items-center">Enabled<SortIcon column="enabled" /></span>
+                              </th>
+                              <th className="text-right px-3 py-1.5 font-medium">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.checks.map(renderCheckRow)}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {/* Mobile card view — shown only on small screens */}
+          <div className="sm:hidden space-y-4">
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : groups.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No check definitions found</div>
+            ) : (
+              groups.map((group) => {
+                const isCollapsed = collapsedGroups.has(group.project)
+                return (
+                  <div key={group.project}>
+                    {/* Mobile group header */}
+                    <button
+                      onClick={() => toggleGroup(group.project)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 mb-2"
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-semibold text-sm">{group.project}</span>
+                      <Badge variant="secondary" className="text-[10px] ml-auto">
+                        {group.checks.length}
+                      </Badge>
+                    </button>
+
+                    {!isCollapsed && (
+                      <div className="space-y-2">
+                        {group.checks.map((def) => {
+                          const isSelected = selectedUUIDs.has(def.uuid)
+                          return (
+                            <div
+                              key={def.uuid}
+                              className={`rounded-lg border bg-card p-4 active:bg-muted/50 transition-colors cursor-pointer ${
+                                isSelected ? 'bg-primary/5 border-primary/30' : ''
+                              }`}
+                              onClick={() => handleEdit(def)}
                             >
-                              {isSelected ? (
-                                <CheckSquare className="h-4 w-4 text-primary" />
-                              ) : (
-                                <Square className="h-4 w-4" />
-                              )}
-                            </button>
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="font-medium">{def.name}</div>
-                            <div className="font-mono text-[10px] text-muted-foreground">{def.uuid}</div>
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground">{def.project}</td>
-                          <td className="px-3 py-2">
-                            <Badge variant="secondary" className="text-[10px]">
-                              {def.type}
-                            </Badge>
-                          </td>
-                          <td className="px-3 py-2 font-mono text-muted-foreground">{def.duration}</td>
-                          <td className="px-3 py-2">
-                            <Switch
-                              checked={def.enabled}
-                              onCheckedChange={() => handleToggle(def.uuid)}
-                              className="scale-75"
-                            />
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(def)}>
-                                    <Copy className="h-3.5 w-3.5" />
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium text-sm truncate">{def.name}</div>
+                                  {(def.url || def.host) && (
+                                    <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">{def.url || def.host}</div>
+                                  )}
+                                  {def.group_name && (
+                                    <div className="text-xs text-muted-foreground/60 mt-0.5">{def.group_name}</div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {def.type}
+                                  </Badge>
+                                  <div
+                                    className={`h-2.5 w-2.5 rounded-full ${def.enabled ? 'bg-healthy' : 'bg-disabled'}`}
+                                    title={def.enabled ? 'Enabled' : 'Disabled'}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between mt-3">
+                                <span className="text-xs text-muted-foreground font-mono">{def.duration}</span>
+                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" onClick={() => handleClone(def)}>
+                                    <Copy className="h-4 w-4" />
                                   </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Clone check</TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(def)}>
-                                    <Pencil className="h-3.5 w-3.5" />
+                                  <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" onClick={() => handleEdit(def)}>
+                                    <Pencil className="h-4 w-4" />
                                   </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Edit check</TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 text-unhealthy hover:text-unhealthy"
+                                    className="h-9 w-9 min-h-[44px] min-w-[44px] text-unhealthy hover:text-unhealthy"
                                     onClick={() => {
                                       setDeletingUUID(def.uuid)
                                       setDeleteDialogOpen(true)
                                     }}
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Delete check</TooltipContent>
-                              </Tooltip>
+                                </div>
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Mobile card view — shown only on small screens */}
-          <div className="sm:hidden space-y-2">
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
-            ) : sorted.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No check definitions found</div>
-            ) : (
-              sorted.map((def) => {
-                const isSelected = selectedUUIDs.has(def.uuid)
-                return (
-                  <div
-                    key={def.uuid}
-                    className={`rounded-lg border bg-card p-4 active:bg-muted/50 transition-colors cursor-pointer ${
-                      isSelected ? 'bg-primary/5 border-primary/30' : ''
-                    }`}
-                    onClick={() => handleEdit(def)}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-sm truncate">{def.name}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{def.project}</div>
+                          )
+                        })}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {def.type}
-                        </Badge>
-                        <div
-                          className={`h-2.5 w-2.5 rounded-full ${def.enabled ? 'bg-healthy' : 'bg-disabled'}`}
-                          title={def.enabled ? 'Enabled' : 'Disabled'}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs text-muted-foreground font-mono">{def.duration}</span>
-                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" onClick={() => handleClone(def)}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px]" onClick={() => handleEdit(def)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 min-h-[44px] min-w-[44px] text-unhealthy hover:text-unhealthy"
-                          onClick={() => {
-                            setDeletingUUID(def.uuid)
-                            setDeleteDialogOpen(true)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )
               })
