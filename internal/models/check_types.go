@@ -15,6 +15,7 @@ var _ CheckConfig = (*ICMPCheckConfig)(nil)
 var _ CheckConfig = (*PassiveCheckConfig)(nil)
 var _ CheckConfig = (*MySQLCheckConfig)(nil)
 var _ CheckConfig = (*PostgreSQLCheckConfig)(nil)
+var _ CheckConfig = (*SSHCheckConfig)(nil)
 var _ CheckConfig = (*RedisCheckConfig)(nil)
 var _ CheckConfig = (*MongoDBCheckConfig)(nil)
 var _ CheckConfig = (*WebhookConfig)(nil)
@@ -111,6 +112,17 @@ type PostgreSQLCheckConfig struct {
 
 func (c *PostgreSQLCheckConfig) CheckType() string { return "pgsql" }
 func (c *PostgreSQLCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
+
+// SSHCheckConfig holds configuration for SSH banner checks
+type SSHCheckConfig struct {
+	Host         string `bson:"host,omitempty" json:"host,omitempty"`
+	Port         int    `bson:"port,omitempty" json:"port,omitempty"`
+	Timeout      string `bson:"timeout,omitempty" json:"timeout,omitempty"`
+	ExpectBanner string `bson:"expect_banner,omitempty" json:"expect_banner,omitempty"`
+}
+
+func (c *SSHCheckConfig) CheckType() string { return "ssh" }
+func (c *SSHCheckConfig) GetTarget() string { return c.Host + ":" + strconv.Itoa(c.Port) }
 
 // RedisCheckConfig holds configuration for Redis checks
 type RedisCheckConfig struct {

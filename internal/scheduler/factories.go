@@ -45,6 +45,19 @@ func CheckerFactory(checkDef models.CheckDefinition, logger *logrus.Entry) check
 			Port:    config.Port,
 			Timeout: config.Timeout,
 		}
+	case *models.SSHCheckConfig:
+		port := config.Port
+		if port == 0 {
+			port = checks.DefaultSSHPort
+		}
+		logger.Debugf("Creating SSH check for host: %s, port: %d", config.Host, port)
+		return &checks.SSHCheck{
+			Host:         config.Host,
+			Port:         config.Port,
+			Timeout:      config.Timeout,
+			ExpectBanner: config.ExpectBanner,
+			Logger:       logger,
+		}
 	case *models.ICMPCheckConfig:
 		logger.Debugf("Creating ICMP check for host: %s", config.Host)
 		return &checks.ICMPCheck{
