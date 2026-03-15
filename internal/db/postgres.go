@@ -388,6 +388,11 @@ func (db *PostgresDB) ConvertConfigToCheckDefinitions(ctx context.Context, cfg *
 					}
 				case "passive":
 					checkDef.Config = &models.PassiveCheckConfig{}
+				case "domain_expiry":
+					checkDef.Config = &models.DomainExpiryCheckConfig{
+						Domain:  check.Host, // host field used for domain in config migration
+						Timeout: timeout,
+					}
 				case "mysql_query", "mysql_query_unixtime", "mysql_replication":
 					// MySQL checks would need DB connection details from config
 					logrus.Warnf("MySQL check type %s not fully implemented in config migration", check.Type)
@@ -651,6 +656,12 @@ func unmarshalConfig(checkType string, data []byte) (models.CheckConfig, error) 
 		return &conf, nil
 	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
 		var conf models.PostgreSQLCheckConfig
+		if err := json.Unmarshal(data, &conf); err != nil {
+			return nil, err
+		}
+		return &conf, nil
+	case "domain_expiry":
+		var conf models.DomainExpiryCheckConfig
 		if err := json.Unmarshal(data, &conf); err != nil {
 			return nil, err
 		}

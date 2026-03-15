@@ -231,6 +231,14 @@ func validateChecks(checks []models.CheckImportItem) []models.CheckImportError {
 					Message: "host is required for icmp checks",
 				})
 			}
+		case "domain_expiry":
+			if check.Domain == "" {
+				errors = append(errors, models.CheckImportError{
+					Name:    check.Name,
+					Index:   i,
+					Message: "domain is required for domain_expiry checks",
+				})
+			}
 		}
 	}
 
@@ -497,6 +505,12 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 			cfg.ServerList = item.PgSQL.ServerList
 		}
 		def.Config = cfg
+	case "domain_expiry":
+		def.Config = &models.DomainExpiryCheckConfig{
+			Domain:            item.Domain,
+			Timeout:           item.Timeout,
+			ExpiryWarningDays: item.ExpiryWarningDays,
+		}
 	}
 
 	return def
@@ -612,6 +626,10 @@ func ExportCheckDefinitions(c *gin.Context) {
 					Query:      cfg.Query,
 					ServerList: cfg.ServerList,
 				}
+			case *models.DomainExpiryCheckConfig:
+				item.Domain = cfg.Domain
+				item.Timeout = cfg.Timeout
+				item.ExpiryWarningDays = cfg.ExpiryWarningDays
 			}
 		}
 

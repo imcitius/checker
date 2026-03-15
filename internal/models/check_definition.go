@@ -388,6 +388,10 @@ type CheckDefinitionViewModel struct {
 	// ICMP fields
 	Count int `json:"count,omitempty"`
 
+	// Domain expiry fields
+	Domain            string `json:"domain,omitempty"`
+	ExpiryWarningDays int    `json:"expiry_warning_days,omitempty"`
+
 	// Database config fields
 	PgSQL struct {
 		UserName         string   `json:"username,omitempty"`

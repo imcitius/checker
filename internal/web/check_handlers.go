@@ -410,6 +410,10 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 			vm.PgSQL.Lag = c.Lag
 			vm.PgSQL.ServerList = c.ServerList
 			vm.PgSQL.AnalyticReplicas = c.AnalyticReplicas
+		case *models.DomainExpiryCheckConfig:
+			vm.Domain = c.Domain
+			vm.Timeout = c.Timeout
+			vm.ExpiryWarningDays = c.ExpiryWarningDays
 		case *models.MongoDBCheckConfig:
 			vm.MongoDBURI = c.URI
 			vm.Timeout = c.Timeout
@@ -510,6 +514,12 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 			Lag:              vm.PgSQL.Lag,
 			ServerList:       vm.PgSQL.ServerList,
 			AnalyticReplicas: vm.PgSQL.AnalyticReplicas,
+		}
+	case "domain_expiry":
+		def.Config = &models.DomainExpiryCheckConfig{
+			Domain:            vm.Domain,
+			Timeout:           vm.Timeout,
+			ExpiryWarningDays: vm.ExpiryWarningDays,
 		}
 	}
 

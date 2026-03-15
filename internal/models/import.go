@@ -97,6 +97,10 @@ type CheckImportItem struct {
 	Host string `json:"host,omitempty" yaml:"host,omitempty"`
 	Port int    `json:"port,omitempty" yaml:"port,omitempty"`
 
+	// Domain expiry config
+	Domain            string `json:"domain,omitempty" yaml:"domain,omitempty"`
+	ExpiryWarningDays int    `json:"expiry_warning_days,omitempty" yaml:"expiry_warning_days,omitempty"`
+
 	// Database config
 	PgSQL *DBImportConfig `json:"pgsql,omitempty" yaml:"pgsql,omitempty"`
 	MySQL *DBImportConfig `json:"mysql,omitempty" yaml:"mysql,omitempty"`
