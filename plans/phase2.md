@@ -54,7 +54,7 @@ See: `plans/phase2-part5-status-pages.md`
 
 **Key design decisions:**
 - Status pages are served at `/status/:slug` — no auth required
-- Custom domain: Checker proxies via `Host` header matching; ACME/Let's Encrypt via `golang.org/x/crypto/acme/autocert`
+- Custom domain: Host-header routing. Checker serves the correct page when the request hostname matches a registered domain. TLS is the user's responsibility.
 - Component status is computed from linked checks: worst-case across all checks in the component
 - Manual override: operator can force a component to any status
 - 90-day uptime: computed from `check_results` metrics table (Part 6 dependency)
@@ -115,7 +115,7 @@ Each has a corresponding `.down.sql`.
 1. A check going unhealthy auto-creates an incident (when `auto_incident: true`)
 2. Incident can be acknowledged, progressed through states, and resolved with a postmortem
 3. A status page at `/status/my-page` shows component health, active incidents, and 90-day uptime bars
-4. Custom domain points to a status page via ACME cert
+4. Custom domain correctly routes to its status page (Host-header match)
 5. `/metrics` Prometheus endpoint returns check up/down gauges and response time histograms
 6. Frontend shows response time sparklines on dashboard and full charts on check detail page
 7. `go test ./...` passes

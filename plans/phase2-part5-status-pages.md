@@ -15,7 +15,7 @@ A status page is a public-facing, auth-free web page that shows the health of se
 - Active incidents displayed on the page (sourced from Part 4)
 - Scheduled maintenance windows shown on the page
 - 90-day uptime history bars per component (sourced from Part 6)
-- Custom domain support via ACME/Let's Encrypt
+- Custom domain support: Checker serves the page when it receives a request for a configured hostname. TLS termination is handled externally (nginx, Caddy, Cloudflare, Railway — user's choice).
 - Embeddable SVG badge per page
 - RSS feed per page (for lightweight "subscribe via RSS reader" — subscriber email/SMS deferred)
 
@@ -111,16 +111,13 @@ CREATE TABLE status_page_incidents (
 ```sql
 -- migrations/000017_custom_domains.up.sql
 CREATE TABLE custom_domains (
-    domain       TEXT PRIMARY KEY,
-    page_uuid    TEXT NOT NULL REFERENCES status_pages(uuid) ON DELETE CASCADE,
-    verified_at  TIMESTAMPTZ,          -- NULL until DNS verification passes
-    cert_obtained_at TIMESTAMPTZ,      -- NULL until ACME cert issued
-    acme_account_key TEXT,             -- ACME account private key, encrypted at rest
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    domain     TEXT PRIMARY KEY,
+    page_uuid  TEXT NOT NULL REFERENCES status_pages(uuid) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-Note: `status_pages.custom_domain` is a convenience column for fast lookup. The canonical source of truth is `custom_domains`.
+Note: `status_pages.custom_domain` is a convenience column for fast lookup by the domain middleware. The canonical record is in `custom_domains`.
 
 ---
 
@@ -300,52 +297,43 @@ Standard RSS 2.0 feed. Each incident update is an item. Most recent 20 items.
 
 ---
 
-## 7. Custom Domain & ACME
+## 7. Custom Domain
 
-### DNS verification flow
+Checker does not handle TLS. That is the user's responsibility — nginx, Caddy, Cloudflare proxy, Railway custom domain, or any other terminator. Checker only needs to know which status page to serve for a given hostname.
 
-1. Operator adds custom domain in settings UI
-2. API creates `custom_domains` row with `verified_at = NULL`
-3. UI shows: "Add a CNAME record: `status.example.com → checker.yourdomain.com`"
-4. Background goroutine (runs every 5 minutes) checks DNS for each unverified domain:
-   ```go
-   addrs, err := net.LookupCNAME(domain)
-   if err == nil && strings.HasSuffix(addrs, checkerHostname+".") {
-       // Mark verified
-       repo.VerifyCustomDomain(ctx, domain)
-       // Trigger ACME cert acquisition
-       go acquireACMECert(ctx, domain)
-   }
-   ```
-5. Once verified, ACME cert is obtained via `autocert.Manager`
-6. `custom_domains.cert_obtained_at` is updated
-7. Custom domain starts working
+### How it works
 
-### ACME implementation
+1. Operator adds a custom domain in the Settings UI: `status.example.com`
+2. Checker stores it in `custom_domains` table, linked to a status page
+3. User configures their proxy/DNS to point `status.example.com` to the Checker instance
+4. When a request arrives with `Host: status.example.com`, Gin middleware looks up the domain in the cache and serves the corresponding status page
 
-Use `golang.org/x/crypto/acme/autocert`:
+That's it. No DNS verification, no cert acquisition. The user owns their TLS stack.
+
+### Implementation
 
 ```go
-certManager := autocert.Manager{
-    Prompt:     autocert.AcceptTOS,
-    HostPolicy: func(ctx context.Context, host string) error {
-        // Allow only hosts in custom_domains table with verified_at != NULL
-        if repo.IsVerifiedCustomDomain(ctx, host) {
-            return nil
-        }
-        return fmt.Errorf("host %q not allowed", host)
-    },
-    Cache: autocert.DirCache("/data/acme-certs"), // persistent directory
+// In-memory cache, refreshed every 60s from DB
+type domainCache struct {
+    mu      sync.RWMutex
+    entries map[string]string // domain → page_uuid
 }
+
+// Middleware (runs before all routes)
+router.Use(func(c *gin.Context) {
+    host := stripPort(c.Request.Host)
+    if pageUUID, ok := domainCache.Get(host); ok {
+        c.Set("status_page_override_uuid", pageUUID)
+    }
+    c.Next()
+})
 ```
 
-**Corner case — HTTP-01 challenge:** Let's Encrypt requires serving `/.well-known/acme-challenge/` over HTTP port 80. Checker must listen on port 80 (or have a redirect) even if the primary service is on 443. Add an HTTP listener that handles ACME challenges and redirects all other traffic to HTTPS. This requires the service to be accessible on port 80 externally.
+The status page handler checks for `status_page_override_uuid` in the context. If set, it uses that page UUID instead of the slug from the URL path.
 
-**Corner case — Railway/Docker deployment:** Railway terminates TLS at the proxy level. Custom domain ACME won't work behind Railway's proxy unless the user configures Railway to pass through raw TCP (not straightforward). Document: custom domains with auto-TLS work in self-hosted deployments. For Railway/hosted deployments, the user configures TLS at the proxy level and sets `CUSTOM_DOMAIN_TLS=external`.
+**Corner case — domain registered but proxy not configured yet:** page just won't be reachable at that domain until the user sets up their proxy. No error in Checker, just 404 from the user's perspective until DNS/proxy is set.
 
-**Corner case — cert expiry:** `autocert` handles renewal automatically. But if the domain's CNAME is removed, renewal fails silently. Add monitoring: if `cert_obtained_at` > 80 days ago and renewal hasn't happened, send a warning to the operator.
-
-**Corner case — `acme_account_key` storage:** this is a private key. Store encrypted using a `ACME_KEY_ENCRYPTION_KEY` env var (AES-256-GCM). If the env var is not set, ACME is disabled and a warning is logged.
+**Corner case — same domain registered twice:** the DB unique constraint on `custom_domains.domain` prevents this. Return 409 on duplicate.
 
 ---
 
@@ -401,9 +389,6 @@ GetComponentChecks(ctx context.Context, componentUUID string) ([]string, error) 
 
 // Custom domains
 SetCustomDomain(ctx context.Context, pageUUID, domain string) error
-VerifyCustomDomain(ctx context.Context, domain string) error
-GetUnverifiedCustomDomains(ctx context.Context) ([]models.CustomDomain, error)
-IsVerifiedCustomDomain(ctx context.Context, domain string) bool
 RemoveCustomDomain(ctx context.Context, domain string) error
 
 // Status page rendering (read-optimised, used by the public page renderer)
@@ -453,13 +438,11 @@ GetStatusPageRenderData(ctx context.Context, pageUUID string) (models.StatusPage
 | `internal/web/templates/status_page.html` | New: server-rendered status page template |
 | `internal/web/templates/status_badge.svg` | New: badge template |
 | `internal/web/server.go` | Wire routes (public + admin), add custom domain middleware |
-| `internal/scheduler/acme.go` | New: ACME cert acquisition + renewal |
-| `internal/scheduler/domain_verifier.go` | New: background DNS verification goroutine |
 | `frontend/src/pages/StatusPages.tsx` | New admin page |
 | `frontend/src/components/StatusPageEditor.tsx` | New component |
 | `frontend/src/App.tsx` | Add /status-pages route |
 | `frontend/src/components/TopBar.tsx` | Add Status Pages nav link |
-| `go.mod` | Add `golang.org/x/crypto/acme/autocert` if not present |
+
 
 ---
 
@@ -473,6 +456,6 @@ GetStatusPageRenderData(ctx context.Context, pageUUID string) (models.StatusPage
 6. SQLite mode: status pages work, uptime bars show "N/A"
 7. Embeddable badge returns valid SVG with correct status color
 8. RSS feed returns valid RSS 2.0 with recent incident updates
-9. Custom domain: CNAME → verification → ACME cert → page accessible at custom domain (self-hosted only)
+9. Custom domain: register domain in Checker → proxy traffic to Checker → page served correctly based on Host header
 10. Reserved slugs rejected at creation time
 11. `go test ./...` passes
