@@ -167,7 +167,7 @@ export function Alerts() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="min-h-screen pb-8">
+      <div className="min-h-screen bg-background pb-8">
         <TopBar
           search={search}
           onSearchChange={setSearch}
