@@ -11,9 +11,17 @@ export interface CheckStats {
   silenced: number
 }
 
-export interface ProjectGroup {
+export interface SubGroup {
   name: string
   checks: Check[]
+  healthyCount: number
+  failingCount: number
+}
+
+export interface ProjectGroup {
+  name: string
+  subGroups: SubGroup[]
+  checks: Check[]        // flat list of all checks in project
   healthyCount: number
   failingCount: number
 }
@@ -62,20 +70,39 @@ export function useChecks() {
   }
 
   const getGrouped = useCallback(
-    (filtered: Check[]): ProjectGroup[] => {
-      const groups = new Map<string, Check[]>()
+    (filtered: Check[], sortFn?: (checks: Check[]) => Check[]): ProjectGroup[] => {
+      // Two-level: Project → group_name (Healthcheck)
+      const projectMap = new Map<string, Map<string, Check[]>>()
       for (const check of filtered) {
         const project = check.Project || 'default'
-        if (!groups.has(project)) groups.set(project, [])
-        groups.get(project)!.push(check)
+        const group = check.Healthcheck || ''
+        if (!projectMap.has(project)) projectMap.set(project, new Map())
+        const groupMap = projectMap.get(project)!
+        if (!groupMap.has(group)) groupMap.set(group, [])
+        groupMap.get(group)!.push(check)
       }
-      return Array.from(groups.entries())
-        .map(([name, checks]) => ({
-          name,
-          checks,
-          healthyCount: checks.filter((c) => c.Enabled && c.LastResult).length,
-          failingCount: checks.filter((c) => c.Enabled && !c.LastResult).length,
-        }))
+      return Array.from(projectMap.entries())
+        .map(([name, groupMap]) => {
+          const subGroups: SubGroup[] = Array.from(groupMap.entries())
+            .map(([sgName, sgChecks]) => {
+              const sorted = sortFn ? sortFn(sgChecks) : sgChecks
+              return {
+                name: sgName,
+                checks: sorted,
+                healthyCount: sgChecks.filter((c) => c.Enabled && c.LastResult).length,
+                failingCount: sgChecks.filter((c) => c.Enabled && !c.LastResult).length,
+              }
+            })
+            .sort((a, b) => a.name.localeCompare(b.name))
+          const allChecks = subGroups.flatMap((sg) => sg.checks)
+          return {
+            name,
+            subGroups,
+            checks: allChecks,
+            healthyCount: allChecks.filter((c) => c.Enabled && c.LastResult).length,
+            failingCount: allChecks.filter((c) => c.Enabled && !c.LastResult).length,
+          }
+        })
         .sort((a, b) => {
           // Failing projects first
           if (a.failingCount > 0 && b.failingCount === 0) return -1

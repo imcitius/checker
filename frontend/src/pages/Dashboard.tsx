@@ -13,12 +13,18 @@ import { useEventLog } from '@/hooks/useEventLog'
 import { useKeyboard } from '@/hooks/useKeyboard'
 import { api } from '@/lib/api'
 import type { Check } from '@/lib/websocket'
-import { LayoutGrid, List } from 'lucide-react'
+import { LayoutGrid, List, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 
 const COLLAPSED_KEY = 'checker-collapsed-groups'
 const VIEW_MODE_KEY = 'checker-view-mode'
+const SORT_KEY = 'checker-dashboard-sort'
 
 type ViewMode = 'list' | 'grid'
+type SortColumn = 'name' | 'type' | 'status' | 'host' | 'frequency'
+type SortDirection = 'asc' | 'desc'
+
+const VALID_SORT_COLUMNS: readonly string[] = ['name', 'type', 'status', 'host', 'frequency'] as const
+const VALID_SORT_DIRECTIONS: readonly string[] = ['asc', 'desc'] as const
 
 function loadCollapsed(): Set<string> {
   try {
@@ -37,12 +43,84 @@ function loadViewMode(): ViewMode {
   return (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || 'list'
 }
 
+function loadSort(): { column: SortColumn | null; direction: SortDirection } {
+  try {
+    const val = localStorage.getItem(SORT_KEY)
+    if (!val) return { column: null, direction: 'asc' }
+    const parsed = JSON.parse(val)
+    return {
+      column: parsed.column && VALID_SORT_COLUMNS.includes(parsed.column) ? parsed.column : null,
+      direction: parsed.direction && VALID_SORT_DIRECTIONS.includes(parsed.direction) ? parsed.direction : 'asc',
+    }
+  } catch {
+    return { column: null, direction: 'asc' }
+  }
+}
+
+function saveSort(column: SortColumn | null, direction: SortDirection) {
+  if (column) {
+    localStorage.setItem(SORT_KEY, JSON.stringify({ column, direction }))
+  } else {
+    localStorage.removeItem(SORT_KEY)
+  }
+}
+
 export function Dashboard() {
   const { checks, previousChecks, stats, wsStatus, getGrouped } = useChecks()
   const { entries } = useEventLog(checks, previousChecks)
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode)
+
+  // Sort state — persisted in localStorage
+  const [sortState, setSortState] = useState(loadSort)
+  const sortColumn = sortState.column
+  const sortDirection = sortState.direction
+
+  const handleSort = useCallback((column: SortColumn) => {
+    setSortState((prev) => {
+      let next: { column: SortColumn | null; direction: SortDirection }
+      if (prev.column === column) {
+        if (prev.direction === 'asc') {
+          next = { column, direction: 'desc' }
+        } else {
+          next = { column: null, direction: 'asc' }
+        }
+      } else {
+        next = { column, direction: 'asc' }
+      }
+      saveSort(next.column, next.direction)
+      return next
+    })
+  }, [])
+
+  const sortChecks = useCallback((checks: Check[]): Check[] => {
+    if (!sortColumn) return checks
+    return [...checks].sort((a, b) => {
+      let cmp = 0
+      switch (sortColumn) {
+        case 'name':
+          cmp = a.Name.toLowerCase().localeCompare(b.Name.toLowerCase())
+          break
+        case 'type':
+          cmp = a.CheckType.toLowerCase().localeCompare(b.CheckType.toLowerCase())
+          break
+        case 'status': {
+          const statusA = !a.Enabled ? 2 : a.LastResult ? 0 : 1
+          const statusB = !b.Enabled ? 2 : b.LastResult ? 0 : 1
+          cmp = statusA - statusB
+          break
+        }
+        case 'host':
+          cmp = (a.URL || a.Host || '').toLowerCase().localeCompare((b.URL || b.Host || '').toLowerCase())
+          break
+        case 'frequency':
+          cmp = a.Periodicity.localeCompare(b.Periodicity)
+          break
+      }
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+  }, [sortColumn, sortDirection])
 
   const handleSetViewMode = (mode: ViewMode) => {
     setViewMode(mode)
@@ -113,14 +191,18 @@ export function Dashboard() {
     })
   }, [checks, search, statusFilter, projectFilter, typeFilter])
 
-  const groups = useMemo(() => getGrouped(filtered), [getGrouped, filtered])
+  const groups = useMemo(() => getGrouped(filtered, sortChecks), [getGrouped, filtered, sortChecks])
 
   // Flat list of visible check UUIDs for keyboard navigation
   const visibleUUIDs = useMemo(() => {
     const uuids: string[] = []
     for (const group of groups) {
-      if (!collapsedGroups.has(group.name)) {
-        for (const c of group.checks) uuids.push(c.UUID)
+      const projectKey = `p:${group.name}`
+      if (collapsedGroups.has(projectKey)) continue
+      for (const sg of group.subGroups) {
+        const sgKey = `g:${group.name}/${sg.name}`
+        if (collapsedGroups.has(sgKey)) continue
+        for (const c of sg.checks) uuids.push(c.UUID)
       }
     }
     return uuids
@@ -155,11 +237,11 @@ export function Dashboard() {
     [selectedUUID]
   )
 
-  // Find the group that the selected check belongs to
+  // Find the project key that the selected check belongs to (for keyboard toggle)
   const selectedGroup = useMemo(() => {
     if (!selectedUUID) return null
     for (const g of groups) {
-      if (g.checks.some((c) => c.UUID === selectedUUID)) return g.name
+      if (g.checks.some((c) => c.UUID === selectedUUID)) return `p:${g.name}`
     }
     return null
   }, [selectedUUID, groups])
@@ -256,6 +338,9 @@ export function Dashboard() {
               expandedUUID={expandedUUID}
               onSelectCheck={handleSelectCheck}
               onToggleCheck={handleToggleCheck}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSort={handleSort}
             />
           ) : (
             <HealthMap groups={groups} onSelectCheck={handleSelectCheck} />
