@@ -496,6 +496,16 @@ func sendAlertToChannel(channel string, status models.CheckStatus, checkDef mode
 			logrus.Errorf("Failed to send Slack alert: %v", err)
 		}
 
+	case "slack_webhook":
+		if checkDef.AlertDestination == "" {
+			logrus.Errorf("Slack webhook URL is not configured for check %s", status.UUID)
+			return
+		}
+		message := fmt.Sprintf("[%s] Check %s (%s/%s) failed: %s", strings.ToUpper(severity), status.CheckName, status.Project, status.CheckGroup, status.Message)
+		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
+			logrus.Errorf("Failed to send Slack webhook alert: %v", err)
+		}
+
 	case "email":
 		emailCfg := getEmailConfig()
 		if emailCfg == nil {
@@ -668,6 +678,14 @@ func sendRecoveryToChannel(channel string, status models.CheckStatus, checkDef m
 		}
 		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
 			logrus.Errorf("Failed to send Slack recovery alert: %v", err)
+		}
+
+	case "slack_webhook":
+		if checkDef.AlertDestination == "" {
+			return
+		}
+		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
+			logrus.Errorf("Failed to send Slack webhook recovery alert: %v", err)
 		}
 
 	case "email":

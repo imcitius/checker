@@ -50,7 +50,8 @@ import {
 // Channel type metadata
 const CHANNEL_TYPES = [
   { value: 'telegram', label: 'Telegram', icon: MessageSquare, color: 'bg-blue-500' },
-  { value: 'slack', label: 'Slack', icon: Hash, color: 'bg-purple-500' },
+  { value: 'slack', label: 'Slack App', icon: Hash, color: 'bg-purple-500' },
+  { value: 'slack_webhook', label: 'Slack Webhook', icon: Hash, color: 'bg-purple-400' },
   { value: 'email', label: 'Email', icon: Mail, color: 'bg-green-500' },
   { value: 'discord', label: 'Discord', icon: Megaphone, color: 'bg-indigo-500' },
   { value: 'teams', label: 'Teams', icon: Users, color: 'bg-blue-600' },
@@ -75,6 +76,11 @@ const CONFIG_FIELDS: Record<ChannelType, ConfigField[]> = {
     { key: 'chat_id', label: 'Chat ID', type: 'text', placeholder: 'e.g. -1001234567890', required: true },
   ],
   slack: [
+    { key: 'bot_token', label: 'Bot Token', type: 'password', placeholder: 'xoxb-...', required: true },
+    { key: 'signing_secret', label: 'Signing Secret', type: 'password', placeholder: 'Slack app signing secret', required: true },
+    { key: 'default_channel', label: 'Default Channel ID', type: 'text', placeholder: 'e.g. C01ABCDEF', required: true },
+  ],
+  slack_webhook: [
     { key: 'webhook_url', label: 'Webhook URL', type: 'password', placeholder: 'https://hooks.slack.com/services/...', required: true },
   ],
   email: [
@@ -640,7 +646,11 @@ function ConfigSummary({ channel }: { channel: AlertChannel }) {
   switch (channel.type) {
     case 'telegram':
       return <span>Chat ID: {(cfg.chat_id as string) || 'N/A'}</span>
-    case 'slack':
+    case 'slack': {
+      const channel = (cfg.default_channel as string) || 'N/A'
+      return <span>Channel: {channel}</span>
+    }
+    case 'slack_webhook':
       return <span>Webhook configured</span>
     case 'email': {
       const host = (cfg.smtp_host as string) || 'N/A'

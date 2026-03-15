@@ -18,7 +18,8 @@ type AlertChannel struct {
 // SensitiveFields maps channel type to the config keys that contain secrets.
 var SensitiveFields = map[string][]string{
 	"telegram":  {"bot_token"},
-	"slack":     {"webhook_url"},
+	"slack":         {"bot_token", "signing_secret"},
+	"slack_webhook": {"webhook_url"},
 	"email":     {"smtp_password"},
 	"discord":   {"webhook_url"},
 	"teams":     {"webhook_url"},

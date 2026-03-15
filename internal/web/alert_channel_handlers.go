@@ -16,13 +16,14 @@ import (
 
 // validChannelTypes is the set of supported alert channel types.
 var validChannelTypes = map[string]bool{
-	"telegram":  true,
-	"slack":     true,
-	"email":     true,
-	"discord":   true,
-	"teams":     true,
-	"pagerduty": true,
-	"opsgenie":  true,
+	"telegram":      true,
+	"slack":         true,
+	"slack_webhook": true,
+	"email":         true,
+	"discord":       true,
+	"teams":         true,
+	"pagerduty":     true,
+	"opsgenie":      true,
 }
 
 // ListAlertChannels returns all alert channels with sensitive fields masked.
@@ -203,9 +204,17 @@ func sendTestNotification(channel models.AlertChannel) error {
 		return alerts.SendTelegramAlert(botToken, chatID, testMessage)
 
 	case "slack":
+		botToken, _ := cfg["bot_token"].(string)
+		defaultChannel, _ := cfg["default_channel"].(string)
+		if botToken == "" || defaultChannel == "" {
+			return fmt.Errorf("slack app requires bot_token and default_channel")
+		}
+		return alerts.SendSlackAppTest(botToken, defaultChannel, testMessage)
+
+	case "slack_webhook":
 		webhookURL, _ := cfg["webhook_url"].(string)
 		if webhookURL == "" {
-			return fmt.Errorf("slack requires webhook_url")
+			return fmt.Errorf("slack webhook requires webhook_url")
 		}
 		return alerts.SendSlackAlert(webhookURL, testMessage)
 
