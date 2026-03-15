@@ -214,7 +214,9 @@ export function Management() {
         !d.project.toLowerCase().includes(q) &&
         !(d.group_name || '').toLowerCase().includes(q) &&
         !(d.url || '').toLowerCase().includes(q) &&
-        !(d.host || '').toLowerCase().includes(q)
+        !(d.host || '').toLowerCase().includes(q) &&
+        !(d.domain || '').toLowerCase().includes(q) &&
+        !(d.mongodb_uri || '').toLowerCase().includes(q)
       )
         return false
     }
@@ -566,10 +568,10 @@ export function Management() {
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="font-mono text-xs text-muted-foreground truncate block">
-                {def.url || def.host || '—'}
+                {def.url || def.host || def.domain || def.mongodb_uri || '—'}
               </span>
             </TooltipTrigger>
-            <TooltipContent>{def.url || def.host || 'No target'}</TooltipContent>
+            <TooltipContent>{def.url || def.host || def.domain || def.mongodb_uri || 'No target'}</TooltipContent>
           </Tooltip>
         </td>
         <td className="px-3 py-2">
