@@ -84,11 +84,20 @@ export const CheckRow = memo(function CheckRow({
       {/* Host / URL */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="font-mono text-xs text-muted-foreground truncate min-w-0 flex-1">
+          <span
+            className="font-mono text-xs text-muted-foreground break-all min-w-0 flex-1 cursor-pointer hover:text-foreground transition-colors"
+            onClick={(e) => {
+              e.stopPropagation()
+              const target = check.URL || check.Host || ''
+              if (target) {
+                navigator.clipboard.writeText(target)
+              }
+            }}
+          >
             {check.URL || check.Host || '—'}
           </span>
         </TooltipTrigger>
-        <TooltipContent>{check.URL || check.Host || 'No target'}</TooltipContent>
+        <TooltipContent>Click to copy</TooltipContent>
       </Tooltip>
 
       {/* Frequency */}
