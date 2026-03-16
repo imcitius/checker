@@ -12,7 +12,6 @@ interface CheckListProps {
   selectedUUID: string | null
   expandedUUID: string | null
   onSelectCheck: (uuid: string) => void
-  onToggleCheck: (uuid: string, enabled: boolean) => void
   sortColumn: SortColumn | null
   sortDirection: SortDirection
   onSort: (column: SortColumn) => void
@@ -31,7 +30,6 @@ export function CheckList({
   selectedUUID,
   expandedUUID,
   onSelectCheck,
-  onToggleCheck,
   sortColumn,
   sortDirection,
   onSort,
@@ -65,8 +63,7 @@ export function CheckList({
           Freq<SortIcon column="frequency" sortColumn={sortColumn} sortDirection={sortDirection} />
         </button>
         <span className="w-[60px] shrink-0 text-right">Last Run</span>
-        <span className="w-9 shrink-0" />
-        <span className="w-3 shrink-0" />
+        <span className="w-4 shrink-0" />
       </div>
 
       {groups.map((group) => (
@@ -78,7 +75,6 @@ export function CheckList({
           selectedUUID={selectedUUID}
           expandedUUID={expandedUUID}
           onSelectCheck={onSelectCheck}
-          onToggleCheck={onToggleCheck}
         />
       ))}
     </div>

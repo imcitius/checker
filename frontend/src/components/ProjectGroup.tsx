@@ -13,7 +13,6 @@ interface ProjectGroupProps {
   selectedUUID: string | null
   expandedUUID: string | null
   onSelectCheck: (uuid: string) => void
-  onToggleCheck: (uuid: string, enabled: boolean) => void
 }
 
 export function ProjectGroup({
@@ -23,7 +22,6 @@ export function ProjectGroup({
   selectedUUID,
   expandedUUID,
   onSelectCheck,
-  onToggleCheck,
 }: ProjectGroupProps) {
   const projectKey = `p:${group.name}`
   const isProjectOpen = !collapsedGroups.has(projectKey)
@@ -74,18 +72,19 @@ export function ProjectGroup({
                   )}
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  {sg.checks.map((check) => (
-                    <div key={check.UUID}>
-                      <CheckRow
-                        check={check}
-                        isSelected={selectedUUID === check.UUID}
-                        isExpanded={expandedUUID === check.UUID}
-                        onSelect={() => onSelectCheck(check.UUID)}
-                        onToggle={onToggleCheck}
-                      />
-                      {expandedUUID === check.UUID && <CheckDetails check={check} />}
-                    </div>
-                  ))}
+                  <div className="ml-4 border-l-2 border-border/40">
+                    {sg.checks.map((check) => (
+                      <div key={check.UUID}>
+                        <CheckRow
+                          check={check}
+                          isSelected={selectedUUID === check.UUID}
+                          isExpanded={expandedUUID === check.UUID}
+                          onSelect={() => onSelectCheck(check.UUID)}
+                        />
+                        {expandedUUID === check.UUID && <CheckDetails check={check} />}
+                      </div>
+                    ))}
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
             )
@@ -100,7 +99,6 @@ export function ProjectGroup({
                   isSelected={selectedUUID === check.UUID}
                   isExpanded={expandedUUID === check.UUID}
                   onSelect={() => onSelectCheck(check.UUID)}
-                  onToggle={onToggleCheck}
                 />
                 {expandedUUID === check.UUID && <CheckDetails check={check} />}
               </div>

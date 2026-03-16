@@ -2,7 +2,7 @@ import { memo } from 'react'
 import type { Check } from '@/lib/websocket'
 import { StatusDot } from '@/components/StatusDot'
 import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { relativeTime } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -12,7 +12,6 @@ interface CheckRowProps {
   isSelected: boolean
   isExpanded: boolean
   onSelect: () => void
-  onToggle: (uuid: string, enabled: boolean) => void
 }
 
 function getTypeBadgeVariant(type: string): 'info' | 'database' | 'warning' | 'secondary' {
@@ -27,7 +26,6 @@ export const CheckRow = memo(function CheckRow({
   isSelected,
   isExpanded,
   onSelect,
-  onToggle,
 }: CheckRowProps) {
   const statusText = !check.Enabled
     ? 'Disabled'
@@ -115,19 +113,12 @@ export const CheckRow = memo(function CheckRow({
         <TooltipContent>{check.LastExec}</TooltipContent>
       </Tooltip>
 
-      {/* Toggle */}
-      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-        <Switch
-          checked={check.Enabled}
-          onCheckedChange={(checked) => onToggle(check.UUID, checked)}
-          className="scale-75"
-        />
-      </div>
-
       {/* Expand indicator */}
-      <span className={cn('text-muted-foreground text-xs transition-transform shrink-0', isExpanded && 'rotate-180')}>
-        ▾
-      </span>
+      {isExpanded ? (
+        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+      ) : (
+        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+      )}
     </div>
   )
 })
