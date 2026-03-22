@@ -216,6 +216,9 @@ func (sa *SlackAlerter) HandleRecovery(ctx context.Context, checkDef models.Chec
 	}
 }
 
+// OwnedTypes returns the standard alerter type strings that SlackAlerter supersedes.
+func (sa *SlackAlerter) OwnedTypes() []string { return []string{"slack"} }
+
 // checkTarget computes a human-readable target string from a CheckDefinition.
 func checkTarget(def models.CheckDefinition) string {
 	if def.Config != nil {

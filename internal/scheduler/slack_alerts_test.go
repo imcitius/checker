@@ -14,6 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Compile-time interface check.
+var _ AppAlerter = (*SlackAlerter)(nil)
+
 // --- Mock Slack Sender ---
 
 type mockSlackSender struct {

@@ -144,6 +144,9 @@ func (ta *TelegramAppAlerter) SendAlert(ctx context.Context, checkDef models.Che
 	web.BroadcastAlertNew(alertEvent)
 }
 
+// OwnedTypes returns the standard alerter type strings that TelegramAppAlerter supersedes.
+func (ta *TelegramAppAlerter) OwnedTypes() []string { return []string{"telegram"} }
+
 // HandleRecovery resolves an existing Telegram thread when a check recovers.
 func (ta *TelegramAppAlerter) HandleRecovery(ctx context.Context, checkDef models.CheckDefinition) {
 	thread, err := ta.repo.GetUnresolvedTelegramThread(ctx, checkDef.UUID)

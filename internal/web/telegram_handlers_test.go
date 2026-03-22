@@ -168,6 +168,9 @@ func (m *mockTelegramRepo) UpdateAlertChannel(_ context.Context, _ models.AlertC
 	return nil
 }
 func (m *mockTelegramRepo) DeleteAlertChannel(_ context.Context, _ string) error { return nil }
+func (m *mockTelegramRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
+	return 0, nil
+}
 
 // mockTelegramClient wraps a test HTTP server to capture API calls.
 type mockTelegramClient struct {
