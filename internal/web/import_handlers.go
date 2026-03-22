@@ -134,12 +134,6 @@ func resolveChecks(payload *models.CheckImportPayload) []models.CheckImportItem 
 		if check.Timeout == "" && payload.Defaults.Timeout != "" {
 			check.Timeout = payload.Defaults.Timeout
 		}
-		if check.AlertType == "" && payload.Defaults.AlertType != "" {
-			check.AlertType = payload.Defaults.AlertType
-		}
-		if check.AlertDestination == "" && payload.Defaults.AlertDestination != "" {
-			check.AlertDestination = payload.Defaults.AlertDestination
-		}
 		if check.ActorType == "" && payload.Defaults.ActorType != "" {
 			check.ActorType = payload.Defaults.ActorType
 		}
@@ -412,9 +406,7 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 		Type:             item.Type,
 		Description:      item.Description,
 		Duration:         item.Duration,
-		ActorType:        item.ActorType,
-		AlertType:        item.AlertType,
-		AlertDestination: item.AlertDestination,
+		ActorType: item.ActorType,
 		Severity:         item.Severity,
 		AlertChannels:    item.AlertChannels,
 		ReAlertInterval:  item.ReAlertInterval,
@@ -613,9 +605,7 @@ func ExportCheckDefinitions(c *gin.Context) {
 			Type:             def.Type,
 			Description:      def.Description,
 			Duration:         def.Duration,
-			AlertType:        def.AlertType,
-			AlertDestination: def.AlertDestination,
-			ActorType:        def.ActorType,
+			ActorType: def.ActorType,
 			Severity:         def.Severity,
 			AlertChannels:    def.AlertChannels,
 			ReAlertInterval:  def.ReAlertInterval,

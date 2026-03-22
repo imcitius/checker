@@ -4,7 +4,6 @@ import (
 	"container/heap"
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -36,26 +35,24 @@ type Scheduler struct {
 	checkMap        map[string]*CheckItem // Map UUID -> CheckItem
 	lock            sync.Mutex
 	repo            db.Repository
-	slackAlerter    *SlackAlerter
-	telegramAlerter *TelegramAppAlerter
+	appAlerters []AppAlerter
 }
 
 // NewScheduler creates a new scheduler instance
-func NewScheduler(repo db.Repository, slackAlerter *SlackAlerter, telegramAlerter *TelegramAppAlerter) *Scheduler {
+func NewScheduler(repo db.Repository, appAlerters []AppAlerter) *Scheduler {
 	h := &CheckHeap{}
 	heap.Init(h)
 	return &Scheduler{
-		workerPool:      NewWorkerPool(DefaultWorkerPoolSize, repo, slackAlerter, telegramAlerter),
-		checkHeap:       h,
-		checkMap:        make(map[string]*CheckItem),
-		repo:            repo,
-		slackAlerter:    slackAlerter,
-		telegramAlerter: telegramAlerter,
+		workerPool:  NewWorkerPool(DefaultWorkerPoolSize, repo, appAlerters),
+		checkHeap:   h,
+		checkMap:    make(map[string]*CheckItem),
+		repo:        repo,
+		appAlerters: appAlerters,
 	}
 }
 
 // RunScheduler starts the health check scheduler.
-func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, slackAlerter *SlackAlerter, telegramAlerter *TelegramAppAlerter) error {
+func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, appAlerters []AppAlerter) error {
 	logrus.Info("Starting event-driven health check scheduler")
 
 	// Initialize email alert configuration from config
@@ -72,7 +69,7 @@ func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, s
 		logrus.Info("Email alerter configured")
 	}
 
-	s := NewScheduler(repo, slackAlerter, telegramAlerter)
+	s := NewScheduler(repo, appAlerters)
 
 	// Start worker pool
 	s.workerPool.Start()
@@ -283,7 +280,7 @@ func (s *Scheduler) getAllChecks(ctx context.Context) ([]models.CheckDefinition,
 }
 
 // executeCheck runs a single check and updates its status
-func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAlerter *SlackAlerter, telegramAlerter *TelegramAppAlerter) error {
+func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerters []AppAlerter) error {
 	logger := logrus.WithFields(logrus.Fields{
 		"project": checkDef.Project,
 		// "group":   checkDef.GroupName,
@@ -365,7 +362,7 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 	// Handle alerts if check fails
 	if !isHealthy {
 		if shouldSendAlert(previouslyHealthy, reAlertInterval, checkStatus) {
-			sendAlerts(repo, checkStatus, checkDef, slackAlerter != nil, telegramAlerter != nil)
+			sendAlerts(repo, checkStatus, checkDef, appAlerters)
 
 			checkStatus.LastAlertSent = runTime
 			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
@@ -373,38 +370,38 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 			}
 		}
 
-		// Slack App alert (runs alongside existing alerts)
-		if slackAlerter != nil {
-			// isNewIncident is true when the check transitions from healthy to unhealthy.
-			// This tells SendAlert to create a fresh thread instead of replying to any
-			// stale unresolved thread left over from a previous incident.
-			isNewIncident := previouslyHealthy
-			slackAlerter.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
-		}
-
-		// Telegram App alert (runs alongside existing alerts)
-		if telegramAlerter != nil {
-			isNewIncident := previouslyHealthy
-			telegramAlerter.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+		// App alerters (Slack App, Telegram App, etc.) — runs alongside existing alerts
+		isNewIncident := previouslyHealthy
+		for _, aa := range appAlerters {
+			aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
 		}
 
 		// Process escalation policy (if assigned)
-		processEscalation(repo, checkDef, checkStatus, slackAlerter)
+		processEscalation(repo, checkDef, checkStatus, appAlerters)
+
+		// Execute actors (webhook, log) — separate from alert dispatch
+		if checkDef.ActorType != "" && checkDef.ActorType != "alert" {
+			actor, err := ActorFactory(checkDef)
+			if err != nil {
+				logrus.Errorf("Failed to create actor for check %s: %v", checkStatus.UUID, err)
+			} else if actor != nil {
+				logrus.Infof("Executing %s actor for check %s (%s/%s)",
+					checkDef.ActorType, checkStatus.UUID, checkStatus.Project, checkStatus.CheckName)
+				if err := actor.Act(checkStatus.Message); err != nil {
+					logrus.Errorf("Failed to execute action: %v", err)
+				}
+			}
+		}
 	}
 
 	// Handle recovery when check transitions from unhealthy to healthy
 	if isHealthy && wasUnhealthy {
-		// Send recovery alerts for legacy channels (telegram, slack webhook)
-		sendRecoveryAlerts(repo, checkStatus, checkDef, slackAlerter != nil, telegramAlerter != nil)
+		// Send recovery alerts for legacy channels
+		sendRecoveryAlerts(repo, checkStatus, checkDef, appAlerters)
 
-		// Handle Slack App recovery (thread resolution)
-		if slackAlerter != nil {
-			slackAlerter.HandleRecovery(context.Background(), checkDef)
-		}
-
-		// Handle Telegram App recovery (thread resolution)
-		if telegramAlerter != nil {
-			telegramAlerter.HandleRecovery(context.Background(), checkDef)
+		// Handle app alerter recovery (thread resolution, etc.)
+		for _, aa := range appAlerters {
+			aa.HandleRecovery(context.Background(), checkDef)
 		}
 
 		// Clear escalation notifications on recovery (reset for next incident)
@@ -443,24 +440,9 @@ func shouldSendAlert(previouslyHealthy bool, reAlertInterval time.Duration, stat
 	return time.Since(status.LastAlertSent) >= reAlertInterval
 }
 
-// splitAlertDestination splits an alert destination string by colon
-func splitAlertDestination(destination string) []string {
-	return strings.Split(destination, ":")
-}
-
 // getEffectiveAlertChannels returns the list of alert channels to dispatch to.
-// If AlertChannels is set, it returns that. Otherwise, for backward compatibility,
-// if AlertType is set and ActorType is "alert", it returns a single-element list
-// with the old AlertType value.
 func getEffectiveAlertChannels(checkDef models.CheckDefinition) []string {
-	if len(checkDef.AlertChannels) > 0 {
-		return checkDef.AlertChannels
-	}
-	// Backward compat: use the old single-channel AlertType
-	if checkDef.ActorType == "alert" && checkDef.AlertType != "" {
-		return []string{checkDef.AlertType}
-	}
-	return nil
+	return checkDef.AlertChannels
 }
 
 // getEffectiveSeverity returns the severity for the check, defaulting to "critical".
@@ -471,163 +453,64 @@ func getEffectiveSeverity(checkDef models.CheckDefinition) string {
 	return "critical"
 }
 
-// resolveAlerter resolves an Alerter for the given channel name. It first tries
-// the DB-based alert_channels table, then falls back to legacy inline config.
-func resolveAlerter(repo db.Repository, channelName string, checkDef models.CheckDefinition) (alerts.Alerter, error) {
+// resolveAlerter resolves an Alerter for the given channel name from the DB alert_channels table.
+func resolveAlerter(repo db.Repository, channelName string) (alerts.Alerter, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Try DB-based alert channel first
 	ch, err := repo.GetAlertChannelByName(ctx, channelName)
-	if err == nil {
-		return alerts.NewAlerter(ch.Type, ch.Config)
+	if err != nil {
+		return nil, fmt.Errorf("alert channel %q not found: %w", channelName, err)
 	}
-
-	// Legacy fallback: channelName is a channel *type* with config inline in checkDef
-	return buildLegacyAlerter(channelName, checkDef)
-}
-
-// buildLegacyAlerter constructs an Alerter from inline checkDef fields (AlertDestination).
-// This preserves backward compatibility with the old single-channel config style.
-func buildLegacyAlerter(channelType string, checkDef models.CheckDefinition) (alerts.Alerter, error) {
-	switch channelType {
-	case "telegram":
-		if checkDef.AlertDestination == "" {
-			return nil, fmt.Errorf("telegram alert destination is not configured for check %s", checkDef.UUID)
-		}
-		parts := splitAlertDestination(checkDef.AlertDestination)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid telegram alert destination format for check %s (expected 'botToken:chatID')", checkDef.UUID)
-		}
-		return &alerts.TelegramAlerter{BotToken: parts[0], ChatID: parts[1]}, nil
-
-	case "slack", "slack_webhook":
-		if checkDef.AlertDestination == "" {
-			return nil, fmt.Errorf("slack webhook URL is not configured for check %s", checkDef.UUID)
-		}
-		return &alerts.SlackWebhookAlerter{WebhookURL: checkDef.AlertDestination}, nil
-
-	case "email":
-		emailCfg := getEmailConfig()
-		if emailCfg == nil {
-			return nil, fmt.Errorf("email alert configuration not found for check %s", checkDef.UUID)
-		}
-		return &alerts.EmailAlerter{Config: *emailCfg}, nil
-
-	case "discord":
-		if checkDef.AlertDestination == "" {
-			return nil, fmt.Errorf("discord webhook URL is not configured for check %s", checkDef.UUID)
-		}
-		return &alerts.DiscordAlerter{WebhookURL: checkDef.AlertDestination}, nil
-
-	case "teams":
-		if checkDef.AlertDestination == "" {
-			return nil, fmt.Errorf("teams webhook URL is not configured for check %s", checkDef.UUID)
-		}
-		return &alerts.TeamsAlerter{WebhookURL: checkDef.AlertDestination}, nil
-
-	case "pagerduty":
-		if checkDef.AlertDestination == "" {
-			return nil, fmt.Errorf("pagerduty routing key is not configured for check %s", checkDef.UUID)
-		}
-		return &alerts.PagerDutyAlerter{RoutingKey: checkDef.AlertDestination}, nil
-
-	case "opsgenie":
-		if checkDef.AlertDestination == "" {
-			return nil, fmt.Errorf("opsgenie alert destination is not configured for check %s", checkDef.UUID)
-		}
-		parts := splitAlertDestination(checkDef.AlertDestination)
-		apiKey := parts[0]
-		region := "us"
-		if len(parts) >= 2 && parts[1] != "" {
-			region = parts[1]
-		}
-		return &alerts.OpsgenieAlerter{APIKey: apiKey, Region: region}, nil
-
-	default:
-		return nil, fmt.Errorf("unknown alert channel type: %s", channelType)
-	}
+	return alerts.NewAlerter(ch.Type, ch.Config)
 }
 
 // sendAlerts dispatches alerts based on the check definition using the Alerter registry.
-// When slackAppActive is true, alerters with Type() == "slack" are skipped because the SlackAlerter handles it natively.
-// When telegramAppActive is true, alerters with Type() == "telegram" are skipped because the TelegramAppAlerter handles it natively.
-// Supports multi-channel dispatch via AlertChannels with backward compatibility for single-channel AlertType.
-func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool, telegramAppActive bool) {
-	// Skip if no actor type is defined
-	if checkDef.ActorType == "" && len(checkDef.AlertChannels) == 0 {
-		return
-	}
-
-	// Multi-channel alert dispatch
+// Alerters whose Type() matches any type owned by an active AppAlerter are skipped
+// to prevent duplicate alerts.
+func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, appAlerters []AppAlerter) {
 	channels := getEffectiveAlertChannels(checkDef)
-	if len(channels) > 0 {
-		severity := getEffectiveSeverity(checkDef)
-		payload := alerts.AlertPayload{
-			CheckName:  status.CheckName,
-			CheckUUID:  status.UUID,
-			Project:    status.Project,
-			CheckGroup: status.CheckGroup,
-			CheckType:  status.CheckType,
-			Message:    status.Message,
-			Severity:   severity,
-			Timestamp:  status.LastRun,
-		}
-		for _, channel := range channels {
-			alerter, err := resolveAlerter(repo, channel, checkDef)
-			if err != nil {
-				logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)
-				continue
-			}
-			// Slack App bypass: check resolved type, not name
-			if alerter.Type() == "slack" && slackAppActive {
-				continue
-			}
-			// Telegram App bypass: check resolved type, not name
-			if alerter.Type() == "telegram" && telegramAppActive {
-				continue
-			}
-			logrus.Infof("Sending %s notification (severity=%s) for check %s (%s/%s)",
-				alerter.Type(), severity, status.UUID, status.Project, status.CheckName)
-			if err := alerter.SendAlert(payload); err != nil {
-				logrus.Errorf("Failed to send %s alert for check %s: %v", alerter.Type(), status.UUID, err)
-			}
-		}
+	if len(channels) == 0 {
 		return
 	}
 
-	// Handle actors (log, webhook, etc.) — non-alert actor types
-	if checkDef.ActorType != "" && checkDef.ActorType != "alert" {
-		actor, err := ActorFactory(checkDef)
+	ownedTypes := buildOwnedTypeSet(appAlerters)
+	severity := getEffectiveSeverity(checkDef)
+	payload := alerts.AlertPayload{
+		CheckName:  status.CheckName,
+		CheckUUID:  status.UUID,
+		Project:    status.Project,
+		CheckGroup: status.CheckGroup,
+		CheckType:  status.CheckType,
+		Message:    status.Message,
+		Severity:   severity,
+		Timestamp:  status.LastRun,
+	}
+	for _, channel := range channels {
+		alerter, err := resolveAlerter(repo, channel)
 		if err != nil {
-			logrus.Errorf("Failed to create actor for check %s: %v", status.UUID, err)
-			return
+			logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)
+			continue
 		}
-
-		if actor != nil {
-			logrus.Infof("Executing %s actor for check %s (%s/%s)",
-				checkDef.ActorType, status.UUID, status.Project, status.CheckName)
-
-			if err := actor.Act(status.Message); err != nil {
-				logrus.Errorf("Failed to execute action: %v", err)
-			}
+		// Skip channels whose type is owned by an active AppAlerter
+		if ownedTypes[alerter.Type()] {
+			continue
+		}
+		logrus.Infof("Sending %s notification (severity=%s) for check %s (%s/%s)",
+			alerter.Type(), severity, status.UUID, status.Project, status.CheckName)
+		if err := alerter.SendAlert(payload); err != nil {
+			logrus.Errorf("Failed to send %s alert for check %s: %v", alerter.Type(), status.UUID, err)
 		}
 	}
 }
 
 // sendRecoveryAlerts dispatches recovery notifications using the Alerter registry.
-// When slackAppActive is true, alerters with Type() == "slack" are skipped because the SlackAlerter handles recovery natively.
-// When telegramAppActive is true, alerters with Type() == "telegram" are skipped because the TelegramAppAlerter handles recovery natively.
-// Supports multi-channel dispatch via AlertChannels with backward compatibility for single-channel AlertType.
-func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool, telegramAppActive bool) {
-	// Multi-channel recovery dispatch
+// Alerters whose Type() matches any type owned by an active AppAlerter are skipped
+// to prevent duplicate recovery notifications.
+func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, appAlerters []AppAlerter) {
 	channels := getEffectiveAlertChannels(checkDef)
 	if len(channels) == 0 {
-		// Legacy single-channel fallback
-		if checkDef.ActorType != "alert" || checkDef.AlertType == "" {
-			return
-		}
-		channels = []string{checkDef.AlertType}
+		return
 	}
 
 	payload := alerts.RecoveryPayload{
@@ -639,18 +522,16 @@ func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef 
 		Timestamp:  status.LastRun,
 	}
 
+	ownedTypes := buildOwnedTypeSet(appAlerters)
+
 	for _, channel := range channels {
-		alerter, err := resolveAlerter(repo, channel, checkDef)
+		alerter, err := resolveAlerter(repo, channel)
 		if err != nil {
 			logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)
 			continue
 		}
-		// Slack App bypass: check resolved type, not name
-		if alerter.Type() == "slack" && slackAppActive {
-			continue
-		}
-		// Telegram App bypass: check resolved type, not name
-		if alerter.Type() == "telegram" && telegramAppActive {
+		// Skip channels whose type is owned by an active AppAlerter
+		if ownedTypes[alerter.Type()] {
 			continue
 		}
 		logrus.Infof("Sending %s recovery notification for check %s (%s/%s)",

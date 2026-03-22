@@ -403,53 +403,17 @@ func TestActorFactory_Webhook(t *testing.T) {
 // TestActorFactory_Alert verifies that ActorFactory rejects alert actor type.
 // Alerts are now handled separately in the sendAlerts() function and should not go through ActorFactory.
 func TestActorFactory_Alert(t *testing.T) {
-	testCases := []struct {
-		name      string
-		alertType string
-		wantErr   bool
-	}{
-		{
-			name:      "Telegram Alert",
-			alertType: "telegram",
-			wantErr:   true, // Should be rejected by ActorFactory
-		},
-		{
-			name:      "Slack Alert",
-			alertType: "slack",
-			wantErr:   true, // Should be rejected by ActorFactory
-		},
-		{
-			name:      "Unknown Alert Type",
-			alertType: "unknown",
-			wantErr:   true,
-		},
+	checkDef := models.CheckDefinition{
+		ID:        primitive.NewObjectID(),
+		UUID:      "test-uuid",
+		ActorType: "alert",
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			checkDef := models.CheckDefinition{
-				ID:        primitive.NewObjectID(),
-				UUID:      "test-uuid",
-				ActorType: "alert",
-				AlertType: tc.alertType,
-			}
-			actor, err := ActorFactory(checkDef)
-			if tc.wantErr {
-				if err == nil {
-					t.Error("Expected error, got nil")
-				}
-				if actor != nil {
-					t.Errorf("Expected nil actor, got %T", actor)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-				if actor == nil {
-					t.Error("Expected non-nil actor, got nil")
-				}
-			}
-		})
+	actor, err := ActorFactory(checkDef)
+	if err == nil {
+		t.Error("Expected error, got nil")
+	}
+	if actor != nil {
+		t.Errorf("Expected nil actor, got %T", actor)
 	}
 }
 

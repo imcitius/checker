@@ -15,20 +15,18 @@ type WorkerPool struct {
 	jobs            chan models.CheckDefinition
 	wg              sync.WaitGroup
 	repo            db.Repository
-	slackAlerter    *SlackAlerter
-	telegramAlerter *TelegramAppAlerter
+	appAlerters []AppAlerter
 	quit            chan struct{}
 }
 
 // NewWorkerPool creates a new worker pool
-func NewWorkerPool(workers int, repo db.Repository, slackAlerter *SlackAlerter, telegramAlerter *TelegramAppAlerter) *WorkerPool {
+func NewWorkerPool(workers int, repo db.Repository, appAlerters []AppAlerter) *WorkerPool {
 	return &WorkerPool{
-		workers:         workers,
-		jobs:            make(chan models.CheckDefinition, workers*2), // Buffer slightly
-		repo:            repo,
-		slackAlerter:    slackAlerter,
-		telegramAlerter: telegramAlerter,
-		quit:            make(chan struct{}),
+		workers:     workers,
+		jobs:        make(chan models.CheckDefinition, workers*2), // Buffer slightly
+		repo:        repo,
+		appAlerters: appAlerters,
+		quit:        make(chan struct{}),
 	}
 }
 
@@ -79,7 +77,7 @@ func (wp *WorkerPool) worker(id int) {
 			if !ok {
 				return
 			}
-			if err := executeCheck(wp.repo, check, wp.slackAlerter, wp.telegramAlerter); err != nil {
+			if err := executeCheck(wp.repo, check, wp.appAlerters); err != nil {
 				logrus.Errorf("Worker %d: Error executing check %s: %v", id, check.UUID, err)
 			}
 		case <-wp.quit:

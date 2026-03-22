@@ -254,6 +254,9 @@ func (r *mockRepo) GetTelegramThreadByMessage(_ context.Context, _ string, _ int
 	return models.TelegramAlertThread{}, fmt.Errorf("not found")
 }
 func (r *mockRepo) ResolveTelegramThread(_ context.Context, _ string) error { return nil }
+func (r *mockRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
+	return 0, nil
+}
 
 // --- Tests ---
 

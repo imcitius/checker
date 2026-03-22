@@ -34,10 +34,8 @@ type CheckDefinition struct {
 	Config CheckConfig `bson:"-" json:"config"`
 
 	// Alert/Actor configuration
-	ActorType        string      `bson:"actor_type,omitempty" json:"actor_type,omitempty"`
-	AlertType        string      `bson:"alert_type,omitempty" json:"alert_type,omitempty"`
-	AlertDestination string      `bson:"alert_destination,omitempty" json:"alert_destination,omitempty"`
-	ActorConfig      interface{} `bson:"-" json:"actor_config,omitempty"` // Polymorphic Actor Config
+	ActorType   string      `bson:"actor_type,omitempty" json:"actor_type,omitempty"`
+	ActorConfig interface{} `bson:"-" json:"actor_config,omitempty"` // Polymorphic Actor Config
 
 	// Alert severity and multi-channel support
 	Severity        string   `bson:"severity,omitempty" json:"severity,omitempty"`             // "critical", "warning", "info"; default "critical"
@@ -283,8 +281,6 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 		"last_alert_sent":   cd.LastAlertSent,
 		"duration":           cd.Duration,
 		"actor_type":        cd.ActorType,
-		"alert_type":        cd.AlertType,
-		"alert_destination": cd.AlertDestination,
 		"severity":          cd.Severity,
 		"alert_channels":    cd.AlertChannels,
 		"re_alert_interval":  cd.ReAlertInterval,
@@ -506,9 +502,7 @@ type CheckDefinitionViewModel struct {
 	// MongoDB config fields
 	MongoDBURI string `json:"mongodb_uri,omitempty"`
 
-	ActorType        string `json:"actor_type,omitempty"`
-	AlertType        string `json:"alert_type,omitempty"`
-	AlertDestination string `json:"alert_destination,omitempty"`
+	ActorType string `json:"actor_type,omitempty"`
 
 	// Alert severity and multi-channel support
 	Severity        string   `json:"severity,omitempty"`

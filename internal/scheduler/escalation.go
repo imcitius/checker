@@ -17,7 +17,7 @@ import (
 //  2. For each step, check if the check has been DOWN for >= step.DelayMin minutes
 //  3. If yes and this step hasn't been notified yet, send alert to step.Channel
 //  4. Record the notification in escalation_notifications
-func processEscalation(repo db.Repository, checkDef models.CheckDefinition, checkStatus models.CheckStatus, slackAlerter *SlackAlerter) {
+func processEscalation(repo db.Repository, checkDef models.CheckDefinition, checkStatus models.CheckStatus, appAlerters []AppAlerter) {
 	if checkDef.EscalationPolicyName == "" {
 		return
 	}
@@ -83,6 +83,8 @@ func processEscalation(repo db.Repository, checkDef models.CheckDefinition, chec
 		Timestamp:  checkStatus.LastRun,
 	}
 
+	ownedTypes := buildOwnedTypeSet(appAlerters)
+
 	for i, step := range policy.Steps {
 		if notifiedSteps[i] {
 			continue // Already notified for this step
@@ -99,9 +101,11 @@ func processEscalation(repo db.Repository, checkDef models.CheckDefinition, chec
 		logrus.Infof("Escalation policy %q step %d: sending %s alert for check %s (down for %s, delay=%dm)",
 			policy.Name, i, step.Channel, checkDef.UUID, downDuration.Round(time.Second), step.DelayMin)
 
-		alerter, err := resolveAlerter(repo, step.Channel, checkDef)
+		alerter, err := resolveAlerter(repo, step.Channel)
 		if err != nil {
 			logrus.Errorf("Escalation policy %q step %d: failed to resolve channel %q: %v", policy.Name, i, step.Channel, err)
+		} else if ownedTypes[alerter.Type()] {
+			logrus.Debugf("Escalation policy %q step %d: skipping %s (owned by app alerter)", policy.Name, i, alerter.Type())
 		} else if err := alerter.SendAlert(payload); err != nil {
 			logrus.Errorf("Escalation policy %q step %d: failed to send alert: %v", policy.Name, i, err)
 		}
