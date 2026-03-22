@@ -99,7 +99,7 @@ func processEscalation(repo db.Repository, checkDef models.CheckDefinition, chec
 		logrus.Infof("Escalation policy %q step %d: sending %s alert for check %s (down for %s, delay=%dm)",
 			policy.Name, i, step.Channel, checkDef.UUID, downDuration.Round(time.Second), step.DelayMin)
 
-		alerter, err := resolveAlerter(repo, step.Channel, checkDef)
+		alerter, err := resolveAlerter(repo, step.Channel)
 		if err != nil {
 			logrus.Errorf("Escalation policy %q step %d: failed to resolve channel %q: %v", policy.Name, i, step.Channel, err)
 		} else if err := alerter.SendAlert(payload); err != nil {

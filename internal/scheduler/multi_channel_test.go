@@ -9,8 +9,6 @@ import (
 func TestGetEffectiveAlertChannels_UsesAlertChannels(t *testing.T) {
 	def := models.CheckDefinition{
 		AlertChannels: []string{"telegram", "slack"},
-		AlertType:     "telegram",
-		ActorType:     "alert",
 	}
 	channels := getEffectiveAlertChannels(def)
 	if len(channels) != 2 {
@@ -21,34 +19,11 @@ func TestGetEffectiveAlertChannels_UsesAlertChannels(t *testing.T) {
 	}
 }
 
-func TestGetEffectiveAlertChannels_FallbackToAlertType(t *testing.T) {
-	def := models.CheckDefinition{
-		AlertType: "telegram",
-		ActorType: "alert",
-	}
-	channels := getEffectiveAlertChannels(def)
-	if len(channels) != 1 || channels[0] != "telegram" {
-		t.Fatalf("expected [telegram], got %v", channels)
-	}
-}
-
 func TestGetEffectiveAlertChannels_NoChannels(t *testing.T) {
 	def := models.CheckDefinition{}
 	channels := getEffectiveAlertChannels(def)
 	if len(channels) != 0 {
 		t.Fatalf("expected empty channels, got %v", channels)
-	}
-}
-
-func TestGetEffectiveAlertChannels_ActorTypeNotAlert(t *testing.T) {
-	// When ActorType is not "alert" and AlertChannels is empty, should return nil
-	def := models.CheckDefinition{
-		AlertType: "telegram",
-		ActorType: "webhook",
-	}
-	channels := getEffectiveAlertChannels(def)
-	if len(channels) != 0 {
-		t.Fatalf("expected empty channels for non-alert actor, got %v", channels)
 	}
 }
 
@@ -80,7 +55,6 @@ func TestGetEffectiveAlertChannels_MultiChannel(t *testing.T) {
 	// Verify that a check with alert_channels: ["telegram", "discord"] returns both
 	def := models.CheckDefinition{
 		AlertChannels: []string{"telegram", "discord"},
-		ActorType:     "alert",
 	}
 	channels := getEffectiveAlertChannels(def)
 	if len(channels) != 2 {
