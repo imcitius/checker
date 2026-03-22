@@ -17,6 +17,7 @@ type SlackSender interface {
 	PostAlert(ctx context.Context, channelID string, info slack.CheckAlertInfo) (string, error)
 	SendAlertReply(ctx context.Context, channelID, threadTS string, info slack.CheckAlertInfo) (string, error)
 	SendResolve(ctx context.Context, info slack.CheckAlertInfo, originalThreadTS, channelID string) error
+	PostErrorSnapshotReply(ctx context.Context, channelID, threadTS string, info slack.CheckAlertInfo) (string, error)
 }
 
 // SlackAlerter sends Slack App alerts with thread tracking and silence support.
@@ -77,6 +78,7 @@ func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefi
 		Message:   status.Message,
 		IsHealthy: false,
 		Frequency: checkDef.Duration,
+		Target:    checkTarget(checkDef),
 	}
 
 	// Check for existing unresolved thread (ongoing failure)
@@ -111,6 +113,15 @@ func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefi
 	}
 
 	logrus.Infof("Slack App alert sent for check %s (ts: %s)", checkDef.UUID, messageTs)
+
+	// Post immutable error snapshot as the first thread reply.
+	// This reply is never edited on resolve/silence/ack, preserving error context.
+	snapshotTs, snapshotErr := sa.client.PostErrorSnapshotReply(ctx, channelID, messageTs, alertInfo)
+	if snapshotErr != nil {
+		logrus.Errorf("Failed to post error snapshot for check %s: %v", checkDef.UUID, snapshotErr)
+	} else {
+		logrus.Infof("Error snapshot posted for check %s (thread: %s, reply: %s)", checkDef.UUID, messageTs, snapshotTs)
+	}
 
 	// Track the thread
 	if err := sa.repo.CreateSlackThread(ctx, checkDef.UUID, channelID, messageTs, messageTs); err != nil {
@@ -149,15 +160,28 @@ func (sa *SlackAlerter) HandleRecovery(ctx context.Context, checkDef models.Chec
 
 	logrus.Infof("Resolving Slack thread for check %s (channel: %s, thread: %s)", checkDef.UUID, thread.ChannelID, thread.ThreadTs)
 
+	// Fetch the original error message from alert history so it can be preserved
+	// in the resolved message for context.
+	var originalError string
+	unresolved := false
+	events, _, err := sa.repo.GetAlertHistory(ctx, 1, 0, models.AlertHistoryFilters{
+		CheckUUID:  checkDef.UUID,
+		IsResolved: &unresolved,
+	})
+	if err == nil && len(events) > 0 {
+		originalError = events[0].Message
+	}
+
 	alertInfo := slack.CheckAlertInfo{
-		UUID:      checkDef.UUID,
-		Name:      checkDef.Name,
-		Project:   checkDef.Project,
-		Group:     checkDef.GroupName,
-		CheckType: checkDef.Type,
-		Message:   "Check is healthy again",
-		IsHealthy: true,
-		Frequency: checkDef.Duration,
+		UUID:          checkDef.UUID,
+		Name:          checkDef.Name,
+		Project:       checkDef.Project,
+		Group:         checkDef.GroupName,
+		CheckType:     checkDef.Type,
+		Message:       "Check is healthy again",
+		IsHealthy:     true,
+		Frequency:     checkDef.Duration,
+		OriginalError: originalError,
 	}
 
 	// Send Slack resolution message (cosmetic — failure here should NOT prevent
@@ -190,4 +214,12 @@ func (sa *SlackAlerter) HandleRecovery(ctx context.Context, checkDef models.Chec
 	} else {
 		logrus.Infof("Deactivated check-level silence for recovered check %s", checkDef.UUID)
 	}
+}
+
+// checkTarget computes a human-readable target string from a CheckDefinition.
+func checkTarget(def models.CheckDefinition) string {
+	if def.Config != nil {
+		return def.Config.GetTarget()
+	}
+	return ""
 }

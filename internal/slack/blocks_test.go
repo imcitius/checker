@@ -263,6 +263,66 @@ func TestBuildResolvedOriginalBlocks(t *testing.T) {
 	assertFieldContains(t, section.Fields[3], "🟢 Healthy")
 }
 
+func TestBuildResolvedOriginalBlocks_WithOriginalError(t *testing.T) {
+	info := CheckAlertInfo{
+		UUID:          "abc-123",
+		Name:          "API Health Check",
+		Project:       "backend",
+		Group:         "http",
+		CheckType:     "http",
+		IsHealthy:     true,
+		Severity:      "resolved",
+		OriginalError: "connection refused",
+	}
+
+	blocks := BuildResolvedOriginalBlocks(info)
+
+	// Should have 4 blocks: header, fields, error (muted), context
+	if len(blocks) != 4 {
+		t.Fatalf("expected 4 blocks with original error, got %d", len(blocks))
+	}
+
+	// Verify error block is present and muted
+	errorSection := blocks[2].(*slack.SectionBlock)
+	assertContains(t, errorSection.Text.Text, "Was: connection refused")
+	assertContains(t, errorSection.Text.Text, ">") // quote block
+}
+
+func TestBuildErrorSnapshotBlocks(t *testing.T) {
+	info := CheckAlertInfo{
+		Message: "connection refused",
+		Target:  "https://example.com/health",
+	}
+
+	blocks := BuildErrorSnapshotBlocks(info)
+
+	// Should have 2 blocks: error section and context
+	if len(blocks) != 2 {
+		t.Fatalf("expected 2 blocks, got %d", len(blocks))
+	}
+
+	errorSection := blocks[0].(*slack.SectionBlock)
+	assertContains(t, errorSection.Text.Text, "connection refused")
+}
+
+func TestBuildErrorSnapshotBlocks_NoTarget(t *testing.T) {
+	info := CheckAlertInfo{
+		Message: "timeout",
+	}
+
+	blocks := BuildErrorSnapshotBlocks(info)
+
+	if len(blocks) != 2 {
+		t.Fatalf("expected 2 blocks, got %d", len(blocks))
+	}
+
+	// Context block should only have timestamp, no target
+	ctx := blocks[1].(*slack.ContextBlock)
+	if len(ctx.ContextElements.Elements) != 1 {
+		t.Errorf("expected 1 context element (timestamp only), got %d", len(ctx.ContextElements.Elements))
+	}
+}
+
 func TestBuildSilenceConfirmationBlocks(t *testing.T) {
 	blocks := BuildSilenceConfirmationBlocks("check", "abc-123", "1h", "U12345")
 

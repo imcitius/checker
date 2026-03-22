@@ -2,15 +2,17 @@ package slack
 
 // CheckAlertInfo contains the check information used when posting alerts to Slack.
 type CheckAlertInfo struct {
-	UUID      string
-	Name      string
-	Project   string
-	Group     string
-	CheckType string
-	Frequency string // e.g. "5m"
-	Message   string // error message
-	IsHealthy bool
-	Severity  string // "critical", "degraded", "resolved"
+	UUID          string
+	Name          string
+	Project       string
+	Group         string
+	CheckType     string
+	Frequency     string // e.g. "5m"
+	Message       string // error message
+	IsHealthy     bool
+	Severity      string // "critical", "degraded", "resolved"
+	Target        string // check target: URL for HTTP, host:port for TCP/DB, host for ICMP
+	OriginalError string // original error message, used when resolving to preserve context
 }
 
 // typeEmoji returns the emoji for a check type.

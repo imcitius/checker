@@ -17,14 +17,16 @@ import (
 // --- Mock Slack Sender ---
 
 type mockSlackSender struct {
-	postAlertCalls     []postAlertCall
-	sendReplyCalls     []sendReplyCall
-	sendResolveCalls   []sendResolveCall
-	postAlertErr       error
-	sendReplyErr       error
-	sendResolveErr     error
-	postAlertTs        string
-	sendReplyTs        string
+	postAlertCalls          []postAlertCall
+	sendReplyCalls          []sendReplyCall
+	sendResolveCalls        []sendResolveCall
+	errorSnapshotCalls      []errorSnapshotCall
+	postAlertErr            error
+	sendReplyErr            error
+	sendResolveErr          error
+	errorSnapshotErr        error
+	postAlertTs             string
+	sendReplyTs             string
 }
 
 type postAlertCall struct {
@@ -42,6 +44,12 @@ type sendResolveCall struct {
 	info             slack.CheckAlertInfo
 	originalThreadTS string
 	channelID        string
+}
+
+type errorSnapshotCall struct {
+	channelID string
+	threadTS  string
+	info      slack.CheckAlertInfo
 }
 
 func (m *mockSlackSender) PostAlert(_ context.Context, channelID string, info slack.CheckAlertInfo) (string, error) {
@@ -65,6 +73,11 @@ func (m *mockSlackSender) SendAlertReply(_ context.Context, channelID, threadTS 
 func (m *mockSlackSender) SendResolve(_ context.Context, info slack.CheckAlertInfo, originalThreadTS, channelID string) error {
 	m.sendResolveCalls = append(m.sendResolveCalls, sendResolveCall{info: info, originalThreadTS: originalThreadTS, channelID: channelID})
 	return m.sendResolveErr
+}
+
+func (m *mockSlackSender) PostErrorSnapshotReply(_ context.Context, channelID, threadTS string, info slack.CheckAlertInfo) (string, error) {
+	m.errorSnapshotCalls = append(m.errorSnapshotCalls, errorSnapshotCall{channelID: channelID, threadTS: threadTS, info: info})
+	return fmt.Sprintf("snapshot-ts-%d", len(m.errorSnapshotCalls)), m.errorSnapshotErr
 }
 
 // --- Mock Repository (only Slack-related methods) ---
@@ -400,4 +413,53 @@ func TestSendAlert_Silenced_SkipsAlert(t *testing.T) {
 
 	assert.Len(t, sender.postAlertCalls, 0, "should not post alert when silenced")
 	assert.Len(t, sender.sendReplyCalls, 0, "should not reply when silenced")
+}
+
+func TestSendAlert_PostsErrorSnapshotOnNewAlert(t *testing.T) {
+	repo := newMockRepo()
+	sender := &mockSlackSender{}
+	alerter := newSlackAlerterWithSender(sender, repo, "C123")
+
+	checkDef := models.CheckDefinition{UUID: "check-1", Name: "test-check", Project: "proj"}
+	status := models.CheckStatus{Message: "connection refused"}
+
+	alerter.SendAlert(context.Background(), checkDef, status, true)
+
+	require.Len(t, sender.errorSnapshotCalls, 1, "should post error snapshot")
+	assert.Equal(t, "C123", sender.errorSnapshotCalls[0].channelID)
+	assert.Equal(t, "connection refused", sender.errorSnapshotCalls[0].info.Message)
+}
+
+func TestSendAlert_NoErrorSnapshotOnReply(t *testing.T) {
+	repo := newMockRepo()
+	repo.threads["check-1"] = models.SlackAlertThread{
+		CheckUUID: "check-1", ChannelID: "C123", ThreadTs: "1234.5678", ParentTs: "1234.5678",
+	}
+	sender := &mockSlackSender{}
+	alerter := newSlackAlerterWithSender(sender, repo, "C123")
+
+	checkDef := models.CheckDefinition{UUID: "check-1", Name: "test-check", Project: "proj"}
+	status := models.CheckStatus{Message: "still failing"}
+
+	// Ongoing failure — should NOT post error snapshot
+	alerter.SendAlert(context.Background(), checkDef, status, false)
+
+	assert.Len(t, sender.errorSnapshotCalls, 0, "should NOT post error snapshot for replies")
+}
+
+func TestHandleRecovery_PassesOriginalErrorToResolve(t *testing.T) {
+	repo := newMockRepo()
+	repo.threads["check-1"] = models.SlackAlertThread{
+		CheckUUID: "check-1", ChannelID: "C123", ThreadTs: "1234.5678", ParentTs: "1234.5678",
+	}
+	sender := &mockSlackSender{}
+	alerter := newSlackAlerterWithSender(sender, repo, "C123")
+
+	checkDef := models.CheckDefinition{UUID: "check-1", Name: "test-check", Project: "proj"}
+
+	alerter.HandleRecovery(context.Background(), checkDef)
+
+	require.Len(t, sender.sendResolveCalls, 1, "should send resolve to Slack")
+	// The mock repo returns empty alert history, so OriginalError should be empty
+	assert.Equal(t, "", sender.sendResolveCalls[0].info.OriginalError)
 }
