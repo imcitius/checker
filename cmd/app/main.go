@@ -127,33 +127,35 @@ func main() {
 				repo.Close()
 			}()
 
-			// 3. Initialize Slack App client
-			var slackClient *slack.SlackClient
+			// 3. Build AppAlerter and WebhookRegistrar slices
+			var appAlerters []scheduler.AppAlerter
+			var webhooks []web.WebhookRegistrar
+
+			// Slack App
 			if cfg.SlackApp.BotToken != "" {
-				slackClient = slack.NewSlackClient(cfg.SlackApp.BotToken, cfg.SlackApp.SigningSecret, cfg.SlackApp.DefaultChannel)
+				slackClient := slack.NewSlackClient(cfg.SlackApp.BotToken, cfg.SlackApp.SigningSecret, cfg.SlackApp.DefaultChannel)
 				logrus.Info("Slack App client initialized")
+				appAlerters = append(appAlerters, scheduler.NewSlackAlerter(slackClient, repo, cfg.SlackApp.DefaultChannel))
+				webhooks = append(webhooks, &web.SlackWebhookRegistrar{Client: slackClient})
 			} else {
 				logrus.Info("Slack App not configured, skipping")
 			}
 
-			// 3b. Initialize Telegram App client
-			var telegramClient *telegram.TelegramClient
+			// Telegram App
 			if cfg.TelegramApp.BotToken != "" {
-				telegramClient = telegram.NewTelegramClient(
-					cfg.TelegramApp.BotToken,
-					cfg.TelegramApp.SecretToken,
-					cfg.TelegramApp.DefaultChatID,
-				)
+				tgClient := telegram.NewTelegramClient(cfg.TelegramApp.BotToken, cfg.TelegramApp.SecretToken, cfg.TelegramApp.DefaultChatID)
 				logrus.Info("Telegram App client initialized")
 				// Set webhook on startup if URL configured
 				if cfg.TelegramApp.WebhookURL != "" {
 					webhookURL := cfg.TelegramApp.WebhookURL + "/api/telegram/webhook"
-					if err := telegramClient.SetWebhook(context.Background(), webhookURL, cfg.TelegramApp.SecretToken); err != nil {
+					if err := tgClient.SetWebhook(context.Background(), webhookURL, cfg.TelegramApp.SecretToken); err != nil {
 						logrus.Errorf("Failed to set Telegram webhook: %v", err)
 					} else {
 						logrus.Infof("Telegram webhook set to %s", webhookURL)
 					}
 				}
+				appAlerters = append(appAlerters, scheduler.NewTelegramAppAlerter(tgClient, repo, cfg.TelegramApp.DefaultChatID))
+				webhooks = append(webhooks, &web.TelegramWebhookRegistrar{Client: tgClient})
 			} else {
 				logrus.Info("Telegram App not configured, skipping")
 			}
@@ -162,16 +164,6 @@ func main() {
 			authMgr, err := auth.NewAuthManager(ctx, cfg)
 			if err != nil {
 				return fmt.Errorf("failed to initialize auth: %w", err)
-			}
-
-			var slackAlerter *scheduler.SlackAlerter
-			if slackClient != nil {
-				slackAlerter = scheduler.NewSlackAlerter(slackClient, repo, cfg.SlackApp.DefaultChannel)
-			}
-
-			var telegramAlerter *scheduler.TelegramAppAlerter
-			if telegramClient != nil {
-				telegramAlerter = scheduler.NewTelegramAppAlerter(telegramClient, repo, cfg.TelegramApp.DefaultChatID)
 			}
 
 			// 3d. Migrate legacy alert fields to AlertChannels
@@ -187,7 +179,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := scheduler.RunScheduler(schedulerCtx, cfg, repo, slackAlerter, telegramAlerter); err != nil {
+				if err := scheduler.RunScheduler(schedulerCtx, cfg, repo, appAlerters); err != nil {
 					logrus.Errorf("Scheduler error: %v", err)
 				}
 			}()
@@ -198,7 +190,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := web.RunServer(serverCtx, cfg, repo, slackClient, telegramClient, authMgr); err != nil {
+				if err := web.RunServer(serverCtx, cfg, repo, webhooks, authMgr); err != nil {
 					logrus.Errorf("Web server error: %v", err)
 					// Trigger app shutdown if web server fails
 					cancel()
