@@ -21,6 +21,7 @@ import (
 	"checker/internal/db"
 	"checker/internal/models"
 	"checker/internal/slack"
+	"checker/internal/telegram"
 )
 
 var (
@@ -196,7 +197,7 @@ func BroadcastAlertResolved(checkUUID string) {
 }
 
 // RunServer starts the web server and returns an error if it fails
-func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slackClient *slack.SlackClient, authMgr *auth.AuthManager) error {
+func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slackClient *slack.SlackClient, telegramClient *telegram.TelegramClient, authMgr *auth.AuthManager) error {
 	// Create a router with default middleware
 	router := gin.Default()
 
@@ -264,6 +265,13 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		logrus.Info("Slack interactive endpoint registered at /api/slack/interactive")
 		router.POST("/api/slack/commands", gin.WrapF(handler.HandleSlashCommand))
 		logrus.Info("Slack slash command endpoint registered at /api/slack/commands")
+	}
+
+	// Telegram routes (exempt from OIDC — they use secret token verification)
+	if telegramClient != nil {
+		tgHandler := NewTelegramWebhookHandler(telegramClient.SecretToken(), telegramClient, repo)
+		router.POST("/api/telegram/webhook", gin.WrapF(tgHandler.HandleWebhook))
+		logrus.Info("Telegram webhook endpoint registered at /api/telegram/webhook")
 	}
 
 	// Protected routes (OIDC cookie or API key required)
