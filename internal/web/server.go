@@ -315,6 +315,7 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 	// REST API routes
 	checkDefinitionsGroup := protected.Group("/api/check-definitions")
 	{
+		checkDefinitionsGroup.POST("/test", TestCheckDefinition)
 		checkDefinitionsGroup.GET("", ListCheckDefinitions)
 		checkDefinitionsGroup.GET("/:uuid", GetCheckDefinition)
 		checkDefinitionsGroup.POST("", CreateCheckDefinition)

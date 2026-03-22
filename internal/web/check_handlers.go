@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
+	"checker/internal/checks"
 	"checker/internal/db"
 	"checker/internal/models"
 )
@@ -624,6 +625,82 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 	}
 
 	return def
+}
+
+// TestCheckDefinition executes a check definition without saving it (dry-run).
+// POST /api/check-definitions/test
+func TestCheckDefinition(c *gin.Context) {
+	var vm models.CheckDefinitionViewModel
+	if err := c.ShouldBindJSON(&vm); err != nil {
+		logrus.Errorf("Failed to bind check definition for test: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid check definition data",
+		})
+		return
+	}
+
+	// Validate that check type is set
+	if vm.Type == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Check type is required",
+		})
+		return
+	}
+
+	// Convert VM -> Domain Model
+	def := convertFromCheckDefViewModel(vm)
+
+	// Create the checker via the factory
+	logger := logrus.WithField("handler", "TestCheckDefinition")
+	checker := checks.CheckerFactory(def, logger)
+	if checker == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("Unsupported or misconfigured check type: %s", vm.Type),
+		})
+		return
+	}
+
+	// Execute with a 30-second hard timeout
+	type checkResult struct {
+		duration time.Duration
+		err      error
+	}
+	resultCh := make(chan checkResult, 1)
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	go func() {
+		d, err := checker.Run()
+		resultCh <- checkResult{duration: d, err: err}
+	}()
+
+	select {
+	case res := <-resultCh:
+		durationMs := res.duration.Milliseconds()
+		if res.err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success":     false,
+				"duration_ms": durationMs,
+				"message":     res.err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"success":     true,
+				"duration_ms": durationMs,
+				"message":     "OK",
+			})
+		}
+	case <-ctx.Done():
+		c.JSON(http.StatusOK, gin.H{
+			"success":     false,
+			"duration_ms": 30000,
+			"message":     "Check timed out after 30 seconds",
+		})
+	}
 }
 
 // SetMaintenanceWindow sets a maintenance window for a check definition.
