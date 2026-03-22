@@ -176,6 +176,9 @@ func (m *mockEscalationRepo) UpdateAlertChannel(_ context.Context, _ models.Aler
 	return nil
 }
 func (m *mockEscalationRepo) DeleteAlertChannel(_ context.Context, _ string) error { return nil }
+func (m *mockEscalationRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
+	return 0, nil
+}
 
 // --- Tests ---
 
