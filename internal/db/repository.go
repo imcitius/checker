@@ -64,6 +64,9 @@ type Repository interface {
 	CreateEscalationNotification(ctx context.Context, notification models.EscalationNotification) error
 	DeleteEscalationNotifications(ctx context.Context, checkUUID string) error
 
+	// Migrations
+	MigrateLegacyAlertFields(ctx context.Context) (int, error) // returns count of migrated checks
+
 	// Alert channels
 	GetAllAlertChannels(ctx context.Context) ([]models.AlertChannel, error)
 	GetAlertChannelByName(ctx context.Context, name string) (models.AlertChannel, error)
