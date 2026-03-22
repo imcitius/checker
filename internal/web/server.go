@@ -20,9 +20,12 @@ import (
 	"checker/internal/config"
 	"checker/internal/db"
 	"checker/internal/models"
-	"checker/internal/slack"
-	"checker/internal/telegram"
 )
+
+// WebhookRegistrar allows app integrations to register their webhook routes.
+type WebhookRegistrar interface {
+	RegisterRoutes(router *gin.Engine, repo db.Repository)
+}
 
 var (
 	// WebSocket upgrader with more explicit configuration
@@ -197,7 +200,7 @@ func BroadcastAlertResolved(checkUUID string) {
 }
 
 // RunServer starts the web server and returns an error if it fails
-func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slackClient *slack.SlackClient, telegramClient *telegram.TelegramClient, authMgr *auth.AuthManager) error {
+func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, webhooks []WebhookRegistrar, authMgr *auth.AuthManager) error {
 	// Create a router with default middleware
 	router := gin.Default()
 
@@ -258,20 +261,9 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, slac
 		router.GET("/login", serveSPA(spaRoot))
 	}
 
-	// Slack routes (exempt from OIDC — they have their own signature verification)
-	if slackClient != nil {
-		handler := NewSlackInteractiveHandler(slackClient.SigningSecret(), slackClient, repo)
-		router.POST("/api/slack/interactive", gin.WrapF(handler.HandleInteraction))
-		logrus.Info("Slack interactive endpoint registered at /api/slack/interactive")
-		router.POST("/api/slack/commands", gin.WrapF(handler.HandleSlashCommand))
-		logrus.Info("Slack slash command endpoint registered at /api/slack/commands")
-	}
-
-	// Telegram routes (exempt from OIDC — they use secret token verification)
-	if telegramClient != nil {
-		tgHandler := NewTelegramWebhookHandler(telegramClient.SecretToken(), telegramClient, repo)
-		router.POST("/api/telegram/webhook", gin.WrapF(tgHandler.HandleWebhook))
-		logrus.Info("Telegram webhook endpoint registered at /api/telegram/webhook")
+	// Register webhook routes for app integrations (Slack, Telegram, etc.)
+	for _, wh := range webhooks {
+		wh.RegisterRoutes(router, repo)
 	}
 
 	// Protected routes (OIDC cookie or API key required)

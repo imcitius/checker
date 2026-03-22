@@ -10,12 +10,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
 	"checker/internal/db"
 	"checker/internal/models"
 	"checker/internal/telegram"
 )
+
+// TelegramWebhookRegistrar registers the Telegram webhook route.
+type TelegramWebhookRegistrar struct {
+	Client *telegram.TelegramClient
+}
+
+func (r *TelegramWebhookRegistrar) RegisterRoutes(router *gin.Engine, repo db.Repository) {
+	handler := NewTelegramWebhookHandler(r.Client.SecretToken(), r.Client, repo)
+	router.POST("/api/telegram/webhook", gin.WrapF(handler.HandleWebhook))
+	logrus.Info("Telegram webhook endpoint registered at /api/telegram/webhook")
+}
 
 // TelegramWebhookHandler handles Telegram webhook updates (callback queries and bot commands).
 type TelegramWebhookHandler struct {
