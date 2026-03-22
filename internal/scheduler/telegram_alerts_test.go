@@ -13,6 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Compile-time interface check.
+var _ AppAlerter = (*TelegramAppAlerter)(nil)
+
 // --- Mock Telegram Sender ---
 
 type mockTelegramSender struct {
