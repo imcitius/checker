@@ -35,26 +35,24 @@ type Scheduler struct {
 	checkMap        map[string]*CheckItem // Map UUID -> CheckItem
 	lock            sync.Mutex
 	repo            db.Repository
-	slackAlerter    *SlackAlerter
-	telegramAlerter *TelegramAppAlerter
+	appAlerters []AppAlerter
 }
 
 // NewScheduler creates a new scheduler instance
-func NewScheduler(repo db.Repository, slackAlerter *SlackAlerter, telegramAlerter *TelegramAppAlerter) *Scheduler {
+func NewScheduler(repo db.Repository, appAlerters []AppAlerter) *Scheduler {
 	h := &CheckHeap{}
 	heap.Init(h)
 	return &Scheduler{
-		workerPool:      NewWorkerPool(DefaultWorkerPoolSize, repo, slackAlerter, telegramAlerter),
-		checkHeap:       h,
-		checkMap:        make(map[string]*CheckItem),
-		repo:            repo,
-		slackAlerter:    slackAlerter,
-		telegramAlerter: telegramAlerter,
+		workerPool:  NewWorkerPool(DefaultWorkerPoolSize, repo, appAlerters),
+		checkHeap:   h,
+		checkMap:    make(map[string]*CheckItem),
+		repo:        repo,
+		appAlerters: appAlerters,
 	}
 }
 
 // RunScheduler starts the health check scheduler.
-func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, slackAlerter *SlackAlerter, telegramAlerter *TelegramAppAlerter) error {
+func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, appAlerters []AppAlerter) error {
 	logrus.Info("Starting event-driven health check scheduler")
 
 	// Initialize email alert configuration from config
@@ -71,7 +69,7 @@ func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, s
 		logrus.Info("Email alerter configured")
 	}
 
-	s := NewScheduler(repo, slackAlerter, telegramAlerter)
+	s := NewScheduler(repo, appAlerters)
 
 	// Start worker pool
 	s.workerPool.Start()
@@ -282,7 +280,7 @@ func (s *Scheduler) getAllChecks(ctx context.Context) ([]models.CheckDefinition,
 }
 
 // executeCheck runs a single check and updates its status
-func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAlerter *SlackAlerter, telegramAlerter *TelegramAppAlerter) error {
+func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerters []AppAlerter) error {
 	logger := logrus.WithFields(logrus.Fields{
 		"project": checkDef.Project,
 		// "group":   checkDef.GroupName,
@@ -364,7 +362,7 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 	// Handle alerts if check fails
 	if !isHealthy {
 		if shouldSendAlert(previouslyHealthy, reAlertInterval, checkStatus) {
-			sendAlerts(repo, checkStatus, checkDef, slackAlerter != nil, telegramAlerter != nil)
+			sendAlerts(repo, checkStatus, checkDef, appAlerters)
 
 			checkStatus.LastAlertSent = runTime
 			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
@@ -372,23 +370,14 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 			}
 		}
 
-		// Slack App alert (runs alongside existing alerts)
-		if slackAlerter != nil {
-			// isNewIncident is true when the check transitions from healthy to unhealthy.
-			// This tells SendAlert to create a fresh thread instead of replying to any
-			// stale unresolved thread left over from a previous incident.
-			isNewIncident := previouslyHealthy
-			slackAlerter.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
-		}
-
-		// Telegram App alert (runs alongside existing alerts)
-		if telegramAlerter != nil {
-			isNewIncident := previouslyHealthy
-			telegramAlerter.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+		// App alerters (Slack App, Telegram App, etc.) — runs alongside existing alerts
+		isNewIncident := previouslyHealthy
+		for _, aa := range appAlerters {
+			aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
 		}
 
 		// Process escalation policy (if assigned)
-		processEscalation(repo, checkDef, checkStatus, slackAlerter)
+		processEscalation(repo, checkDef, checkStatus, appAlerters)
 
 		// Execute actors (webhook, log) — separate from alert dispatch
 		if checkDef.ActorType != "" && checkDef.ActorType != "alert" {
@@ -407,17 +396,12 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 
 	// Handle recovery when check transitions from unhealthy to healthy
 	if isHealthy && wasUnhealthy {
-		// Send recovery alerts for legacy channels (telegram, slack webhook)
-		sendRecoveryAlerts(repo, checkStatus, checkDef, slackAlerter != nil, telegramAlerter != nil)
+		// Send recovery alerts for legacy channels
+		sendRecoveryAlerts(repo, checkStatus, checkDef, appAlerters)
 
-		// Handle Slack App recovery (thread resolution)
-		if slackAlerter != nil {
-			slackAlerter.HandleRecovery(context.Background(), checkDef)
-		}
-
-		// Handle Telegram App recovery (thread resolution)
-		if telegramAlerter != nil {
-			telegramAlerter.HandleRecovery(context.Background(), checkDef)
+		// Handle app alerter recovery (thread resolution, etc.)
+		for _, aa := range appAlerters {
+			aa.HandleRecovery(context.Background(), checkDef)
 		}
 
 		// Clear escalation notifications on recovery (reset for next incident)
@@ -482,14 +466,15 @@ func resolveAlerter(repo db.Repository, channelName string) (alerts.Alerter, err
 }
 
 // sendAlerts dispatches alerts based on the check definition using the Alerter registry.
-// When slackAppActive is true, alerters with Type() == "slack" are skipped because the SlackAlerter handles it natively.
-// When telegramAppActive is true, alerters with Type() == "telegram" are skipped because the TelegramAppAlerter handles it natively.
-func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool, telegramAppActive bool) {
+// Alerters whose Type() matches any type owned by an active AppAlerter are skipped
+// to prevent duplicate alerts.
+func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, appAlerters []AppAlerter) {
 	channels := getEffectiveAlertChannels(checkDef)
 	if len(channels) == 0 {
 		return
 	}
 
+	ownedTypes := buildOwnedTypeSet(appAlerters)
 	severity := getEffectiveSeverity(checkDef)
 	payload := alerts.AlertPayload{
 		CheckName:  status.CheckName,
@@ -507,12 +492,8 @@ func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.C
 			logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)
 			continue
 		}
-		// Slack App bypass: check resolved type, not name
-		if alerter.Type() == "slack" && slackAppActive {
-			continue
-		}
-		// Telegram App bypass: check resolved type, not name
-		if alerter.Type() == "telegram" && telegramAppActive {
+		// Skip channels whose type is owned by an active AppAlerter
+		if ownedTypes[alerter.Type()] {
 			continue
 		}
 		logrus.Infof("Sending %s notification (severity=%s) for check %s (%s/%s)",
@@ -524,9 +505,9 @@ func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.C
 }
 
 // sendRecoveryAlerts dispatches recovery notifications using the Alerter registry.
-// When slackAppActive is true, alerters with Type() == "slack" are skipped because the SlackAlerter handles recovery natively.
-// When telegramAppActive is true, alerters with Type() == "telegram" are skipped because the TelegramAppAlerter handles recovery natively.
-func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool, telegramAppActive bool) {
+// Alerters whose Type() matches any type owned by an active AppAlerter are skipped
+// to prevent duplicate recovery notifications.
+func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, appAlerters []AppAlerter) {
 	channels := getEffectiveAlertChannels(checkDef)
 	if len(channels) == 0 {
 		return
@@ -541,18 +522,16 @@ func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef 
 		Timestamp:  status.LastRun,
 	}
 
+	ownedTypes := buildOwnedTypeSet(appAlerters)
+
 	for _, channel := range channels {
 		alerter, err := resolveAlerter(repo, channel)
 		if err != nil {
 			logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)
 			continue
 		}
-		// Slack App bypass: check resolved type, not name
-		if alerter.Type() == "slack" && slackAppActive {
-			continue
-		}
-		// Telegram App bypass: check resolved type, not name
-		if alerter.Type() == "telegram" && telegramAppActive {
+		// Skip channels whose type is owned by an active AppAlerter
+		if ownedTypes[alerter.Type()] {
 			continue
 		}
 		logrus.Infof("Sending %s recovery notification for check %s (%s/%s)",
