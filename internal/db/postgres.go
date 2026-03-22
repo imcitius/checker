@@ -1044,3 +1044,44 @@ func (db *PostgresDB) ResolveTelegramThread(ctx context.Context, checkUUID strin
 		checkUUID)
 	return err
 }
+
+// MigrateLegacyAlertFields converts checks using the old ActorType="alert" + AlertType
+// config to use AlertChannels. Idempotent — safe to run multiple times.
+func (db *PostgresDB) MigrateLegacyAlertFields(ctx context.Context) (int, error) {
+	// First, warn about checks that had AlertDestination set
+	rows, err := db.Pool.Query(ctx,
+		`SELECT uuid, name, alert_destination FROM check_definitions
+		 WHERE actor_type = 'alert'
+		   AND alert_type IS NOT NULL AND alert_type != ''
+		   AND (alert_channels IS NULL OR alert_channels = '[]' OR alert_channels = '')
+		   AND alert_destination IS NOT NULL AND alert_destination != ''`)
+	if err != nil {
+		return 0, fmt.Errorf("querying checks with alert_destination: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var uuid, name, dest string
+		if err := rows.Scan(&uuid, &name, &dest); err != nil {
+			logrus.Warnf("Failed to scan alert_destination row: %v", err)
+			continue
+		}
+		logrus.Warnf("Check %q (%s) had AlertDestination=%q which is NOT auto-migrated. Please create a named alert channel in the Settings UI.", name, uuid, dest)
+	}
+	rows.Close()
+
+	// Perform the migration
+	tag, err := db.Pool.Exec(ctx, `
+		UPDATE check_definitions
+		SET alert_channels = json_build_array(alert_type),
+		    actor_type = NULL,
+		    alert_type = NULL,
+		    alert_destination = NULL
+		WHERE actor_type = 'alert'
+		  AND alert_type IS NOT NULL AND alert_type != ''
+		  AND (alert_channels IS NULL OR alert_channels = '[]' OR alert_channels = '')`)
+	if err != nil {
+		return 0, fmt.Errorf("migrating legacy alert fields: %w", err)
+	}
+
+	return int(tag.RowsAffected()), nil
+}

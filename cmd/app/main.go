@@ -174,6 +174,13 @@ func main() {
 				telegramAlerter = scheduler.NewTelegramAppAlerter(telegramClient, repo, cfg.TelegramApp.DefaultChatID)
 			}
 
+			// 3d. Migrate legacy alert fields to AlertChannels
+			if count, err := repo.MigrateLegacyAlertFields(ctx); err != nil {
+				logrus.Errorf("Failed to migrate legacy alert fields: %v", err)
+			} else if count > 0 {
+				logrus.Infof("Migrated %d checks from legacy alert fields to AlertChannels", count)
+			}
+
 			// 4. Start Scheduler in background
 			logrus.Info("Starting scheduler")
 			schedulerCtx, schedulerCancel := context.WithCancel(ctx)
