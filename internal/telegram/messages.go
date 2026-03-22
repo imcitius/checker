@@ -201,6 +201,90 @@ func BuildUnsilenceConfirmationHTML(scope, target, user string) string {
 	)
 }
 
+// BuildSilencedAlertHTML builds an alert message with a "🔇 SILENCED" badge and no action buttons.
+func BuildSilencedAlertHTML(info CheckAlertInfo) string {
+	now := time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
+
+	errorMsg := info.Message
+	if errorMsg == "" {
+		errorMsg = "No error message"
+	}
+
+	html := fmt.Sprintf(
+		"\U0001f507 <b>SILENCED: %s</b>\n\n"+
+			"<b>Project:</b> %s\n"+
+			"<b>Group:</b> %s\n"+
+			"<b>Type:</b> %s %s\n"+
+			"<b>Status:</b> %s\n\n"+
+			"<pre>%s</pre>\n\n"+
+			"<i>\u23f0 %s | UUID: %s",
+		info.Name,
+		info.Project,
+		info.Group,
+		typeEmoji(info.CheckType), info.CheckType,
+		statusText(info.IsHealthy),
+		errorMsg,
+		now, info.UUID,
+	)
+
+	if info.Frequency != "" {
+		html += fmt.Sprintf(" | Every %s", info.Frequency)
+	}
+	html += "</i>"
+
+	return html
+}
+
+// BuildAcknowledgedAlertHTML builds an alert message with a "👀 ACKNOWLEDGED" badge.
+func BuildAcknowledgedAlertHTML(info CheckAlertInfo) string {
+	now := time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
+
+	errorMsg := info.Message
+	if errorMsg == "" {
+		errorMsg = "No error message"
+	}
+
+	html := fmt.Sprintf(
+		"\U0001f440 <b>ACKNOWLEDGED: %s</b>\n\n"+
+			"<b>Project:</b> %s\n"+
+			"<b>Group:</b> %s\n"+
+			"<b>Type:</b> %s %s\n"+
+			"<b>Status:</b> %s\n\n"+
+			"<pre>%s</pre>\n\n"+
+			"<i>\u23f0 %s | UUID: %s",
+		info.Name,
+		info.Project,
+		info.Group,
+		typeEmoji(info.CheckType), info.CheckType,
+		statusText(info.IsHealthy),
+		errorMsg,
+		now, info.UUID,
+	)
+
+	if info.Frequency != "" {
+		html += fmt.Sprintf(" | Every %s", info.Frequency)
+	}
+	html += "</i>"
+
+	return html
+}
+
+// BuildAcknowledgedAlertKeyboard builds a keyboard for acknowledged alerts (silence buttons, no ack).
+func BuildAcknowledgedAlertKeyboard(info CheckAlertInfo) *InlineKeyboardMarkup {
+	return &InlineKeyboardMarkup{
+		InlineKeyboard: [][]InlineKeyboardButton{
+			{
+				{Text: "\U0001f507 Silence 1h", CallbackData: "s|1h"},
+				{Text: "\U0001f507 Silence 4h", CallbackData: "s|4h"},
+				{Text: "\U0001f507 Indefinite", CallbackData: "s|indef"},
+			},
+			{
+				{Text: "\U0001f507 Silence project 1h", CallbackData: "sp|1h"},
+			},
+		},
+	}
+}
+
 // BuildAlertKeyboard builds an inline keyboard with silence and acknowledge buttons.
 func BuildAlertKeyboard(info CheckAlertInfo) *InlineKeyboardMarkup {
 	return &InlineKeyboardMarkup{

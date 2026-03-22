@@ -30,6 +30,17 @@ func NewTelegramClient(botToken, secretToken, defaultChatID string) *TelegramCli
 	}
 }
 
+// NewTelegramClientWithBaseURL creates a TelegramClient with a custom base URL (for testing).
+func NewTelegramClientWithBaseURL(botToken, secretToken, defaultChatID, baseURL string) *TelegramClient {
+	return &TelegramClient{
+		botToken:      botToken,
+		secretToken:   secretToken,
+		defaultChatID: defaultChatID,
+		httpClient:    &http.Client{Timeout: 10 * time.Second},
+		baseURL:       baseURL,
+	}
+}
+
 // DefaultChatID returns the configured default chat ID.
 func (c *TelegramClient) DefaultChatID() string {
 	return c.defaultChatID
