@@ -23,7 +23,7 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from '@/components/ui/collapsible'
-import { Plus, X, ChevronDown, ChevronRight, Wrench } from 'lucide-react'
+import { Plus, X, ChevronDown, ChevronRight, Wrench, Play } from 'lucide-react'
 import { api } from '@/lib/api'
 
 /** Inline string list editor — add/remove entries (used for server_list, analytic_replicas) */
@@ -369,6 +369,12 @@ export function CheckEditDrawer({
 
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [errors, setErrors] = useState<Set<string>>(new Set())
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{
+    success: boolean
+    duration_ms: number
+    message: string
+  } | null>(null)
 
   // Sync advanced section open state when check changes
   useEffect(() => {
@@ -377,6 +383,7 @@ export function CheckEditDrawer({
 
   const updateForm = (field: string, value: string | number | boolean | number[] | Record<string, string>[]) => {
     onCheckChange({ ...editingCheck, [field]: value })
+    setTestResult(null)
   }
 
   const updateDBField = (field: string, value: string | string[]) => {
@@ -384,6 +391,7 @@ export function CheckEditDrawer({
       ...editingCheck,
       [dbKey]: { ...(isMySQL ? editingCheck.mysql : editingCheck.pgsql), [field]: value },
     })
+    setTestResult(null)
   }
 
   const updateAuth = (field: string, value: string) => {
@@ -391,6 +399,7 @@ export function CheckEditDrawer({
       ...editingCheck,
       auth: { ...editingCheck.auth, [field]: value },
     })
+    setTestResult(null)
   }
 
   const validate = (): boolean => {
@@ -410,6 +419,43 @@ export function CheckEditDrawer({
       onSave()
     }
   }
+
+  const handleTest = async () => {
+    if (!validate()) return
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const result = await api.testCheck(editingCheck)
+      setTestResult(result)
+    } catch (err) {
+      setTestResult({
+        success: false,
+        duration_ms: 0,
+        message: err instanceof Error ? err.message : 'Unknown error',
+      })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  // Determine if the test button should be enabled based on filled connection fields
+  const isPassive = editingCheck.type === 'passive'
+  const isSSLCert = editingCheck.type === 'ssl_cert'
+  const isSMTP = editingCheck.type === 'smtp'
+  const isGRPC = editingCheck.type === 'grpc_health'
+  const isWebSocketType = editingCheck.type === 'websocket'
+
+  const canTest = (() => {
+    if (!editingCheck.type) return false
+    if (isPassive) return true
+    if (isHTTP || isWebSocketType) return !!editingCheck.url?.trim()
+    if (isTCP || isDB || isSSH || isRedis || isSSLCert || isSMTP || isGRPC) return !!editingCheck.host?.trim()
+    if (isICMP) return !!editingCheck.host?.trim()
+    if (isDNS) return !!editingCheck.domain?.trim()
+    if (isDomainExpiry) return !!editingCheck.domain?.trim()
+    if (isMongoDB) return !!editingCheck.mongodb_uri?.trim()
+    return false
+  })()
 
   const hasConnection = isHTTP || isTCP || isICMP || isDB || isDNS || isSSH || isRedis || isMongoDB || isDomainExpiry
   const hasAdvanced = isHTTP || isDB || isICMP || isDNS || isSSH || isRedis
@@ -1084,13 +1130,36 @@ export function CheckEditDrawer({
         </div>
 
         {/* Sticky footer */}
-        <div className="flex-shrink-0 flex items-center justify-end gap-2 px-6 py-4 border-t bg-background">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : editingCheck.uuid ? 'Update' : 'Create'}
-          </Button>
+        <div className="flex-shrink-0 px-6 py-4 border-t bg-background space-y-2">
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleTest}
+              disabled={testing || !canTest}
+            >
+              <Play className="h-3.5 w-3.5 mr-1.5" />
+              {testing ? 'Testing...' : 'Test'}
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : editingCheck.uuid ? 'Update' : 'Create'}
+            </Button>
+          </div>
+          {testResult && (
+            <div
+              className={`text-sm px-1 ${
+                testResult.success
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-red-600 dark:text-red-400'
+              }`}
+            >
+              {testResult.success
+                ? `\u2713 Check passed (${testResult.duration_ms}ms)`
+                : `\u2717 Check failed: ${testResult.message} (${testResult.duration_ms}ms)`}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

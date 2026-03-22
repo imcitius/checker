@@ -8,6 +8,42 @@ import (
 	"strings"
 )
 
+// SlackWebhookAlerter implements the Alerter interface for Slack webhooks.
+type SlackWebhookAlerter struct {
+	WebhookURL string
+}
+
+func (a *SlackWebhookAlerter) Type() string { return "slack" }
+
+func (a *SlackWebhookAlerter) SendAlert(p AlertPayload) error {
+	msg := fmt.Sprintf("[%s] Check %s (%s/%s) failed: %s",
+		strings.ToUpper(p.Severity), p.CheckName, p.Project, p.CheckGroup, p.Message)
+	return SendSlackAlert(a.WebhookURL, msg)
+}
+
+func (a *SlackWebhookAlerter) SendRecovery(p RecoveryPayload) error {
+	msg := fmt.Sprintf("RECOVERY: Check %s (%s/%s) is healthy again", p.CheckName, p.Project, p.CheckGroup)
+	return SendSlackAlert(a.WebhookURL, msg)
+}
+
+func newSlackWebhookAlerter(raw json.RawMessage) (Alerter, error) {
+	var cfg struct {
+		WebhookURL string `json:"webhook_url"`
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing slack config: %w", err)
+	}
+	if cfg.WebhookURL == "" {
+		return nil, fmt.Errorf("slack requires webhook_url")
+	}
+	return &SlackWebhookAlerter{WebhookURL: cfg.WebhookURL}, nil
+}
+
+func init() {
+	RegisterAlerter("slack", newSlackWebhookAlerter)
+	RegisterAlerter("slack_webhook", newSlackWebhookAlerter)
+}
+
 // Note: SendSlackAlert uses postJSON, but SendSlackAppTest uses custom logic
 // (parses response body for Slack API errors), so it stays manual.
 

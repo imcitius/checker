@@ -14,18 +14,6 @@ import (
 	"checker/internal/models"
 )
 
-// validChannelTypes is the set of supported alert channel types.
-var validChannelTypes = map[string]bool{
-	"telegram":      true,
-	"slack":         true,
-	"slack_webhook": true,
-	"email":         true,
-	"discord":       true,
-	"teams":         true,
-	"pagerduty":     true,
-	"opsgenie":      true,
-}
-
 // ListAlertChannels returns all alert channels with sensitive fields masked.
 // GET /api/alert-channels
 func ListAlertChannels(c *gin.Context) {
@@ -66,7 +54,7 @@ func CreateAlertChannel(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Channel name is required"})
 		return
 	}
-	if !validChannelTypes[channel.Type] {
+	if !alerts.IsRegisteredType(channel.Type) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid channel type: %s", channel.Type)})
 		return
 	}
@@ -104,7 +92,7 @@ func UpdateAlertChannel(c *gin.Context) {
 	// Ensure name from URL is used
 	channel.Name = name
 
-	if !validChannelTypes[channel.Type] {
+	if !alerts.IsRegisteredType(channel.Type) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid channel type: %s", channel.Type)})
 		return
 	}

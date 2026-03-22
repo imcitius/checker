@@ -10,6 +10,7 @@ import { EventLog } from '@/components/EventLog'
 import { StatusBar } from '@/components/StatusBar'
 import { useChecks } from '@/hooks/useChecks'
 import { useEventLog } from '@/hooks/useEventLog'
+import { useFavicon } from '@/hooks/useFavicon'
 import { useKeyboard } from '@/hooks/useKeyboard'
 import { api } from '@/lib/api'
 import type { Check } from '@/lib/websocket'
@@ -68,6 +69,7 @@ function saveSort(column: SortColumn | null, direction: SortDirection) {
 export function Dashboard() {
   const { checks, previousChecks, stats, wsStatus, getGrouped } = useChecks()
   const { entries } = useEventLog(checks, previousChecks)
+  useFavicon(stats.unhealthy, stats.total - stats.disabled)
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode)
@@ -218,14 +220,6 @@ export function Dashboard() {
     })
   }, [])
 
-  const handleToggleCheck = useCallback(async (uuid: string, enabled: boolean) => {
-    try {
-      await api.toggleCheck(uuid, enabled)
-    } catch (err) {
-      console.error('Failed to toggle check:', err)
-    }
-  }, [])
-
   const handleSelectCheck = useCallback(
     (uuid: string) => {
       if (selectedUUID === uuid) {
@@ -337,7 +331,6 @@ export function Dashboard() {
               selectedUUID={selectedUUID}
               expandedUUID={expandedUUID}
               onSelectCheck={handleSelectCheck}
-              onToggleCheck={handleToggleCheck}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
               onSort={handleSort}

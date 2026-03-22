@@ -1,8 +1,41 @@
 package alerts
 
 import (
+	"encoding/json"
 	"fmt"
 )
+
+// PagerDutyAlerter implements the Alerter interface for PagerDuty.
+type PagerDutyAlerter struct {
+	RoutingKey string
+}
+
+func (a *PagerDutyAlerter) Type() string { return "pagerduty" }
+
+func (a *PagerDutyAlerter) SendAlert(p AlertPayload) error {
+	return SendPagerDutyTrigger(a.RoutingKey, p.CheckUUID, p.CheckName, p.Message, p.Severity)
+}
+
+func (a *PagerDutyAlerter) SendRecovery(p RecoveryPayload) error {
+	return SendPagerDutyResolve(a.RoutingKey, p.CheckUUID, p.CheckName)
+}
+
+func newPagerDutyAlerter(raw json.RawMessage) (Alerter, error) {
+	var cfg struct {
+		RoutingKey string `json:"routing_key"`
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing pagerduty config: %w", err)
+	}
+	if cfg.RoutingKey == "" {
+		return nil, fmt.Errorf("pagerduty requires routing_key")
+	}
+	return &PagerDutyAlerter{RoutingKey: cfg.RoutingKey}, nil
+}
+
+func init() {
+	RegisterAlerter("pagerduty", newPagerDutyAlerter)
+}
 
 // PagerDutyEventsURL is the default PagerDuty Events API v2 endpoint.
 // It can be overridden in tests.

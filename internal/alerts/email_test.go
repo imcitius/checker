@@ -1,6 +1,7 @@
 package alerts
 
 import (
+	"encoding/json"
 	"net/smtp"
 	"strings"
 	"testing"
@@ -162,6 +163,71 @@ func TestSendEmailAlert_SMTPError(t *testing.T) {
 
 	err := SendEmailAlert(baseCfg(), data)
 	assert.Error(t, err)
+}
+
+func TestNewEmailAlerter_Valid(t *testing.T) {
+	cfg := json.RawMessage(`{
+		"smtp_host":"smtp.example.com",
+		"smtp_port":587,
+		"smtp_user":"user",
+		"smtp_password":"pass",
+		"from":"alerts@example.com",
+		"to":["ops@example.com"],
+		"use_tls":true
+	}`)
+	a, err := NewAlerter("email", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	ea, ok := a.(*EmailAlerter)
+	if !ok {
+		t.Fatalf("expected *EmailAlerter, got %T", a)
+	}
+	if ea.Config.SMTPHost != "smtp.example.com" {
+		t.Errorf("unexpected SMTPHost: %q", ea.Config.SMTPHost)
+	}
+	if ea.Config.SMTPPort != 587 {
+		t.Errorf("unexpected SMTPPort: %d", ea.Config.SMTPPort)
+	}
+	if ea.Config.From != "alerts@example.com" {
+		t.Errorf("unexpected From: %q", ea.Config.From)
+	}
+	if len(ea.Config.To) != 1 || ea.Config.To[0] != "ops@example.com" {
+		t.Errorf("unexpected To: %v", ea.Config.To)
+	}
+	if !ea.Config.UseTLS {
+		t.Error("expected UseTLS to be true")
+	}
+	if ea.Type() != "email" {
+		t.Errorf("expected Type() 'email', got %q", ea.Type())
+	}
+}
+
+func TestNewEmailAlerter_MissingFields(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  string
+	}{
+		{"missing smtp_host", `{"from":"a@b.com","to":["c@d.com"]}`},
+		{"missing from", `{"smtp_host":"smtp.example.com","to":["c@d.com"]}`},
+		{"missing to", `{"smtp_host":"smtp.example.com","from":"a@b.com"}`},
+		{"empty to", `{"smtp_host":"smtp.example.com","from":"a@b.com","to":[]}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewAlerter("email", json.RawMessage(tt.cfg))
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestNewEmailAlerter_InvalidJSON(t *testing.T) {
+	_, err := NewAlerter("email", json.RawMessage(`{invalid`))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON, got nil")
+	}
 }
 
 func TestBuildEmailMessage_Multipart(t *testing.T) {

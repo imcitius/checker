@@ -126,6 +126,36 @@ func BuildAlertBlocks(info CheckAlertInfo) []slack.Block {
 	}
 }
 
+// BuildErrorSnapshotBlocks constructs Block Kit blocks for an immutable error snapshot
+// thread reply. This is posted immediately after the initial alert and is never edited.
+// Layout:
+//   - Section: error message in code block
+//   - Context: target and timestamp
+func BuildErrorSnapshotBlocks(info CheckAlertInfo) []slack.Block {
+	errorMsg := info.Message
+	if errorMsg == "" {
+		errorMsg = "No error message"
+	}
+	errorText := fmt.Sprintf("```%s```", errorMsg)
+	errorSection := slack.NewSectionBlock(
+		slack.NewTextBlockObject(slack.MarkdownType, errorText, false, false),
+		nil, nil,
+	)
+
+	now := time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
+	contextElements := []slack.MixedElement{
+		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("⏰ %s", now), false, false),
+	}
+	if info.Target != "" {
+		contextElements = append(contextElements,
+			slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("Target: `%s`", info.Target), false, false),
+		)
+	}
+	contextBlock := slack.NewContextBlock("", contextElements...)
+
+	return []slack.Block{errorSection, contextBlock}
+}
+
 // BuildResolveBlocks constructs Block Kit blocks for a resolution thread reply.
 func BuildResolveBlocks(info CheckAlertInfo) []slack.Block {
 	header := slack.NewHeaderBlock(
@@ -175,8 +205,19 @@ func BuildResolvedOriginalBlocks(info CheckAlertInfo) []slack.Block {
 		slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("UUID: `%s`", info.UUID), false, false),
 	)
 
+	// Include original error message (muted) if available
+	blocks := []slack.Block{header, fieldsSection}
+	if info.OriginalError != "" {
+		errorSection := slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("> _Was: %s_", info.OriginalError), false, false),
+			nil, nil,
+		)
+		blocks = append(blocks, errorSection)
+	}
+	blocks = append(blocks, ctx)
+
 	// No action buttons — resolved messages don't need them
-	return []slack.Block{header, fieldsSection, ctx}
+	return blocks
 }
 
 // BuildUnsilenceConfirmationBlocks constructs Block Kit blocks for an un-silence confirmation reply.

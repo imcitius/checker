@@ -8,6 +8,42 @@ import (
 	"net/http"
 )
 
+// OpsgenieAlerter implements the Alerter interface for Opsgenie.
+type OpsgenieAlerter struct {
+	APIKey string
+	Region string
+}
+
+func (a *OpsgenieAlerter) Type() string { return "opsgenie" }
+
+func (a *OpsgenieAlerter) SendAlert(p AlertPayload) error {
+	client := &OpsgenieClient{APIKey: a.APIKey, Region: a.Region}
+	return client.Trigger(p.CheckName, p.CheckUUID, p.Message, p.Severity)
+}
+
+func (a *OpsgenieAlerter) SendRecovery(p RecoveryPayload) error {
+	client := &OpsgenieClient{APIKey: a.APIKey, Region: a.Region}
+	return client.Resolve(p.CheckUUID)
+}
+
+func newOpsgenieAlerter(raw json.RawMessage) (Alerter, error) {
+	var cfg struct {
+		APIKey string `json:"api_key"`
+		Region string `json:"region"`
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing opsgenie config: %w", err)
+	}
+	if cfg.APIKey == "" {
+		return nil, fmt.Errorf("opsgenie requires api_key")
+	}
+	return &OpsgenieAlerter{APIKey: cfg.APIKey, Region: cfg.Region}, nil
+}
+
+func init() {
+	RegisterAlerter("opsgenie", newOpsgenieAlerter)
+}
+
 // OpsgenieClient handles sending alerts to Opsgenie.
 type OpsgenieClient struct {
 	APIKey  string

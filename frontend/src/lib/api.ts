@@ -256,6 +256,12 @@ export const api = {
       { method: 'POST' }
     ),
 
+  testCheck: (data: Partial<CheckDefinition>) =>
+    request<{ success: boolean; duration_ms: number; message: string }>(
+      '/api/check-definitions/test',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
+
   getProjects: () => request<string[]>('/api/metadata/projects'),
   getCheckTypes: () => request<string[]>('/api/metadata/check-types'),
   getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),

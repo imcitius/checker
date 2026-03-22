@@ -138,6 +138,24 @@ func (c *SlackClient) SendAlertReply(ctx context.Context, channelID, threadTS st
 	return ts, nil
 }
 
+// PostErrorSnapshotReply posts an immutable error snapshot as a thread reply.
+// This reply is never edited on resolve/silence/ack, preserving error context.
+func (c *SlackClient) PostErrorSnapshotReply(ctx context.Context, channelID, threadTS string, info CheckAlertInfo) (string, error) {
+	blocks := BuildErrorSnapshotBlocks(info)
+	fallback := fmt.Sprintf("Error: %s", info.Message)
+
+	_, ts, err := c.api.PostMessageContext(ctx, channelID,
+		slack.MsgOptionBlocks(blocks...),
+		slack.MsgOptionText(fallback, false),
+		slack.MsgOptionTS(threadTS),
+	)
+	if err != nil {
+		return "", fmt.Errorf("PostErrorSnapshotReply: %w", err)
+	}
+
+	return ts, nil
+}
+
 // PostAlert is a backward-compatible wrapper around SendAlert.
 func (c *SlackClient) PostAlert(ctx context.Context, channelID string, info CheckAlertInfo) (string, error) {
 	return c.SendAlert(ctx, channelID, info)

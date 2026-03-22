@@ -13,12 +13,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
 	"checker/internal/db"
 	"checker/internal/models"
 	"checker/internal/slack"
 )
+
+// SlackWebhookRegistrar registers Slack interactive and command routes.
+type SlackWebhookRegistrar struct {
+	Client *slack.SlackClient
+}
+
+func (r *SlackWebhookRegistrar) RegisterRoutes(router *gin.Engine, repo db.Repository) {
+	handler := NewSlackInteractiveHandler(r.Client.SigningSecret(), r.Client, repo)
+	router.POST("/api/slack/interactive", gin.WrapF(handler.HandleInteraction))
+	logrus.Info("Slack interactive endpoint registered at /api/slack/interactive")
+	router.POST("/api/slack/commands", gin.WrapF(handler.HandleSlashCommand))
+	logrus.Info("Slack slash command endpoint registered at /api/slack/commands")
+}
 
 // SlackInteractiveHandler handles Slack interactive message payloads (button clicks).
 type SlackInteractiveHandler struct {

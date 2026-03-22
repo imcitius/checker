@@ -443,6 +443,17 @@ func TestSQLiteDB_AlertChannels(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestSQLiteDB_MigrateLegacyAlertFields(t *testing.T) {
+	db := newTestSQLiteDB(t)
+	ctx := context.Background()
+
+	// MigrateLegacyAlertFields is now a no-op since alert_type and alert_destination
+	// columns have been dropped. Verify it returns 0, nil.
+	count, err := db.MigrateLegacyAlertFields(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count, "should be a no-op returning 0")
+}
+
 // TestSQLiteDB_ImplementsRepository verifies the interface is satisfied at compile time.
 func TestSQLiteDB_ImplementsRepository(t *testing.T) {
 	var _ Repository = (*SQLiteDB)(nil)

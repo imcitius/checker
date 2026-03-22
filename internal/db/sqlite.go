@@ -75,8 +75,6 @@ func (s *SQLiteDB) ensureSchema() error {
 		last_alert_sent    DATETIME NOT NULL DEFAULT '1970-01-01T00:00:00Z',
 		duration           TEXT NOT NULL DEFAULT '30s',
 		actor_type         TEXT NOT NULL DEFAULT '',
-		alert_type         TEXT NOT NULL DEFAULT '',
-		alert_destination  TEXT NOT NULL DEFAULT '',
 		config             TEXT NOT NULL DEFAULT '{}',
 		actor_config       TEXT NOT NULL DEFAULT '{}',
 		slack_thread_ts    TEXT,
@@ -149,6 +147,18 @@ func (s *SQLiteDB) ensureSchema() error {
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_escalation_notif_unique
 		ON escalation_notifications(check_uuid, policy_name, step_index, notified_at);
 
+	CREATE TABLE IF NOT EXISTS telegram_alert_threads (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		check_uuid  TEXT NOT NULL,
+		chat_id     TEXT NOT NULL,
+		message_id  INTEGER NOT NULL,
+		is_resolved INTEGER NOT NULL DEFAULT 0,
+		created_at  DATETIME NOT NULL DEFAULT (datetime('now')),
+		resolved_at DATETIME
+	);
+	CREATE INDEX IF NOT EXISTS idx_tg_threads_unresolved ON telegram_alert_threads(check_uuid, is_resolved);
+	CREATE INDEX IF NOT EXISTS idx_tg_threads_message ON telegram_alert_threads(chat_id, message_id);
+
 	CREATE TABLE IF NOT EXISTS alert_channels (
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
 		name       TEXT NOT NULL UNIQUE,
@@ -182,7 +192,7 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 	err := scanner.Scan(
 		&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &enabled,
 		&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &isHealthy, &c.LastMessage, &c.LastAlertSent,
-		&c.Duration, &c.ActorType, &c.AlertType, &c.AlertDestination, &configJSON, &actorConfigJSON,
+		&c.Duration, &c.ActorType, &configJSON, &actorConfigJSON,
 		&severity, &alertChannelsJSON, &reAlertInterval, &retryCount, &retryInterval, &maintenanceUntil,
 		&escalationPolicyName,
 	)
@@ -253,7 +263,7 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 }
 
 // sqliteCheckDefColumns is the column list for check_definitions queries.
-const sqliteCheckDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name`
+const sqliteCheckDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name`
 
 // placeholders generates "?, ?, ?" for n parameters.
 func placeholders(n int) string {
@@ -324,13 +334,13 @@ func (s *SQLiteDB) CreateCheckDefinition(ctx context.Context, def models.CheckDe
 	}
 
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO check_definitions
-    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, boolToInt(def.Enabled),
 		def.CreatedAt.UTC().Format(time.RFC3339), def.UpdatedAt.UTC().Format(time.RFC3339),
 		def.LastRun.UTC().Format(time.RFC3339), boolToInt(def.IsHealthy), def.LastMessage,
-		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType, def.AlertType,
-		def.AlertDestination, string(configJSON), string(actorConfigJSON), def.Severity,
+		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType,
+		string(configJSON), string(actorConfigJSON), def.Severity,
 		alertChannelsJSON, nilIfEmpty(def.ReAlertInterval), def.RetryCount, nilIfEmpty(def.RetryInterval),
 		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName))
 
@@ -351,12 +361,12 @@ func (s *SQLiteDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDe
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	result, err := s.DB.ExecContext(ctx, `UPDATE check_definitions SET
-    name=?, project=?, group_name=?, type=?, description=?, enabled=?, updated_at=?, last_run=?, is_healthy=?, last_message=?, last_alert_sent=?, duration=?, actor_type=?, alert_type=?, alert_destination=?, config=?, actor_config=?, severity=?, alert_channels=?, re_alert_interval=?, retry_count=?, retry_interval=?, maintenance_until=?, escalation_policy_name=?
+    name=?, project=?, group_name=?, type=?, description=?, enabled=?, updated_at=?, last_run=?, is_healthy=?, last_message=?, last_alert_sent=?, duration=?, actor_type=?, config=?, actor_config=?, severity=?, alert_channels=?, re_alert_interval=?, retry_count=?, retry_interval=?, maintenance_until=?, escalation_policy_name=?
     WHERE uuid=?`,
 		def.Name, def.Project, def.GroupName, def.Type, def.Description, boolToInt(def.Enabled),
 		now, def.LastRun.UTC().Format(time.RFC3339), boolToInt(def.IsHealthy), def.LastMessage,
-		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType, def.AlertType,
-		def.AlertDestination, string(configJSON), string(actorConfigJSON), def.Severity,
+		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType,
+		string(configJSON), string(actorConfigJSON), def.Severity,
 		alertChannelsJSON, nilIfEmpty(def.ReAlertInterval), def.RetryCount, nilIfEmpty(def.RetryInterval),
 		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName),
 		def.UUID)
@@ -544,7 +554,6 @@ func (s *SQLiteDB) ConvertConfigToCheckDefinitions(ctx context.Context, cfg *con
 					UpdatedAt:   time.Now(),
 					Duration:    duration.String(),
 					ActorType:   check.ActorType,
-					AlertType:   check.AlertType,
 				}
 
 				// Map config to appropriate check config type
@@ -1059,6 +1068,59 @@ func (s *SQLiteDB) DeleteAlertChannel(ctx context.Context, name string) error {
 		return fmt.Errorf("alert channel not found")
 	}
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Telegram thread tracking
+// ---------------------------------------------------------------------------
+
+func (s *SQLiteDB) CreateTelegramThread(ctx context.Context, checkUUID, chatID string, messageID int) error {
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO telegram_alert_threads (check_uuid, chat_id, message_id) VALUES (?, ?, ?)`,
+		checkUUID, chatID, messageID)
+	return err
+}
+
+func (s *SQLiteDB) GetUnresolvedTelegramThread(ctx context.Context, checkUUID string) (models.TelegramAlertThread, error) {
+	var t models.TelegramAlertThread
+	var isResolved sql.NullInt64
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
+		 FROM telegram_alert_threads WHERE check_uuid=? AND is_resolved=0 ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChatID, &t.MessageID, &isResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.TelegramAlertThread{}, err
+	}
+	t.IsResolved = isResolved.Valid && isResolved.Int64 != 0
+	return t, nil
+}
+
+func (s *SQLiteDB) GetTelegramThreadByMessage(ctx context.Context, chatID string, messageID int) (models.TelegramAlertThread, error) {
+	var t models.TelegramAlertThread
+	var isResolved sql.NullInt64
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
+		 FROM telegram_alert_threads WHERE chat_id=? AND message_id=? AND is_resolved=0`, chatID, messageID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChatID, &t.MessageID, &isResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.TelegramAlertThread{}, err
+	}
+	t.IsResolved = isResolved.Valid && isResolved.Int64 != 0
+	return t, nil
+}
+
+func (s *SQLiteDB) ResolveTelegramThread(ctx context.Context, checkUUID string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := s.DB.ExecContext(ctx,
+		`UPDATE telegram_alert_threads SET is_resolved=1, resolved_at=? WHERE check_uuid=? AND is_resolved=0`,
+		now, checkUUID)
+	return err
+}
+
+// MigrateLegacyAlertFields is a no-op. The legacy alert_type and alert_destination
+// columns have been dropped. Kept for interface compatibility.
+func (s *SQLiteDB) MigrateLegacyAlertFields(ctx context.Context) (int, error) {
+	return 0, nil
 }
 
 // ---------------------------------------------------------------------------

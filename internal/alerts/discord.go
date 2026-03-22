@@ -1,9 +1,55 @@
 package alerts
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
+
+// DiscordAlerter implements the Alerter interface for Discord webhooks.
+type DiscordAlerter struct {
+	WebhookURL string
+}
+
+func (a *DiscordAlerter) Type() string { return "discord" }
+
+func (a *DiscordAlerter) SendAlert(p AlertPayload) error {
+	payload := BuildDiscordPayload(DiscordAlertParams{
+		CheckName: p.CheckName,
+		Project:   p.Project,
+		CheckType: p.CheckType,
+		Message:   p.Message,
+		IsDown:    true,
+	})
+	return SendDiscordAlert(a.WebhookURL, payload)
+}
+
+func (a *DiscordAlerter) SendRecovery(p RecoveryPayload) error {
+	payload := BuildDiscordPayload(DiscordAlertParams{
+		CheckName: p.CheckName,
+		Project:   p.Project,
+		CheckType: p.CheckType,
+		IsDown:    false,
+	})
+	return SendDiscordAlert(a.WebhookURL, payload)
+}
+
+func newDiscordAlerter(raw json.RawMessage) (Alerter, error) {
+	var cfg struct {
+		WebhookURL string `json:"webhook_url"`
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing discord config: %w", err)
+	}
+	if cfg.WebhookURL == "" {
+		return nil, fmt.Errorf("discord requires webhook_url")
+	}
+	return &DiscordAlerter{WebhookURL: cfg.WebhookURL}, nil
+}
+
+func init() {
+	RegisterAlerter("discord", newDiscordAlerter)
+}
 
 // Discord embed color constants.
 const (

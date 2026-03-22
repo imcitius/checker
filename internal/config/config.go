@@ -61,6 +61,13 @@ type Config struct {
 		DefaultChannel string `yaml:"default_channel"`
 	} `yaml:"slack_app"`
 
+	TelegramApp struct {
+		BotToken      string `yaml:"bot_token"`
+		SecretToken   string `yaml:"secret_token"`    // for webhook verification
+		DefaultChatID string `yaml:"default_chat_id"`
+		WebhookURL    string `yaml:"webhook_url"`     // public URL for setWebhook
+	} `yaml:"telegram_app"`
+
 	Auth struct {
 		OIDC struct {
 			IssuerURL    string `yaml:"issuer_url"`
@@ -210,6 +217,18 @@ func (cfg *Config) applyEnvOverrides() {
 	}
 	if v := os.Getenv("SLACK_DEFAULT_CHANNEL"); v != "" {
 		cfg.SlackApp.DefaultChannel = v
+	}
+	if v := os.Getenv("TELEGRAM_APP_BOT_TOKEN"); v != "" {
+		cfg.TelegramApp.BotToken = v
+	}
+	if v := os.Getenv("TELEGRAM_APP_SECRET_TOKEN"); v != "" {
+		cfg.TelegramApp.SecretToken = v
+	}
+	if v := os.Getenv("TELEGRAM_APP_DEFAULT_CHAT_ID"); v != "" {
+		cfg.TelegramApp.DefaultChatID = v
+	}
+	if v := os.Getenv("TELEGRAM_APP_WEBHOOK_URL"); v != "" {
+		cfg.TelegramApp.WebhookURL = v
 	}
 
 	// Auth overrides

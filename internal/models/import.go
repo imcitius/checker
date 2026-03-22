@@ -19,8 +19,6 @@ package models
 //	environment: prod
 //	defaults:
 //	  duration: 30s
-//	  alert_type: slack
-//	  alert_destination: "#alerts"
 //	prune: true
 //	checks:
 //	  - name: "API Health"
@@ -52,9 +50,7 @@ type CheckImportDefaults struct {
 	Duration         string   `json:"duration" yaml:"duration"`
 	Timeout          string   `json:"timeout" yaml:"timeout"`
 	Enabled          *bool    `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	AlertType        string   `json:"alert_type" yaml:"alert_type"`
-	AlertDestination string   `json:"alert_destination" yaml:"alert_destination"`
-	ActorType        string   `json:"actor_type" yaml:"actor_type"`
+	ActorType string `json:"actor_type" yaml:"actor_type"`
 	Severity         string   `json:"severity,omitempty" yaml:"severity,omitempty"`
 	AlertChannels    []string `json:"alert_channels,omitempty" yaml:"alert_channels,omitempty"`
 	ReAlertInterval  string   `json:"re_alert_interval,omitempty" yaml:"re_alert_interval,omitempty"`
@@ -131,9 +127,7 @@ type CheckImportItem struct {
 	MongoDBURI string `json:"mongodb_uri,omitempty" yaml:"mongodb_uri,omitempty"`
 
 	// Alert config
-	ActorType        string   `json:"actor_type,omitempty" yaml:"actor_type,omitempty"`
-	AlertType        string   `json:"alert_type,omitempty" yaml:"alert_type,omitempty"`
-	AlertDestination string   `json:"alert_destination,omitempty" yaml:"alert_destination,omitempty"`
+	ActorType string `json:"actor_type,omitempty" yaml:"actor_type,omitempty"`
 	Severity         string   `json:"severity,omitempty" yaml:"severity,omitempty"`
 	AlertChannels    []string `json:"alert_channels,omitempty" yaml:"alert_channels,omitempty"`
 	ReAlertInterval  string   `json:"re_alert_interval,omitempty" yaml:"re_alert_interval,omitempty"`
