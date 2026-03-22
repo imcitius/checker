@@ -201,6 +201,53 @@ func TestOpsgenieClient_TriggerHTTPError(t *testing.T) {
 	}
 }
 
+func TestNewOpsgenieAlerter_Valid(t *testing.T) {
+	cfg := json.RawMessage(`{"api_key":"test-key-123","region":"eu"}`)
+	a, err := NewAlerter("opsgenie", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	oa, ok := a.(*OpsgenieAlerter)
+	if !ok {
+		t.Fatalf("expected *OpsgenieAlerter, got %T", a)
+	}
+	if oa.APIKey != "test-key-123" {
+		t.Errorf("unexpected APIKey: %q", oa.APIKey)
+	}
+	if oa.Region != "eu" {
+		t.Errorf("unexpected Region: %q", oa.Region)
+	}
+	if oa.Type() != "opsgenie" {
+		t.Errorf("expected Type() 'opsgenie', got %q", oa.Type())
+	}
+}
+
+func TestNewOpsgenieAlerter_MissingAPIKey(t *testing.T) {
+	_, err := NewAlerter("opsgenie", json.RawMessage(`{"region":"us"}`))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestNewOpsgenieAlerter_InvalidJSON(t *testing.T) {
+	_, err := NewAlerter("opsgenie", json.RawMessage(`{invalid`))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON, got nil")
+	}
+}
+
+func TestNewOpsgenieAlerter_DefaultRegion(t *testing.T) {
+	cfg := json.RawMessage(`{"api_key":"test-key"}`)
+	a, err := NewAlerter("opsgenie", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	oa := a.(*OpsgenieAlerter)
+	if oa.Region != "" {
+		t.Errorf("expected empty Region (defaults to US), got %q", oa.Region)
+	}
+}
+
 func TestOpsgenieClient_ResolveHTTPError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)

@@ -166,6 +166,38 @@ func TestSendDiscordAlert_ServerError(t *testing.T) {
 	}
 }
 
+func TestNewDiscordAlerter_Valid(t *testing.T) {
+	cfg := json.RawMessage(`{"webhook_url":"https://discord.com/api/webhooks/123/abc"}`)
+	a, err := NewAlerter("discord", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	da, ok := a.(*DiscordAlerter)
+	if !ok {
+		t.Fatalf("expected *DiscordAlerter, got %T", a)
+	}
+	if da.WebhookURL != "https://discord.com/api/webhooks/123/abc" {
+		t.Errorf("unexpected WebhookURL: %q", da.WebhookURL)
+	}
+	if da.Type() != "discord" {
+		t.Errorf("expected Type() 'discord', got %q", da.Type())
+	}
+}
+
+func TestNewDiscordAlerter_MissingURL(t *testing.T) {
+	_, err := NewAlerter("discord", json.RawMessage(`{}`))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestNewDiscordAlerter_InvalidJSON(t *testing.T) {
+	_, err := NewAlerter("discord", json.RawMessage(`{invalid`))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON, got nil")
+	}
+}
+
 func TestBuildDiscordPayload_Colors(t *testing.T) {
 	downPayload := BuildDiscordPayload(DiscordAlertParams{
 		CheckName: "test", Project: "p", CheckType: "http", Message: "err", IsDown: true,

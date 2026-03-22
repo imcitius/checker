@@ -160,6 +160,38 @@ func TestSendTeamsAlert_ServerError(t *testing.T) {
 	}
 }
 
+func TestNewTeamsAlerter_Valid(t *testing.T) {
+	cfg := json.RawMessage(`{"webhook_url":"https://outlook.office.com/webhook/abc"}`)
+	a, err := NewAlerter("teams", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	ta, ok := a.(*TeamsAlerter)
+	if !ok {
+		t.Fatalf("expected *TeamsAlerter, got %T", a)
+	}
+	if ta.WebhookURL != "https://outlook.office.com/webhook/abc" {
+		t.Errorf("unexpected WebhookURL: %q", ta.WebhookURL)
+	}
+	if ta.Type() != "teams" {
+		t.Errorf("expected Type() 'teams', got %q", ta.Type())
+	}
+}
+
+func TestNewTeamsAlerter_MissingURL(t *testing.T) {
+	_, err := NewAlerter("teams", json.RawMessage(`{}`))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestNewTeamsAlerter_InvalidJSON(t *testing.T) {
+	_, err := NewAlerter("teams", json.RawMessage(`{invalid`))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON, got nil")
+	}
+}
+
 func TestSendTeamsAlert_InvalidURL(t *testing.T) {
 	params := TeamsAlertParams{
 		CheckName:   "check1",

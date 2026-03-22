@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"mime"
 	"net"
@@ -12,6 +13,69 @@ import (
 	"text/template"
 	"time"
 )
+
+// EmailAlerter implements the Alerter interface for email (SMTP).
+type EmailAlerter struct {
+	Config EmailConfig
+}
+
+func (a *EmailAlerter) Type() string { return "email" }
+
+func (a *EmailAlerter) SendAlert(p AlertPayload) error {
+	data := EmailData{
+		Subject:      fmt.Sprintf("[ALERT] %s is DOWN", p.CheckName),
+		HeaderClass:  "header-down",
+		CheckName:    p.CheckName,
+		Project:      p.Project,
+		CheckType:    p.CheckType,
+		ErrorMessage: p.Message,
+		Timestamp:    p.Timestamp.Format(time.RFC3339),
+	}
+	return SendEmailAlert(a.Config, data)
+}
+
+func (a *EmailAlerter) SendRecovery(p RecoveryPayload) error {
+	data := EmailData{
+		Subject:     fmt.Sprintf("[RESOLVED] %s is UP", p.CheckName),
+		HeaderClass: "header-up",
+		CheckName:   p.CheckName,
+		Project:     p.Project,
+		CheckType:   p.CheckType,
+		Timestamp:   p.Timestamp.Format(time.RFC3339),
+	}
+	return SendEmailAlert(a.Config, data)
+}
+
+func newEmailAlerter(raw json.RawMessage) (Alerter, error) {
+	var cfg struct {
+		SMTPHost     string   `json:"smtp_host"`
+		SMTPPort     int      `json:"smtp_port"`
+		SMTPUser     string   `json:"smtp_user"`
+		SMTPPassword string   `json:"smtp_password"`
+		From         string   `json:"from"`
+		To           []string `json:"to"`
+		UseTLS       bool     `json:"use_tls"`
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing email config: %w", err)
+	}
+	if cfg.SMTPHost == "" || cfg.From == "" || len(cfg.To) == 0 {
+		return nil, fmt.Errorf("email requires smtp_host, from, and to")
+	}
+	return &EmailAlerter{Config: EmailConfig{
+		SMTPHost:     cfg.SMTPHost,
+		SMTPPort:     cfg.SMTPPort,
+		SMTPUser:     cfg.SMTPUser,
+		SMTPPassword: cfg.SMTPPassword,
+		From:         cfg.From,
+		To:           cfg.To,
+		UseTLS:       cfg.UseTLS,
+	}}, nil
+}
+
+func init() {
+	RegisterAlerter("email", newEmailAlerter)
+}
 
 //go:embed templates/email_alert.html templates/email_alert.txt
 var emailTemplates embed.FS

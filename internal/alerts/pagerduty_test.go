@@ -136,6 +136,38 @@ func TestMapSeverity(t *testing.T) {
 	}
 }
 
+func TestNewPagerDutyAlerter_Valid(t *testing.T) {
+	cfg := json.RawMessage(`{"routing_key":"R0123456789"}`)
+	a, err := NewAlerter("pagerduty", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	pa, ok := a.(*PagerDutyAlerter)
+	if !ok {
+		t.Fatalf("expected *PagerDutyAlerter, got %T", a)
+	}
+	if pa.RoutingKey != "R0123456789" {
+		t.Errorf("unexpected RoutingKey: %q", pa.RoutingKey)
+	}
+	if pa.Type() != "pagerduty" {
+		t.Errorf("expected Type() 'pagerduty', got %q", pa.Type())
+	}
+}
+
+func TestNewPagerDutyAlerter_MissingKey(t *testing.T) {
+	_, err := NewAlerter("pagerduty", json.RawMessage(`{}`))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestNewPagerDutyAlerter_InvalidJSON(t *testing.T) {
+	_, err := NewAlerter("pagerduty", json.RawMessage(`{invalid`))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON, got nil")
+	}
+}
+
 func TestSendPagerDutyTrigger_SeverityMapping(t *testing.T) {
 	tests := []struct {
 		severity         string

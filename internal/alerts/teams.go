@@ -1,9 +1,56 @@
 package alerts
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
+
+// TeamsAlerter implements the Alerter interface for Microsoft Teams.
+type TeamsAlerter struct {
+	WebhookURL string
+}
+
+func (a *TeamsAlerter) Type() string { return "teams" }
+
+func (a *TeamsAlerter) SendAlert(p AlertPayload) error {
+	params := TeamsAlertParams{
+		CheckName:   p.CheckName,
+		ProjectName: p.Project,
+		Status:      "DOWN",
+		Error:       p.Message,
+		Time:        p.Timestamp,
+	}
+	return SendTeamsAlert(a.WebhookURL, params)
+}
+
+func (a *TeamsAlerter) SendRecovery(p RecoveryPayload) error {
+	params := TeamsAlertParams{
+		CheckName:   p.CheckName,
+		ProjectName: p.Project,
+		Status:      "RESOLVED",
+		Error:       "",
+		Time:        p.Timestamp,
+	}
+	return SendTeamsAlert(a.WebhookURL, params)
+}
+
+func newTeamsAlerter(raw json.RawMessage) (Alerter, error) {
+	var cfg struct {
+		WebhookURL string `json:"webhook_url"`
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing teams config: %w", err)
+	}
+	if cfg.WebhookURL == "" {
+		return nil, fmt.Errorf("teams requires webhook_url")
+	}
+	return &TeamsAlerter{WebhookURL: cfg.WebhookURL}, nil
+}
+
+func init() {
+	RegisterAlerter("teams", newTeamsAlerter)
+}
 
 // TeamsMessageCard represents a Microsoft Teams legacy MessageCard payload.
 type TeamsMessageCard struct {
