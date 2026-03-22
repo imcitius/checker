@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"checker/internal/alerts"
 	"checker/internal/db"
 	"checker/internal/models"
 
@@ -68,7 +69,19 @@ func processEscalation(repo db.Repository, checkDef models.CheckDefinition, chec
 	}
 
 	now := time.Now()
-	slackAppActive := slackAlerter != nil
+
+	// Build the AlertPayload once — it's the same for all escalation steps
+	severity := getEffectiveSeverity(checkDef)
+	payload := alerts.AlertPayload{
+		CheckName:  checkStatus.CheckName,
+		CheckUUID:  checkStatus.UUID,
+		Project:    checkStatus.Project,
+		CheckGroup: checkStatus.CheckGroup,
+		CheckType:  checkStatus.CheckType,
+		Message:    checkStatus.Message,
+		Severity:   severity,
+		Timestamp:  checkStatus.LastRun,
+	}
 
 	for i, step := range policy.Steps {
 		if notifiedSteps[i] {
@@ -83,14 +96,17 @@ func processEscalation(repo db.Repository, checkDef models.CheckDefinition, chec
 			continue // Not enough time has elapsed for this step
 		}
 
-		// Send the escalation alert to the step's channel
-		severity := getEffectiveSeverity(checkDef)
 		logrus.Infof("Escalation policy %q step %d: sending %s alert for check %s (down for %s, delay=%dm)",
 			policy.Name, i, step.Channel, checkDef.UUID, downDuration.Round(time.Second), step.DelayMin)
 
-		sendAlertToChannel(step.Channel, checkStatus, checkDef, severity, slackAppActive)
+		alerter, err := resolveAlerter(repo, step.Channel, checkDef)
+		if err != nil {
+			logrus.Errorf("Escalation policy %q step %d: failed to resolve channel %q: %v", policy.Name, i, step.Channel, err)
+		} else if err := alerter.SendAlert(payload); err != nil {
+			logrus.Errorf("Escalation policy %q step %d: failed to send alert: %v", policy.Name, i, err)
+		}
 
-		// Record the notification
+		// Record the notification regardless of send success to avoid retrying the same step
 		notification := models.EscalationNotification{
 			CheckUUID:  checkDef.UUID,
 			PolicyName: policy.Name,

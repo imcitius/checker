@@ -363,7 +363,7 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 	// Handle alerts if check fails
 	if !isHealthy {
 		if shouldSendAlert(previouslyHealthy, reAlertInterval, checkStatus) {
-			sendAlerts(checkStatus, checkDef, slackAlerter != nil)
+			sendAlerts(repo, checkStatus, checkDef, slackAlerter != nil)
 
 			checkStatus.LastAlertSent = runTime
 			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
@@ -387,7 +387,7 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, slackAler
 	// Handle recovery when check transitions from unhealthy to healthy
 	if isHealthy && wasUnhealthy {
 		// Send recovery alerts for legacy channels (telegram, slack webhook)
-		sendRecoveryAlerts(checkStatus, checkDef, slackAlerter != nil)
+		sendRecoveryAlerts(repo, checkStatus, checkDef, slackAlerter != nil)
 
 		// Handle Slack App recovery (thread resolution)
 		if slackAlerter != nil {
@@ -458,142 +458,88 @@ func getEffectiveSeverity(checkDef models.CheckDefinition) string {
 	return "critical"
 }
 
-// sendAlertToChannel dispatches a single alert to one channel type.
-// When slackAppActive is true, the "slack" channel is skipped because the SlackAlerter handles it natively.
-func sendAlertToChannel(channel string, status models.CheckStatus, checkDef models.CheckDefinition, severity string, slackAppActive bool) {
-	logrus.Infof("Sending %s notification (severity=%s) for check %s (%s/%s)",
-		channel, severity, status.UUID, status.Project, status.CheckName)
+// resolveAlerter resolves an Alerter for the given channel name. It first tries
+// the DB-based alert_channels table, then falls back to legacy inline config.
+func resolveAlerter(repo db.Repository, channelName string, checkDef models.CheckDefinition) (alerts.Alerter, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	switch channel {
+	// Try DB-based alert channel first
+	ch, err := repo.GetAlertChannelByName(ctx, channelName)
+	if err == nil {
+		return alerts.NewAlerter(ch.Type, ch.Config)
+	}
+
+	// Legacy fallback: channelName is a channel *type* with config inline in checkDef
+	return buildLegacyAlerter(channelName, checkDef)
+}
+
+// buildLegacyAlerter constructs an Alerter from inline checkDef fields (AlertDestination).
+// This preserves backward compatibility with the old single-channel config style.
+func buildLegacyAlerter(channelType string, checkDef models.CheckDefinition) (alerts.Alerter, error) {
+	switch channelType {
 	case "telegram":
 		if checkDef.AlertDestination == "" {
-			logrus.Errorf("Telegram alert destination is not configured for check %s", status.UUID)
-			return
+			return nil, fmt.Errorf("telegram alert destination is not configured for check %s", checkDef.UUID)
 		}
 		parts := splitAlertDestination(checkDef.AlertDestination)
 		if len(parts) != 2 {
-			logrus.Errorf("Invalid Telegram alert destination format for check %s (expected 'botToken:chatID')", status.UUID)
-			return
+			return nil, fmt.Errorf("invalid telegram alert destination format for check %s (expected 'botToken:chatID')", checkDef.UUID)
 		}
-		botToken := parts[0]
-		chatID := parts[1]
+		return &alerts.TelegramAlerter{BotToken: parts[0], ChatID: parts[1]}, nil
 
-		message := fmt.Sprintf("[%s] Check %s (%s/%s) failed: %s", strings.ToUpper(severity), status.CheckName, status.Project, status.CheckGroup, status.Message)
-		if err := alerts.SendTelegramAlert(botToken, chatID, message); err != nil {
-			logrus.Errorf("Failed to send Telegram alert: %v", err)
-		}
-
-	case "slack":
-		if slackAppActive {
-			// Slack App (SlackAlerter) handles this natively — skip legacy webhook path
-			return
-		}
+	case "slack", "slack_webhook":
 		if checkDef.AlertDestination == "" {
-			logrus.Errorf("Slack webhook URL is not configured for check %s", status.UUID)
-			return
+			return nil, fmt.Errorf("slack webhook URL is not configured for check %s", checkDef.UUID)
 		}
-		message := fmt.Sprintf("[%s] Check %s (%s/%s) failed: %s", strings.ToUpper(severity), status.CheckName, status.Project, status.CheckGroup, status.Message)
-		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
-			logrus.Errorf("Failed to send Slack alert: %v", err)
-		}
-
-	case "slack_webhook":
-		if checkDef.AlertDestination == "" {
-			logrus.Errorf("Slack webhook URL is not configured for check %s", status.UUID)
-			return
-		}
-		message := fmt.Sprintf("[%s] Check %s (%s/%s) failed: %s", strings.ToUpper(severity), status.CheckName, status.Project, status.CheckGroup, status.Message)
-		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
-			logrus.Errorf("Failed to send Slack webhook alert: %v", err)
-		}
+		return &alerts.SlackWebhookAlerter{WebhookURL: checkDef.AlertDestination}, nil
 
 	case "email":
 		emailCfg := getEmailConfig()
 		if emailCfg == nil {
-			logrus.Errorf("Email alert configuration not found for check %s", status.UUID)
-			return
+			return nil, fmt.Errorf("email alert configuration not found for check %s", checkDef.UUID)
 		}
-		data := alerts.EmailData{
-			Subject:      fmt.Sprintf("[ALERT] %s is DOWN", status.CheckName),
-			HeaderClass:  "header-down",
-			CheckName:    status.CheckName,
-			Project:      status.Project,
-			CheckType:    status.CheckType,
-			ErrorMessage: status.Message,
-			Timestamp:    status.LastRun.Format("2006-01-02T15:04:05Z07:00"),
-		}
-		if err := alerts.SendEmailAlert(*emailCfg, data); err != nil {
-			logrus.Errorf("Failed to send email alert: %v", err)
-		}
+		return &alerts.EmailAlerter{Config: *emailCfg}, nil
 
 	case "discord":
 		if checkDef.AlertDestination == "" {
-			logrus.Errorf("Discord webhook URL is not configured for check %s", status.UUID)
-			return
+			return nil, fmt.Errorf("discord webhook URL is not configured for check %s", checkDef.UUID)
 		}
-		isDown := !status.IsHealthy
-		payload := alerts.BuildDiscordPayload(alerts.DiscordAlertParams{
-			CheckName: status.CheckName,
-			Project:   status.Project,
-			CheckType: checkDef.Type,
-			Message:   status.Message,
-			IsDown:    isDown,
-		})
-		if err := alerts.SendDiscordAlert(checkDef.AlertDestination, payload); err != nil {
-			logrus.Errorf("Failed to send Discord alert: %v", err)
-		}
+		return &alerts.DiscordAlerter{WebhookURL: checkDef.AlertDestination}, nil
 
 	case "teams":
 		if checkDef.AlertDestination == "" {
-			logrus.Errorf("Teams webhook URL is not configured for check %s", status.UUID)
-			return
+			return nil, fmt.Errorf("teams webhook URL is not configured for check %s", checkDef.UUID)
 		}
-		params := alerts.TeamsAlertParams{
-			CheckName:   status.CheckName,
-			ProjectName: status.Project,
-			Status:      "DOWN",
-			Error:       status.Message,
-			Time:        time.Now(),
-		}
-		if err := alerts.SendTeamsAlert(checkDef.AlertDestination, params); err != nil {
-			logrus.Errorf("Failed to send Teams alert: %v", err)
-		}
+		return &alerts.TeamsAlerter{WebhookURL: checkDef.AlertDestination}, nil
 
 	case "pagerduty":
 		if checkDef.AlertDestination == "" {
-			logrus.Errorf("PagerDuty routing key is not configured for check %s", status.UUID)
-			return
+			return nil, fmt.Errorf("pagerduty routing key is not configured for check %s", checkDef.UUID)
 		}
-		if err := alerts.SendPagerDutyTrigger(checkDef.AlertDestination, status.UUID, status.CheckName, status.Message, severity); err != nil {
-			logrus.Errorf("Failed to send PagerDuty trigger: %v", err)
-		}
+		return &alerts.PagerDutyAlerter{RoutingKey: checkDef.AlertDestination}, nil
 
 	case "opsgenie":
 		if checkDef.AlertDestination == "" {
-			logrus.Errorf("Opsgenie alert destination is not configured for check %s", status.UUID)
-			return
+			return nil, fmt.Errorf("opsgenie alert destination is not configured for check %s", checkDef.UUID)
 		}
-		// AlertDestination format: "apiKey:region" (region is "us" or "eu")
 		parts := splitAlertDestination(checkDef.AlertDestination)
 		apiKey := parts[0]
 		region := "us"
 		if len(parts) >= 2 && parts[1] != "" {
 			region = parts[1]
 		}
-		client := &alerts.OpsgenieClient{APIKey: apiKey, Region: region}
-		if err := client.Trigger(status.CheckName, status.UUID, status.Message, severity); err != nil {
-			logrus.Errorf("Failed to send Opsgenie alert: %v", err)
-		}
+		return &alerts.OpsgenieAlerter{APIKey: apiKey, Region: region}, nil
 
 	default:
-		logrus.Warnf("Unknown alert channel: %s for check %s (severity=%s)", channel, status.UUID, severity)
+		return nil, fmt.Errorf("unknown alert channel type: %s", channelType)
 	}
 }
 
-// sendAlerts dispatches alerts based on the check definition.
-// When slackAppActive is true, the "slack" alertType is skipped because the SlackAlerter handles it natively.
+// sendAlerts dispatches alerts based on the check definition using the Alerter registry.
+// When slackAppActive is true, alerters with Type() == "slack" are skipped because the SlackAlerter handles it natively.
 // Supports multi-channel dispatch via AlertChannels with backward compatibility for single-channel AlertType.
-func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
+func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
 	// Skip if no actor type is defined
 	if checkDef.ActorType == "" && len(checkDef.AlertChannels) == 0 {
 		return
@@ -603,8 +549,31 @@ func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slac
 	channels := getEffectiveAlertChannels(checkDef)
 	if len(channels) > 0 {
 		severity := getEffectiveSeverity(checkDef)
+		payload := alerts.AlertPayload{
+			CheckName:  status.CheckName,
+			CheckUUID:  status.UUID,
+			Project:    status.Project,
+			CheckGroup: status.CheckGroup,
+			CheckType:  status.CheckType,
+			Message:    status.Message,
+			Severity:   severity,
+			Timestamp:  status.LastRun,
+		}
 		for _, channel := range channels {
-			sendAlertToChannel(channel, status, checkDef, severity, slackAppActive)
+			alerter, err := resolveAlerter(repo, channel, checkDef)
+			if err != nil {
+				logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)
+				continue
+			}
+			// Slack App bypass: check resolved type, not name
+			if alerter.Type() == "slack" && slackAppActive {
+				continue
+			}
+			logrus.Infof("Sending %s notification (severity=%s) for check %s (%s/%s)",
+				alerter.Type(), severity, status.UUID, status.Project, status.CheckName)
+			if err := alerter.SendAlert(payload); err != nil {
+				logrus.Errorf("Failed to send %s alert for check %s: %v", alerter.Type(), status.UUID, err)
+			}
 		}
 		return
 	}
@@ -628,135 +597,43 @@ func sendAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slac
 	}
 }
 
-// sendRecoveryAlerts dispatches recovery notifications for alert channels.
+// sendRecoveryAlerts dispatches recovery notifications using the Alerter registry.
+// When slackAppActive is true, alerters with Type() == "slack" are skipped because the SlackAlerter handles recovery natively.
 // Supports multi-channel dispatch via AlertChannels with backward compatibility for single-channel AlertType.
-// When slackAppActive is true, the "slack" alertType is skipped because the SlackAlerter handles recovery natively.
-func sendRecoveryAlerts(status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
+func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
 	// Multi-channel recovery dispatch
 	channels := getEffectiveAlertChannels(checkDef)
-	if len(channels) > 0 {
-		for _, channel := range channels {
-			logrus.Infof("Sending %s recovery notification for check %s (%s/%s)",
-				channel, status.UUID, status.Project, status.CheckName)
-			sendRecoveryToChannel(channel, status, checkDef, slackAppActive)
+	if len(channels) == 0 {
+		// Legacy single-channel fallback
+		if checkDef.ActorType != "alert" || checkDef.AlertType == "" {
+			return
 		}
-		return
+		channels = []string{checkDef.AlertType}
 	}
 
-	// Legacy single-channel fallback
-	if checkDef.ActorType != "alert" || checkDef.AlertType == "" {
-		return
+	payload := alerts.RecoveryPayload{
+		CheckName:  status.CheckName,
+		CheckUUID:  status.UUID,
+		Project:    status.Project,
+		CheckGroup: status.CheckGroup,
+		CheckType:  status.CheckType,
+		Timestamp:  status.LastRun,
 	}
-	logrus.Infof("Sending %s recovery notification for check %s (%s/%s)",
-		checkDef.AlertType, status.UUID, status.Project, status.CheckName)
-	sendRecoveryToChannel(checkDef.AlertType, status, checkDef, slackAppActive)
-}
 
-// sendRecoveryToChannel dispatches a single recovery notification to one channel type.
-func sendRecoveryToChannel(channel string, status models.CheckStatus, checkDef models.CheckDefinition, slackAppActive bool) {
-	message := fmt.Sprintf("RECOVERY: Check %s (%s/%s) is healthy again", status.CheckName, status.Project, status.CheckGroup)
-
-	switch channel {
-	case "telegram":
-		if checkDef.AlertDestination == "" {
-			return
+	for _, channel := range channels {
+		alerter, err := resolveAlerter(repo, channel, checkDef)
+		if err != nil {
+			logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)
+			continue
 		}
-		parts := splitAlertDestination(checkDef.AlertDestination)
-		if len(parts) != 2 {
-			return
+		// Slack App bypass: check resolved type, not name
+		if alerter.Type() == "slack" && slackAppActive {
+			continue
 		}
-		if err := alerts.SendTelegramAlert(parts[0], parts[1], message); err != nil {
-			logrus.Errorf("Failed to send Telegram recovery alert: %v", err)
-		}
-
-	case "slack":
-		if slackAppActive {
-			// Slack App handles recovery natively via HandleRecovery
-			return
-		}
-		if checkDef.AlertDestination == "" {
-			return
-		}
-		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
-			logrus.Errorf("Failed to send Slack recovery alert: %v", err)
-		}
-
-	case "slack_webhook":
-		if checkDef.AlertDestination == "" {
-			return
-		}
-		if err := alerts.SendSlackAlert(checkDef.AlertDestination, message); err != nil {
-			logrus.Errorf("Failed to send Slack webhook recovery alert: %v", err)
-		}
-
-	case "email":
-		emailCfg := getEmailConfig()
-		if emailCfg == nil {
-			logrus.Errorf("Email alert configuration not found for check %s", status.UUID)
-			return
-		}
-		data := alerts.EmailData{
-			Subject:     fmt.Sprintf("[RESOLVED] %s is UP", status.CheckName),
-			HeaderClass: "header-up",
-			CheckName:   status.CheckName,
-			Project:     status.Project,
-			CheckType:   status.CheckType,
-			Timestamp:   status.LastRun.Format("2006-01-02T15:04:05Z07:00"),
-		}
-		if err := alerts.SendEmailAlert(*emailCfg, data); err != nil {
-			logrus.Errorf("Failed to send email recovery alert: %v", err)
-		}
-
-	case "pagerduty":
-		if checkDef.AlertDestination == "" {
-			return
-		}
-		if err := alerts.SendPagerDutyResolve(checkDef.AlertDestination, status.UUID, status.CheckName); err != nil {
-			logrus.Errorf("Failed to send PagerDuty recovery: %v", err)
-		}
-
-	case "discord":
-		if checkDef.AlertDestination == "" {
-			return
-		}
-		payload := alerts.BuildDiscordPayload(alerts.DiscordAlertParams{
-			CheckName: status.CheckName,
-			Project:   status.Project,
-			CheckType: checkDef.Type,
-			Message:   message,
-			IsDown:    false,
-		})
-		if err := alerts.SendDiscordAlert(checkDef.AlertDestination, payload); err != nil {
-			logrus.Errorf("Failed to send Discord recovery alert: %v", err)
-		}
-
-	case "teams":
-		if checkDef.AlertDestination == "" {
-			return
-		}
-		params := alerts.TeamsAlertParams{
-			CheckName:   status.CheckName,
-			ProjectName: status.Project,
-			Status:      "RESOLVED",
-			Time:        time.Now(),
-		}
-		if err := alerts.SendTeamsAlert(checkDef.AlertDestination, params); err != nil {
-			logrus.Errorf("Failed to send Teams recovery alert: %v", err)
-		}
-
-	case "opsgenie":
-		if checkDef.AlertDestination == "" {
-			return
-		}
-		parts := splitAlertDestination(checkDef.AlertDestination)
-		apiKey := parts[0]
-		region := "us"
-		if len(parts) >= 2 && parts[1] != "" {
-			region = parts[1]
-		}
-		client := &alerts.OpsgenieClient{APIKey: apiKey, Region: region}
-		if err := client.Resolve(status.UUID); err != nil {
-			logrus.Errorf("Failed to send Opsgenie recovery: %v", err)
+		logrus.Infof("Sending %s recovery notification for check %s (%s/%s)",
+			alerter.Type(), status.UUID, status.Project, status.CheckName)
+		if err := alerter.SendRecovery(payload); err != nil {
+			logrus.Errorf("Failed to send %s recovery for check %s: %v", alerter.Type(), status.UUID, err)
 		}
 	}
 }
