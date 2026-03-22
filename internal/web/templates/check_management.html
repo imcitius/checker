@@ -971,19 +971,6 @@
                                 </select>
                             </div>
 
-                            <div class="form-row alert-fields" style="display: none;">
-                                <label for="alert-type">Alert Destination</label>
-                                <select id="alert-type" name="alert_type">
-                                    <option value="telegram">Telegram</option>
-                                    <option value="slack">Slack</option>
-                                </select>
-                            </div>
-
-                            <div class="form-row alert-fields" style="display: none;">
-                                <label for="alert-destination">Destination</label>
-                                <input type="text" id="alert-destination" name="alert_destination"
-                                    placeholder="Chat ID or webhook URL">
-                            </div>
                         </div>
                     </div>
 
@@ -1483,8 +1470,6 @@
 
                         // Set alert-related fields
                         document.getElementById('actor-type').value = def.actor_type || '';
-                        document.getElementById('alert-type').value = def.alert_type || 'telegram';
-                        document.getElementById('alert-destination').value = def.alert_destination || '';
 
                         // Show/hide alert fields based on actor_type
                         const alertFields = document.querySelectorAll('.alert-fields');

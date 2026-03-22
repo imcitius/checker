@@ -75,8 +75,6 @@ func (s *SQLiteDB) ensureSchema() error {
 		last_alert_sent    DATETIME NOT NULL DEFAULT '1970-01-01T00:00:00Z',
 		duration           TEXT NOT NULL DEFAULT '30s',
 		actor_type         TEXT NOT NULL DEFAULT '',
-		alert_type         TEXT NOT NULL DEFAULT '',
-		alert_destination  TEXT NOT NULL DEFAULT '',
 		config             TEXT NOT NULL DEFAULT '{}',
 		actor_config       TEXT NOT NULL DEFAULT '{}',
 		slack_thread_ts    TEXT,
@@ -194,7 +192,7 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 	err := scanner.Scan(
 		&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &enabled,
 		&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &isHealthy, &c.LastMessage, &c.LastAlertSent,
-		&c.Duration, &c.ActorType, &c.AlertType, &c.AlertDestination, &configJSON, &actorConfigJSON,
+		&c.Duration, &c.ActorType, &configJSON, &actorConfigJSON,
 		&severity, &alertChannelsJSON, &reAlertInterval, &retryCount, &retryInterval, &maintenanceUntil,
 		&escalationPolicyName,
 	)
@@ -265,7 +263,7 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 }
 
 // sqliteCheckDefColumns is the column list for check_definitions queries.
-const sqliteCheckDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name`
+const sqliteCheckDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name`
 
 // placeholders generates "?, ?, ?" for n parameters.
 func placeholders(n int) string {
@@ -336,13 +334,13 @@ func (s *SQLiteDB) CreateCheckDefinition(ctx context.Context, def models.CheckDe
 	}
 
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO check_definitions
-    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, boolToInt(def.Enabled),
 		def.CreatedAt.UTC().Format(time.RFC3339), def.UpdatedAt.UTC().Format(time.RFC3339),
 		def.LastRun.UTC().Format(time.RFC3339), boolToInt(def.IsHealthy), def.LastMessage,
-		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType, def.AlertType,
-		def.AlertDestination, string(configJSON), string(actorConfigJSON), def.Severity,
+		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType,
+		string(configJSON), string(actorConfigJSON), def.Severity,
 		alertChannelsJSON, nilIfEmpty(def.ReAlertInterval), def.RetryCount, nilIfEmpty(def.RetryInterval),
 		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName))
 
@@ -363,12 +361,12 @@ func (s *SQLiteDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDe
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	result, err := s.DB.ExecContext(ctx, `UPDATE check_definitions SET
-    name=?, project=?, group_name=?, type=?, description=?, enabled=?, updated_at=?, last_run=?, is_healthy=?, last_message=?, last_alert_sent=?, duration=?, actor_type=?, alert_type=?, alert_destination=?, config=?, actor_config=?, severity=?, alert_channels=?, re_alert_interval=?, retry_count=?, retry_interval=?, maintenance_until=?, escalation_policy_name=?
+    name=?, project=?, group_name=?, type=?, description=?, enabled=?, updated_at=?, last_run=?, is_healthy=?, last_message=?, last_alert_sent=?, duration=?, actor_type=?, config=?, actor_config=?, severity=?, alert_channels=?, re_alert_interval=?, retry_count=?, retry_interval=?, maintenance_until=?, escalation_policy_name=?
     WHERE uuid=?`,
 		def.Name, def.Project, def.GroupName, def.Type, def.Description, boolToInt(def.Enabled),
 		now, def.LastRun.UTC().Format(time.RFC3339), boolToInt(def.IsHealthy), def.LastMessage,
-		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType, def.AlertType,
-		def.AlertDestination, string(configJSON), string(actorConfigJSON), def.Severity,
+		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType,
+		string(configJSON), string(actorConfigJSON), def.Severity,
 		alertChannelsJSON, nilIfEmpty(def.ReAlertInterval), def.RetryCount, nilIfEmpty(def.RetryInterval),
 		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName),
 		def.UUID)
@@ -556,7 +554,6 @@ func (s *SQLiteDB) ConvertConfigToCheckDefinitions(ctx context.Context, cfg *con
 					UpdatedAt:   time.Now(),
 					Duration:    duration.String(),
 					ActorType:   check.ActorType,
-					AlertType:   check.AlertType,
 				}
 
 				// Map config to appropriate check config type
@@ -1120,50 +1117,10 @@ func (s *SQLiteDB) ResolveTelegramThread(ctx context.Context, checkUUID string) 
 	return err
 }
 
-// MigrateLegacyAlertFields converts checks using the old ActorType="alert" + AlertType
-// config to use AlertChannels. Idempotent — safe to run multiple times.
+// MigrateLegacyAlertFields is a no-op. The legacy alert_type and alert_destination
+// columns have been dropped. Kept for interface compatibility.
 func (s *SQLiteDB) MigrateLegacyAlertFields(ctx context.Context) (int, error) {
-	// First, warn about checks that had AlertDestination set
-	rows, err := s.DB.QueryContext(ctx,
-		`SELECT uuid, name, alert_destination FROM check_definitions
-		 WHERE actor_type = 'alert'
-		   AND alert_type IS NOT NULL AND alert_type != ''
-		   AND (alert_channels IS NULL OR alert_channels = '[]' OR alert_channels = '')
-		   AND alert_destination IS NOT NULL AND alert_destination != ''`)
-	if err != nil {
-		return 0, fmt.Errorf("querying checks with alert_destination: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var uuid, name, dest string
-		if err := rows.Scan(&uuid, &name, &dest); err != nil {
-			logrus.Warnf("Failed to scan alert_destination row: %v", err)
-			continue
-		}
-		logrus.Warnf("Check %q (%s) had AlertDestination=%q which is NOT auto-migrated. Please create a named alert channel in the Settings UI.", name, uuid, dest)
-	}
-	rows.Close()
-
-	// Perform the migration (SQLite columns have NOT NULL DEFAULT '', so use empty string)
-	result, err := s.DB.ExecContext(ctx, `
-		UPDATE check_definitions
-		SET alert_channels = json_array(alert_type),
-		    actor_type = '',
-		    alert_type = '',
-		    alert_destination = ''
-		WHERE actor_type = 'alert'
-		  AND alert_type IS NOT NULL AND alert_type != ''
-		  AND (alert_channels IS NULL OR alert_channels = '[]' OR alert_channels = '')`)
-	if err != nil {
-		return 0, fmt.Errorf("migrating legacy alert fields: %w", err)
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("getting rows affected: %w", err)
-	}
-
-	return int(affected), nil
+	return 0, nil
 }
 
 // ---------------------------------------------------------------------------

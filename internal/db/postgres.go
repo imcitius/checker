@@ -70,7 +70,7 @@ func (db *PostgresDB) Close() {
 }
 
 // checkDefColumns is the shared SELECT column list for check_definitions queries.
-const checkDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name`
+const checkDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name`
 
 // scanCheckDef scans a row into a CheckDefinition, handling config unmarshaling
 // and alert_channels JSON parsing.
@@ -87,7 +87,7 @@ func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.
 	err := scanner.Scan(
 		&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &c.Enabled,
 		&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &c.IsHealthy, &c.LastMessage, &c.LastAlertSent,
-		&c.Duration, &c.ActorType, &c.AlertType, &c.AlertDestination, &configJSON, &actorConfigJSON,
+		&c.Duration, &c.ActorType, &configJSON, &actorConfigJSON,
 		&severity, &alertChannelsJSON, &reAlertInterval, &retryCount, &retryInterval, &maintenanceUntil,
 		&escalationPolicyName,
 	)
@@ -221,9 +221,9 @@ func (db *PostgresDB) CreateCheckDefinition(ctx context.Context, def models.Chec
 
 	// insert
 	_, err := db.Pool.Exec(ctx, `INSERT INTO check_definitions
-    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName))
+    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName))
 
 	if err != nil {
 		return "", err
@@ -242,9 +242,9 @@ func (db *PostgresDB) UpdateCheckDefinition(ctx context.Context, def models.Chec
 
 	// update
 	cmdTag, err := db.Pool.Exec(ctx, `UPDATE check_definitions SET
-    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, alert_type=$15, alert_destination=$16, config=$17, actor_config=$18, severity=$19, alert_channels=$20, re_alert_interval=$21, retry_count=$22, retry_interval=$23, maintenance_until=$24, escalation_policy_name=$25
+    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, config=$15, actor_config=$16, severity=$17, alert_channels=$18, re_alert_interval=$19, retry_count=$20, retry_interval=$21, maintenance_until=$22, escalation_policy_name=$23
     WHERE uuid=$1`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, def.AlertType, def.AlertDestination, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName))
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName))
 
 	if err != nil {
 		return err
@@ -404,7 +404,6 @@ func (db *PostgresDB) ConvertConfigToCheckDefinitions(ctx context.Context, cfg *
 					UpdatedAt:   time.Now(),
 					Duration:    duration.String(),
 					ActorType:   check.ActorType,
-					AlertType:   check.AlertType,
 				}
 
 				// Map config to appropriate check config type
@@ -1045,43 +1044,8 @@ func (db *PostgresDB) ResolveTelegramThread(ctx context.Context, checkUUID strin
 	return err
 }
 
-// MigrateLegacyAlertFields converts checks using the old ActorType="alert" + AlertType
-// config to use AlertChannels. Idempotent — safe to run multiple times.
+// MigrateLegacyAlertFields is a no-op. The legacy alert_type and alert_destination
+// columns have been dropped. Kept for interface compatibility.
 func (db *PostgresDB) MigrateLegacyAlertFields(ctx context.Context) (int, error) {
-	// First, warn about checks that had AlertDestination set
-	rows, err := db.Pool.Query(ctx,
-		`SELECT uuid, name, alert_destination FROM check_definitions
-		 WHERE actor_type = 'alert'
-		   AND alert_type IS NOT NULL AND alert_type != ''
-		   AND (alert_channels IS NULL OR alert_channels = '[]' OR alert_channels = '')
-		   AND alert_destination IS NOT NULL AND alert_destination != ''`)
-	if err != nil {
-		return 0, fmt.Errorf("querying checks with alert_destination: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var uuid, name, dest string
-		if err := rows.Scan(&uuid, &name, &dest); err != nil {
-			logrus.Warnf("Failed to scan alert_destination row: %v", err)
-			continue
-		}
-		logrus.Warnf("Check %q (%s) had AlertDestination=%q which is NOT auto-migrated. Please create a named alert channel in the Settings UI.", name, uuid, dest)
-	}
-	rows.Close()
-
-	// Perform the migration
-	tag, err := db.Pool.Exec(ctx, `
-		UPDATE check_definitions
-		SET alert_channels = json_build_array(alert_type),
-		    actor_type = NULL,
-		    alert_type = NULL,
-		    alert_destination = NULL
-		WHERE actor_type = 'alert'
-		  AND alert_type IS NOT NULL AND alert_type != ''
-		  AND (alert_channels IS NULL OR alert_channels = '[]' OR alert_channels = '')`)
-	if err != nil {
-		return 0, fmt.Errorf("migrating legacy alert fields: %w", err)
-	}
-
-	return int(tag.RowsAffected()), nil
+	return 0, nil
 }

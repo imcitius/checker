@@ -13,10 +13,8 @@ func TestResolveChecks_InheritsRootProject(t *testing.T) {
 		Project:     "my-service",
 		Environment: "prod",
 		Defaults: models.CheckImportDefaults{
-			Duration:         "30s",
-			Timeout:          "10s",
-			AlertType:        "slack",
-			AlertDestination: "#alerts",
+			Duration: "30s",
+			Timeout:  "10s",
 		},
 		Checks: []models.CheckImportItem{
 			{Name: "API Health", Type: "http", URL: "https://example.com/healthz"},
@@ -43,9 +41,6 @@ func TestResolveChecks_InheritsRootProject(t *testing.T) {
 		}
 		if check.Timeout != "10s" {
 			t.Errorf("check %d (%s): expected timeout '10s', got %q", i, check.Name, check.Timeout)
-		}
-		if check.AlertType != "slack" {
-			t.Errorf("check %d (%s): expected alert_type 'slack', got %q", i, check.Name, check.AlertType)
 		}
 	}
 }

@@ -447,66 +447,11 @@ func TestSQLiteDB_MigrateLegacyAlertFields(t *testing.T) {
 	db := newTestSQLiteDB(t)
 	ctx := context.Background()
 
-	now := time.Now().UTC().Truncate(time.Second)
-
-	// Insert a check with ActorType="alert" and AlertType="slack" (should be migrated)
-	_, err := db.DB.ExecContext(ctx, `
-		INSERT INTO check_definitions
-		(uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		"uuid-alert-1", "Alert Check", "proj", "grp", "http", "desc", 1,
-		now.Format(time.RFC3339), now.Format(time.RFC3339), now.Format(time.RFC3339), 1, "", now.Format(time.RFC3339),
-		"30s", "alert", "slack", "botToken:chatID", `{"url":"https://example.com"}`, "", "warning", "", "5m", 0, "")
-	require.NoError(t, err)
-
-	// Insert a check with ActorType="webhook" (should NOT be migrated)
-	_, err = db.DB.ExecContext(ctx, `
-		INSERT INTO check_definitions
-		(uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		"uuid-webhook-1", "Webhook Check", "proj", "grp", "http", "desc", 1,
-		now.Format(time.RFC3339), now.Format(time.RFC3339), now.Format(time.RFC3339), 1, "", now.Format(time.RFC3339),
-		"30s", "webhook", "slack", "", `{"url":"https://example.com"}`, `{"url":"https://webhook.example.com"}`, "warning", "", "5m", 0, "")
-	require.NoError(t, err)
-
-	// Insert a check with ActorType="alert" that already has AlertChannels (should NOT be migrated)
-	_, err = db.DB.ExecContext(ctx, `
-		INSERT INTO check_definitions
-		(uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, alert_type, alert_destination, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		"uuid-already-migrated", "Already Migrated", "proj", "grp", "http", "desc", 1,
-		now.Format(time.RFC3339), now.Format(time.RFC3339), now.Format(time.RFC3339), 1, "", now.Format(time.RFC3339),
-		"30s", "alert", "slack", "", `{"url":"https://example.com"}`, "", "warning", `["slack"]`, "5m", 0, "")
-	require.NoError(t, err)
-
-	// Run migration
+	// MigrateLegacyAlertFields is now a no-op since alert_type and alert_destination
+	// columns have been dropped. Verify it returns 0, nil.
 	count, err := db.MigrateLegacyAlertFields(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 1, count, "should migrate exactly 1 check")
-
-	// Verify the migrated check
-	var actorType, alertType, alertDest, alertChannels string
-	err = db.DB.QueryRowContext(ctx,
-		`SELECT COALESCE(actor_type,''), COALESCE(alert_type,''), COALESCE(alert_destination,''), COALESCE(alert_channels,'') FROM check_definitions WHERE uuid=?`,
-		"uuid-alert-1").Scan(&actorType, &alertType, &alertDest, &alertChannels)
-	require.NoError(t, err)
-	assert.Empty(t, actorType, "actor_type should be cleared")
-	assert.Empty(t, alertType, "alert_type should be cleared")
-	assert.Empty(t, alertDest, "alert_destination should be cleared")
-	assert.Equal(t, `["slack"]`, alertChannels, "alert_channels should contain the old alert_type")
-
-	// Verify the webhook check was NOT touched
-	err = db.DB.QueryRowContext(ctx,
-		`SELECT actor_type, alert_type FROM check_definitions WHERE uuid=?`,
-		"uuid-webhook-1").Scan(&actorType, &alertType)
-	require.NoError(t, err)
-	assert.Equal(t, "webhook", actorType, "webhook check should not be migrated")
-	assert.Equal(t, "slack", alertType, "webhook check alert_type should be preserved")
-
-	// Run migration again — should be idempotent
-	count, err = db.MigrateLegacyAlertFields(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, 0, count, "second run should migrate 0 checks (idempotent)")
+	assert.Equal(t, 0, count, "should be a no-op returning 0")
 }
 
 // TestSQLiteDB_ImplementsRepository verifies the interface is satisfied at compile time.
