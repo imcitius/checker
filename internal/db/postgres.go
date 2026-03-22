@@ -1004,3 +1004,43 @@ func (db *PostgresDB) DeleteAlertChannel(ctx context.Context, name string) error
 	}
 	return nil
 }
+
+// Telegram thread tracking
+
+func (db *PostgresDB) CreateTelegramThread(ctx context.Context, checkUUID, chatID string, messageID int) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO telegram_alert_threads (check_uuid, chat_id, message_id) VALUES ($1, $2, $3)`,
+		checkUUID, chatID, messageID)
+	return err
+}
+
+func (db *PostgresDB) GetUnresolvedTelegramThread(ctx context.Context, checkUUID string) (models.TelegramAlertThread, error) {
+	var t models.TelegramAlertThread
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
+		 FROM telegram_alert_threads WHERE check_uuid=$1 AND is_resolved=false ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChatID, &t.MessageID, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.TelegramAlertThread{}, err
+	}
+	return t, nil
+}
+
+func (db *PostgresDB) GetTelegramThreadByMessage(ctx context.Context, chatID string, messageID int) (models.TelegramAlertThread, error) {
+	var t models.TelegramAlertThread
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
+		 FROM telegram_alert_threads WHERE chat_id=$1 AND message_id=$2 AND is_resolved=false`, chatID, messageID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChatID, &t.MessageID, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.TelegramAlertThread{}, err
+	}
+	return t, nil
+}
+
+func (db *PostgresDB) ResolveTelegramThread(ctx context.Context, checkUUID string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE telegram_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false`,
+		checkUUID)
+	return err
+}

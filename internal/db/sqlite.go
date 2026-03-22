@@ -149,6 +149,18 @@ func (s *SQLiteDB) ensureSchema() error {
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_escalation_notif_unique
 		ON escalation_notifications(check_uuid, policy_name, step_index, notified_at);
 
+	CREATE TABLE IF NOT EXISTS telegram_alert_threads (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		check_uuid  TEXT NOT NULL,
+		chat_id     TEXT NOT NULL,
+		message_id  INTEGER NOT NULL,
+		is_resolved INTEGER NOT NULL DEFAULT 0,
+		created_at  DATETIME NOT NULL DEFAULT (datetime('now')),
+		resolved_at DATETIME
+	);
+	CREATE INDEX IF NOT EXISTS idx_tg_threads_unresolved ON telegram_alert_threads(check_uuid, is_resolved);
+	CREATE INDEX IF NOT EXISTS idx_tg_threads_message ON telegram_alert_threads(chat_id, message_id);
+
 	CREATE TABLE IF NOT EXISTS alert_channels (
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
 		name       TEXT NOT NULL UNIQUE,
@@ -1059,6 +1071,53 @@ func (s *SQLiteDB) DeleteAlertChannel(ctx context.Context, name string) error {
 		return fmt.Errorf("alert channel not found")
 	}
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Telegram thread tracking
+// ---------------------------------------------------------------------------
+
+func (s *SQLiteDB) CreateTelegramThread(ctx context.Context, checkUUID, chatID string, messageID int) error {
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO telegram_alert_threads (check_uuid, chat_id, message_id) VALUES (?, ?, ?)`,
+		checkUUID, chatID, messageID)
+	return err
+}
+
+func (s *SQLiteDB) GetUnresolvedTelegramThread(ctx context.Context, checkUUID string) (models.TelegramAlertThread, error) {
+	var t models.TelegramAlertThread
+	var isResolved sql.NullInt64
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
+		 FROM telegram_alert_threads WHERE check_uuid=? AND is_resolved=0 ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChatID, &t.MessageID, &isResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.TelegramAlertThread{}, err
+	}
+	t.IsResolved = isResolved.Valid && isResolved.Int64 != 0
+	return t, nil
+}
+
+func (s *SQLiteDB) GetTelegramThreadByMessage(ctx context.Context, chatID string, messageID int) (models.TelegramAlertThread, error) {
+	var t models.TelegramAlertThread
+	var isResolved sql.NullInt64
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
+		 FROM telegram_alert_threads WHERE chat_id=? AND message_id=? AND is_resolved=0`, chatID, messageID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChatID, &t.MessageID, &isResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.TelegramAlertThread{}, err
+	}
+	t.IsResolved = isResolved.Valid && isResolved.Int64 != 0
+	return t, nil
+}
+
+func (s *SQLiteDB) ResolveTelegramThread(ctx context.Context, checkUUID string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := s.DB.ExecContext(ctx,
+		`UPDATE telegram_alert_threads SET is_resolved=1, resolved_at=? WHERE check_uuid=? AND is_resolved=0`,
+		now, checkUUID)
+	return err
 }
 
 // ---------------------------------------------------------------------------

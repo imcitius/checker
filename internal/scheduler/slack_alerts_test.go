@@ -243,6 +243,14 @@ func (r *mockRepo) GetAlertChannelByName(_ context.Context, _ string) (models.Al
 func (r *mockRepo) CreateAlertChannel(_ context.Context, _ models.AlertChannel) error { return nil }
 func (r *mockRepo) UpdateAlertChannel(_ context.Context, _ models.AlertChannel) error { return nil }
 func (r *mockRepo) DeleteAlertChannel(_ context.Context, _ string) error              { return nil }
+func (r *mockRepo) CreateTelegramThread(_ context.Context, _, _ string, _ int) error  { return nil }
+func (r *mockRepo) GetUnresolvedTelegramThread(_ context.Context, _ string) (models.TelegramAlertThread, error) {
+	return models.TelegramAlertThread{}, fmt.Errorf("not found")
+}
+func (r *mockRepo) GetTelegramThreadByMessage(_ context.Context, _ string, _ int) (models.TelegramAlertThread, error) {
+	return models.TelegramAlertThread{}, fmt.Errorf("not found")
+}
+func (r *mockRepo) ResolveTelegramThread(_ context.Context, _ string) error { return nil }
 
 // --- Tests ---
 

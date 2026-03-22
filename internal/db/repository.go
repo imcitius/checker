@@ -33,6 +33,12 @@ type Repository interface {
 	ResolveThread(ctx context.Context, checkUUID string) error
 	UpdateSlackThread(ctx context.Context, checkUUID, threadTs, channelID string) error
 
+	// Telegram thread tracking
+	CreateTelegramThread(ctx context.Context, checkUUID, chatID string, messageID int) error
+	GetUnresolvedTelegramThread(ctx context.Context, checkUUID string) (models.TelegramAlertThread, error)
+	GetTelegramThreadByMessage(ctx context.Context, chatID string, messageID int) (models.TelegramAlertThread, error)
+	ResolveTelegramThread(ctx context.Context, checkUUID string) error
+
 	// Alert silences
 	CreateSilence(ctx context.Context, silence models.AlertSilence) error
 	IsCheckSilenced(ctx context.Context, checkUUID, project string) (bool, error)
