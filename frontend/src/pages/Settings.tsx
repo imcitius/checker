@@ -254,7 +254,16 @@ export function Settings() {
         toast.error('Test notification failed')
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Test notification failed')
+      let message = 'Test notification failed'
+      if (err instanceof Error) {
+        try {
+          const parsed = JSON.parse(err.message)
+          message = parsed.error || err.message
+        } catch {
+          message = err.message
+        }
+      }
+      toast.error(message)
     } finally {
       setTestingChannel(null)
     }
