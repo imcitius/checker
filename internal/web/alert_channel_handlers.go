@@ -295,6 +295,17 @@ func sendTestNotification(channel models.AlertChannel) error {
 		}
 		return client.Trigger("Test Check", "checker-test", testMessage, "info")
 
+	case "ntfy":
+		serverURL, _ := cfg["server_url"].(string)
+		topic, _ := cfg["topic"].(string)
+		token, _ := cfg["token"].(string)
+		username, _ := cfg["username"].(string)
+		password, _ := cfg["password"].(string)
+		if topic == "" {
+			return fmt.Errorf("ntfy requires topic")
+		}
+		return alerts.SendNtfyTest(serverURL, topic, token, username, password, testMessage)
+
 	default:
 		return fmt.Errorf("unsupported channel type: %s", channel.Type)
 	}

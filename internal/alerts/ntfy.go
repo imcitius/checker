@@ -105,6 +105,29 @@ func (a *NtfyAlerter) authHeaders() map[string]string {
 	return headers
 }
 
+// SendNtfyTest sends a test notification to an ntfy server.
+func SendNtfyTest(serverURL, topic, token, username, password, message string) error {
+	if serverURL == "" {
+		serverURL = "https://ntfy.sh"
+	}
+	payload := ntfyPayload{
+		Topic:    topic,
+		Title:    "Checker Test Notification",
+		Message:  message,
+		Priority: 3,
+		Tags:     []string{"test_tube"},
+		Markdown: false,
+	}
+	alerter := &NtfyAlerter{config: ntfyConfig{
+		ServerURL: serverURL,
+		Topic:     topic,
+		Token:     token,
+		Username:  username,
+		Password:  password,
+	}}
+	return postJSON(serverURL, payload, alerter.authHeaders())
+}
+
 func newNtfyAlerter(raw json.RawMessage) (Alerter, error) {
 	var cfg ntfyConfig
 	if err := json.Unmarshal(raw, &cfg); err != nil {
