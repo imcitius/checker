@@ -485,7 +485,7 @@ func TestSendNtfyTest_WithClickURL(t *testing.T) {
 	}))
 	defer server.Close()
 
-	err := SendNtfyTest(server.URL, "test-topic", "", "", "", "test message", "https://checker.example.com")
+	err := SendNtfyTest(server.URL, "test-topic", "", "", "", "test message", "https://checker.example.com", false)
 	if err != nil {
 		t.Fatalf("SendNtfyTest returned error: %v", err)
 	}
@@ -515,7 +515,7 @@ func TestSendNtfyTest_NoClickURL(t *testing.T) {
 	}))
 	defer server.Close()
 
-	err := SendNtfyTest(server.URL, "test-topic", "", "", "", "test message", "")
+	err := SendNtfyTest(server.URL, "test-topic", "", "", "", "test message", "", false)
 	if err != nil {
 		t.Fatalf("SendNtfyTest returned error: %v", err)
 	}

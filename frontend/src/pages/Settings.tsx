@@ -115,6 +115,7 @@ const CONFIG_FIELDS: Record<ChannelType, ConfigField[]> = {
     { key: 'password', label: 'Password', type: 'password', placeholder: 'Basic auth password (optional)' },
     { key: 'icon', label: 'Icon URL', type: 'text', placeholder: 'https://example.com/icon.png (optional)' },
     { key: 'click_url', label: 'Checker URL', type: 'text', placeholder: 'https://checker.example.com (optional, for action buttons)' },
+    { key: 'insecure', label: 'Skip TLS Verification', type: 'toggle' },
   ],
 }
 

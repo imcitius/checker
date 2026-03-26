@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 )
 
@@ -16,6 +17,7 @@ type ntfyConfig struct {
 	Password  string `json:"password"`   // optional Basic auth
 	Icon      string `json:"icon"`       // optional notification icon URL
 	ClickURL  string `json:"click_url"`  // base URL of Checker UI, e.g. "https://checker.example.com"
+	Insecure  bool   `json:"insecure"`   // skip TLS certificate verification
 }
 
 // ntfyAction represents an interactive button in an ntfy notification.
@@ -49,6 +51,13 @@ type NtfyAlerter struct {
 
 func (a *NtfyAlerter) Type() string { return "ntfy" }
 
+func (a *NtfyAlerter) httpClient() *http.Client {
+	if a.config.Insecure {
+		return insecureHTTPClient
+	}
+	return defaultHTTPClient
+}
+
 func (a *NtfyAlerter) SendAlert(p AlertPayload) error {
 	priority := ntfyPriority(p.Severity)
 	msg := fmt.Sprintf("**Check:** %s\n**Project:** %s\n**Type:** %s\n**Error:** %s",
@@ -78,7 +87,7 @@ func (a *NtfyAlerter) SendAlert(p AlertPayload) error {
 
 	url := a.config.ServerURL
 	headers := a.authHeaders()
-	if err := postJSON(url, payload, headers); err != nil {
+	if err := postJSONWithClient(a.httpClient(), url, payload, headers); err != nil {
 		return fmt.Errorf("ntfy alert: %w", err)
 	}
 	return nil
@@ -112,7 +121,7 @@ func (a *NtfyAlerter) SendRecovery(p RecoveryPayload) error {
 
 	url := a.config.ServerURL
 	headers := a.authHeaders()
-	if err := postJSON(url, payload, headers); err != nil {
+	if err := postJSONWithClient(a.httpClient(), url, payload, headers); err != nil {
 		return fmt.Errorf("ntfy recovery: %w", err)
 	}
 	return nil
@@ -150,7 +159,7 @@ func (a *NtfyAlerter) authHeaders() map[string]string {
 }
 
 // SendNtfyTest sends a test notification to an ntfy server.
-func SendNtfyTest(serverURL, topic, token, username, password, message, clickURL string) error {
+func SendNtfyTest(serverURL, topic, token, username, password, message, clickURL string, insecure bool) error {
 	if serverURL == "" {
 		serverURL = "https://ntfy.sh"
 	}
@@ -179,8 +188,15 @@ func SendNtfyTest(serverURL, topic, token, username, password, message, clickURL
 		Token:     token,
 		Username:  username,
 		Password:  password,
+		Insecure:  insecure,
 	}}
-	return postJSON(serverURL, payload, alerter.authHeaders())
+	var client *http.Client
+	if insecure {
+		client = insecureHTTPClient
+	} else {
+		client = defaultHTTPClient
+	}
+	return postJSONWithClient(client, serverURL, payload, alerter.authHeaders())
 }
 
 func newNtfyAlerter(raw json.RawMessage) (Alerter, error) {
