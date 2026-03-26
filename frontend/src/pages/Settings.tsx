@@ -216,6 +216,16 @@ export function Settings() {
 
       if (editingChannel) {
         await api.updateAlertChannel(editingChannel.name, input)
+        // Optimistically update the local channel list so the UI reflects
+        // the edit immediately, preventing stale ConfigSummary display
+        // on other channels while fetchChannels() is in flight.
+        setChannels((prev: AlertChannel[]) =>
+          prev.map((ch: AlertChannel) =>
+            ch.id === editingChannel.id
+              ? { ...ch, name: input.name, type: input.type, config: { ...input.config } }
+              : ch
+          )
+        )
         toast.success(`Channel "${formName}" updated`)
       } else {
         await api.createAlertChannel(input)
@@ -223,6 +233,7 @@ export function Settings() {
       }
 
       setDialogOpen(false)
+      // Refresh from server to get canonical data (masked secrets, updated_at, etc.)
       fetchChannels()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save channel')
