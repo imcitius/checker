@@ -92,6 +92,7 @@ export interface CheckDefinition {
   actor_type?: string
   alert_type?: string
   alert_destination?: string
+  alert_channels?: string[]
   // Maintenance window
   maintenance_until?: string | null
 }
