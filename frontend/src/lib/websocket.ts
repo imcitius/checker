@@ -34,6 +34,7 @@ export interface Check {
   Periodicity: string
   URL: string
   IsSilenced: boolean
+  SilencedChannels?: string[]
 }
 
 type OnMessage = (msg: WSMessage) => void

@@ -153,6 +153,7 @@ export interface AlertSilence {
   ID: number
   Scope: string
   Target: string
+  Channel: string
   SilencedBy: string
   SilencedAt: string
   ExpiresAt: string | null
@@ -167,6 +168,7 @@ export interface SilencesResponse {
 export interface CreateSilenceRequest {
   scope: 'check' | 'project'
   target: string
+  channel?: string
   duration: string
   reason?: string
 }
