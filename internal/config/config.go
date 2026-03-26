@@ -71,6 +71,7 @@ type Config struct {
 	DiscordApp struct {
 		BotToken       string `yaml:"bot_token"`
 		AppID          string `yaml:"app_id"`
+		PublicKey      string `yaml:"public_key"`       // for interaction signature verification
 		DefaultChannel string `yaml:"default_channel"` // Discord channel ID
 	} `yaml:"discord_app,omitempty"`
 
@@ -241,6 +242,9 @@ func (cfg *Config) applyEnvOverrides() {
 	}
 	if v := os.Getenv("DISCORD_APP_ID"); v != "" {
 		cfg.DiscordApp.AppID = v
+	}
+	if v := os.Getenv("DISCORD_APP_PUBLIC_KEY"); v != "" {
+		cfg.DiscordApp.PublicKey = v
 	}
 	if v := os.Getenv("DISCORD_APP_DEFAULT_CHANNEL"); v != "" {
 		cfg.DiscordApp.DefaultChannel = v

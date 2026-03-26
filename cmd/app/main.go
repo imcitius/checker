@@ -147,6 +147,10 @@ func main() {
 				discordClient := discord.NewDiscordClient(cfg.DiscordApp.BotToken, cfg.DiscordApp.AppID, cfg.DiscordApp.DefaultChannel)
 				logrus.Info("Discord Bot client initialized")
 				appAlerters = append(appAlerters, scheduler.NewDiscordAppAlerter(discordClient, repo, cfg.DiscordApp.DefaultChannel))
+				webhooks = append(webhooks, &web.DiscordWebhookRegistrar{
+					Client:    discordClient,
+					PublicKey: cfg.DiscordApp.PublicKey,
+				})
 			} else {
 				logrus.Info("Discord Bot App not configured, skipping")
 			}
