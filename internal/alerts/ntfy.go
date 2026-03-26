@@ -10,7 +10,7 @@ import (
 type ntfyConfig struct {
 	ServerURL string `json:"server_url"` // default "https://ntfy.sh"
 	Topic     string `json:"topic"`      // required
-	Token     string `json:"token"`      // optional Bearer auth
+	Token     string `json:"token"`      // optional token auth (Basic with token as username)
 	Username  string `json:"username"`   // optional Basic auth
 	Password  string `json:"password"`   // optional Basic auth
 	Icon      string `json:"icon"`       // optional notification icon URL
@@ -95,7 +95,12 @@ func ntfyPriority(severity string) int {
 func (a *NtfyAlerter) authHeaders() map[string]string {
 	headers := map[string]string{}
 	if a.config.Token != "" {
-		headers["Authorization"] = "Bearer " + a.config.Token
+		// ntfy access tokens authenticate via Basic Auth with token as username
+		// and empty password, per https://docs.ntfy.sh/config/#access-tokens
+		creds := base64.StdEncoding.EncodeToString(
+			[]byte(a.config.Token + ":"),
+		)
+		headers["Authorization"] = "Basic " + creds
 	} else if a.config.Username != "" && a.config.Password != "" {
 		creds := base64.StdEncoding.EncodeToString(
 			[]byte(a.config.Username + ":" + a.config.Password),

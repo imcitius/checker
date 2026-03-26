@@ -222,7 +222,7 @@ func TestNewNtfyAlerter_DefaultServerURL(t *testing.T) {
 	}
 }
 
-func TestSendNtfyAlert_WithBearerAuth(t *testing.T) {
+func TestSendNtfyAlert_WithTokenAuth(t *testing.T) {
 	var authHeader string
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -235,7 +235,7 @@ func TestSendNtfyAlert_WithBearerAuth(t *testing.T) {
 		config: ntfyConfig{
 			ServerURL: server.URL,
 			Topic:     "test-topic",
-			Token:     "tk_mytoken123",
+			Token:     "tk_abc123",
 		},
 	}
 
@@ -250,9 +250,16 @@ func TestSendNtfyAlert_WithBearerAuth(t *testing.T) {
 		t.Fatalf("SendAlert returned error: %v", err)
 	}
 
-	expected := "Bearer tk_mytoken123"
+	// ntfy tokens use Basic Auth with token as username and empty password
+	expectedCreds := base64.StdEncoding.EncodeToString([]byte("tk_abc123:"))
+	expected := "Basic " + expectedCreds
 	if authHeader != expected {
 		t.Errorf("expected Authorization %q, got %q", expected, authHeader)
+	}
+
+	// Verify the exact base64 encoding: "tk_abc123:" -> "dGtfYWJjMTIzOg=="
+	if expectedCreds != "dGtfYWJjMTIzOg==" {
+		t.Errorf("expected base64 encoding 'dGtfYWJjMTIzOg==', got %q", expectedCreds)
 	}
 }
 
