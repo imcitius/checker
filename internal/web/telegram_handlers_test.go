@@ -125,6 +125,9 @@ func (m *mockTelegramRepo) ResolveTelegramThread(_ context.Context, _ string) er
 func (m *mockTelegramRepo) IsCheckSilenced(_ context.Context, _, _ string) (bool, error) {
 	return false, nil
 }
+func (m *mockTelegramRepo) IsChannelSilenced(_ context.Context, _, _, _ string) (bool, error) {
+	return false, nil
+}
 func (m *mockTelegramRepo) DeactivateSilenceByID(_ context.Context, _ int) error { return nil }
 func (m *mockTelegramRepo) CreateAlertEvent(_ context.Context, _ models.AlertEvent) error {
 	return nil

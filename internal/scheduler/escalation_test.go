@@ -127,6 +127,9 @@ func (m *mockEscalationRepo) CreateSilence(_ context.Context, _ models.AlertSile
 func (m *mockEscalationRepo) IsCheckSilenced(_ context.Context, _, _ string) (bool, error) {
 	return false, nil
 }
+func (m *mockEscalationRepo) IsChannelSilenced(_ context.Context, _, _, _ string) (bool, error) {
+	return false, nil
+}
 func (m *mockEscalationRepo) DeactivateSilence(_ context.Context, _, _ string) error { return nil }
 func (m *mockEscalationRepo) DeactivateSilenceByID(_ context.Context, _ int) error  { return nil }
 func (m *mockEscalationRepo) GetActiveSilences(_ context.Context) ([]models.AlertSilence, error) {

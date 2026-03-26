@@ -567,8 +567,8 @@ func (db *PostgresDB) UpdateSlackThread(ctx context.Context, checkUUID, threadTs
 
 func (db *PostgresDB) CreateSilence(ctx context.Context, silence models.AlertSilence) error {
 	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO alert_silences (scope, target, silenced_by, silenced_at, expires_at, reason, active) VALUES ($1, $2, $3, NOW(), $4, $5, $6)`,
-		silence.Scope, silence.Target, silence.SilencedBy, silence.ExpiresAt, silence.Reason, silence.Active)
+		`INSERT INTO alert_silences (scope, target, channel, silenced_by, silenced_at, expires_at, reason, active) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7)`,
+		silence.Scope, silence.Target, silence.Channel, silence.SilencedBy, silence.ExpiresAt, silence.Reason, silence.Active)
 	return err
 }
 
@@ -593,7 +593,7 @@ func (db *PostgresDB) DeactivateSilenceByID(ctx context.Context, id int) error {
 
 func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
 	rows, err := db.Pool.Query(ctx,
-		`SELECT id, scope, target, silenced_by, silenced_at, expires_at, reason
+		`SELECT id, scope, target, channel, silenced_by, silenced_at, expires_at, reason
 		FROM alert_silences
 		WHERE active = true AND (expires_at IS NULL OR expires_at > NOW())`)
 	if err != nil {
@@ -604,7 +604,7 @@ func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSile
 	var silences []models.AlertSilence
 	for rows.Next() {
 		var s models.AlertSilence
-		if err := rows.Scan(&s.ID, &s.Scope, &s.Target, &s.SilencedBy, &s.SilencedAt, &s.ExpiresAt, &s.Reason); err != nil {
+		if err := rows.Scan(&s.ID, &s.Scope, &s.Target, &s.Channel, &s.SilencedBy, &s.SilencedAt, &s.ExpiresAt, &s.Reason); err != nil {
 			return nil, err
 		}
 		s.Active = true
@@ -625,6 +625,24 @@ func (db *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project st
 				OR (scope = 'project' AND target = $2)
 			)
 		)`, checkUUID, project).Scan(&exists)
+	return exists, err
+}
+
+// IsChannelSilenced checks if a specific channel is silenced for a check.
+// Returns true if there's a silence matching the check/project AND (channel='' OR channel=channelName).
+func (db *PostgresDB) IsChannelSilenced(ctx context.Context, checkUUID, project, channelName string) (bool, error) {
+	var exists bool
+	err := db.Pool.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM alert_silences
+			WHERE active = true
+			AND (expires_at IS NULL OR expires_at > NOW())
+			AND (
+				(scope = 'check' AND target = $1)
+				OR (scope = 'project' AND target = $2)
+			)
+			AND (channel = '' OR channel = $3)
+		)`, checkUUID, project, channelName).Scan(&exists)
 	return exists, err
 }
 

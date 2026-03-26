@@ -92,6 +92,7 @@ func (s *SQLiteDB) ensureSchema() error {
 		id          INTEGER PRIMARY KEY AUTOINCREMENT,
 		scope       TEXT NOT NULL,
 		target      TEXT NOT NULL,
+		channel     TEXT NOT NULL DEFAULT '',
 		silenced_by TEXT NOT NULL DEFAULT '',
 		silenced_at DATETIME NOT NULL DEFAULT (datetime('now')),
 		expires_at  DATETIME,
@@ -723,8 +724,8 @@ func (s *SQLiteDB) UpdateSlackThread(ctx context.Context, checkUUID, threadTs, c
 func (s *SQLiteDB) CreateSilence(ctx context.Context, silence models.AlertSilence) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, err := s.DB.ExecContext(ctx,
-		`INSERT INTO alert_silences (scope, target, silenced_by, silenced_at, expires_at, reason, active) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		silence.Scope, silence.Target, silence.SilencedBy, now, nullableTime(silence.ExpiresAt), silence.Reason, boolToInt(silence.Active))
+		`INSERT INTO alert_silences (scope, target, channel, silenced_by, silenced_at, expires_at, reason, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		silence.Scope, silence.Target, silence.Channel, silence.SilencedBy, now, nullableTime(silence.ExpiresAt), silence.Reason, boolToInt(silence.Active))
 	return err
 }
 
@@ -751,7 +752,7 @@ func (s *SQLiteDB) DeactivateSilenceByID(ctx context.Context, id int) error {
 func (s *SQLiteDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT id, scope, target, silenced_by, silenced_at, expires_at, reason
+		`SELECT id, scope, target, channel, silenced_by, silenced_at, expires_at, reason
 		FROM alert_silences
 		WHERE active = 1 AND (expires_at IS NULL OR expires_at > ?)`, now)
 	if err != nil {
@@ -762,7 +763,7 @@ func (s *SQLiteDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence
 	var silences []models.AlertSilence
 	for rows.Next() {
 		var si models.AlertSilence
-		if err := rows.Scan(&si.ID, &si.Scope, &si.Target, &si.SilencedBy, &si.SilencedAt, &si.ExpiresAt, &si.Reason); err != nil {
+		if err := rows.Scan(&si.ID, &si.Scope, &si.Target, &si.Channel, &si.SilencedBy, &si.SilencedAt, &si.ExpiresAt, &si.Reason); err != nil {
 			return nil, err
 		}
 		si.Active = true
@@ -782,6 +783,21 @@ func (s *SQLiteDB) IsCheckSilenced(ctx context.Context, checkUUID, project strin
 			(scope = 'check' AND target = ?)
 			OR (scope = 'project' AND target = ?)
 		)`, now, checkUUID, project).Scan(&count)
+	return count > 0, err
+}
+
+func (s *SQLiteDB) IsChannelSilenced(ctx context.Context, checkUUID, project, channelName string) (bool, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	var count int
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM alert_silences
+		WHERE active = 1
+		AND (expires_at IS NULL OR expires_at > ?)
+		AND (
+			(scope = 'check' AND target = ?)
+			OR (scope = 'project' AND target = ?)
+		)
+		AND (channel = '' OR channel = ?)`, now, checkUUID, project, channelName).Scan(&count)
 	return count > 0, err
 }
 

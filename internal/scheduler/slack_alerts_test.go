@@ -117,6 +117,10 @@ func (r *mockRepo) IsCheckSilenced(_ context.Context, checkUUID, _ string) (bool
 	return r.silenced[checkUUID], nil
 }
 
+func (r *mockRepo) IsChannelSilenced(_ context.Context, checkUUID, _, _ string) (bool, error) {
+	return r.silenced[checkUUID], nil
+}
+
 func (r *mockRepo) GetUnresolvedThread(_ context.Context, checkUUID string) (models.SlackAlertThread, error) {
 	if r.getThreadErr != nil {
 		return models.SlackAlertThread{}, r.getThreadErr
