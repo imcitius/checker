@@ -108,7 +108,7 @@ const CONFIG_FIELDS: Record<ChannelType, ConfigField[]> = {
     { key: 'region', label: 'Region', type: 'text', placeholder: 'us or eu' },
   ],
   ntfy: [
-    { key: 'server_url', label: 'Server URL', type: 'text', placeholder: 'https://ntfy.sh (default)' },
+    { key: 'server_url', label: 'Server URL', type: 'text', placeholder: 'https://ntfy.example.com' },
     { key: 'topic', label: 'Topic', type: 'text', placeholder: 'my-alerts', required: true },
     { key: 'token', label: 'Access Token', type: 'password', placeholder: 'Bearer token (optional)' },
     { key: 'username', label: 'Username', type: 'text', placeholder: 'Basic auth username (optional)' },

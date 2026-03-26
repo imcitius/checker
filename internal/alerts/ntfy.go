@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -158,11 +159,24 @@ func (a *NtfyAlerter) authHeaders() map[string]string {
 	return headers
 }
 
+// validateNtfyURL checks that the given URL is a valid HTTP(S) URL with a host.
+func validateNtfyURL(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("ntfy server_url is not a valid HTTP(S) URL: %q", rawURL)
+	}
+	return nil
+}
+
 // SendNtfyTest sends a test notification to an ntfy server.
 func SendNtfyTest(serverURL, topic, token, username, password, message, clickURL string, insecure bool) error {
 	if serverURL == "" {
 		serverURL = "https://ntfy.sh"
 	}
+	if err := validateNtfyURL(serverURL); err != nil {
+		return fmt.Errorf("invalid server URL: %q — must be a valid HTTP(S) URL (e.g. https://ntfy.example.com)", serverURL)
+	}
+	serverURL = strings.TrimRight(serverURL, "/")
 	payload := ntfyPayload{
 		Topic:    topic,
 		Title:    "Checker Test Notification",
@@ -210,6 +224,12 @@ func newNtfyAlerter(raw json.RawMessage) (Alerter, error) {
 	if cfg.ServerURL == "" {
 		cfg.ServerURL = "https://ntfy.sh"
 	}
+	// Validate server URL
+	if err := validateNtfyURL(cfg.ServerURL); err != nil {
+		return nil, fmt.Errorf("ntfy server_url is not a valid HTTP(S) URL: %q", cfg.ServerURL)
+	}
+	// Normalize: strip trailing slash
+	cfg.ServerURL = strings.TrimRight(cfg.ServerURL, "/")
 	return &NtfyAlerter{config: cfg}, nil
 }
 

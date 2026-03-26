@@ -528,6 +528,64 @@ func TestSendNtfyTest_NoClickURL(t *testing.T) {
 	}
 }
 
+func TestNewNtfyAlerter_InvalidServerURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"double colon typo", `{"topic":"t","server_url":"https:://ntfy.example.com"}`},
+		{"no scheme", `{"topic":"t","server_url":"ntfy.example.com"}`},
+		{"ftp scheme", `{"topic":"t","server_url":"ftp://ntfy.example.com"}`},
+		{"no host", `{"topic":"t","server_url":"https://"}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewAlerter("ntfy", json.RawMessage(tc.url))
+			if err == nil {
+				t.Fatalf("expected error for invalid server_url, got nil")
+			}
+			if !strings.Contains(err.Error(), "not a valid HTTP(S) URL") {
+				t.Errorf("expected 'not a valid HTTP(S) URL' in error, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestNewNtfyAlerter_TrailingSlashNormalized(t *testing.T) {
+	cfg := json.RawMessage(`{"topic":"t","server_url":"https://ntfy.example.com/"}`)
+	a, err := NewAlerter("ntfy", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	na := a.(*NtfyAlerter)
+	if na.config.ServerURL != "https://ntfy.example.com" {
+		t.Errorf("expected trailing slash stripped, got %q", na.config.ServerURL)
+	}
+}
+
+func TestSendNtfyTest_InvalidServerURL(t *testing.T) {
+	err := SendNtfyTest("https:://ntfy.example.com", "topic", "", "", "", "test", "", false)
+	if err == nil {
+		t.Fatal("expected error for invalid server URL, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid server URL") {
+		t.Errorf("expected 'invalid server URL' in error, got: %v", err)
+	}
+}
+
+func TestSendNtfyTest_EmptyServerURLDefaults(t *testing.T) {
+	// This should not error — empty URL defaults to https://ntfy.sh
+	// We can't actually send, but we can verify it doesn't fail on URL validation
+	// by checking it proceeds past validation (will fail on network, not validation)
+	err := SendNtfyTest("", "topic", "", "", "", "test", "", false)
+	if err != nil {
+		// Should fail on network, not on URL validation
+		if strings.Contains(err.Error(), "invalid server URL") {
+			t.Errorf("empty URL should default to ntfy.sh, not fail validation: %v", err)
+		}
+	}
+}
+
 func TestNtfyPriorityMapping(t *testing.T) {
 	tests := []struct {
 		severity string
