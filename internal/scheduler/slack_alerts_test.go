@@ -91,6 +91,7 @@ type mockRepo struct {
 	resolvedThreads  []string                           // checkUUIDs that had ResolveThread called
 	createdThreads   []createdThread
 	checkDefs        map[string]models.CheckDefinition // uuid -> def
+	alertChannels    map[string]models.AlertChannel     // name -> channel
 	resolveErr       error
 	createThreadErr  error
 	getThreadErr     error
@@ -107,9 +108,10 @@ type createdThread struct {
 
 func newMockRepo() *mockRepo {
 	return &mockRepo{
-		threads:   make(map[string]models.SlackAlertThread),
-		silenced:  make(map[string]bool),
-		checkDefs: make(map[string]models.CheckDefinition),
+		threads:       make(map[string]models.SlackAlertThread),
+		silenced:      make(map[string]bool),
+		checkDefs:     make(map[string]models.CheckDefinition),
+		alertChannels: make(map[string]models.AlertChannel),
 	}
 }
 
@@ -240,12 +242,16 @@ func (r *mockRepo) CreateEscalationNotification(_ context.Context, _ models.Esca
 }
 func (r *mockRepo) DeleteEscalationNotifications(_ context.Context, _ string) error { return nil }
 
-// Alert channel stubs (not used in slack alert tests)
+// Alert channel stubs
 func (r *mockRepo) GetAllAlertChannels(_ context.Context) ([]models.AlertChannel, error) {
 	return nil, nil
 }
-func (r *mockRepo) GetAlertChannelByName(_ context.Context, _ string) (models.AlertChannel, error) {
-	return models.AlertChannel{}, fmt.Errorf("not found")
+func (r *mockRepo) GetAlertChannelByName(_ context.Context, name string) (models.AlertChannel, error) {
+	ch, ok := r.alertChannels[name]
+	if !ok {
+		return models.AlertChannel{}, fmt.Errorf("alert channel %q not found", name)
+	}
+	return ch, nil
 }
 func (r *mockRepo) CreateAlertChannel(_ context.Context, _ models.AlertChannel) error { return nil }
 func (r *mockRepo) UpdateAlertChannel(_ context.Context, _ models.AlertChannel) error { return nil }

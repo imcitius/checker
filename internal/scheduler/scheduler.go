@@ -370,10 +370,21 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 			}
 		}
 
-		// App alerters (Slack App, Telegram App, etc.) — runs alongside existing alerts
+		// App alerters — only fire if the check has a matching channel type selected
 		isNewIncident := previouslyHealthy
-		for _, aa := range appAlerters {
-			aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+		channels := getEffectiveAlertChannels(checkDef)
+		if len(channels) == 0 {
+			// No channels explicitly configured — fire all AppAlerters (backward compatible)
+			for _, aa := range appAlerters {
+				aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+			}
+		} else {
+			selectedTypes := resolveSelectedChannelTypes(repo, checkDef)
+			for _, aa := range appAlerters {
+				if shouldAppAlerterFire(aa, selectedTypes) {
+					aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+				}
+			}
 		}
 
 		// Process escalation policy (if assigned)
@@ -399,9 +410,20 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 		// Send recovery alerts for legacy channels
 		sendRecoveryAlerts(repo, checkStatus, checkDef, appAlerters)
 
-		// Handle app alerter recovery (thread resolution, etc.)
-		for _, aa := range appAlerters {
-			aa.HandleRecovery(context.Background(), checkDef)
+		// Handle app alerter recovery — only fire if the check has a matching channel type selected
+		recoveryChannels := getEffectiveAlertChannels(checkDef)
+		if len(recoveryChannels) == 0 {
+			// No channels explicitly configured — fire all AppAlerters (backward compatible)
+			for _, aa := range appAlerters {
+				aa.HandleRecovery(context.Background(), checkDef)
+			}
+		} else {
+			recoveryTypes := resolveSelectedChannelTypes(repo, checkDef)
+			for _, aa := range appAlerters {
+				if shouldAppAlerterFire(aa, recoveryTypes) {
+					aa.HandleRecovery(context.Background(), checkDef)
+				}
+			}
 		}
 
 		// Clear escalation notifications on recovery (reset for next incident)
@@ -443,6 +465,32 @@ func shouldSendAlert(previouslyHealthy bool, reAlertInterval time.Duration, stat
 // getEffectiveAlertChannels returns the list of alert channels to dispatch to.
 func getEffectiveAlertChannels(checkDef models.CheckDefinition) []string {
 	return checkDef.AlertChannels
+}
+
+// resolveSelectedChannelTypes returns the set of channel types selected for a check.
+func resolveSelectedChannelTypes(repo db.Repository, checkDef models.CheckDefinition) map[string]bool {
+	channels := getEffectiveAlertChannels(checkDef)
+	types := make(map[string]bool)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for _, name := range channels {
+		ch, err := repo.GetAlertChannelByName(ctx, name)
+		if err != nil {
+			continue
+		}
+		types[ch.Type] = true
+	}
+	return types
+}
+
+// shouldAppAlerterFire returns true if any selected channel type matches the AppAlerter's owned types.
+func shouldAppAlerterFire(aa AppAlerter, selectedTypes map[string]bool) bool {
+	for _, t := range aa.OwnedTypes() {
+		if selectedTypes[t] {
+			return true
+		}
+	}
+	return false
 }
 
 // getEffectiveSeverity returns the severity for the check, defaulting to "critical".
