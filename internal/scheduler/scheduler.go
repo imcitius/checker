@@ -474,6 +474,19 @@ func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.C
 		return
 	}
 
+	// Check if the check or its project is silenced
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	silenced, err := repo.IsCheckSilenced(ctx, status.UUID, status.Project)
+	if err != nil {
+		logrus.Errorf("Failed to check silence for %s: %v", status.UUID, err)
+		// Continue — don't suppress alerts on error
+	}
+	if silenced {
+		logrus.Infof("Check %s (%s/%s) is silenced, skipping stateless alerts", status.UUID, status.Project, status.CheckName)
+		return
+	}
+
 	ownedTypes := buildOwnedTypeSet(appAlerters)
 	severity := getEffectiveSeverity(checkDef)
 	payload := alerts.AlertPayload{
@@ -510,6 +523,19 @@ func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.C
 func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef models.CheckDefinition, appAlerters []AppAlerter) {
 	channels := getEffectiveAlertChannels(checkDef)
 	if len(channels) == 0 {
+		return
+	}
+
+	// Check if the check or its project is silenced
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	silenced, err := repo.IsCheckSilenced(ctx, status.UUID, status.Project)
+	if err != nil {
+		logrus.Errorf("Failed to check silence for %s: %v", status.UUID, err)
+		// Continue — don't suppress recovery alerts on error
+	}
+	if silenced {
+		logrus.Infof("Check %s (%s/%s) is silenced, skipping stateless recovery alerts", status.UUID, status.Project, status.CheckName)
 		return
 	}
 
