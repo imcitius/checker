@@ -368,6 +368,15 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 				logger.WithError(err).Error("Failed to update last alert time")
 			}
+		} else if configChangedSinceLastAlert(checkDef, checkStatus) {
+			// Fire stateless alerters when check config was updated after the last
+			// alert (e.g. user added new alert channels on an ongoing failure).
+			sendAlerts(repo, checkStatus, checkDef, appAlerters)
+
+			checkStatus.LastAlertSent = runTime
+			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
+				logger.WithError(err).Error("Failed to update last alert time")
+			}
 		}
 
 		// App alerters — only fire if the check has a matching channel type selected
@@ -460,6 +469,18 @@ func shouldSendAlert(previouslyHealthy bool, reAlertInterval time.Duration, stat
 
 	// Re-alert if enough time has passed since the last alert.
 	return time.Since(status.LastAlertSent) >= reAlertInterval
+}
+
+// configChangedSinceLastAlert returns true when the check definition was
+// modified after the last alert was sent.  This catches the case where a user
+// adds new alert channels while a check is already in a failing state —
+// without this, the new channels would never fire until the check recovers
+// and fails again.
+func configChangedSinceLastAlert(checkDef models.CheckDefinition, status models.CheckStatus) bool {
+	if status.LastAlertSent.IsZero() {
+		return false // no previous alert — handled by shouldSendAlert
+	}
+	return !checkDef.UpdatedAt.IsZero() && checkDef.UpdatedAt.After(status.LastAlertSent)
 }
 
 // getEffectiveAlertChannels returns the list of alert channels to dispatch to.
