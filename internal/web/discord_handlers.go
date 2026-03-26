@@ -243,7 +243,7 @@ func (h *DiscordInteractionHandler) handleSilence(ctx context.Context, w http.Re
 	silence := models.AlertSilence{
 		Scope:      "check",
 		Target:     checkUUID,
-		Channel:    "discord_bot",
+		Channel:    "discord",
 		SilencedBy: username,
 		Reason:     fmt.Sprintf("Silenced via Discord for %s", durationLabel),
 		Active:     true,

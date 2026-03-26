@@ -249,25 +249,11 @@ func sendTestNotification(channel models.AlertChannel) error {
 		return alerts.SendEmailAlert(emailCfg, data)
 
 	case "discord":
-		webhookURL, _ := cfg["webhook_url"].(string)
-		if webhookURL == "" {
-			return fmt.Errorf("discord requires webhook_url")
-		}
-		payload := alerts.BuildDiscordPayload(alerts.DiscordAlertParams{
-			CheckName: "Test Check",
-			Project:   "Test Project",
-			CheckType: "test",
-			Message:   testMessage,
-			IsDown:    false,
-		})
-		return alerts.SendDiscordAlert(webhookURL, payload)
-
-	case "discord_bot":
 		botToken, _ := cfg["bot_token"].(string)
 		appID, _ := cfg["app_id"].(string)
 		defaultChannel, _ := cfg["default_channel"].(string)
 		if botToken == "" || defaultChannel == "" {
-			return fmt.Errorf("discord_bot requires bot_token and default_channel")
+			return fmt.Errorf("discord requires bot_token and default_channel")
 		}
 		client := discord.NewDiscordClient(botToken, appID, defaultChannel)
 		payload := discord.BuildAlertMessage(discord.CheckAlertInfo{

@@ -55,7 +55,6 @@ const CHANNEL_TYPES = [
   { value: 'slack_webhook', label: 'Slack Webhook', icon: Hash, color: 'bg-purple-400' },
   { value: 'email', label: 'Email', icon: Mail, color: 'bg-green-500' },
   { value: 'discord', label: 'Discord', icon: Megaphone, color: 'bg-indigo-500' },
-  { value: 'discord_bot', label: 'Discord Bot', icon: Megaphone, color: 'bg-indigo-600' },
   { value: 'teams', label: 'Teams', icon: Users, color: 'bg-blue-600' },
   { value: 'pagerduty', label: 'PagerDuty', icon: AlertTriangle, color: 'bg-emerald-500' },
   { value: 'opsgenie', label: 'Opsgenie', icon: Eye, color: 'bg-cyan-500' },
@@ -96,9 +95,6 @@ const CONFIG_FIELDS: Record<ChannelType, ConfigField[]> = {
     { key: 'use_tls', label: 'Use TLS', type: 'toggle' },
   ],
   discord: [
-    { key: 'webhook_url', label: 'Webhook URL', type: 'password', placeholder: 'https://discord.com/api/webhooks/...', required: true },
-  ],
-  discord_bot: [
     { key: 'bot_token', label: 'Bot Token', type: 'password', placeholder: 'Bot token from Discord Developer Portal', required: true },
     { key: 'app_id', label: 'Application ID', type: 'text', placeholder: 'Discord Application ID', required: true },
     { key: 'default_channel', label: 'Channel ID', type: 'text', placeholder: 'Discord channel ID for alerts', required: true },
@@ -721,8 +717,6 @@ function ConfigSummary({ channel }: { channel: AlertChannel }) {
       )
     }
     case 'discord':
-      return <span>Webhook configured</span>
-    case 'discord_bot':
       return <span>Channel: {(cfg.default_channel as string) || 'N/A'}</span>
     case 'teams':
       return <span>Webhook configured</span>

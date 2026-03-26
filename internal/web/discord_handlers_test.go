@@ -464,8 +464,8 @@ func TestDiscordInteraction_Silence1h(t *testing.T) {
 	if s.Target != checkUUID {
 		t.Errorf("expected target '%s', got '%s'", checkUUID, s.Target)
 	}
-	if s.Channel != "discord_bot" {
-		t.Errorf("expected channel 'discord_bot', got '%s'", s.Channel)
+	if s.Channel != "discord" {
+		t.Errorf("expected channel 'discord', got '%s'", s.Channel)
 	}
 	if s.ExpiresAt == nil {
 		t.Error("expected ExpiresAt to be set")

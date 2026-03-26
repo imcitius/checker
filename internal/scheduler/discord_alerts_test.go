@@ -389,7 +389,7 @@ func TestDiscordOwnedTypes(t *testing.T) {
 	sender := &mockDiscordSender{}
 	alerter := newDiscordAppAlerterWithSender(sender, repo, "discord-channel-1")
 
-	assert.Equal(t, []string{"discord_bot"}, alerter.OwnedTypes())
+	assert.Equal(t, []string{"discord"}, alerter.OwnedTypes())
 }
 
 func TestDiscordSendAlert_AlertMessageHasButtons(t *testing.T) {

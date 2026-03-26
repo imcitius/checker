@@ -50,20 +50,20 @@ func newDiscordAppAlerterWithSender(sender DiscordSender, repo db.Repository, de
 }
 
 // OwnedTypes returns the standard alerter type strings that DiscordAppAlerter supersedes.
-func (da *DiscordAppAlerter) OwnedTypes() []string { return []string{"discord_bot"} }
+func (da *DiscordAppAlerter) OwnedTypes() []string { return []string{"discord"} }
 
 // SendAlert posts a Discord alert for a failing check. If an unresolved thread exists
 // and this is NOT a new incident, it posts a thread reply. If isNewIncident is true
 // (check transitioned from healthy to unhealthy), any stale unresolved threads are
 // resolved first and a fresh thread is created.
 func (da *DiscordAppAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefinition, status models.CheckStatus, isNewIncident bool) {
-	// Check if silenced (per-channel: "discord_bot")
-	silenced, err := da.repo.IsChannelSilenced(ctx, checkDef.UUID, checkDef.Project, "discord_bot")
+	// Check if silenced (per-channel: "discord")
+	silenced, err := da.repo.IsChannelSilenced(ctx, checkDef.UUID, checkDef.Project, "discord")
 	if err != nil {
 		logrus.Errorf("Failed to check silence status for %s: %v", checkDef.UUID, err)
 	}
 	if silenced {
-		logrus.Infof("Check %s (project %s) is silenced for discord_bot, skipping discord_bot alert", checkDef.UUID, checkDef.Project)
+		logrus.Infof("Check %s (project %s) is silenced for discord, skipping discord alert", checkDef.UUID, checkDef.Project)
 		return
 	}
 
@@ -164,7 +164,7 @@ func (da *DiscordAppAlerter) SendAlert(ctx context.Context, checkDef models.Chec
 		GroupName: checkDef.GroupName,
 		CheckType: checkDef.Type,
 		Message:   status.Message,
-		AlertType: "discord_bot",
+		AlertType: "discord",
 	}
 	if err := da.repo.CreateAlertEvent(ctx, alertEvent); err != nil {
 		logrus.Errorf("Failed to record alert event for check %s: %v", checkDef.UUID, err)
