@@ -68,6 +68,12 @@ type Config struct {
 		WebhookURL    string `yaml:"webhook_url"`     // public URL for setWebhook
 	} `yaml:"telegram_app"`
 
+	DiscordApp struct {
+		BotToken       string `yaml:"bot_token"`
+		AppID          string `yaml:"app_id"`
+		DefaultChannel string `yaml:"default_channel"` // Discord channel ID
+	} `yaml:"discord_app,omitempty"`
+
 	Auth struct {
 		OIDC struct {
 			IssuerURL    string `yaml:"issuer_url"`
@@ -229,6 +235,15 @@ func (cfg *Config) applyEnvOverrides() {
 	}
 	if v := os.Getenv("TELEGRAM_APP_WEBHOOK_URL"); v != "" {
 		cfg.TelegramApp.WebhookURL = v
+	}
+	if v := os.Getenv("DISCORD_APP_BOT_TOKEN"); v != "" {
+		cfg.DiscordApp.BotToken = v
+	}
+	if v := os.Getenv("DISCORD_APP_ID"); v != "" {
+		cfg.DiscordApp.AppID = v
+	}
+	if v := os.Getenv("DISCORD_APP_DEFAULT_CHANNEL"); v != "" {
+		cfg.DiscordApp.DefaultChannel = v
 	}
 
 	// Auth overrides

@@ -149,6 +149,11 @@ func (r *mockTelegramRepo) ResolveTelegramThread(_ context.Context, checkUUID st
 func (r *mockTelegramRepo) GetTelegramThreadByMessage(_ context.Context, _ string, _ int) (models.TelegramAlertThread, error) {
 	return models.TelegramAlertThread{}, fmt.Errorf("not found")
 }
+func (r *mockTelegramRepo) CreateDiscordThread(_ context.Context, _, _, _, _ string) error { return nil }
+func (r *mockTelegramRepo) GetUnresolvedDiscordThread(_ context.Context, _ string) (models.DiscordAlertThread, error) {
+	return models.DiscordAlertThread{}, fmt.Errorf("not found")
+}
+func (r *mockTelegramRepo) ResolveDiscordThread(_ context.Context, _ string) error { return nil }
 
 // --- Tests ---
 

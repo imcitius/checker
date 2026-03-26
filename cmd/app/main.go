@@ -15,6 +15,7 @@ import (
 	"checker/internal/auth"
 	"checker/internal/config"
 	"checker/internal/db"
+	"checker/internal/discord"
 	"checker/internal/scheduler"
 	"checker/internal/slack"
 	"checker/internal/telegram"
@@ -139,6 +140,15 @@ func main() {
 				webhooks = append(webhooks, &web.SlackWebhookRegistrar{Client: slackClient})
 			} else {
 				logrus.Info("Slack App not configured, skipping")
+			}
+
+			// Discord Bot App
+			if cfg.DiscordApp.BotToken != "" {
+				discordClient := discord.NewDiscordClient(cfg.DiscordApp.BotToken, cfg.DiscordApp.AppID, cfg.DiscordApp.DefaultChannel)
+				logrus.Info("Discord Bot client initialized")
+				appAlerters = append(appAlerters, scheduler.NewDiscordAppAlerter(discordClient, repo, cfg.DiscordApp.DefaultChannel))
+			} else {
+				logrus.Info("Discord Bot App not configured, skipping")
 			}
 
 			// Telegram App

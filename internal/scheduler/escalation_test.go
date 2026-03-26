@@ -121,6 +121,11 @@ func (m *mockEscalationRepo) GetTelegramThreadByMessage(_ context.Context, _ str
 	return models.TelegramAlertThread{}, fmt.Errorf("not found")
 }
 func (m *mockEscalationRepo) ResolveTelegramThread(_ context.Context, _ string) error { return nil }
+func (m *mockEscalationRepo) CreateDiscordThread(_ context.Context, _, _, _, _ string) error { return nil }
+func (m *mockEscalationRepo) GetUnresolvedDiscordThread(_ context.Context, _ string) (models.DiscordAlertThread, error) {
+	return models.DiscordAlertThread{}, fmt.Errorf("not found")
+}
+func (m *mockEscalationRepo) ResolveDiscordThread(_ context.Context, _ string) error { return nil }
 func (m *mockEscalationRepo) CreateSilence(_ context.Context, _ models.AlertSilence) error {
 	return nil
 }

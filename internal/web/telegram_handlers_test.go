@@ -122,6 +122,11 @@ func (m *mockTelegramRepo) GetUnresolvedTelegramThread(_ context.Context, _ stri
 	return models.TelegramAlertThread{}, nil
 }
 func (m *mockTelegramRepo) ResolveTelegramThread(_ context.Context, _ string) error { return nil }
+func (m *mockTelegramRepo) CreateDiscordThread(_ context.Context, _, _, _, _ string) error { return nil }
+func (m *mockTelegramRepo) GetUnresolvedDiscordThread(_ context.Context, _ string) (models.DiscordAlertThread, error) {
+	return models.DiscordAlertThread{}, fmt.Errorf("not found")
+}
+func (m *mockTelegramRepo) ResolveDiscordThread(_ context.Context, _ string) error { return nil }
 func (m *mockTelegramRepo) IsCheckSilenced(_ context.Context, _, _ string) (bool, error) {
 	return false, nil
 }

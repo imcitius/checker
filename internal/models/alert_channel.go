@@ -21,12 +21,12 @@ var SensitiveFields = map[string][]string{
 	"slack":         {"bot_token", "signing_secret"},
 	"slack_webhook": {"webhook_url"},
 	"email":     {"smtp_password"},
-	"discord":   {"webhook_url"},
-	"teams":     {"webhook_url"},
-	"pagerduty": {"routing_key"},
-	"opsgenie":  {"api_key"},
-	"ntfy":        {"token", "password"},
+	"discord":     {"webhook_url"},
 	"discord_bot": {"bot_token"},
+	"teams":       {"webhook_url"},
+	"pagerduty":   {"routing_key"},
+	"opsgenie":    {"api_key"},
+	"ntfy":        {"token", "password"},
 }
 
 // MaskSensitiveConfig returns a copy of config with sensitive fields masked.

@@ -264,6 +264,11 @@ func (r *mockRepo) GetTelegramThreadByMessage(_ context.Context, _ string, _ int
 	return models.TelegramAlertThread{}, fmt.Errorf("not found")
 }
 func (r *mockRepo) ResolveTelegramThread(_ context.Context, _ string) error { return nil }
+func (r *mockRepo) CreateDiscordThread(_ context.Context, _, _, _, _ string) error { return nil }
+func (r *mockRepo) GetUnresolvedDiscordThread(_ context.Context, _ string) (models.DiscordAlertThread, error) {
+	return models.DiscordAlertThread{}, fmt.Errorf("not found")
+}
+func (r *mockRepo) ResolveDiscordThread(_ context.Context, _ string) error { return nil }
 func (r *mockRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
 	return 0, nil
 }

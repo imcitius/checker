@@ -160,6 +160,18 @@ func (s *SQLiteDB) ensureSchema() error {
 	CREATE INDEX IF NOT EXISTS idx_tg_threads_unresolved ON telegram_alert_threads(check_uuid, is_resolved);
 	CREATE INDEX IF NOT EXISTS idx_tg_threads_message ON telegram_alert_threads(chat_id, message_id);
 
+	CREATE TABLE IF NOT EXISTS discord_alert_threads (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		check_uuid  TEXT NOT NULL,
+		channel_id  TEXT NOT NULL,
+		message_id  TEXT NOT NULL,
+		thread_id   TEXT NOT NULL,
+		is_resolved INTEGER NOT NULL DEFAULT 0,
+		created_at  DATETIME NOT NULL DEFAULT (datetime('now')),
+		resolved_at DATETIME
+	);
+	CREATE INDEX IF NOT EXISTS idx_discord_threads_unresolved ON discord_alert_threads(check_uuid, is_resolved);
+
 	CREATE TABLE IF NOT EXISTS alert_channels (
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
 		name       TEXT NOT NULL UNIQUE,
@@ -1129,6 +1141,35 @@ func (s *SQLiteDB) ResolveTelegramThread(ctx context.Context, checkUUID string) 
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, err := s.DB.ExecContext(ctx,
 		`UPDATE telegram_alert_threads SET is_resolved=1, resolved_at=? WHERE check_uuid=? AND is_resolved=0`,
+		now, checkUUID)
+	return err
+}
+
+func (s *SQLiteDB) CreateDiscordThread(ctx context.Context, checkUUID, channelID, messageID, threadID string) error {
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO discord_alert_threads (check_uuid, channel_id, message_id, thread_id) VALUES (?, ?, ?, ?)`,
+		checkUUID, channelID, messageID, threadID)
+	return err
+}
+
+func (s *SQLiteDB) GetUnresolvedDiscordThread(ctx context.Context, checkUUID string) (models.DiscordAlertThread, error) {
+	var t models.DiscordAlertThread
+	var isResolved sql.NullInt64
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT id, check_uuid, channel_id, message_id, thread_id, is_resolved, created_at, resolved_at
+		 FROM discord_alert_threads WHERE check_uuid=? AND is_resolved=0 ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChannelID, &t.MessageID, &t.ThreadID, &isResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.DiscordAlertThread{}, err
+	}
+	t.IsResolved = isResolved.Valid && isResolved.Int64 != 0
+	return t, nil
+}
+
+func (s *SQLiteDB) ResolveDiscordThread(ctx context.Context, checkUUID string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := s.DB.ExecContext(ctx,
+		`UPDATE discord_alert_threads SET is_resolved=1, resolved_at=? WHERE check_uuid=? AND is_resolved=0`,
 		now, checkUUID)
 	return err
 }

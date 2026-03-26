@@ -1062,6 +1062,32 @@ func (db *PostgresDB) ResolveTelegramThread(ctx context.Context, checkUUID strin
 	return err
 }
 
+func (db *PostgresDB) CreateDiscordThread(ctx context.Context, checkUUID, channelID, messageID, threadID string) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO discord_alert_threads (check_uuid, channel_id, message_id, thread_id) VALUES ($1, $2, $3, $4)`,
+		checkUUID, channelID, messageID, threadID)
+	return err
+}
+
+func (db *PostgresDB) GetUnresolvedDiscordThread(ctx context.Context, checkUUID string) (models.DiscordAlertThread, error) {
+	var t models.DiscordAlertThread
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id, check_uuid, channel_id, message_id, thread_id, is_resolved, created_at, resolved_at
+		 FROM discord_alert_threads WHERE check_uuid=$1 AND is_resolved=false ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChannelID, &t.MessageID, &t.ThreadID, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.DiscordAlertThread{}, err
+	}
+	return t, nil
+}
+
+func (db *PostgresDB) ResolveDiscordThread(ctx context.Context, checkUUID string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE discord_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false`,
+		checkUUID)
+	return err
+}
+
 // MigrateLegacyAlertFields is a no-op. The legacy alert_type and alert_destination
 // columns have been dropped. Kept for interface compatibility.
 func (db *PostgresDB) MigrateLegacyAlertFields(ctx context.Context) (int, error) {
