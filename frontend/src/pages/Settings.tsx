@@ -45,6 +45,7 @@ import {
   RefreshCw,
   Search,
   Settings as SettingsIcon,
+  Bell,
 } from 'lucide-react'
 
 // Channel type metadata
@@ -57,6 +58,7 @@ const CHANNEL_TYPES = [
   { value: 'teams', label: 'Teams', icon: Users, color: 'bg-blue-600' },
   { value: 'pagerduty', label: 'PagerDuty', icon: AlertTriangle, color: 'bg-emerald-500' },
   { value: 'opsgenie', label: 'Opsgenie', icon: Eye, color: 'bg-cyan-500' },
+  { value: 'ntfy', label: 'ntfy', icon: Bell, color: 'bg-amber-500' },
 ] as const
 
 type ChannelType = (typeof CHANNEL_TYPES)[number]['value']
@@ -104,6 +106,14 @@ const CONFIG_FIELDS: Record<ChannelType, ConfigField[]> = {
   opsgenie: [
     { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Opsgenie API key', required: true },
     { key: 'region', label: 'Region', type: 'text', placeholder: 'us or eu' },
+  ],
+  ntfy: [
+    { key: 'server_url', label: 'Server URL', type: 'text', placeholder: 'https://ntfy.sh (default)' },
+    { key: 'topic', label: 'Topic', type: 'text', placeholder: 'my-alerts', required: true },
+    { key: 'token', label: 'Access Token', type: 'password', placeholder: 'Bearer token (optional)' },
+    { key: 'username', label: 'Username', type: 'text', placeholder: 'Basic auth username (optional)' },
+    { key: 'password', label: 'Password', type: 'password', placeholder: 'Basic auth password (optional)' },
+    { key: 'icon', label: 'Icon URL', type: 'text', placeholder: 'https://example.com/icon.png (optional)' },
   ],
 }
 
@@ -671,6 +681,10 @@ function ConfigSummary({ channel }: { channel: AlertChannel }) {
     case 'opsgenie': {
       const region = (cfg.region as string) || 'us'
       return <span>Region: {region}</span>
+    }
+    case 'ntfy': {
+      const url = (cfg.server_url as string) || 'ntfy.sh'
+      return <span>{url} → {(cfg.topic as string) || 'N/A'}</span>
     }
     default:
       return <span>Configured</span>
