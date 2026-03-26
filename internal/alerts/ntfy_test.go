@@ -250,16 +250,10 @@ func TestSendNtfyAlert_WithTokenAuth(t *testing.T) {
 		t.Fatalf("SendAlert returned error: %v", err)
 	}
 
-	// ntfy tokens use Basic Auth with token as username and empty password
-	expectedCreds := base64.StdEncoding.EncodeToString([]byte("tk_abc123:"))
-	expected := "Basic " + expectedCreds
+	// ntfy access tokens use Bearer auth per https://docs.ntfy.sh/publish/#access-tokens
+	expected := "Bearer tk_abc123"
 	if authHeader != expected {
 		t.Errorf("expected Authorization %q, got %q", expected, authHeader)
-	}
-
-	// Verify the exact base64 encoding: "tk_abc123:" -> "dGtfYWJjMTIzOg=="
-	if expectedCreds != "dGtfYWJjMTIzOg==" {
-		t.Errorf("expected base64 encoding 'dGtfYWJjMTIzOg==', got %q", expectedCreds)
 	}
 }
 

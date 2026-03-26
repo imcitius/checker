@@ -144,12 +144,9 @@ func ntfyPriority(severity string) int {
 func (a *NtfyAlerter) authHeaders() map[string]string {
 	headers := map[string]string{}
 	if a.config.Token != "" {
-		// ntfy access tokens authenticate via Basic Auth with token as username
-		// and empty password, per https://docs.ntfy.sh/config/#access-tokens
-		creds := base64.StdEncoding.EncodeToString(
-			[]byte(a.config.Token + ":"),
-		)
-		headers["Authorization"] = "Basic " + creds
+		// ntfy access tokens use Bearer auth
+		// per https://docs.ntfy.sh/publish/#access-tokens
+		headers["Authorization"] = "Bearer " + a.config.Token
 	} else if a.config.Username != "" && a.config.Password != "" {
 		creds := base64.StdEncoding.EncodeToString(
 			[]byte(a.config.Username + ":" + a.config.Password),
