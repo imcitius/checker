@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // ntfyConfig holds the configuration for an ntfy.sh alert channel.
@@ -14,17 +15,31 @@ type ntfyConfig struct {
 	Username  string `json:"username"`   // optional Basic auth
 	Password  string `json:"password"`   // optional Basic auth
 	Icon      string `json:"icon"`       // optional notification icon URL
+	ClickURL  string `json:"click_url"`  // base URL of Checker UI, e.g. "https://checker.example.com"
+}
+
+// ntfyAction represents an interactive button in an ntfy notification.
+type ntfyAction struct {
+	Action  string            `json:"action"`            // "view", "http", "broadcast", "copy"
+	Label   string            `json:"label"`
+	URL     string            `json:"url,omitempty"`
+	Method  string            `json:"method,omitempty"`  // for "http" action
+	Headers map[string]string `json:"headers,omitempty"` // for "http" action
+	Body    string            `json:"body,omitempty"`    // for "http" action
+	Clear   bool              `json:"clear,omitempty"`
 }
 
 // ntfyPayload is the JSON body sent to the ntfy server.
 type ntfyPayload struct {
-	Topic    string   `json:"topic"`
-	Title    string   `json:"title"`
-	Message  string   `json:"message"`
-	Priority int      `json:"priority"`
-	Tags     []string `json:"tags"`
-	Markdown bool     `json:"markdown"`
-	Icon     string   `json:"icon,omitempty"`
+	Topic    string       `json:"topic"`
+	Title    string       `json:"title"`
+	Message  string       `json:"message"`
+	Priority int          `json:"priority"`
+	Tags     []string     `json:"tags"`
+	Markdown bool         `json:"markdown"`
+	Icon     string       `json:"icon,omitempty"`
+	Click    string       `json:"click,omitempty"`   // URL opened on notification tap
+	Actions  []ntfyAction `json:"actions,omitempty"` // up to 3 action buttons
 }
 
 // NtfyAlerter implements the Alerter interface for ntfy.sh notifications.
@@ -49,6 +64,18 @@ func (a *NtfyAlerter) SendAlert(p AlertPayload) error {
 		Icon:     a.config.Icon,
 	}
 
+	if a.config.ClickURL != "" {
+		checkURL := fmt.Sprintf("%s/checks/%s", strings.TrimRight(a.config.ClickURL, "/"), p.CheckUUID)
+		payload.Click = checkURL
+		payload.Actions = []ntfyAction{
+			{
+				Action: "view",
+				Label:  "View in Checker",
+				URL:    checkURL,
+			},
+		}
+	}
+
 	url := a.config.ServerURL
 	headers := a.authHeaders()
 	if err := postJSON(url, payload, headers); err != nil {
@@ -69,6 +96,18 @@ func (a *NtfyAlerter) SendRecovery(p RecoveryPayload) error {
 		Tags:     []string{"white_check_mark", p.CheckType},
 		Markdown: true,
 		Icon:     a.config.Icon,
+	}
+
+	if a.config.ClickURL != "" {
+		checkURL := fmt.Sprintf("%s/checks/%s", strings.TrimRight(a.config.ClickURL, "/"), p.CheckUUID)
+		payload.Click = checkURL
+		payload.Actions = []ntfyAction{
+			{
+				Action: "view",
+				Label:  "View in Checker",
+				URL:    checkURL,
+			},
+		}
 	}
 
 	url := a.config.ServerURL
@@ -111,7 +150,7 @@ func (a *NtfyAlerter) authHeaders() map[string]string {
 }
 
 // SendNtfyTest sends a test notification to an ntfy server.
-func SendNtfyTest(serverURL, topic, token, username, password, message string) error {
+func SendNtfyTest(serverURL, topic, token, username, password, message, clickURL string) error {
 	if serverURL == "" {
 		serverURL = "https://ntfy.sh"
 	}
@@ -122,6 +161,17 @@ func SendNtfyTest(serverURL, topic, token, username, password, message string) e
 		Priority: 3,
 		Tags:     []string{"test_tube"},
 		Markdown: false,
+	}
+	if clickURL != "" {
+		testURL := strings.TrimRight(clickURL, "/") + "/checks"
+		payload.Click = testURL
+		payload.Actions = []ntfyAction{
+			{
+				Action: "view",
+				Label:  "View in Checker",
+				URL:    testURL,
+			},
+		}
 	}
 	alerter := &NtfyAlerter{config: ntfyConfig{
 		ServerURL: serverURL,

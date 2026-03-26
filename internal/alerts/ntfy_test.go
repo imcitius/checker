@@ -299,6 +299,235 @@ func TestSendNtfyAlert_WithBasicAuth(t *testing.T) {
 	}
 }
 
+func TestSendNtfyAlert_WithClickURL(t *testing.T) {
+	var received ntfyPayload
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("failed to read body: %v", err)
+		}
+		if err := json.Unmarshal(body, &received); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	alerter := &NtfyAlerter{
+		config: ntfyConfig{
+			ServerURL: server.URL,
+			Topic:     "test-topic",
+			ClickURL:  "https://checker.example.com",
+		},
+	}
+
+	err := alerter.SendAlert(AlertPayload{
+		CheckName: "api-health",
+		CheckUUID: "abc-123",
+		Project:   "my-project",
+		CheckType: "http",
+		Message:   "Connection timeout",
+		Severity:  "critical",
+	})
+	if err != nil {
+		t.Fatalf("SendAlert returned error: %v", err)
+	}
+
+	expectedURL := "https://checker.example.com/checks/abc-123"
+
+	// Verify click URL
+	if received.Click != expectedURL {
+		t.Errorf("expected click %q, got %q", expectedURL, received.Click)
+	}
+
+	// Verify actions
+	if len(received.Actions) != 1 {
+		t.Fatalf("expected 1 action, got %d", len(received.Actions))
+	}
+	action := received.Actions[0]
+	if action.Action != "view" {
+		t.Errorf("expected action type 'view', got %q", action.Action)
+	}
+	if action.Label != "View in Checker" {
+		t.Errorf("expected label 'View in Checker', got %q", action.Label)
+	}
+	if action.URL != expectedURL {
+		t.Errorf("expected action URL %q, got %q", expectedURL, action.URL)
+	}
+}
+
+func TestSendNtfyAlert_WithClickURLTrailingSlash(t *testing.T) {
+	var received ntfyPayload
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &received)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	alerter := &NtfyAlerter{
+		config: ntfyConfig{
+			ServerURL: server.URL,
+			Topic:     "test-topic",
+			ClickURL:  "https://checker.example.com/",
+		},
+	}
+
+	err := alerter.SendAlert(AlertPayload{
+		CheckName: "test",
+		CheckUUID: "uuid-456",
+		Project:   "test",
+		CheckType: "http",
+		Message:   "error",
+		Severity:  "warning",
+	})
+	if err != nil {
+		t.Fatalf("SendAlert returned error: %v", err)
+	}
+
+	expectedURL := "https://checker.example.com/checks/uuid-456"
+	if received.Click != expectedURL {
+		t.Errorf("expected click %q (trailing slash trimmed), got %q", expectedURL, received.Click)
+	}
+}
+
+func TestSendNtfyAlert_NoClickURL(t *testing.T) {
+	var received ntfyPayload
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &received)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	alerter := &NtfyAlerter{
+		config: ntfyConfig{
+			ServerURL: server.URL,
+			Topic:     "test-topic",
+		},
+	}
+
+	err := alerter.SendAlert(AlertPayload{
+		CheckName: "test",
+		CheckUUID: "uuid-789",
+		Project:   "test",
+		CheckType: "http",
+		Message:   "error",
+		Severity:  "critical",
+	})
+	if err != nil {
+		t.Fatalf("SendAlert returned error: %v", err)
+	}
+
+	// No click URL or actions when click_url is not configured
+	if received.Click != "" {
+		t.Errorf("expected empty click, got %q", received.Click)
+	}
+	if len(received.Actions) != 0 {
+		t.Errorf("expected no actions, got %d", len(received.Actions))
+	}
+}
+
+func TestSendNtfyRecovery_WithClickURL(t *testing.T) {
+	var received ntfyPayload
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &received)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	alerter := &NtfyAlerter{
+		config: ntfyConfig{
+			ServerURL: server.URL,
+			Topic:     "test-topic",
+			ClickURL:  "https://checker.example.com",
+		},
+	}
+
+	err := alerter.SendRecovery(RecoveryPayload{
+		CheckName: "db-check",
+		CheckUUID: "recovery-uuid",
+		Project:   "backend",
+		CheckType: "tcp",
+	})
+	if err != nil {
+		t.Fatalf("SendRecovery returned error: %v", err)
+	}
+
+	expectedURL := "https://checker.example.com/checks/recovery-uuid"
+
+	if received.Click != expectedURL {
+		t.Errorf("expected click %q, got %q", expectedURL, received.Click)
+	}
+	if len(received.Actions) != 1 {
+		t.Fatalf("expected 1 action, got %d", len(received.Actions))
+	}
+	if received.Actions[0].Label != "View in Checker" {
+		t.Errorf("expected label 'View in Checker', got %q", received.Actions[0].Label)
+	}
+	if received.Actions[0].URL != expectedURL {
+		t.Errorf("expected action URL %q, got %q", expectedURL, received.Actions[0].URL)
+	}
+}
+
+func TestSendNtfyTest_WithClickURL(t *testing.T) {
+	var received ntfyPayload
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &received)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	err := SendNtfyTest(server.URL, "test-topic", "", "", "", "test message", "https://checker.example.com")
+	if err != nil {
+		t.Fatalf("SendNtfyTest returned error: %v", err)
+	}
+
+	expectedURL := "https://checker.example.com/checks"
+	if received.Click != expectedURL {
+		t.Errorf("expected click %q, got %q", expectedURL, received.Click)
+	}
+	if len(received.Actions) != 1 {
+		t.Fatalf("expected 1 action, got %d", len(received.Actions))
+	}
+	if received.Actions[0].Action != "view" {
+		t.Errorf("expected action type 'view', got %q", received.Actions[0].Action)
+	}
+	if received.Actions[0].Label != "View in Checker" {
+		t.Errorf("expected label 'View in Checker', got %q", received.Actions[0].Label)
+	}
+}
+
+func TestSendNtfyTest_NoClickURL(t *testing.T) {
+	var received ntfyPayload
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		json.Unmarshal(body, &received)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	err := SendNtfyTest(server.URL, "test-topic", "", "", "", "test message", "")
+	if err != nil {
+		t.Fatalf("SendNtfyTest returned error: %v", err)
+	}
+
+	if received.Click != "" {
+		t.Errorf("expected empty click, got %q", received.Click)
+	}
+	if len(received.Actions) != 0 {
+		t.Errorf("expected no actions, got %d", len(received.Actions))
+	}
+}
+
 func TestNtfyPriorityMapping(t *testing.T) {
 	tests := []struct {
 		severity string

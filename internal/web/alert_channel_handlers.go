@@ -301,10 +301,11 @@ func sendTestNotification(channel models.AlertChannel) error {
 		token, _ := cfg["token"].(string)
 		username, _ := cfg["username"].(string)
 		password, _ := cfg["password"].(string)
+		clickURL, _ := cfg["click_url"].(string)
 		if topic == "" {
 			return fmt.Errorf("ntfy requires topic")
 		}
-		return alerts.SendNtfyTest(serverURL, topic, token, username, password, testMessage)
+		return alerts.SendNtfyTest(serverURL, topic, token, username, password, testMessage, clickURL)
 
 	default:
 		return fmt.Errorf("unsupported channel type: %s", channel.Type)
