@@ -36,6 +36,11 @@ func NewDiscordClient(botToken, appID, defaultChannelID string) *DiscordClient {
 	}
 }
 
+// SetBaseURL overrides the API base URL. Intended for testing.
+func (c *DiscordClient) SetBaseURL(url string) {
+	c.baseURL = url
+}
+
 // DefaultChannelID returns the configured default channel ID.
 func (c *DiscordClient) DefaultChannelID() string {
 	return c.channelID
