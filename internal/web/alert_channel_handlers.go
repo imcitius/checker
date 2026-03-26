@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 
 	"checker/internal/alerts"
 	"checker/internal/db"
+	"checker/internal/discord"
 	"checker/internal/models"
 )
 
@@ -259,6 +261,23 @@ func sendTestNotification(channel models.AlertChannel) error {
 			IsDown:    false,
 		})
 		return alerts.SendDiscordAlert(webhookURL, payload)
+
+	case "discord_bot":
+		botToken, _ := cfg["bot_token"].(string)
+		appID, _ := cfg["app_id"].(string)
+		defaultChannel, _ := cfg["default_channel"].(string)
+		if botToken == "" || defaultChannel == "" {
+			return fmt.Errorf("discord_bot requires bot_token and default_channel")
+		}
+		client := discord.NewDiscordClient(botToken, appID, defaultChannel)
+		payload := discord.BuildAlertMessage(discord.CheckAlertInfo{
+			Name:      "Test Check",
+			Project:   "Test Project",
+			CheckType: "test",
+			Message:   testMessage,
+		})
+		_, err := client.SendMessage(context.Background(), defaultChannel, payload)
+		return err
 
 	case "teams":
 		webhookURL, _ := cfg["webhook_url"].(string)

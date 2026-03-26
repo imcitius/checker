@@ -25,7 +25,8 @@ var SensitiveFields = map[string][]string{
 	"teams":     {"webhook_url"},
 	"pagerduty": {"routing_key"},
 	"opsgenie":  {"api_key"},
-	"ntfy":      {"token", "password"},
+	"ntfy":        {"token", "password"},
+	"discord_bot": {"bot_token"},
 }
 
 // MaskSensitiveConfig returns a copy of config with sensitive fields masked.
