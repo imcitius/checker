@@ -501,11 +501,30 @@ export function Settings() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
+            {editingChannel && (
+              <Button
+                variant="outline"
+                onClick={() => handleTest(editingChannel)}
+                disabled={testingChannel === editingChannel.name}
+              >
+                {testingChannel === editingChannel.name ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Play className="h-3.5 w-3.5 mr-1" />
+                )}
+                Test
+              </Button>
+            )}
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               {editingChannel ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
+          {!editingChannel && (
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Save the channel first, then use the Test button to verify it works.
+            </p>
+          )}
         </DialogContent>
       </Dialog>
 
