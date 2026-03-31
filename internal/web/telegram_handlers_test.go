@@ -179,6 +179,16 @@ func (m *mockTelegramRepo) DeleteAlertChannel(_ context.Context, _ string) error
 func (m *mockTelegramRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
 	return 0, nil
 }
+func (m *mockTelegramRepo) GetSetting(_ context.Context, _ string) (string, error) {
+	return "", fmt.Errorf("not found")
+}
+func (m *mockTelegramRepo) SetSetting(_ context.Context, _, _ string) error { return nil }
+func (m *mockTelegramRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
+	return models.CheckDefaults{}, nil
+}
+func (m *mockTelegramRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
+	return nil
+}
 
 // mockTelegramClient wraps a test HTTP server to capture API calls.
 type mockTelegramClient struct {

@@ -187,6 +187,16 @@ func (m *mockEscalationRepo) DeleteAlertChannel(_ context.Context, _ string) err
 func (m *mockEscalationRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
 	return 0, nil
 }
+func (m *mockEscalationRepo) GetSetting(_ context.Context, _ string) (string, error) {
+	return "", fmt.Errorf("not found")
+}
+func (m *mockEscalationRepo) SetSetting(_ context.Context, _, _ string) error { return nil }
+func (m *mockEscalationRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
+	return models.CheckDefaults{}, nil
+}
+func (m *mockEscalationRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
+	return nil
+}
 
 // --- Tests ---
 

@@ -689,6 +689,63 @@ func (s *SQLiteDB) GetAllDefaultTimeouts() map[string]string {
 }
 
 // ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+func (s *SQLiteDB) GetSetting(ctx context.Context, key string) (string, error) {
+	var value string
+	err := s.DB.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, key).Scan(&value)
+	if err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+func (s *SQLiteDB) SetSetting(ctx context.Context, key, value string) error {
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
+		key, value)
+	return err
+}
+
+func (s *SQLiteDB) GetCheckDefaults(ctx context.Context) (models.CheckDefaults, error) {
+	defaults := models.CheckDefaults{
+		Timeouts: s.GetAllDefaultTimeouts(),
+	}
+	raw, err := s.GetSetting(ctx, "check_defaults")
+	if err != nil {
+		return defaults, nil // no saved defaults yet, return hardcoded
+	}
+	var saved models.CheckDefaults
+	if err := json.Unmarshal([]byte(raw), &saved); err != nil {
+		return defaults, fmt.Errorf("unmarshal check_defaults: %w", err)
+	}
+	// Merge saved timeouts over hardcoded defaults
+	if saved.Timeouts != nil {
+		for k, v := range saved.Timeouts {
+			defaults.Timeouts[k] = v
+		}
+	}
+	defaults.RetryCount = saved.RetryCount
+	defaults.RetryInterval = saved.RetryInterval
+	defaults.CheckInterval = saved.CheckInterval
+	defaults.ReAlertInterval = saved.ReAlertInterval
+	defaults.Severity = saved.Severity
+	defaults.AlertChannels = saved.AlertChannels
+	defaults.EscalationPolicy = saved.EscalationPolicy
+	return defaults, nil
+}
+
+func (s *SQLiteDB) SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error {
+	raw, err := json.Marshal(defaults)
+	if err != nil {
+		return fmt.Errorf("marshal check_defaults: %w", err)
+	}
+	return s.SetSetting(ctx, "check_defaults", string(raw))
+}
+
+// ---------------------------------------------------------------------------
 // Slack thread tracking
 // ---------------------------------------------------------------------------
 

@@ -79,4 +79,10 @@ type Repository interface {
 	CreateAlertChannel(ctx context.Context, channel models.AlertChannel) error
 	UpdateAlertChannel(ctx context.Context, channel models.AlertChannel) error
 	DeleteAlertChannel(ctx context.Context, name string) error
+
+	// Settings
+	GetSetting(ctx context.Context, key string) (string, error)
+	SetSetting(ctx context.Context, key, value string) error
+	GetCheckDefaults(ctx context.Context) (models.CheckDefaults, error)
+	SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error
 }

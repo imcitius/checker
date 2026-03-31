@@ -213,6 +213,16 @@ func (r *mockDiscordRepo) GetUnresolvedTelegramThread(_ context.Context, _ strin
 func (r *mockDiscordRepo) GetTelegramThreadByMessage(_ context.Context, _ string, _ int) (models.TelegramAlertThread, error) { return models.TelegramAlertThread{}, fmt.Errorf("not found") }
 func (r *mockDiscordRepo) ResolveTelegramThread(_ context.Context, _ string) error { return nil }
 func (r *mockDiscordRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) { return 0, nil }
+func (r *mockDiscordRepo) GetSetting(_ context.Context, _ string) (string, error) {
+	return "", fmt.Errorf("not found")
+}
+func (r *mockDiscordRepo) SetSetting(_ context.Context, _, _ string) error { return nil }
+func (r *mockDiscordRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
+	return models.CheckDefaults{}, nil
+}
+func (r *mockDiscordRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
+	return nil
+}
 
 // --- Tests ---
 

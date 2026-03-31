@@ -100,6 +100,12 @@ func (s *stubRepo) BulkDeleteCheckDefinitions(_ context.Context, uuids []string)
 	s.lastBulkUUIDs = uuids
 	return int64(len(uuids)), nil
 }
+func (s *stubRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
+	return models.CheckDefaults{}, nil
+}
+func (s *stubRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
+	return nil
+}
 
 func TestCreateCheckDefinition_GeneratesUUID(t *testing.T) {
 	gin.SetMode(gin.TestMode)

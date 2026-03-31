@@ -188,6 +188,17 @@ export interface AlertChannelInput {
   config: Record<string, unknown>
 }
 
+export interface CheckDefaults {
+  retry_count: number
+  retry_interval: string
+  check_interval: string
+  timeouts: Record<string, string>
+  re_alert_interval: string
+  severity: string
+  alert_channels: string[]
+  escalation_policy: string
+}
+
 export const api = {
   getChecks: () => request<CheckDefinition[]>('/api/check-definitions'),
   getCheck: (uuid: string) => request<CheckDefinition>(`/api/check-definitions/${uuid}`),
@@ -268,6 +279,15 @@ export const api = {
   getProjects: () => request<string[]>('/api/metadata/projects'),
   getCheckTypes: () => request<string[]>('/api/metadata/check-types'),
   getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),
+
+  // Settings
+  getCheckDefaults: () =>
+    request<CheckDefaults>('/api/settings/check-defaults'),
+  updateCheckDefaults: (data: CheckDefaults) =>
+    request<CheckDefaults>('/api/settings/check-defaults', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Bulk actions
   bulkEnable: (uuids: string[]) =>

@@ -528,6 +528,61 @@ func (db *PostgresDB) GetAllDefaultTimeouts() map[string]string {
 	}
 }
 
+// Settings
+
+func (db *PostgresDB) GetSetting(ctx context.Context, key string) (string, error) {
+	var value string
+	err := db.Pool.QueryRow(ctx, `SELECT value FROM settings WHERE key = $1`, key).Scan(&value)
+	if err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+func (db *PostgresDB) SetSetting(ctx context.Context, key, value string) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO settings (key, value, updated_at) VALUES ($1, $2, NOW())
+		 ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+		key, value)
+	return err
+}
+
+func (db *PostgresDB) GetCheckDefaults(ctx context.Context) (models.CheckDefaults, error) {
+	defaults := models.CheckDefaults{
+		Timeouts: db.GetAllDefaultTimeouts(),
+	}
+	raw, err := db.GetSetting(ctx, "check_defaults")
+	if err != nil {
+		return defaults, nil // no saved defaults yet, return hardcoded
+	}
+	var saved models.CheckDefaults
+	if err := json.Unmarshal([]byte(raw), &saved); err != nil {
+		return defaults, fmt.Errorf("unmarshal check_defaults: %w", err)
+	}
+	// Merge saved timeouts over hardcoded defaults
+	if saved.Timeouts != nil {
+		for k, v := range saved.Timeouts {
+			defaults.Timeouts[k] = v
+		}
+	}
+	defaults.RetryCount = saved.RetryCount
+	defaults.RetryInterval = saved.RetryInterval
+	defaults.CheckInterval = saved.CheckInterval
+	defaults.ReAlertInterval = saved.ReAlertInterval
+	defaults.Severity = saved.Severity
+	defaults.AlertChannels = saved.AlertChannels
+	defaults.EscalationPolicy = saved.EscalationPolicy
+	return defaults, nil
+}
+
+func (db *PostgresDB) SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error {
+	raw, err := json.Marshal(defaults)
+	if err != nil {
+		return fmt.Errorf("marshal check_defaults: %w", err)
+	}
+	return db.SetSetting(ctx, "check_defaults", string(raw))
+}
+
 // Slack thread tracking
 
 func (db *PostgresDB) CreateSlackThread(ctx context.Context, checkUUID, channelID, threadTs, parentTs string) error {

@@ -169,6 +169,16 @@ func (m *mockDiscordRepo) DeleteAlertChannel(_ context.Context, _ string) error 
 func (m *mockDiscordRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
 	return 0, nil
 }
+func (m *mockDiscordRepo) GetSetting(_ context.Context, _ string) (string, error) {
+	return "", fmt.Errorf("not found")
+}
+func (m *mockDiscordRepo) SetSetting(_ context.Context, _, _ string) error { return nil }
+func (m *mockDiscordRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
+	return models.CheckDefaults{}, nil
+}
+func (m *mockDiscordRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
+	return nil
+}
 
 // --- Test helpers ---
 

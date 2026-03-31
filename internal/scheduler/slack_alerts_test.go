@@ -272,6 +272,16 @@ func (r *mockRepo) ResolveDiscordThread(_ context.Context, _ string) error { ret
 func (r *mockRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
 	return 0, nil
 }
+func (r *mockRepo) GetSetting(_ context.Context, _ string) (string, error) {
+	return "", fmt.Errorf("not found")
+}
+func (r *mockRepo) SetSetting(_ context.Context, _, _ string) error { return nil }
+func (r *mockRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
+	return models.CheckDefaults{}, nil
+}
+func (r *mockRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
+	return nil
+}
 
 // --- Tests ---
 

@@ -24,9 +24,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { TopBar } from '@/components/TopBar'
 import { api } from '@/lib/api'
-import type { AlertChannel, AlertChannelInput } from '@/lib/api'
+import type { AlertChannel, AlertChannelInput, CheckDefaults } from '@/lib/api'
 import { toast } from 'sonner'
 import {
   Plus,
@@ -46,6 +47,8 @@ import {
   Search,
   Settings as SettingsIcon,
   Bell,
+  Save,
+  SlidersHorizontal,
 } from 'lucide-react'
 
 // Channel type metadata
@@ -325,128 +328,147 @@ export function Settings() {
           </div>
         </div>
 
-        {/* Notification Channels section */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Notification Channels</h2>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={fetchChannels} disabled={loading}>
-                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button size="sm" onClick={openCreateDialog}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Channel
-              </Button>
-            </div>
-          </div>
+        <Tabs defaultValue="channels" className="w-full">
+          <TabsList>
+            <TabsTrigger value="channels">
+              <Bell className="h-4 w-4 mr-1.5" />
+              Notification Channels
+            </TabsTrigger>
+            <TabsTrigger value="defaults">
+              <SlidersHorizontal className="h-4 w-4 mr-1.5" />
+              Check Defaults
+            </TabsTrigger>
+          </TabsList>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-muted-foreground">Loading channels...</span>
-            </div>
-          ) : filteredChannels.length === 0 ? (
-            <div className="border rounded-lg p-8 text-center">
-              <MessageSquare className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground">
-                {channels.length === 0
-                  ? 'No notification channels configured yet.'
-                  : 'No channels match your search.'}
-              </p>
-              {channels.length === 0 && (
-                <Button className="mt-4" onClick={openCreateDialog}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add your first channel
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {filteredChannels.map((channel) => {
-                const meta = getChannelMeta(channel.type)
-                const Icon = meta.icon
-                const isTesting = testingChannel === channel.name
+          <TabsContent value="channels">
+            {/* Notification Channels section */}
+            <section className="mb-8 mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Notification Channels</h2>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={fetchChannels} disabled={loading}>
+                    <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button size="sm" onClick={openCreateDialog}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Channel
+                  </Button>
+                </div>
+              </div>
 
-                return (
-                  <div
-                    key={channel.id}
-                    className="border rounded-lg p-4 bg-card hover:border-foreground/20 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Channel type icon */}
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Loading channels...</span>
+                </div>
+              ) : filteredChannels.length === 0 ? (
+                <div className="border rounded-lg p-8 text-center">
+                  <MessageSquare className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">
+                    {channels.length === 0
+                      ? 'No notification channels configured yet.'
+                      : 'No channels match your search.'}
+                  </p>
+                  {channels.length === 0 && (
+                    <Button className="mt-4" onClick={openCreateDialog}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add your first channel
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredChannels.map((channel) => {
+                    const meta = getChannelMeta(channel.type)
+                    const Icon = meta.icon
+                    const isTesting = testingChannel === channel.name
+
+                    return (
                       <div
-                        className={`h-10 w-10 rounded-lg ${meta.color} flex items-center justify-center shrink-0`}
+                        key={channel.id}
+                        className="border rounded-lg p-4 bg-card hover:border-foreground/20 transition-colors"
                       >
-                        <Icon className="h-5 w-5 text-white" />
-                      </div>
+                        <div className="flex items-center gap-3">
+                          {/* Channel type icon */}
+                          <div
+                            className={`h-10 w-10 rounded-lg ${meta.color} flex items-center justify-center shrink-0`}
+                          >
+                            <Icon className="h-5 w-5 text-white" />
+                          </div>
 
-                      {/* Channel info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground truncate">{channel.name}</span>
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            {meta.label}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          <ConfigSummary channel={channel} />
-                        </div>
-                      </div>
+                          {/* Channel info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground truncate">{channel.name}</span>
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                {meta.label}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              <ConfigSummary channel={channel} />
+                            </div>
+                          </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTest(channel)}
-                          disabled={isTesting}
-                          className="hidden sm:flex"
-                        >
-                          {isTesting ? (
-                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                          ) : (
-                            <Play className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Test
-                        </Button>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(channel)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => handleTest(channel)}
                               disabled={isTesting}
-                              className="sm:hidden"
+                              className="hidden sm:flex"
                             >
-                              <Play className="h-4 w-4 mr-2" />
+                              {isTesting ? (
+                                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                              ) : (
+                                <Play className="h-3.5 w-3.5 mr-1" />
+                              )}
                               Test
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => openDeleteDialog(channel)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </Button>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEditDialog(channel)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleTest(channel)}
+                                  disabled={isTesting}
+                                  className="sm:hidden"
+                                >
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Test
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => openDeleteDialog(channel)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          </TabsContent>
+
+          <TabsContent value="defaults">
+            <CheckDefaultsTab channels={channels} />
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Create/Edit Dialog */}
@@ -574,6 +596,262 @@ export function Settings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+// CheckDefaultsTab manages checker-wide default values
+function CheckDefaultsTab({ channels }: { channels: AlertChannel[] }) {
+  const [defaults, setDefaults] = useState<CheckDefaults | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [escalationPolicies, setEscalationPolicies] = useState<string[]>([])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [defs, polRes] = await Promise.all([
+          api.getCheckDefaults(),
+          fetch('/api/escalation-policies').then((r) => r.ok ? r.json() : []),
+        ])
+        setDefaults(defs)
+        if (Array.isArray(polRes)) {
+          setEscalationPolicies(polRes.map((p: { name: string }) => p.name))
+        }
+      } catch {
+        toast.error('Failed to load check defaults')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const handleSave = async () => {
+    if (!defaults) return
+    setSaving(true)
+    try {
+      const saved = await api.updateCheckDefaults(defaults)
+      setDefaults(saved)
+      toast.success('Check defaults saved')
+    } catch {
+      toast.error('Failed to save check defaults')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateField = <K extends keyof CheckDefaults>(key: K, value: CheckDefaults[K]) => {
+    setDefaults((prev) => (prev ? { ...prev, [key]: value } : prev))
+  }
+
+  const updateTimeout = (checkType: string, value: string) => {
+    setDefaults((prev) => {
+      if (!prev) return prev
+      return { ...prev, timeouts: { ...prev.timeouts, [checkType]: value } }
+    })
+  }
+
+  const toggleAlertChannel = (name: string) => {
+    setDefaults((prev) => {
+      if (!prev) return prev
+      const current = prev.alert_channels || []
+      const next = current.includes(name)
+        ? current.filter((c) => c !== name)
+        : [...current, name]
+      return { ...prev, alert_channels: next }
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Loading defaults...</span>
+      </div>
+    )
+  }
+
+  if (!defaults) return null
+
+  const channelNames = channels.map((c) => c.name)
+
+  return (
+    <div className="mt-4 space-y-8">
+      <p className="text-sm text-muted-foreground">
+        These defaults are applied to new checks that don't specify their own values.
+      </p>
+
+      {/* Retry Settings */}
+      <section>
+        <h3 className="text-base font-semibold text-foreground mb-3">Retry Settings</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-foreground">Retry Count</label>
+            <Input
+              type="number"
+              min={0}
+              max={10}
+              value={defaults.retry_count}
+              onChange={(e) => updateField('retry_count', parseInt(e.target.value) || 0)}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Number of retries before declaring failure (0 = no retry)
+            </p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground">Retry Interval</label>
+            <Input
+              value={defaults.retry_interval}
+              onChange={(e) => updateField('retry_interval', e.target.value)}
+              placeholder="e.g. 5s, 10s, 1m"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Wait between retries (Go duration format)
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Timing */}
+      <section>
+        <h3 className="text-base font-semibold text-foreground mb-3">Timing</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-foreground">Check Interval</label>
+            <Input
+              value={defaults.check_interval}
+              onChange={(e) => updateField('check_interval', e.target.value)}
+              placeholder="e.g. 30s, 1m, 5m"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              How often checks run by default
+            </p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground">Re-alert Interval</label>
+            <Input
+              value={defaults.re_alert_interval}
+              onChange={(e) => updateField('re_alert_interval', e.target.value)}
+              placeholder="e.g. 30m, 1h"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Re-send alert for ongoing failures (empty = no re-alert)
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Alerting */}
+      <section>
+        <h3 className="text-base font-semibold text-foreground mb-3">Alerting</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-foreground">Default Severity</label>
+            <Select
+              value={defaults.severity || ''}
+              onValueChange={(v) => updateField('severity', v)}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select severity" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="info">Info</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground">Escalation Policy</label>
+            <Select
+              value={defaults.escalation_policy || ''}
+              onValueChange={(v) => updateField('escalation_policy', v === '_none_' ? '' : v)}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none_">None</SelectItem>
+                {escalationPolicies.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Alert channels multi-select */}
+        <div className="mt-4">
+          <label className="text-sm font-medium text-foreground">Default Alert Channels</label>
+          {channelNames.length === 0 ? (
+            <p className="text-sm text-muted-foreground mt-1">
+              No notification channels configured. Add channels in the Notification Channels tab.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {channelNames.map((name) => {
+                const selected = (defaults.alert_channels || []).includes(name)
+                return (
+                  <Badge
+                    key={name}
+                    variant={selected ? 'default' : 'outline'}
+                    className={`cursor-pointer select-none ${selected ? '' : 'opacity-60 hover:opacity-100'}`}
+                    onClick={() => toggleAlertChannel(name)}
+                  >
+                    {name}
+                  </Badge>
+                )
+              })}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Click to toggle. Selected channels will be assigned to new checks by default.
+          </p>
+        </div>
+      </section>
+
+      {/* Timeouts per check type */}
+      <section>
+        <h3 className="text-base font-semibold text-foreground mb-3">Default Timeouts</h3>
+        <p className="text-sm text-muted-foreground mb-3">
+          Timeout per check type (Go duration format, e.g. 3s, 10s, 1m).
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {Object.entries(defaults.timeouts || {})
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([checkType, timeout]) => (
+              <div key={checkType} className="flex items-center gap-2">
+                <label className="text-sm font-medium text-foreground w-28 shrink-0">
+                  {checkType}
+                </label>
+                <Input
+                  value={timeout}
+                  onChange={(e) => updateTimeout(checkType, e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+            ))}
+        </div>
+      </section>
+
+      {/* Save */}
+      <div className="flex justify-end pt-4 border-t">
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? (
+            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-1.5" />
+          )}
+          Save Defaults
+        </Button>
+      </div>
     </div>
   )
 }

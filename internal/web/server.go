@@ -367,6 +367,13 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, webh
 		alertChannelGroup.POST("/:name/test", TestAlertChannel)
 	}
 
+	// Settings endpoints
+	settingsGroup := protected.Group("/api/settings")
+	{
+		settingsGroup.GET("/check-defaults", GetCheckDefaults)
+		settingsGroup.PUT("/check-defaults", UpdateCheckDefaults)
+	}
+
 	// Metadata endpoints
 	metadataGroup := protected.Group("/api/metadata")
 	{
