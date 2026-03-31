@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 
 	"checker/internal/alerts"
 	"checker/internal/db"
+	"checker/internal/discord"
 	"checker/internal/models"
 )
 
@@ -160,7 +162,7 @@ func TestAlertChannel(c *gin.Context) {
 	if testErr != nil {
 		logrus.Errorf("Test notification failed for channel %s: %v", name, testErr)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Test notification failed — check channel configuration and credentials",
+			"error":   fmt.Sprintf("Test notification failed: %v", testErr),
 			"success": false,
 		})
 		return
@@ -247,18 +249,21 @@ func sendTestNotification(channel models.AlertChannel) error {
 		return alerts.SendEmailAlert(emailCfg, data)
 
 	case "discord":
-		webhookURL, _ := cfg["webhook_url"].(string)
-		if webhookURL == "" {
-			return fmt.Errorf("discord requires webhook_url")
+		botToken, _ := cfg["bot_token"].(string)
+		appID, _ := cfg["app_id"].(string)
+		defaultChannel, _ := cfg["default_channel"].(string)
+		if botToken == "" || defaultChannel == "" {
+			return fmt.Errorf("discord requires bot_token and default_channel")
 		}
-		payload := alerts.BuildDiscordPayload(alerts.DiscordAlertParams{
-			CheckName: "Test Check",
+		client := discord.NewDiscordClient(botToken, appID, defaultChannel)
+		payload := discord.BuildAlertMessage(discord.CheckAlertInfo{
+			Name:      "Test Check",
 			Project:   "Test Project",
 			CheckType: "test",
 			Message:   testMessage,
-			IsDown:    false,
 		})
-		return alerts.SendDiscordAlert(webhookURL, payload)
+		_, err := client.SendMessage(context.Background(), defaultChannel, payload)
+		return err
 
 	case "teams":
 		webhookURL, _ := cfg["webhook_url"].(string)
@@ -294,6 +299,19 @@ func sendTestNotification(channel models.AlertChannel) error {
 			Region: region,
 		}
 		return client.Trigger("Test Check", "checker-test", testMessage, "info")
+
+	case "ntfy":
+		serverURL, _ := cfg["server_url"].(string)
+		topic, _ := cfg["topic"].(string)
+		token, _ := cfg["token"].(string)
+		username, _ := cfg["username"].(string)
+		password, _ := cfg["password"].(string)
+		clickURL, _ := cfg["click_url"].(string)
+		insecure, _ := cfg["insecure"].(bool)
+		if topic == "" {
+			return fmt.Errorf("ntfy requires topic")
+		}
+		return alerts.SendNtfyTest(serverURL, topic, token, username, password, testMessage, clickURL, insecure)
 
 	default:
 		return fmt.Errorf("unsupported channel type: %s", channel.Type)

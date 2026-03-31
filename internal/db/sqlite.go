@@ -92,6 +92,7 @@ func (s *SQLiteDB) ensureSchema() error {
 		id          INTEGER PRIMARY KEY AUTOINCREMENT,
 		scope       TEXT NOT NULL,
 		target      TEXT NOT NULL,
+		channel     TEXT NOT NULL DEFAULT '',
 		silenced_by TEXT NOT NULL DEFAULT '',
 		silenced_at DATETIME NOT NULL DEFAULT (datetime('now')),
 		expires_at  DATETIME,
@@ -158,6 +159,18 @@ func (s *SQLiteDB) ensureSchema() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_tg_threads_unresolved ON telegram_alert_threads(check_uuid, is_resolved);
 	CREATE INDEX IF NOT EXISTS idx_tg_threads_message ON telegram_alert_threads(chat_id, message_id);
+
+	CREATE TABLE IF NOT EXISTS discord_alert_threads (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		check_uuid  TEXT NOT NULL,
+		channel_id  TEXT NOT NULL,
+		message_id  TEXT NOT NULL,
+		thread_id   TEXT NOT NULL,
+		is_resolved INTEGER NOT NULL DEFAULT 0,
+		created_at  DATETIME NOT NULL DEFAULT (datetime('now')),
+		resolved_at DATETIME
+	);
+	CREATE INDEX IF NOT EXISTS idx_discord_threads_unresolved ON discord_alert_threads(check_uuid, is_resolved);
 
 	CREATE TABLE IF NOT EXISTS alert_channels (
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -676,6 +689,63 @@ func (s *SQLiteDB) GetAllDefaultTimeouts() map[string]string {
 }
 
 // ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+func (s *SQLiteDB) GetSetting(ctx context.Context, key string) (string, error) {
+	var value string
+	err := s.DB.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, key).Scan(&value)
+	if err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+func (s *SQLiteDB) SetSetting(ctx context.Context, key, value string) error {
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+		 ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
+		key, value)
+	return err
+}
+
+func (s *SQLiteDB) GetCheckDefaults(ctx context.Context) (models.CheckDefaults, error) {
+	defaults := models.CheckDefaults{
+		Timeouts: s.GetAllDefaultTimeouts(),
+	}
+	raw, err := s.GetSetting(ctx, "check_defaults")
+	if err != nil {
+		return defaults, nil // no saved defaults yet, return hardcoded
+	}
+	var saved models.CheckDefaults
+	if err := json.Unmarshal([]byte(raw), &saved); err != nil {
+		return defaults, fmt.Errorf("unmarshal check_defaults: %w", err)
+	}
+	// Merge saved timeouts over hardcoded defaults
+	if saved.Timeouts != nil {
+		for k, v := range saved.Timeouts {
+			defaults.Timeouts[k] = v
+		}
+	}
+	defaults.RetryCount = saved.RetryCount
+	defaults.RetryInterval = saved.RetryInterval
+	defaults.CheckInterval = saved.CheckInterval
+	defaults.ReAlertInterval = saved.ReAlertInterval
+	defaults.Severity = saved.Severity
+	defaults.AlertChannels = saved.AlertChannels
+	defaults.EscalationPolicy = saved.EscalationPolicy
+	return defaults, nil
+}
+
+func (s *SQLiteDB) SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error {
+	raw, err := json.Marshal(defaults)
+	if err != nil {
+		return fmt.Errorf("marshal check_defaults: %w", err)
+	}
+	return s.SetSetting(ctx, "check_defaults", string(raw))
+}
+
+// ---------------------------------------------------------------------------
 // Slack thread tracking
 // ---------------------------------------------------------------------------
 
@@ -723,8 +793,8 @@ func (s *SQLiteDB) UpdateSlackThread(ctx context.Context, checkUUID, threadTs, c
 func (s *SQLiteDB) CreateSilence(ctx context.Context, silence models.AlertSilence) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, err := s.DB.ExecContext(ctx,
-		`INSERT INTO alert_silences (scope, target, silenced_by, silenced_at, expires_at, reason, active) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		silence.Scope, silence.Target, silence.SilencedBy, now, nullableTime(silence.ExpiresAt), silence.Reason, boolToInt(silence.Active))
+		`INSERT INTO alert_silences (scope, target, channel, silenced_by, silenced_at, expires_at, reason, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		silence.Scope, silence.Target, silence.Channel, silence.SilencedBy, now, nullableTime(silence.ExpiresAt), silence.Reason, boolToInt(silence.Active))
 	return err
 }
 
@@ -751,7 +821,7 @@ func (s *SQLiteDB) DeactivateSilenceByID(ctx context.Context, id int) error {
 func (s *SQLiteDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT id, scope, target, silenced_by, silenced_at, expires_at, reason
+		`SELECT id, scope, target, channel, silenced_by, silenced_at, expires_at, reason
 		FROM alert_silences
 		WHERE active = 1 AND (expires_at IS NULL OR expires_at > ?)`, now)
 	if err != nil {
@@ -762,7 +832,7 @@ func (s *SQLiteDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence
 	var silences []models.AlertSilence
 	for rows.Next() {
 		var si models.AlertSilence
-		if err := rows.Scan(&si.ID, &si.Scope, &si.Target, &si.SilencedBy, &si.SilencedAt, &si.ExpiresAt, &si.Reason); err != nil {
+		if err := rows.Scan(&si.ID, &si.Scope, &si.Target, &si.Channel, &si.SilencedBy, &si.SilencedAt, &si.ExpiresAt, &si.Reason); err != nil {
 			return nil, err
 		}
 		si.Active = true
@@ -782,6 +852,21 @@ func (s *SQLiteDB) IsCheckSilenced(ctx context.Context, checkUUID, project strin
 			(scope = 'check' AND target = ?)
 			OR (scope = 'project' AND target = ?)
 		)`, now, checkUUID, project).Scan(&count)
+	return count > 0, err
+}
+
+func (s *SQLiteDB) IsChannelSilenced(ctx context.Context, checkUUID, project, channelName string) (bool, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	var count int
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM alert_silences
+		WHERE active = 1
+		AND (expires_at IS NULL OR expires_at > ?)
+		AND (
+			(scope = 'check' AND target = ?)
+			OR (scope = 'project' AND target = ?)
+		)
+		AND (channel = '' OR channel = ?)`, now, checkUUID, project, channelName).Scan(&count)
 	return count > 0, err
 }
 
@@ -1113,6 +1198,35 @@ func (s *SQLiteDB) ResolveTelegramThread(ctx context.Context, checkUUID string) 
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, err := s.DB.ExecContext(ctx,
 		`UPDATE telegram_alert_threads SET is_resolved=1, resolved_at=? WHERE check_uuid=? AND is_resolved=0`,
+		now, checkUUID)
+	return err
+}
+
+func (s *SQLiteDB) CreateDiscordThread(ctx context.Context, checkUUID, channelID, messageID, threadID string) error {
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO discord_alert_threads (check_uuid, channel_id, message_id, thread_id) VALUES (?, ?, ?, ?)`,
+		checkUUID, channelID, messageID, threadID)
+	return err
+}
+
+func (s *SQLiteDB) GetUnresolvedDiscordThread(ctx context.Context, checkUUID string) (models.DiscordAlertThread, error) {
+	var t models.DiscordAlertThread
+	var isResolved sql.NullInt64
+	err := s.DB.QueryRowContext(ctx,
+		`SELECT id, check_uuid, channel_id, message_id, thread_id, is_resolved, created_at, resolved_at
+		 FROM discord_alert_threads WHERE check_uuid=? AND is_resolved=0 ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChannelID, &t.MessageID, &t.ThreadID, &isResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.DiscordAlertThread{}, err
+	}
+	t.IsResolved = isResolved.Valid && isResolved.Int64 != 0
+	return t, nil
+}
+
+func (s *SQLiteDB) ResolveDiscordThread(ctx context.Context, checkUUID string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := s.DB.ExecContext(ctx,
+		`UPDATE discord_alert_threads SET is_resolved=1, resolved_at=? WHERE check_uuid=? AND is_resolved=0`,
 		now, checkUUID)
 	return err
 }

@@ -27,6 +27,8 @@ export const CheckRow = memo(function CheckRow({
   isExpanded,
   onSelect,
 }: CheckRowProps) {
+  const hasPartialSilence = !check.IsSilenced && check.SilencedChannels && check.SilencedChannels.length > 0
+
   const statusText = !check.Enabled
     ? 'Disabled'
     : check.LastResult
@@ -48,6 +50,7 @@ export const CheckRow = memo(function CheckRow({
         healthy={check.LastResult}
         enabled={check.Enabled}
         silenced={check.IsSilenced}
+        partiallySilenced={hasPartialSilence}
       />
 
       {/* Name */}

@@ -39,9 +39,15 @@ type Repository interface {
 	GetTelegramThreadByMessage(ctx context.Context, chatID string, messageID int) (models.TelegramAlertThread, error)
 	ResolveTelegramThread(ctx context.Context, checkUUID string) error
 
+	// Discord thread tracking
+	CreateDiscordThread(ctx context.Context, checkUUID, channelID, messageID, threadID string) error
+	GetUnresolvedDiscordThread(ctx context.Context, checkUUID string) (models.DiscordAlertThread, error)
+	ResolveDiscordThread(ctx context.Context, checkUUID string) error
+
 	// Alert silences
 	CreateSilence(ctx context.Context, silence models.AlertSilence) error
 	IsCheckSilenced(ctx context.Context, checkUUID, project string) (bool, error)
+	IsChannelSilenced(ctx context.Context, checkUUID, project, channelName string) (bool, error)
 	DeactivateSilence(ctx context.Context, scope, target string) error
 	DeactivateSilenceByID(ctx context.Context, id int) error
 	GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error)
@@ -73,4 +79,10 @@ type Repository interface {
 	CreateAlertChannel(ctx context.Context, channel models.AlertChannel) error
 	UpdateAlertChannel(ctx context.Context, channel models.AlertChannel) error
 	DeleteAlertChannel(ctx context.Context, name string) error
+
+	// Settings
+	GetSetting(ctx context.Context, key string) (string, error)
+	SetSetting(ctx context.Context, key, value string) error
+	GetCheckDefaults(ctx context.Context) (models.CheckDefaults, error)
+	SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error
 }

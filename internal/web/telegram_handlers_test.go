@@ -122,7 +122,15 @@ func (m *mockTelegramRepo) GetUnresolvedTelegramThread(_ context.Context, _ stri
 	return models.TelegramAlertThread{}, nil
 }
 func (m *mockTelegramRepo) ResolveTelegramThread(_ context.Context, _ string) error { return nil }
+func (m *mockTelegramRepo) CreateDiscordThread(_ context.Context, _, _, _, _ string) error { return nil }
+func (m *mockTelegramRepo) GetUnresolvedDiscordThread(_ context.Context, _ string) (models.DiscordAlertThread, error) {
+	return models.DiscordAlertThread{}, fmt.Errorf("not found")
+}
+func (m *mockTelegramRepo) ResolveDiscordThread(_ context.Context, _ string) error { return nil }
 func (m *mockTelegramRepo) IsCheckSilenced(_ context.Context, _, _ string) (bool, error) {
+	return false, nil
+}
+func (m *mockTelegramRepo) IsChannelSilenced(_ context.Context, _, _, _ string) (bool, error) {
 	return false, nil
 }
 func (m *mockTelegramRepo) DeactivateSilenceByID(_ context.Context, _ int) error { return nil }
@@ -170,6 +178,16 @@ func (m *mockTelegramRepo) UpdateAlertChannel(_ context.Context, _ models.AlertC
 func (m *mockTelegramRepo) DeleteAlertChannel(_ context.Context, _ string) error { return nil }
 func (m *mockTelegramRepo) MigrateLegacyAlertFields(_ context.Context) (int, error) {
 	return 0, nil
+}
+func (m *mockTelegramRepo) GetSetting(_ context.Context, _ string) (string, error) {
+	return "", fmt.Errorf("not found")
+}
+func (m *mockTelegramRepo) SetSetting(_ context.Context, _, _ string) error { return nil }
+func (m *mockTelegramRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
+	return models.CheckDefaults{}, nil
+}
+func (m *mockTelegramRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
+	return nil
 }
 
 // mockTelegramClient wraps a test HTTP server to capture API calls.

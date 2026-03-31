@@ -53,13 +53,13 @@ func newSlackAlerterWithSender(sender SlackSender, repo db.Repository, defaultCh
 // (check transitioned from healthy to unhealthy), any stale unresolved threads are
 // resolved first and a fresh thread is created.
 func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefinition, status models.CheckStatus, isNewIncident bool) {
-	// Check if silenced
-	silenced, err := sa.repo.IsCheckSilenced(ctx, checkDef.UUID, checkDef.Project)
+	// Check if silenced (per-channel: "slack")
+	silenced, err := sa.repo.IsChannelSilenced(ctx, checkDef.UUID, checkDef.Project, "slack")
 	if err != nil {
 		logrus.Errorf("Failed to check silence status for %s: %v", checkDef.UUID, err)
 	}
 	if silenced {
-		logrus.Infof("Check %s (project %s) is silenced, skipping slack_app alert", checkDef.UUID, checkDef.Project)
+		logrus.Infof("Check %s (project %s) is silenced for slack, skipping slack_app alert", checkDef.UUID, checkDef.Project)
 		return
 	}
 

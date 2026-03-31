@@ -16,12 +16,13 @@ type SlackAlertThread struct {
 
 // AlertSilence represents a silence rule that suppresses alerts for a given scope.
 type AlertSilence struct {
-	ID        int
-	Scope     string     // "check" or "project"
-	Target    string     // check UUID or project name
-	SilencedBy string   // Slack user ID
+	ID         int
+	Scope      string     // "check" or "project"
+	Target     string     // check UUID or project name
+	Channel    string     // alert channel name; empty = all channels
+	SilencedBy string    // Slack user ID
 	SilencedAt time.Time
-	ExpiresAt *time.Time
-	Reason    string
-	Active    bool
+	ExpiresAt  *time.Time
+	Reason     string
+	Active     bool
 }

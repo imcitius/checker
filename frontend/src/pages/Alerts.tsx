@@ -15,12 +15,16 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
 import { useAlerts } from '@/hooks/useAlerts'
 import { api } from '@/lib/api'
+import type { AlertChannel } from '@/lib/api'
 import {
   Bell,
   BellOff,
@@ -35,6 +39,7 @@ import {
   Clock,
   Shield,
   Trash2,
+  Radio,
 } from 'lucide-react'
 import { useRef } from 'react'
 
@@ -113,40 +118,68 @@ export function Alerts() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [checkTypes, setCheckTypes] = useState<string[]>([])
+  const [alertChannels, setAlertChannels] = useState<AlertChannel[]>([])
 
-  // Fetch projects list for filters
+  // Fetch projects list for filters and alert channels
   useEffect(() => {
     api.getProjects().then((p) => setProjects(p || [])).catch(() => {})
     api.getCheckTypes().then((t) => setCheckTypes(t || [])).catch(() => {})
+    api.getAlertChannels().then((ch) => setAlertChannels(ch || [])).catch(() => setAlertChannels([]))
   }, [])
 
   // Build a set of silenced check UUIDs and project names for quick lookup
+  // Only consider global silences (channel === '') for the "fully silenced" indicator
   const silencedChecks = useMemo(() => {
     const set = new Set<string>()
     for (const s of silences) {
-      if (s.Active) {
+      if (s.Active && !s.Channel) {
         set.add(s.Target)
       }
     }
     return set
   }, [silences])
 
+  // Build a map of partially silenced targets (have per-channel silences but no global silence)
+  const partiallySilencedChecks = useMemo(() => {
+    const channelSilences = new Map<string, string[]>()
+    for (const s of silences) {
+      if (s.Active && s.Channel) {
+        const existing = channelSilences.get(s.Target) || []
+        existing.push(s.Channel)
+        channelSilences.set(s.Target, existing)
+      }
+    }
+    return channelSilences
+  }, [silences])
+
   const isCheckSilenced = (checkUUID: string, project: string) => {
     return silencedChecks.has(checkUUID) || silencedChecks.has(project)
   }
 
-  const handleSilenceCheck = async (checkUUID: string, duration: string) => {
+  const isCheckPartiallySilenced = (checkUUID: string, project: string) => {
+    if (isCheckSilenced(checkUUID, project)) return false
+    return partiallySilencedChecks.has(checkUUID) || partiallySilencedChecks.has(project)
+  }
+
+  const getSilencedChannels = (checkUUID: string, project: string): string[] => {
+    const channels = new Set<string>()
+    for (const ch of partiallySilencedChecks.get(checkUUID) || []) channels.add(ch)
+    for (const ch of partiallySilencedChecks.get(project) || []) channels.add(ch)
+    return Array.from(channels)
+  }
+
+  const handleSilenceCheck = async (checkUUID: string, duration: string, channel?: string) => {
     try {
-      await api.createSilence({ scope: 'check', target: checkUUID, duration })
+      await api.createSilence({ scope: 'check', target: checkUUID, duration, channel: channel || '' })
       fetchSilences()
     } catch (err) {
       console.error('Failed to silence check:', err)
     }
   }
 
-  const handleSilenceProject = async (project: string, duration: string) => {
+  const handleSilenceProject = async (project: string, duration: string, channel?: string) => {
     try {
-      await api.createSilence({ scope: 'project', target: project, duration })
+      await api.createSilence({ scope: 'project', target: project, duration, channel: channel || '' })
       fetchSilences()
     } catch (err) {
       console.error('Failed to silence project:', err)
@@ -239,6 +272,8 @@ export function Alerts() {
                       const isActive = !alert.IsResolved
                       const isRecent = recentAlertIds.has(alert.ID)
                       const isSilenced = isCheckSilenced(alert.CheckUUID, alert.Project)
+                      const isPartial = isCheckPartiallySilenced(alert.CheckUUID, alert.Project)
+                      const silencedChs = isPartial ? getSilencedChannels(alert.CheckUUID, alert.Project) : []
 
                       return (
                         <tr
@@ -269,6 +304,12 @@ export function Alerts() {
                                 <Badge variant="warning" className="text-[10px] py-0">
                                   <VolumeX className="h-3 w-3 mr-0.5" />
                                   Silenced
+                                </Badge>
+                              )}
+                              {isPartial && (
+                                <Badge variant="warning" className="text-[10px] py-0 opacity-70">
+                                  <VolumeX className="h-3 w-3 mr-0.5" />
+                                  Partially silenced ({silencedChs.join(', ')})
                                 </Badge>
                               )}
                             </div>
@@ -310,9 +351,9 @@ export function Alerts() {
                                     Silence
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuContent align="end" className="w-56">
                                   <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                                    Silence Check
+                                    Silence Check — All Channels
                                   </div>
                                   {SILENCE_DURATIONS.map((d) => (
                                     <DropdownMenuItem
@@ -323,9 +364,39 @@ export function Alerts() {
                                       {d.label}
                                     </DropdownMenuItem>
                                   ))}
+                                  {alertChannels.length > 0 && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                                        Silence Check — Specific Channel
+                                      </div>
+                                      {alertChannels.map((ch) => (
+                                        <DropdownMenuSub key={ch.name}>
+                                          <DropdownMenuSubTrigger>
+                                            <Radio className="h-3.5 w-3.5 mr-2" />
+                                            {ch.name}
+                                            <Badge variant="secondary" className="text-[9px] ml-auto py-0">
+                                              {ch.type}
+                                            </Badge>
+                                          </DropdownMenuSubTrigger>
+                                          <DropdownMenuSubContent>
+                                            {SILENCE_DURATIONS.map((d) => (
+                                              <DropdownMenuItem
+                                                key={d.value}
+                                                onClick={() => handleSilenceCheck(alert.CheckUUID, d.value, ch.name)}
+                                              >
+                                                <Clock className="h-3.5 w-3.5 mr-2" />
+                                                {d.label}
+                                              </DropdownMenuItem>
+                                            ))}
+                                          </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
+                                      ))}
+                                    </>
+                                  )}
                                   <DropdownMenuSeparator />
                                   <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                                    Silence Project
+                                    Silence Project — All Channels
                                   </div>
                                   {SILENCE_DURATIONS.map((d) => (
                                     <DropdownMenuItem
@@ -336,6 +407,36 @@ export function Alerts() {
                                       {d.label}
                                     </DropdownMenuItem>
                                   ))}
+                                  {alertChannels.length > 0 && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                                        Silence Project — Specific Channel
+                                      </div>
+                                      {alertChannels.map((ch) => (
+                                        <DropdownMenuSub key={`proj-ch-${ch.name}`}>
+                                          <DropdownMenuSubTrigger>
+                                            <Radio className="h-3.5 w-3.5 mr-2" />
+                                            {ch.name}
+                                            <Badge variant="secondary" className="text-[9px] ml-auto py-0">
+                                              {ch.type}
+                                            </Badge>
+                                          </DropdownMenuSubTrigger>
+                                          <DropdownMenuSubContent>
+                                            {SILENCE_DURATIONS.map((d) => (
+                                              <DropdownMenuItem
+                                                key={d.value}
+                                                onClick={() => handleSilenceProject(alert.Project, d.value, ch.name)}
+                                              >
+                                                <Clock className="h-3.5 w-3.5 mr-2" />
+                                                {d.label}
+                                              </DropdownMenuItem>
+                                            ))}
+                                          </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
+                                      ))}
+                                    </>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
@@ -407,6 +508,7 @@ export function Alerts() {
                       <tr className="border-b bg-muted/50 text-muted-foreground text-xs">
                         <th className="text-left px-3 py-2 font-medium">Scope</th>
                         <th className="text-left px-3 py-2 font-medium">Target</th>
+                        <th className="text-left px-3 py-2 font-medium">Channel</th>
                         <th className="text-left px-3 py-2 font-medium hidden sm:table-cell">Silenced By</th>
                         <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Reason</th>
                         <th className="text-left px-3 py-2 font-medium">Expires</th>
@@ -416,13 +518,13 @@ export function Alerts() {
                     <tbody>
                       {silencesLoading ? (
                         <tr>
-                          <td colSpan={6} className="text-center py-6 text-muted-foreground">
+                          <td colSpan={7} className="text-center py-6 text-muted-foreground">
                             Loading silences...
                           </td>
                         </tr>
                       ) : silences.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="text-center py-6 text-muted-foreground">
+                          <td colSpan={7} className="text-center py-6 text-muted-foreground">
                             <div className="flex flex-col items-center gap-2">
                               <Volume2 className="h-6 w-6 text-muted-foreground/50" />
                               <span>No active silences</span>
@@ -450,6 +552,16 @@ export function Alerts() {
                             </td>
                             <td className="px-3 py-2 font-medium">
                               {silence.Target}
+                            </td>
+                            <td className="px-3 py-2">
+                              {silence.Channel ? (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  <Radio className="h-3 w-3 mr-0.5" />
+                                  {silence.Channel}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">All channels</span>
+                              )}
                             </td>
                             <td className="px-3 py-2 text-muted-foreground hidden sm:table-cell">
                               {silence.SilencedBy || '-'}

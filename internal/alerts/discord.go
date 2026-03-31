@@ -1,124 +1,80 @@
 package alerts
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"time"
+
+	"checker/internal/discord"
 )
 
-// DiscordAlerter implements the Alerter interface for Discord webhooks.
-type DiscordAlerter struct {
-	WebhookURL string
+// discordBotAlerter implements the Alerter interface for Discord using the bot API.
+// It reads bot_token, app_id, and default_channel from the DB channel config (json.RawMessage)
+// and sends real alert/recovery messages with rich embeds.
+//
+// When the YAML-configured DiscordAppAlerter is also present, it takes ownership of
+// the "discord" type via the ownedTypes mechanism, providing the full experience
+// (threads, buttons, interaction handling). This registry alerter provides basic
+// embed-based alerts for users who only configure Discord via the UI.
+type discordBotAlerter struct {
+	client    *discord.DiscordClient
+	channelID string
 }
 
-func (a *DiscordAlerter) Type() string { return "discord" }
+func (a *discordBotAlerter) Type() string { return "discord" }
 
-func (a *DiscordAlerter) SendAlert(p AlertPayload) error {
-	payload := BuildDiscordPayload(DiscordAlertParams{
-		CheckName: p.CheckName,
+func (a *discordBotAlerter) SendAlert(p AlertPayload) error {
+	payload := discord.BuildAlertMessage(discord.CheckAlertInfo{
+		UUID:      p.CheckUUID,
+		Name:      p.CheckName,
 		Project:   p.Project,
+		Group:     p.CheckGroup,
 		CheckType: p.CheckType,
 		Message:   p.Message,
-		IsDown:    true,
+		IsHealthy: false,
 	})
-	return SendDiscordAlert(a.WebhookURL, payload)
+	_, err := a.client.SendMessage(context.Background(), a.channelID, payload)
+	if err != nil {
+		return fmt.Errorf("discord alert: %w", err)
+	}
+	return nil
 }
 
-func (a *DiscordAlerter) SendRecovery(p RecoveryPayload) error {
-	payload := BuildDiscordPayload(DiscordAlertParams{
-		CheckName: p.CheckName,
+func (a *discordBotAlerter) SendRecovery(p RecoveryPayload) error {
+	payload := discord.BuildResolveMessage(discord.CheckAlertInfo{
+		UUID:      p.CheckUUID,
+		Name:      p.CheckName,
 		Project:   p.Project,
+		Group:     p.CheckGroup,
 		CheckType: p.CheckType,
-		IsDown:    false,
+		IsHealthy: true,
 	})
-	return SendDiscordAlert(a.WebhookURL, payload)
+	_, err := a.client.SendMessage(context.Background(), a.channelID, payload)
+	if err != nil {
+		return fmt.Errorf("discord recovery: %w", err)
+	}
+	return nil
 }
 
-func newDiscordAlerter(raw json.RawMessage) (Alerter, error) {
+func newDiscordBotAlerter(raw json.RawMessage) (Alerter, error) {
 	var cfg struct {
-		WebhookURL string `json:"webhook_url"`
+		BotToken       string `json:"bot_token"`
+		AppID          string `json:"app_id"`
+		DefaultChannel string `json:"default_channel"`
 	}
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing discord config: %w", err)
 	}
-	if cfg.WebhookURL == "" {
-		return nil, fmt.Errorf("discord requires webhook_url")
+	if cfg.BotToken == "" {
+		return nil, fmt.Errorf("discord requires bot_token")
 	}
-	return &DiscordAlerter{WebhookURL: cfg.WebhookURL}, nil
+	if cfg.DefaultChannel == "" {
+		return nil, fmt.Errorf("discord requires default_channel")
+	}
+	client := discord.NewDiscordClient(cfg.BotToken, cfg.AppID, cfg.DefaultChannel)
+	return &discordBotAlerter{client: client, channelID: cfg.DefaultChannel}, nil
 }
 
 func init() {
-	RegisterAlerter("discord", newDiscordAlerter)
-}
-
-// Discord embed color constants.
-const (
-	ColorRed    = 15158332 // failure / DOWN
-	ColorGreen  = 3066993  // recovery / RESOLVED
-	ColorYellow = 16776960 // warning
-)
-
-// DiscordEmbedField represents a field inside a Discord embed.
-type DiscordEmbedField struct {
-	Name   string `json:"name"`
-	Value  string `json:"value"`
-	Inline bool   `json:"inline,omitempty"`
-}
-
-// DiscordEmbed represents a single Discord embed object.
-type DiscordEmbed struct {
-	Title       string              `json:"title"`
-	Description string              `json:"description,omitempty"`
-	Color       int                 `json:"color"`
-	Timestamp   string              `json:"timestamp,omitempty"`
-	Fields      []DiscordEmbedField `json:"fields,omitempty"`
-}
-
-// DiscordPayload is the top-level payload sent to Discord webhooks.
-type DiscordPayload struct {
-	Embeds []DiscordEmbed `json:"embeds"`
-}
-
-// DiscordAlertParams holds the parameters for building a Discord alert.
-type DiscordAlertParams struct {
-	CheckName string
-	Project   string
-	CheckType string
-	Message   string
-	IsDown    bool // true = DOWN, false = RESOLVED
-}
-
-// BuildDiscordPayload constructs a DiscordPayload for a check status change.
-func BuildDiscordPayload(params DiscordAlertParams) DiscordPayload {
-	var title string
-	var color int
-
-	if params.IsDown {
-		title = fmt.Sprintf("🔴 %s is DOWN", params.CheckName)
-		color = ColorRed
-	} else {
-		title = fmt.Sprintf("🟢 %s is RESOLVED", params.CheckName)
-		color = ColorGreen
-	}
-
-	embed := DiscordEmbed{
-		Title:       title,
-		Description: params.Message,
-		Color:       color,
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		Fields: []DiscordEmbedField{
-			{Name: "Project", Value: params.Project, Inline: true},
-			{Name: "Type", Value: params.CheckType, Inline: true},
-		},
-	}
-
-	return DiscordPayload{Embeds: []DiscordEmbed{embed}}
-}
-
-// SendDiscordAlert posts a Discord webhook message with an embed payload.
-func SendDiscordAlert(webhookURL string, payload DiscordPayload) error {
-	if err := postJSON(webhookURL, payload, nil); err != nil {
-		return fmt.Errorf("discord alert: %w", err)
-	}
-	return nil
+	RegisterAlerter("discord", newDiscordBotAlerter)
 }

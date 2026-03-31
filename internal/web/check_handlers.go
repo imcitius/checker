@@ -113,6 +113,29 @@ func CreateCheckDefinition(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	// Apply checker-wide defaults for fields not explicitly set
+	if defaults, err := repo.GetCheckDefaults(ctx); err == nil {
+		if def.RetryCount == 0 && def.RetryInterval == "" && defaults.RetryCount > 0 {
+			def.RetryCount = defaults.RetryCount
+			def.RetryInterval = defaults.RetryInterval
+		}
+		if def.Duration == "" && defaults.CheckInterval != "" {
+			def.Duration = defaults.CheckInterval
+		}
+		if def.ReAlertInterval == "" && defaults.ReAlertInterval != "" {
+			def.ReAlertInterval = defaults.ReAlertInterval
+		}
+		if def.Severity == "" && defaults.Severity != "" {
+			def.Severity = defaults.Severity
+		}
+		if len(def.AlertChannels) == 0 && len(defaults.AlertChannels) > 0 {
+			def.AlertChannels = defaults.AlertChannels
+		}
+		if def.EscalationPolicyName == "" && defaults.EscalationPolicy != "" {
+			def.EscalationPolicyName = defaults.EscalationPolicy
+		}
+	}
+
 	id, err := repo.CreateCheckDefinition(ctx, def)
 	if err != nil {
 		logrus.Errorf("Failed to create check definition: %v", err)
@@ -363,6 +386,8 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 		RetryCount:           def.RetryCount,
 		RetryInterval:       def.RetryInterval,
 		EscalationPolicyName: def.EscalationPolicyName,
+		AlertChannels:        def.AlertChannels,
+		Severity:             def.Severity,
 	}
 
 	// Set maintenance window
@@ -489,6 +514,8 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 		RetryCount:           vm.RetryCount,
 		RetryInterval:       vm.RetryInterval,
 		EscalationPolicyName: vm.EscalationPolicyName,
+		AlertChannels:        vm.AlertChannels,
+		Severity:             vm.Severity,
 	}
 
 	// Create ID if present (parsed later usually)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -15,6 +16,7 @@ import (
 	"checker/internal/auth"
 	"checker/internal/config"
 	"checker/internal/db"
+	"checker/internal/discord"
 	"checker/internal/scheduler"
 	"checker/internal/slack"
 	"checker/internal/telegram"
@@ -134,17 +136,30 @@ func main() {
 			// Slack App
 			if cfg.SlackApp.BotToken != "" {
 				slackClient := slack.NewSlackClient(cfg.SlackApp.BotToken, cfg.SlackApp.SigningSecret, cfg.SlackApp.DefaultChannel)
-				logrus.Info("Slack App client initialized")
+				logrus.Info("Slack App initialized from config")
 				appAlerters = append(appAlerters, scheduler.NewSlackAlerter(slackClient, repo, cfg.SlackApp.DefaultChannel))
 				webhooks = append(webhooks, &web.SlackWebhookRegistrar{Client: slackClient})
 			} else {
 				logrus.Info("Slack App not configured, skipping")
 			}
 
+			// Discord Bot App
+			if cfg.DiscordApp.BotToken != "" {
+				discordClient := discord.NewDiscordClient(cfg.DiscordApp.BotToken, cfg.DiscordApp.AppID, cfg.DiscordApp.DefaultChannel)
+				logrus.Info("Discord Bot initialized from config")
+				appAlerters = append(appAlerters, scheduler.NewDiscordAppAlerter(discordClient, repo, cfg.DiscordApp.DefaultChannel))
+				webhooks = append(webhooks, &web.DiscordWebhookRegistrar{
+					Client:    discordClient,
+					PublicKey: cfg.DiscordApp.PublicKey,
+				})
+			} else {
+				logrus.Info("Discord Bot App not configured, skipping")
+			}
+
 			// Telegram App
 			if cfg.TelegramApp.BotToken != "" {
 				tgClient := telegram.NewTelegramClient(cfg.TelegramApp.BotToken, cfg.TelegramApp.SecretToken, cfg.TelegramApp.DefaultChatID)
-				logrus.Info("Telegram App client initialized")
+				logrus.Info("Telegram App initialized from config")
 				// Set webhook on startup if URL configured
 				if cfg.TelegramApp.WebhookURL != "" {
 					webhookURL := cfg.TelegramApp.WebhookURL + "/api/telegram/webhook"
@@ -158,6 +173,75 @@ func main() {
 				webhooks = append(webhooks, &web.TelegramWebhookRegistrar{Client: tgClient})
 			} else {
 				logrus.Info("Telegram App not configured, skipping")
+			}
+
+			// 3b. Initialize AppAlerters from DB alert channels (if not already configured via YAML)
+			initializedTypes := make(map[string]bool)
+			for _, aa := range appAlerters {
+				for _, t := range aa.OwnedTypes() {
+					initializedTypes[t] = true
+				}
+			}
+
+			dbChannels, err := repo.GetAllAlertChannels(context.Background())
+			if err != nil {
+				logrus.Warnf("Failed to load DB alert channels for AppAlerter init: %v", err)
+			} else {
+				for _, ch := range dbChannels {
+					if initializedTypes[ch.Type] {
+						continue // Already initialized from YAML
+					}
+
+					var chCfg map[string]interface{}
+					if err := json.Unmarshal(ch.Config, &chCfg); err != nil {
+						logrus.Warnf("Failed to parse config for DB alert channel %q: %v", ch.Name, err)
+						continue
+					}
+
+					switch ch.Type {
+					case "discord":
+						botToken, _ := chCfg["bot_token"].(string)
+						appID, _ := chCfg["app_id"].(string)
+						defaultChannel, _ := chCfg["default_channel"].(string)
+						publicKey, _ := chCfg["public_key"].(string)
+						if botToken == "" || defaultChannel == "" {
+							continue
+						}
+						discordClient := discord.NewDiscordClient(botToken, appID, defaultChannel)
+						logrus.Infof("Discord Bot initialized from DB channel %q", ch.Name)
+						appAlerters = append(appAlerters, scheduler.NewDiscordAppAlerter(discordClient, repo, defaultChannel))
+						webhooks = append(webhooks, &web.DiscordWebhookRegistrar{
+							Client:    discordClient,
+							PublicKey: publicKey,
+						})
+						initializedTypes["discord"] = true
+
+					case "slack":
+						botToken, _ := chCfg["bot_token"].(string)
+						signingSecret, _ := chCfg["signing_secret"].(string)
+						defaultChannel, _ := chCfg["default_channel"].(string)
+						if botToken == "" || defaultChannel == "" {
+							continue
+						}
+						slackClient := slack.NewSlackClient(botToken, signingSecret, defaultChannel)
+						logrus.Infof("Slack App initialized from DB channel %q", ch.Name)
+						appAlerters = append(appAlerters, scheduler.NewSlackAlerter(slackClient, repo, defaultChannel))
+						webhooks = append(webhooks, &web.SlackWebhookRegistrar{Client: slackClient})
+						initializedTypes["slack"] = true
+
+					case "telegram":
+						botToken, _ := chCfg["bot_token"].(string)
+						chatID, _ := chCfg["chat_id"].(string)
+						if botToken == "" || chatID == "" {
+							continue
+						}
+						tgClient := telegram.NewTelegramClient(botToken, "", chatID)
+						logrus.Infof("Telegram App initialized from DB channel %q", ch.Name)
+						appAlerters = append(appAlerters, scheduler.NewTelegramAppAlerter(tgClient, repo, chatID))
+						webhooks = append(webhooks, &web.TelegramWebhookRegistrar{Client: tgClient})
+						initializedTypes["telegram"] = true
+					}
+				}
 			}
 
 			// 3c. Initialize Auth Manager

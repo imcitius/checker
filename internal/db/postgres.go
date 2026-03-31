@@ -528,6 +528,61 @@ func (db *PostgresDB) GetAllDefaultTimeouts() map[string]string {
 	}
 }
 
+// Settings
+
+func (db *PostgresDB) GetSetting(ctx context.Context, key string) (string, error) {
+	var value string
+	err := db.Pool.QueryRow(ctx, `SELECT value FROM settings WHERE key = $1`, key).Scan(&value)
+	if err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+func (db *PostgresDB) SetSetting(ctx context.Context, key, value string) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO settings (key, value, updated_at) VALUES ($1, $2, NOW())
+		 ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+		key, value)
+	return err
+}
+
+func (db *PostgresDB) GetCheckDefaults(ctx context.Context) (models.CheckDefaults, error) {
+	defaults := models.CheckDefaults{
+		Timeouts: db.GetAllDefaultTimeouts(),
+	}
+	raw, err := db.GetSetting(ctx, "check_defaults")
+	if err != nil {
+		return defaults, nil // no saved defaults yet, return hardcoded
+	}
+	var saved models.CheckDefaults
+	if err := json.Unmarshal([]byte(raw), &saved); err != nil {
+		return defaults, fmt.Errorf("unmarshal check_defaults: %w", err)
+	}
+	// Merge saved timeouts over hardcoded defaults
+	if saved.Timeouts != nil {
+		for k, v := range saved.Timeouts {
+			defaults.Timeouts[k] = v
+		}
+	}
+	defaults.RetryCount = saved.RetryCount
+	defaults.RetryInterval = saved.RetryInterval
+	defaults.CheckInterval = saved.CheckInterval
+	defaults.ReAlertInterval = saved.ReAlertInterval
+	defaults.Severity = saved.Severity
+	defaults.AlertChannels = saved.AlertChannels
+	defaults.EscalationPolicy = saved.EscalationPolicy
+	return defaults, nil
+}
+
+func (db *PostgresDB) SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error {
+	raw, err := json.Marshal(defaults)
+	if err != nil {
+		return fmt.Errorf("marshal check_defaults: %w", err)
+	}
+	return db.SetSetting(ctx, "check_defaults", string(raw))
+}
+
 // Slack thread tracking
 
 func (db *PostgresDB) CreateSlackThread(ctx context.Context, checkUUID, channelID, threadTs, parentTs string) error {
@@ -567,8 +622,8 @@ func (db *PostgresDB) UpdateSlackThread(ctx context.Context, checkUUID, threadTs
 
 func (db *PostgresDB) CreateSilence(ctx context.Context, silence models.AlertSilence) error {
 	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO alert_silences (scope, target, silenced_by, silenced_at, expires_at, reason, active) VALUES ($1, $2, $3, NOW(), $4, $5, $6)`,
-		silence.Scope, silence.Target, silence.SilencedBy, silence.ExpiresAt, silence.Reason, silence.Active)
+		`INSERT INTO alert_silences (scope, target, channel, silenced_by, silenced_at, expires_at, reason, active) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7)`,
+		silence.Scope, silence.Target, silence.Channel, silence.SilencedBy, silence.ExpiresAt, silence.Reason, silence.Active)
 	return err
 }
 
@@ -593,7 +648,7 @@ func (db *PostgresDB) DeactivateSilenceByID(ctx context.Context, id int) error {
 
 func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
 	rows, err := db.Pool.Query(ctx,
-		`SELECT id, scope, target, silenced_by, silenced_at, expires_at, reason
+		`SELECT id, scope, target, channel, silenced_by, silenced_at, expires_at, reason
 		FROM alert_silences
 		WHERE active = true AND (expires_at IS NULL OR expires_at > NOW())`)
 	if err != nil {
@@ -604,7 +659,7 @@ func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSile
 	var silences []models.AlertSilence
 	for rows.Next() {
 		var s models.AlertSilence
-		if err := rows.Scan(&s.ID, &s.Scope, &s.Target, &s.SilencedBy, &s.SilencedAt, &s.ExpiresAt, &s.Reason); err != nil {
+		if err := rows.Scan(&s.ID, &s.Scope, &s.Target, &s.Channel, &s.SilencedBy, &s.SilencedAt, &s.ExpiresAt, &s.Reason); err != nil {
 			return nil, err
 		}
 		s.Active = true
@@ -625,6 +680,24 @@ func (db *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project st
 				OR (scope = 'project' AND target = $2)
 			)
 		)`, checkUUID, project).Scan(&exists)
+	return exists, err
+}
+
+// IsChannelSilenced checks if a specific channel is silenced for a check.
+// Returns true if there's a silence matching the check/project AND (channel='' OR channel=channelName).
+func (db *PostgresDB) IsChannelSilenced(ctx context.Context, checkUUID, project, channelName string) (bool, error) {
+	var exists bool
+	err := db.Pool.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM alert_silences
+			WHERE active = true
+			AND (expires_at IS NULL OR expires_at > NOW())
+			AND (
+				(scope = 'check' AND target = $1)
+				OR (scope = 'project' AND target = $2)
+			)
+			AND (channel = '' OR channel = $3)
+		)`, checkUUID, project, channelName).Scan(&exists)
 	return exists, err
 }
 
@@ -1040,6 +1113,32 @@ func (db *PostgresDB) GetTelegramThreadByMessage(ctx context.Context, chatID str
 func (db *PostgresDB) ResolveTelegramThread(ctx context.Context, checkUUID string) error {
 	_, err := db.Pool.Exec(ctx,
 		`UPDATE telegram_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false`,
+		checkUUID)
+	return err
+}
+
+func (db *PostgresDB) CreateDiscordThread(ctx context.Context, checkUUID, channelID, messageID, threadID string) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO discord_alert_threads (check_uuid, channel_id, message_id, thread_id) VALUES ($1, $2, $3, $4)`,
+		checkUUID, channelID, messageID, threadID)
+	return err
+}
+
+func (db *PostgresDB) GetUnresolvedDiscordThread(ctx context.Context, checkUUID string) (models.DiscordAlertThread, error) {
+	var t models.DiscordAlertThread
+	err := db.Pool.QueryRow(ctx,
+		`SELECT id, check_uuid, channel_id, message_id, thread_id, is_resolved, created_at, resolved_at
+		 FROM discord_alert_threads WHERE check_uuid=$1 AND is_resolved=false ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+		&t.ID, &t.CheckUUID, &t.ChannelID, &t.MessageID, &t.ThreadID, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
+	if err != nil {
+		return models.DiscordAlertThread{}, err
+	}
+	return t, nil
+}
+
+func (db *PostgresDB) ResolveDiscordThread(ctx context.Context, checkUUID string) error {
+	_, err := db.Pool.Exec(ctx,
+		`UPDATE discord_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false`,
 		checkUUID)
 	return err
 }

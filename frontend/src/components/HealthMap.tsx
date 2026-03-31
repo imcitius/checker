@@ -16,13 +16,17 @@ const HealthTile = memo(function HealthTile({
   check: Check
   onSelect: () => void
 }) {
+  const hasPartialSilence = !check.IsSilenced && check.SilencedChannels && check.SilencedChannels.length > 0
+
   const status = !check.Enabled
     ? 'disabled'
     : check.IsSilenced
       ? 'silenced'
-      : check.LastResult
-        ? 'healthy'
-        : 'unhealthy'
+      : hasPartialSilence
+        ? 'partial'
+        : check.LastResult
+          ? 'healthy'
+          : 'unhealthy'
 
   return (
     <Tooltip>
@@ -34,7 +38,8 @@ const HealthTile = memo(function HealthTile({
             status === 'healthy' && 'bg-healthy/80 border-healthy/40 hover:bg-healthy',
             status === 'unhealthy' && 'bg-unhealthy/80 border-unhealthy/40 hover:bg-unhealthy animate-pulse-unhealthy',
             status === 'disabled' && 'bg-disabled/30 border-disabled/20 hover:bg-disabled/50',
-            status === 'silenced' && 'bg-warning/40 border-warning/30 hover:bg-warning/60'
+            status === 'silenced' && 'bg-warning/40 border-warning/30 hover:bg-warning/60',
+            status === 'partial' && 'bg-warning/25 border-warning/20 hover:bg-warning/40'
           )}
           onClick={onSelect}
         />
@@ -51,10 +56,10 @@ const HealthTile = memo(function HealthTile({
               status === 'healthy' && 'text-healthy',
               status === 'unhealthy' && 'text-unhealthy',
               status === 'disabled' && 'text-disabled',
-              status === 'silenced' && 'text-warning'
+              (status === 'silenced' || status === 'partial') && 'text-warning'
             )}
           >
-            {status === 'healthy' ? 'Healthy' : status === 'unhealthy' ? 'FAILING' : status === 'disabled' ? 'Disabled' : 'Silenced'}
+            {status === 'healthy' ? 'Healthy' : status === 'unhealthy' ? 'FAILING' : status === 'disabled' ? 'Disabled' : status === 'partial' ? `Partially silenced (${check.SilencedChannels?.join(', ')})` : 'Silenced'}
           </div>
           {check.Message && status === 'unhealthy' && (
             <div className="text-[10px] text-unhealthy/80 truncate">{check.Message}</div>

@@ -53,13 +53,13 @@ func newTelegramAppAlerterWithSender(sender TelegramSender, repo db.Repository, 
 // (check transitioned from healthy to unhealthy), any stale unresolved threads are
 // resolved first and a fresh thread is created.
 func (ta *TelegramAppAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefinition, status models.CheckStatus, isNewIncident bool) {
-	// Check if silenced
-	silenced, err := ta.repo.IsCheckSilenced(ctx, checkDef.UUID, checkDef.Project)
+	// Check if silenced (per-channel: "telegram")
+	silenced, err := ta.repo.IsChannelSilenced(ctx, checkDef.UUID, checkDef.Project, "telegram")
 	if err != nil {
 		logrus.Errorf("Failed to check silence status for %s: %v", checkDef.UUID, err)
 	}
 	if silenced {
-		logrus.Infof("Check %s (project %s) is silenced, skipping telegram alert", checkDef.UUID, checkDef.Project)
+		logrus.Infof("Check %s (project %s) is silenced for telegram, skipping telegram alert", checkDef.UUID, checkDef.Project)
 		return
 	}
 

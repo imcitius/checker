@@ -70,6 +70,9 @@ func (s *stubRepo) CreateSilence(_ context.Context, _ models.AlertSilence) error
 func (s *stubRepo) IsCheckSilenced(_ context.Context, _, _ string) (bool, error) {
 	return false, nil
 }
+func (s *stubRepo) IsChannelSilenced(_ context.Context, _, _, _ string) (bool, error) {
+	return false, nil
+}
 func (s *stubRepo) DeactivateSilence(_ context.Context, _, _ string) error { return nil }
 func (s *stubRepo) DeactivateSilenceByID(_ context.Context, _ int) error   { return nil }
 func (s *stubRepo) GetActiveSilences(_ context.Context) ([]models.AlertSilence, error) {
@@ -96,6 +99,12 @@ func (s *stubRepo) BulkToggleCheckDefinitions(_ context.Context, uuids []string,
 func (s *stubRepo) BulkDeleteCheckDefinitions(_ context.Context, uuids []string) (int64, error) {
 	s.lastBulkUUIDs = uuids
 	return int64(len(uuids)), nil
+}
+func (s *stubRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
+	return models.CheckDefaults{}, nil
+}
+func (s *stubRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
+	return nil
 }
 
 func TestCreateCheckDefinition_GeneratesUUID(t *testing.T) {

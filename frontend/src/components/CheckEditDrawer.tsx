@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { type CheckDefinition } from '@/lib/api'
+import { type CheckDefinition, type AlertChannel } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -375,13 +375,21 @@ export function CheckEditDrawer({
     duration_ms: number
     message: string
   } | null>(null)
+  const [alertChannels, setAlertChannels] = useState<AlertChannel[]>([])
+
+  // Fetch available alert channels
+  useEffect(() => {
+    if (open) {
+      api.getAlertChannels().then(setAlertChannels).catch(() => setAlertChannels([]))
+    }
+  }, [open])
 
   // Sync advanced section open state when check changes
   useEffect(() => {
     setAdvancedOpen(hasExistingAdvancedHTTP || hasExistingAdvancedDB || hasExistingAdvancedICMP || hasExistingAdvancedSSH || hasExistingAdvancedRedis)
   }, [editingCheck.uuid, editingCheck.type]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const updateForm = (field: string, value: string | number | boolean | number[] | Record<string, string>[]) => {
+  const updateForm = (field: string, value: string | number | boolean | number[] | string[] | Record<string, string>[]) => {
     onCheckChange({ ...editingCheck, [field]: value })
     setTestResult(null)
   }
@@ -1082,9 +1090,52 @@ export function CheckEditDrawer({
             </section>
           )}
 
-          {/* ─── Alert Configuration ─── */}
+          {/* ─── Alert Channels ─── */}
           <section className="space-y-4">
-            <SectionHeader>Alert Configuration</SectionHeader>
+            <SectionHeader>Alert Channels</SectionHeader>
+            {alertChannels.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No alert channels configured. Add channels in Settings → Alert Channels.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {alertChannels.map((ch) => {
+                  const selected = (editingCheck.alert_channels || []).includes(ch.name)
+                  return (
+                    <label
+                      key={ch.name}
+                      className={`flex items-center gap-3 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                        selected
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-muted-foreground/30'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-primary h-4 w-4"
+                        checked={selected}
+                        onChange={() => {
+                          const current = editingCheck.alert_channels || []
+                          const next = selected
+                            ? current.filter((n) => n !== ch.name)
+                            : [...current, ch.name]
+                          updateForm('alert_channels', next)
+                        }}
+                      />
+                      <span className="text-sm font-medium">{ch.name}</span>
+                      <Badge variant="secondary" className="text-[10px] ml-auto">
+                        {ch.type}
+                      </Badge>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* ─── Legacy Alert Configuration ─── */}
+          <section className="space-y-4">
+            <SectionHeader>Legacy Alert (deprecated)</SectionHeader>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">Alert Type</label>

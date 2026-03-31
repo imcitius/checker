@@ -92,6 +92,7 @@ export interface CheckDefinition {
   actor_type?: string
   alert_type?: string
   alert_destination?: string
+  alert_channels?: string[]
   // Maintenance window
   maintenance_until?: string | null
 }
@@ -152,6 +153,7 @@ export interface AlertSilence {
   ID: number
   Scope: string
   Target: string
+  Channel: string
   SilencedBy: string
   SilencedAt: string
   ExpiresAt: string | null
@@ -166,6 +168,7 @@ export interface SilencesResponse {
 export interface CreateSilenceRequest {
   scope: 'check' | 'project'
   target: string
+  channel?: string
   duration: string
   reason?: string
 }
@@ -183,6 +186,17 @@ export interface AlertChannelInput {
   name: string
   type: string
   config: Record<string, unknown>
+}
+
+export interface CheckDefaults {
+  retry_count: number
+  retry_interval: string
+  check_interval: string
+  timeouts: Record<string, string>
+  re_alert_interval: string
+  severity: string
+  alert_channels: string[]
+  escalation_policy: string
 }
 
 export const api = {
@@ -265,6 +279,15 @@ export const api = {
   getProjects: () => request<string[]>('/api/metadata/projects'),
   getCheckTypes: () => request<string[]>('/api/metadata/check-types'),
   getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),
+
+  // Settings
+  getCheckDefaults: () =>
+    request<CheckDefaults>('/api/settings/check-defaults'),
+  updateCheckDefaults: (data: CheckDefaults) =>
+    request<CheckDefaults>('/api/settings/check-defaults', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Bulk actions
   bulkEnable: (uuids: string[]) =>

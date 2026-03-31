@@ -2,6 +2,7 @@ package alerts
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,9 +12,15 @@ import (
 
 var defaultHTTPClient = &http.Client{Timeout: 10 * time.Second}
 
-// postJSON marshals payload to JSON and POSTs it to url with optional headers.
-// Returns an error if the response status is not in the 2xx range.
-func postJSON(url string, payload any, headers map[string]string) error {
+var insecureHTTPClient = &http.Client{
+	Timeout: 10 * time.Second,
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	},
+}
+
+// postJSONWithClient is like postJSON but accepts a custom http.Client.
+func postJSONWithClient(client *http.Client, url string, payload any, headers map[string]string) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshaling payload: %w", err)
@@ -26,7 +33,7 @@ func postJSON(url string, payload any, headers map[string]string) error {
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := defaultHTTPClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("sending request: %w", err)
 	}
@@ -36,4 +43,10 @@ func postJSON(url string, payload any, headers map[string]string) error {
 		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
 	}
 	return nil
+}
+
+// postJSON marshals payload to JSON and POSTs it to url with optional headers.
+// Returns an error if the response status is not in the 2xx range.
+func postJSON(url string, payload any, headers map[string]string) error {
+	return postJSONWithClient(defaultHTTPClient, url, payload, headers)
 }

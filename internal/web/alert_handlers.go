@@ -95,6 +95,7 @@ func ListSilences(c *gin.Context) {
 type createSilenceRequest struct {
 	Scope    string `json:"scope" binding:"required,oneof=check project"`
 	Target   string `json:"target" binding:"required"`
+	Channel  string `json:"channel"`  // optional — empty = all channels
 	Duration string `json:"duration" binding:"required,oneof=30m 1h 4h 8h 24h indefinite"`
 	Reason   string `json:"reason"`
 }
@@ -134,6 +135,7 @@ func CreateSilence(c *gin.Context) {
 	silence := models.AlertSilence{
 		Scope:      req.Scope,
 		Target:     req.Target,
+		Channel:    req.Channel,
 		SilencedBy: silencedBy,
 		ExpiresAt:  expiresAt,
 		Reason:     req.Reason,

@@ -368,12 +368,32 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 				logger.WithError(err).Error("Failed to update last alert time")
 			}
+		} else if configChangedSinceLastAlert(checkDef, checkStatus) {
+			// Fire stateless alerters when check config was updated after the last
+			// alert (e.g. user added new alert channels on an ongoing failure).
+			sendAlerts(repo, checkStatus, checkDef, appAlerters)
+
+			checkStatus.LastAlertSent = runTime
+			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
+				logger.WithError(err).Error("Failed to update last alert time")
+			}
 		}
 
-		// App alerters (Slack App, Telegram App, etc.) — runs alongside existing alerts
+		// App alerters — only fire if the check has a matching channel type selected
 		isNewIncident := previouslyHealthy
-		for _, aa := range appAlerters {
-			aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+		channels := getEffectiveAlertChannels(checkDef)
+		if len(channels) == 0 {
+			// No channels explicitly configured — fire all AppAlerters (backward compatible)
+			for _, aa := range appAlerters {
+				aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+			}
+		} else {
+			selectedTypes := resolveSelectedChannelTypes(repo, checkDef)
+			for _, aa := range appAlerters {
+				if shouldAppAlerterFire(aa, selectedTypes) {
+					aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+				}
+			}
 		}
 
 		// Process escalation policy (if assigned)
@@ -399,9 +419,20 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 		// Send recovery alerts for legacy channels
 		sendRecoveryAlerts(repo, checkStatus, checkDef, appAlerters)
 
-		// Handle app alerter recovery (thread resolution, etc.)
-		for _, aa := range appAlerters {
-			aa.HandleRecovery(context.Background(), checkDef)
+		// Handle app alerter recovery — only fire if the check has a matching channel type selected
+		recoveryChannels := getEffectiveAlertChannels(checkDef)
+		if len(recoveryChannels) == 0 {
+			// No channels explicitly configured — fire all AppAlerters (backward compatible)
+			for _, aa := range appAlerters {
+				aa.HandleRecovery(context.Background(), checkDef)
+			}
+		} else {
+			recoveryTypes := resolveSelectedChannelTypes(repo, checkDef)
+			for _, aa := range appAlerters {
+				if shouldAppAlerterFire(aa, recoveryTypes) {
+					aa.HandleRecovery(context.Background(), checkDef)
+				}
+			}
 		}
 
 		// Clear escalation notifications on recovery (reset for next incident)
@@ -440,9 +471,47 @@ func shouldSendAlert(previouslyHealthy bool, reAlertInterval time.Duration, stat
 	return time.Since(status.LastAlertSent) >= reAlertInterval
 }
 
+// configChangedSinceLastAlert returns true when the check definition was
+// modified after the last alert was sent.  This catches the case where a user
+// adds new alert channels while a check is already in a failing state —
+// without this, the new channels would never fire until the check recovers
+// and fails again.
+func configChangedSinceLastAlert(checkDef models.CheckDefinition, status models.CheckStatus) bool {
+	if status.LastAlertSent.IsZero() {
+		return false // no previous alert — handled by shouldSendAlert
+	}
+	return !checkDef.UpdatedAt.IsZero() && checkDef.UpdatedAt.After(status.LastAlertSent)
+}
+
 // getEffectiveAlertChannels returns the list of alert channels to dispatch to.
 func getEffectiveAlertChannels(checkDef models.CheckDefinition) []string {
 	return checkDef.AlertChannels
+}
+
+// resolveSelectedChannelTypes returns the set of channel types selected for a check.
+func resolveSelectedChannelTypes(repo db.Repository, checkDef models.CheckDefinition) map[string]bool {
+	channels := getEffectiveAlertChannels(checkDef)
+	types := make(map[string]bool)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for _, name := range channels {
+		ch, err := repo.GetAlertChannelByName(ctx, name)
+		if err != nil {
+			continue
+		}
+		types[ch.Type] = true
+	}
+	return types
+}
+
+// shouldAppAlerterFire returns true if any selected channel type matches the AppAlerter's owned types.
+func shouldAppAlerterFire(aa AppAlerter, selectedTypes map[string]bool) bool {
+	for _, t := range aa.OwnedTypes() {
+		if selectedTypes[t] {
+			return true
+		}
+	}
+	return false
 }
 
 // getEffectiveSeverity returns the severity for the check, defaulting to "critical".
@@ -487,6 +556,19 @@ func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.C
 		Timestamp:  status.LastRun,
 	}
 	for _, channel := range channels {
+		// Check per-channel silence
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		silenced, err := repo.IsChannelSilenced(ctx, status.UUID, status.Project, channel)
+		cancel()
+		if err != nil {
+			logrus.Errorf("Failed to check silence for channel %q check %s: %v", channel, status.UUID, err)
+			// Continue — don't suppress alerts on error
+		}
+		if silenced {
+			logrus.Infof("Channel %q silenced for check %s, skipping", channel, status.UUID)
+			continue
+		}
+
 		alerter, err := resolveAlerter(repo, channel)
 		if err != nil {
 			logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)
@@ -525,6 +607,19 @@ func sendRecoveryAlerts(repo db.Repository, status models.CheckStatus, checkDef 
 	ownedTypes := buildOwnedTypeSet(appAlerters)
 
 	for _, channel := range channels {
+		// Check per-channel silence
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		silenced, err := repo.IsChannelSilenced(ctx, status.UUID, status.Project, channel)
+		cancel()
+		if err != nil {
+			logrus.Errorf("Failed to check silence for channel %q check %s: %v", channel, status.UUID, err)
+			// Continue — don't suppress recovery alerts on error
+		}
+		if silenced {
+			logrus.Infof("Channel %q silenced for check %s, skipping recovery", channel, status.UUID)
+			continue
+		}
+
 		alerter, err := resolveAlerter(repo, channel)
 		if err != nil {
 			logrus.Errorf("Failed to resolve alerter for channel %q check %s: %v", channel, status.UUID, err)

@@ -1,0 +1,1 @@
+ALTER TABLE alert_silences ADD COLUMN channel TEXT NOT NULL DEFAULT '';
