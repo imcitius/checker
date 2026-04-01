@@ -7,16 +7,16 @@ ALTER TABLE check_definitions ADD COLUMN slack_channel_id TEXT;
 
 -- Alert silences table: suppresses alerts by scope (check or project)
 CREATE TABLE IF NOT EXISTS alert_silences (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    id          SERIAL PRIMARY KEY,
     scope       TEXT NOT NULL,            -- 'check' or 'project'
     target      TEXT NOT NULL DEFAULT '', -- check UUID or project name
     silenced_by TEXT NOT NULL DEFAULT '', -- Slack user ID
-    silenced_at DATETIME NOT NULL DEFAULT (datetime('now')),
-    expires_at  DATETIME,                -- NULL = never expires
+    silenced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at  TIMESTAMPTZ,             -- NULL = never expires
     reason      TEXT NOT NULL DEFAULT '',
-    active      INTEGER NOT NULL DEFAULT 1
+    active      BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE INDEX IF NOT EXISTS idx_alert_silences_active_scope_target
     ON alert_silences (active, scope, target)
-    WHERE active = 1;
+    WHERE active = TRUE;

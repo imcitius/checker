@@ -37,6 +37,5 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /build/checker .
-COPY --from=builder /build/migrations ./migrations
 EXPOSE 8080
 ENTRYPOINT ["./checker"]

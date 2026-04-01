@@ -8,10 +8,11 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirupsen/logrus"
 
+	"github.com/imcitius/checker/migrations"
 	"github.com/imcitius/checker/pkg/config"
 	"github.com/imcitius/checker/pkg/models"
 )
@@ -38,10 +39,11 @@ func NewPostgresDB(cfg *config.Config) (*PostgresDB, error) {
 	}
 
 	// Run migrations
-	m, err := migrate.New(
-		"file://migrations",
-		dsn,
-	)
+	source, err := iofs.New(migrations.PostgresFS, "postgres")
+	if err != nil {
+		logrus.Warnf("Could not create migration source: %v", err)
+	}
+	m, err := migrate.NewWithSourceInstance("iofs", source, dsn)
 	if err != nil {
 		logrus.Warnf("Could not create migration instance: %v", err)
 	} else {
