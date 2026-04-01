@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
-	"checker/internal/db"
+	"checker/pkg/db"
 )
 
 // bulkUUIDsRequest is the common request body for bulk operations.

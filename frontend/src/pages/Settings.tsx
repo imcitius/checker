@@ -853,7 +853,7 @@ function CheckDefaultsTab({ channels }: { channels: AlertChannel[] }) {
             </div>
           )}
           <p className="text-xs text-muted-foreground mt-1">
-            Selected channels will be assigned to new checks by default.
+            Used as fallback for checks with no alert channels configured, and as defaults for new checks.
           </p>
         </div>
       </section>

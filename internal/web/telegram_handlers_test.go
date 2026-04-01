@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"checker/internal/config"
-	"checker/internal/db"
-	"checker/internal/models"
+	"checker/pkg/config"
+	"checker/pkg/db"
+	"checker/pkg/models"
 	"checker/internal/telegram"
 )
 

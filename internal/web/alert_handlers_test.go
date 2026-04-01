@@ -12,8 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"checker/internal/db"
-	"checker/internal/models"
+	"checker/pkg/db"
+	"checker/pkg/models"
 )
 
 // alertStubRepo extends stubRepo with configurable behavior for alert/silence tests.

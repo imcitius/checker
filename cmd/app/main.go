@@ -14,10 +14,10 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"checker/internal/auth"
-	"checker/internal/config"
-	"checker/internal/db"
+	"checker/pkg/config"
+	"checker/pkg/db"
 	"checker/internal/discord"
-	"checker/internal/scheduler"
+	"checker/pkg/scheduler"
 	checkersentry "checker/internal/sentry"
 	"checker/internal/slack"
 	"checker/internal/telegram"

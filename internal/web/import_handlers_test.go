@@ -3,7 +3,7 @@ package web
 import (
 	"testing"
 
-	"checker/internal/models"
+	"checker/pkg/models"
 
 	"gopkg.in/yaml.v3"
 )

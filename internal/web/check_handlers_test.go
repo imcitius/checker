@@ -11,9 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"checker/internal/config"
-	"checker/internal/db"
-	"checker/internal/models"
+	"checker/pkg/config"
+	"checker/pkg/db"
+	"checker/pkg/models"
 	"context"
 )
 

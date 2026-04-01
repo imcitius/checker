@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"checker/internal/db"
+	"checker/pkg/db"
 
 	"github.com/gin-gonic/gin"
 )

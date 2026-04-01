@@ -19,9 +19,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"checker/internal/auth"
-	"checker/internal/config"
-	"checker/internal/db"
-	"checker/internal/models"
+	"checker/pkg/config"
+	"checker/pkg/db"
+	"checker/pkg/models"
 )
 
 // WebhookRegistrar allows app integrations to register their webhook routes.

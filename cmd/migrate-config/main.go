@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"checker/internal/config"
-	"checker/internal/db"
+	"checker/pkg/config"
+	"checker/pkg/db"
 
 	"github.com/sirupsen/logrus"
 )

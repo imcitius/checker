@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"checker/internal/config"
-	"checker/internal/db"
+	"checker/pkg/config"
+	"checker/pkg/db"
 	"checker/internal/discord"
-	"checker/internal/models"
+	"checker/pkg/models"
 )
 
 // --- Mock repository for Discord handler tests ---

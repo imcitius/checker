@@ -10,10 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
-	"checker/internal/alerts"
-	"checker/internal/db"
+	"checker/pkg/alerts"
+	"checker/pkg/db"
 	"checker/internal/discord"
-	"checker/internal/models"
+	"checker/pkg/models"
 )
 
 // ListAlertChannels returns all alert channels with sensitive fields masked.

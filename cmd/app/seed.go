@@ -11,8 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"checker/demo"
-	"checker/internal/db"
-	"checker/internal/models"
+	"checker/pkg/db"
+	"checker/pkg/models"
 )
 
 // wipAndReseed deletes all existing check definitions and reseeds from the seed file.

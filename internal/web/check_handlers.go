@@ -11,9 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"checker/internal/checks"
-	"checker/internal/db"
-	"checker/internal/models"
+	"checker/pkg/checks"
+	"checker/pkg/db"
+	"checker/pkg/models"
 )
 
 // ListCheckDefinitions returns all check definitions

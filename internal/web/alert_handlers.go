@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
-	"checker/internal/db"
-	"checker/internal/models"
+	"checker/pkg/db"
+	"checker/pkg/models"
 )
 
 // ListAlerts returns paginated alert history with optional filters.

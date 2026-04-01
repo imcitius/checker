@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"checker/internal/db"
-	"checker/internal/models"
+	"checker/pkg/db"
+	"checker/pkg/models"
 )
 
 // alertChannelStubRepo extends stubRepo with alert channel CRUD.
