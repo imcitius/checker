@@ -12,8 +12,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirupsen/logrus"
 
-	"checker/pkg/config"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/config"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 type PostgresDB struct {

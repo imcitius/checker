@@ -11,8 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 	_ "modernc.org/sqlite"
 
-	"checker/pkg/config"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/config"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // SQLiteDB implements the Repository interface using SQLite.

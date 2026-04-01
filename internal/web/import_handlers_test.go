@@ -3,7 +3,7 @@ package web
 import (
 	"testing"
 
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/models"
 
 	"gopkg.in/yaml.v3"
 )

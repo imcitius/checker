@@ -5,10 +5,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"checker/pkg/db"
-	"checker/pkg/models"
-	"checker/internal/telegram"
-	"checker/internal/web"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
+	"github.com/imcitius/checker/internal/telegram"
+	"github.com/imcitius/checker/internal/web"
 )
 
 // TelegramSender abstracts the Telegram client methods used by TelegramAppAlerter.

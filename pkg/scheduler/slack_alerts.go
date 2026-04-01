@@ -5,10 +5,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"checker/pkg/db"
-	"checker/pkg/models"
-	"checker/internal/slack"
-	"checker/internal/web"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
+	"github.com/imcitius/checker/internal/slack"
+	"github.com/imcitius/checker/internal/web"
 )
 
 // SlackSender abstracts the Slack client methods used by SlackAlerter.

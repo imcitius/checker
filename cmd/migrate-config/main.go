@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"checker/pkg/config"
-	"checker/pkg/db"
+	"github.com/imcitius/checker/pkg/config"
+	"github.com/imcitius/checker/pkg/db"
 
 	"github.com/sirupsen/logrus"
 )

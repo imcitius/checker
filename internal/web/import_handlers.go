@@ -13,8 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
-	"checker/pkg/db"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // ImportCheckDefinitions handles bulk import of check definitions from YAML or JSON.

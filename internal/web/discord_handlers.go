@@ -14,9 +14,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
-	"checker/pkg/db"
-	"checker/internal/discord"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/internal/discord"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // DiscordWebhookRegistrar registers Discord interaction routes.

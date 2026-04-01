@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"checker/internal/discord"
+	"github.com/imcitius/checker/internal/discord"
 )
 
 // discordBotAlerter implements the Alerter interface for Discord using the bot API.

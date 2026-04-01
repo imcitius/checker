@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/models"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"

@@ -3,7 +3,7 @@ package scheduler
 import (
 	"context"
 
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // AppAlerter is the interface for stateful alerters (Slack App, Telegram App, etc.)

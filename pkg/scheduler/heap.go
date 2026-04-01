@@ -3,7 +3,7 @@ package scheduler
 import (
 	"time"
 
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // CheckItem represents an item in the priority queue

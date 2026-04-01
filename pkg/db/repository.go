@@ -1,8 +1,8 @@
 package db
 
 import (
-	"checker/pkg/config"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/config"
+	"github.com/imcitius/checker/pkg/models"
 	"context"
 	"time"
 )

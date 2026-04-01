@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 func TestCheckHeap(t *testing.T) {

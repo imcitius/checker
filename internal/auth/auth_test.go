@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"checker/pkg/config"
+	"github.com/imcitius/checker/pkg/config"
 )
 
 func TestNewAuthManager_Disabled(t *testing.T) {

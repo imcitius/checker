@@ -17,7 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
-	"checker/pkg/config"
+	"github.com/imcitius/checker/pkg/config"
 )
 
 // AuthMode represents the authentication method in use.

@@ -16,9 +16,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
-	"checker/pkg/db"
-	"checker/pkg/models"
-	"checker/internal/slack"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
+	"github.com/imcitius/checker/internal/slack"
 )
 
 // SlackWebhookRegistrar registers Slack interactive and command routes.

@@ -13,15 +13,15 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	"checker/internal/auth"
-	"checker/pkg/config"
-	"checker/pkg/db"
-	"checker/internal/discord"
-	"checker/pkg/scheduler"
-	checkersentry "checker/internal/sentry"
-	"checker/internal/slack"
-	"checker/internal/telegram"
-	"checker/internal/web"
+	"github.com/imcitius/checker/internal/auth"
+	"github.com/imcitius/checker/pkg/config"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/internal/discord"
+	"github.com/imcitius/checker/pkg/scheduler"
+	checkersentry "github.com/imcitius/checker/internal/sentry"
+	"github.com/imcitius/checker/internal/slack"
+	"github.com/imcitius/checker/internal/telegram"
+	"github.com/imcitius/checker/internal/web"
 )
 
 // Injected at build time via -ldflags.

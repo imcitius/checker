@@ -6,10 +6,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"checker/pkg/db"
-	"checker/internal/discord"
-	"checker/pkg/models"
-	"checker/internal/web"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/internal/discord"
+	"github.com/imcitius/checker/pkg/models"
+	"github.com/imcitius/checker/internal/web"
 )
 
 // DiscordSender abstracts the Discord client methods used by DiscordAppAlerter.

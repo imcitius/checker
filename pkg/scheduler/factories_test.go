@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"checker/internal/actors"
-	"checker/pkg/checks"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/internal/actors"
+	"github.com/imcitius/checker/pkg/checks"
+	"github.com/imcitius/checker/pkg/models"
 
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"

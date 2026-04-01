@@ -10,9 +10,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
-	"checker/demo"
-	"checker/pkg/db"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/demo"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // wipAndReseed deletes all existing check definitions and reseeds from the seed file.

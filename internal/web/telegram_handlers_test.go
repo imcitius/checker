@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"checker/pkg/config"
-	"checker/pkg/db"
-	"checker/pkg/models"
-	"checker/internal/telegram"
+	"github.com/imcitius/checker/pkg/config"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
+	"github.com/imcitius/checker/internal/telegram"
 )
 
 // mockTelegramRepo implements db.Repository for testing Telegram handlers.

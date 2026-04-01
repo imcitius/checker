@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"checker/pkg/config"
-	"checker/pkg/db"
-	"checker/internal/discord"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/config"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/internal/discord"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // --- Mock repository for Discord handler tests ---

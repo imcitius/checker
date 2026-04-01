@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"checker/pkg/alerts"
-	"checker/pkg/db"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/alerts"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
 
 	"github.com/sirupsen/logrus"
 )

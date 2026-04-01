@@ -13,9 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
-	"checker/pkg/db"
-	"checker/pkg/models"
-	"checker/internal/telegram"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
+	"github.com/imcitius/checker/internal/telegram"
 )
 
 // TelegramWebhookRegistrar registers the Telegram webhook route.

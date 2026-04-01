@@ -18,10 +18,10 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 
-	"checker/internal/auth"
-	"checker/pkg/config"
-	"checker/pkg/db"
-	"checker/pkg/models"
+	"github.com/imcitius/checker/internal/auth"
+	"github.com/imcitius/checker/pkg/config"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // WebhookRegistrar allows app integrations to register their webhook routes.

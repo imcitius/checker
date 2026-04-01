@@ -1,4 +1,4 @@
-module checker
+module github.com/imcitius/checker
 
 go 1.25.0
 

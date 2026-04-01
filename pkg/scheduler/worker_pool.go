@@ -3,9 +3,9 @@ package scheduler
 import (
 	"sync"
 
-	"checker/pkg/db"
-	"checker/pkg/models"
-	checkersentry "checker/internal/sentry"
+	"github.com/imcitius/checker/pkg/db"
+	"github.com/imcitius/checker/pkg/models"
+	checkersentry "github.com/imcitius/checker/internal/sentry"
 
 	"github.com/sirupsen/logrus"
 )

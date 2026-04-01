@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"checker/pkg/models"
+	"github.com/imcitius/checker/pkg/models"
 )
 
 // newTestScheduler creates a scheduler with a buffered worker pool for testing.
