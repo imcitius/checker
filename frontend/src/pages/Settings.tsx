@@ -674,8 +674,6 @@ function CheckDefaultsTab({ channels }: { channels: AlertChannel[] }) {
 
   if (!defaults) return null
 
-  const channelNames = channels.map((c) => c.name)
-
   return (
     <div className="mt-4 space-y-8">
       <p className="text-sm text-muted-foreground">
@@ -787,32 +785,75 @@ function CheckDefaultsTab({ channels }: { channels: AlertChannel[] }) {
           </div>
         </div>
 
-        {/* Alert channels multi-select */}
+        {/* Alert channels multi-select dropdown */}
         <div className="mt-4">
           <label className="text-sm font-medium text-foreground">Default Alert Channels</label>
-          {channelNames.length === 0 ? (
+          {channels.length === 0 ? (
             <p className="text-sm text-muted-foreground mt-1">
               No notification channels configured. Add channels in the Notification Channels tab.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {channelNames.map((name) => {
-                const selected = (defaults.alert_channels || []).includes(name)
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="mt-1 w-full justify-between font-normal">
+                  <span className="truncate">
+                    {(defaults.alert_channels || []).length === 0
+                      ? 'Select channels...'
+                      : `${(defaults.alert_channels || []).length} channel${(defaults.alert_channels || []).length === 1 ? '' : 's'} selected`}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]" align="start">
+                {channels.map((ch) => {
+                  const selected = (defaults.alert_channels || []).includes(ch.name)
+                  const meta = getChannelMeta(ch.type)
+                  const Icon = meta.icon
+                  return (
+                    <DropdownMenuItem
+                      key={ch.name}
+                      onSelect={(e) => {
+                        e.preventDefault()
+                        toggleAlertChannel(ch.name)
+                      }}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${selected ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}>
+                        {selected && <span className="text-primary-foreground text-xs leading-none">&#10003;</span>}
+                      </div>
+                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 truncate">{ch.name}</span>
+                      <Badge variant="outline" className="text-xs shrink-0 ml-auto">
+                        {meta.label}
+                      </Badge>
+                    </DropdownMenuItem>
+                  )
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {(defaults.alert_channels || []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {(defaults.alert_channels || []).map((name) => {
+                const ch = channels.find((c) => c.name === name)
+                const meta = ch ? getChannelMeta(ch.type) : null
                 return (
-                  <Badge
-                    key={name}
-                    variant={selected ? 'default' : 'outline'}
-                    className={`cursor-pointer select-none ${selected ? '' : 'opacity-60 hover:opacity-100'}`}
-                    onClick={() => toggleAlertChannel(name)}
-                  >
+                  <Badge key={name} variant="secondary" className="text-xs gap-1">
+                    {meta && <meta.icon className="h-3 w-3" />}
                     {name}
+                    <button
+                      onClick={() => toggleAlertChannel(name)}
+                      className="ml-0.5 hover:text-destructive"
+                      type="button"
+                    >
+                      &times;
+                    </button>
                   </Badge>
                 )
               })}
             </div>
           )}
           <p className="text-xs text-muted-foreground mt-1">
-            Click to toggle. Selected channels will be assigned to new checks by default.
+            Selected channels will be assigned to new checks by default.
           </p>
         </div>
       </section>
