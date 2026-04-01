@@ -69,6 +69,12 @@ func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, a
 		logrus.Info("Email alerter configured")
 	}
 
+	// Load checker-wide default alert channels
+	if defaults, err := repo.GetCheckDefaults(ctx); err == nil && len(defaults.AlertChannels) > 0 {
+		defaultAlertChannels = defaults.AlertChannels
+		logrus.Infof("Default alert channels: %v", defaultAlertChannels)
+	}
+
 	s := NewScheduler(repo, appAlerters, cfg.Consensus.Region)
 
 	// Start worker pool
@@ -230,6 +236,11 @@ func (s *Scheduler) processNextCheck() {
 func (s *Scheduler) Sync(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	// Reload default alert channels from settings
+	if defaults, err := s.repo.GetCheckDefaults(ctx); err == nil {
+		defaultAlertChannels = defaults.AlertChannels
+	}
 
 	defs, err := s.getAllChecks(ctx)
 	if err != nil {
@@ -428,10 +439,7 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 		isNewIncident := previouslyHealthy
 		channels := getEffectiveAlertChannels(checkDef)
 		if len(channels) == 0 {
-			// No channels explicitly configured — fire all AppAlerters (backward compatible)
-			for _, aa := range appAlerters {
-				aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
-			}
+			// No channels configured and no default — skip app alerters
 		} else {
 			selectedTypes := resolveSelectedChannelTypes(repo, checkDef)
 			for _, aa := range appAlerters {
@@ -467,10 +475,7 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 		// Handle app alerter recovery — only fire if the check has a matching channel type selected
 		recoveryChannels := getEffectiveAlertChannels(checkDef)
 		if len(recoveryChannels) == 0 {
-			// No channels explicitly configured — fire all AppAlerters (backward compatible)
-			for _, aa := range appAlerters {
-				aa.HandleRecovery(context.Background(), checkDef)
-			}
+			// No channels configured and no default — skip app alerters
 		} else {
 			recoveryTypes := resolveSelectedChannelTypes(repo, checkDef)
 			for _, aa := range appAlerters {
@@ -526,9 +531,16 @@ func configChangedSinceLastAlert(checkDef models.CheckDefinition, status models.
 	return !checkDef.UpdatedAt.IsZero() && checkDef.UpdatedAt.After(status.LastAlertSent)
 }
 
+// defaultAlertChannels holds the checker-wide default alert channels, loaded at scheduler startup.
+var defaultAlertChannels []string
+
 // getEffectiveAlertChannels returns the list of alert channels to dispatch to.
+// Falls back to checker-wide default alert channels when the check has none configured.
 func getEffectiveAlertChannels(checkDef models.CheckDefinition) []string {
-	return checkDef.AlertChannels
+	if len(checkDef.AlertChannels) > 0 {
+		return checkDef.AlertChannels
+	}
+	return defaultAlertChannels
 }
 
 // resolveSelectedChannelTypes returns the set of channel types selected for a check.

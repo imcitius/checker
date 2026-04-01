@@ -177,15 +177,15 @@ func TestExecuteCheck_NoChannelsConfigured_AllAppAlertersFire(t *testing.T) {
 		Duration:      "1m",
 		Enabled:       true,
 		IsHealthy:     true,
-		AlertChannels: nil, // no channels configured — backward compatible
+		AlertChannels: nil, // no channels configured, no defaults — skip alerters
 		Config:        &models.HTTPCheckConfig{URL: "http://will-fail.invalid"},
 	}
 	repo.checkDefs[checkDef.UUID] = checkDef
 
 	_ = executeCheck(repo, checkDef, appAlerters, "")
 
-	assert.Len(t, slackAlerter.sendAlertCalls, 1, "Slack should fire when no channels configured (backward compat)")
-	assert.Len(t, telegramAlerter.sendAlertCalls, 1, "Telegram should fire when no channels configured (backward compat)")
+	assert.Len(t, slackAlerter.sendAlertCalls, 0, "Slack should not fire when no channels and no defaults configured")
+	assert.Len(t, telegramAlerter.sendAlertCalls, 0, "Telegram should not fire when no channels and no defaults configured")
 }
 
 func TestExecuteCheck_BothSlackAndNtfy_BothFire(t *testing.T) {
