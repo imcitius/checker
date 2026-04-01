@@ -10,7 +10,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "CMD=$(jq -r '.tool_input.command // \"\"'); if echo \"$CMD\" | grep -qE 'git (commit|merge)'; then cd /Users/citius/GolandProjects/checker-github && go vet ./... && go build ./cmd/app ./cmd/dbcheck ./cmd/migrate-config || { echo '{\"decision\":\"block\",\"reason\":\"go vet or go build failed — fix compilation errors before committing\"}'; exit 0; }; fi",
+            "command": "CMD=$(jq -r '.tool_input.command // \"\"'); if echo \"$CMD\" | grep -qE 'git (commit|merge)'; then export PATH=\"/opt/homebrew/bin:/usr/local/go/bin:$PATH\" && cd /Users/citius/GolandProjects/checker-github && go vet ./... && go build ./cmd/app ./cmd/dbcheck ./cmd/migrate-config || { echo '{\"decision\":\"block\",\"reason\":\"go vet or go build failed — fix compilation errors before committing\"}'; exit 0; }; fi",
             "timeout": 120,
             "statusMessage": "Type-checking and compiling Go code..."
           }
