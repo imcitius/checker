@@ -20,11 +20,12 @@ import {
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
 import { useAlerts } from '@/hooks/useAlerts'
 import { api } from '@/lib/api'
-import type { AlertChannel } from '@/lib/api'
+import type { AlertChannel, RegionResult } from '@/lib/api'
 import {
   Bell,
   BellOff,
@@ -119,6 +120,7 @@ export function Alerts() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [checkTypes, setCheckTypes] = useState<string[]>([])
   const [alertChannels, setAlertChannels] = useState<AlertChannel[]>([])
+  const [regionsByCheck, setRegionsByCheck] = useState<Record<string, RegionResult[]>>({})
 
   // Fetch projects list for filters and alert channels
   useEffect(() => {
@@ -126,6 +128,23 @@ export function Alerts() {
     api.getCheckTypes().then((t) => setCheckTypes(t || [])).catch(() => {})
     api.getAlertChannels().then((ch) => setAlertChannels(ch || [])).catch(() => setAlertChannels([]))
   }, [])
+
+  // Fetch region results for visible alerts
+  useEffect(() => {
+    const uuids = [...new Set(alerts.map((a) => a.CheckUUID))]
+    if (uuids.length === 0) return
+    Promise.all(
+      uuids.map((uuid) =>
+        api.getCheckRegions(uuid).then((regions) => [uuid, regions] as const).catch(() => [uuid, [] as RegionResult[]] as const)
+      )
+    ).then((results) => {
+      const map: Record<string, RegionResult[]> = {}
+      for (const [uuid, regions] of results) {
+        if (regions.length > 0) map[uuid] = regions
+      }
+      setRegionsByCheck(map)
+    })
+  }, [alerts])
 
   // Build a set of silenced check UUIDs and project names for quick lookup
   // Only consider global silences (channel === '') for the "fully silenced" indicator
@@ -298,7 +317,7 @@ export function Alerts() {
 
                           {/* Check name */}
                           <td className="px-3 py-2">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-medium">{alert.CheckName}</span>
                               {isSilenced && (
                                 <Badge variant="warning" className="text-[10px] py-0">
@@ -312,6 +331,25 @@ export function Alerts() {
                                   Partially silenced ({silencedChs.join(', ')})
                                 </Badge>
                               )}
+                              {regionsByCheck[alert.CheckUUID]?.map((r) => (
+                                <Tooltip key={r.region}>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                                        r.is_healthy ? 'bg-healthy' : 'bg-unhealthy'
+                                      }`}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-xs">
+                                      <span className="font-semibold">{r.region}</span>
+                                      {' — '}
+                                      <span>{r.is_healthy ? 'Healthy' : 'Failing'}</span>
+                                      {r.message && <div className="font-mono mt-0.5">{r.message}</div>}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ))}
                             </div>
                             <div className="text-[10px] text-muted-foreground font-mono md:hidden">
                               {alert.Project}{alert.GroupName ? ` / ${alert.GroupName}` : ''}
