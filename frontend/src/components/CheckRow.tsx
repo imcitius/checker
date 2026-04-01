@@ -87,7 +87,7 @@ export const CheckRow = memo(function CheckRow({
         <TooltipTrigger asChild>
           <span
             className="font-mono text-xs text-muted-foreground break-all min-w-0 flex-1 cursor-pointer hover:text-foreground transition-colors"
-            onClick={(e) => {
+            onDoubleClick={(e) => {
               e.stopPropagation()
               const target = check.URL || check.Host || ''
               if (target) {
@@ -98,7 +98,7 @@ export const CheckRow = memo(function CheckRow({
             {check.URL || check.Host || '—'}
           </span>
         </TooltipTrigger>
-        <TooltipContent>Click to copy</TooltipContent>
+        <TooltipContent>Double-click to copy</TooltipContent>
       </Tooltip>
 
       {/* Frequency */}
