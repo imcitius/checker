@@ -11,6 +11,7 @@ import (
 	"checker/internal/config"
 	"checker/internal/db"
 	"checker/internal/models"
+	checkersentry "checker/internal/sentry"
 
 	"github.com/sirupsen/logrus"
 )
@@ -376,6 +377,9 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 		}
 		if err := repo.InsertCheckResult(context.Background(), result); err != nil {
 			logger.WithError(err).Error("Failed to insert check result")
+			checkersentry.CaptureError(err, map[string]string{
+				"check.uuid": checkDef.UUID, "check.name": checkDef.Name, "check.type": checkDef.Type, "op": "insert_check_result",
+			})
 			return fmt.Errorf("insert check result: %w", err)
 		}
 		return nil
@@ -403,6 +407,9 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 	// Update status in database
 	if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 		logger.WithError(err).Error("Failed to update check status")
+		checkersentry.CaptureError(err, map[string]string{
+			"check.uuid": checkDef.UUID, "check.name": checkDef.Name, "op": "update_check_status",
+		})
 		return
 	}
 
@@ -637,6 +644,9 @@ func sendAlerts(repo db.Repository, status models.CheckStatus, checkDef models.C
 			alerter.Type(), severity, status.UUID, status.Project, status.CheckName)
 		if err := alerter.SendAlert(payload); err != nil {
 			logrus.Errorf("Failed to send %s alert for check %s: %v", alerter.Type(), status.UUID, err)
+			checkersentry.CaptureError(err, map[string]string{
+				"check.uuid": status.UUID, "alert.channel": channel, "alert.type": alerter.Type(), "op": "send_alert",
+			})
 		}
 	}
 }

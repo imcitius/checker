@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react'
+
 const BASE = ''
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -15,7 +17,11 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.text()
-    throw new Error(body || res.statusText)
+    const err = new Error(body || res.statusText)
+    Sentry.captureException(err, {
+      tags: { api_url: url, http_status: String(res.status) },
+    })
+    throw err
   }
   return res.json()
 }

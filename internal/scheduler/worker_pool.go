@@ -5,6 +5,7 @@ import (
 
 	"checker/internal/db"
 	"checker/internal/models"
+	checkersentry "checker/internal/sentry"
 
 	"github.com/sirupsen/logrus"
 )
@@ -81,6 +82,9 @@ func (wp *WorkerPool) worker(id int) {
 			}
 			if err := executeCheck(wp.repo, check, wp.appAlerters, wp.consensusRegion); err != nil {
 				logrus.Errorf("Worker %d: Error executing check %s: %v", id, check.UUID, err)
+				checkersentry.CaptureError(err, map[string]string{
+					"check.uuid": check.UUID, "check.name": check.Name, "check.type": check.Type, "op": "execute_check",
+				})
 			}
 		case <-wp.quit:
 			return

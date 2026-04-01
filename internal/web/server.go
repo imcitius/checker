@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/getsentry/sentry-go"
+	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -203,6 +205,13 @@ func BroadcastAlertResolved(checkUUID string) {
 func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, webhooks []WebhookRegistrar, authMgr *auth.AuthManager) error {
 	// Create a router with default middleware
 	router := gin.Default()
+
+	// Add Sentry middleware if initialized
+	if sentry.CurrentHub().Client() != nil {
+		router.Use(sentrygin.New(sentrygin.Options{
+			Repanic: true,
+		}))
+	}
 
 	// Add Repository to context
 	router.Use(func(c *gin.Context) {

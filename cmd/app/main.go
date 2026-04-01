@@ -18,6 +18,7 @@ import (
 	"checker/internal/db"
 	"checker/internal/discord"
 	"checker/internal/scheduler"
+	checkersentry "checker/internal/sentry"
 	"checker/internal/slack"
 	"checker/internal/telegram"
 	"checker/internal/web"
@@ -83,6 +84,12 @@ func main() {
 			// Handle graceful shutdown
 			sigCh := make(chan os.Signal, 1)
 			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+			// Initialize Sentry (no-ops if SENTRY_DSN is not set)
+			sentryEnabled := checkersentry.Init(Version)
+			if sentryEnabled {
+				defer checkersentry.Flush(2 * time.Second)
+			}
 
 			var wg sync.WaitGroup
 
@@ -284,6 +291,11 @@ func main() {
 			// Wait for termination signal
 			sig := <-sigCh
 			logrus.Infof("Received signal: %v. Initiating graceful shutdown...", sig)
+
+			// Flush Sentry before shutting down components
+			if sentryEnabled {
+				checkersentry.Flush(2 * time.Second)
+			}
 
 			// Cancel all contexts to signal shutdown
 			cancel()

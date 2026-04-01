@@ -8,6 +8,7 @@ import (
 
 	"checker/internal/db"
 	"checker/internal/models"
+	checkersentry "checker/internal/sentry"
 
 	"github.com/sirupsen/logrus"
 )
@@ -37,6 +38,7 @@ func RunConsensusSweeper(ctx context.Context, region string, minRegions int, eva
 				n, err := repo.PurgeOldCheckResults(ctx, 24*time.Hour)
 				if err != nil {
 					logrus.WithError(err).Error("Failed to purge old check results")
+				checkersentry.CaptureError(err, map[string]string{"op": "purge_old_check_results"})
 				} else if n > 0 {
 					logrus.Infof("Purged %d old check results", n)
 				}
@@ -49,6 +51,7 @@ func evaluateConsensus(ctx context.Context, minRegions int, timeout time.Duratio
 	cycles, err := repo.GetUnevaluatedCycles(ctx, minRegions, timeout)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to get unevaluated cycles")
+		checkersentry.CaptureError(err, map[string]string{"op": "get_unevaluated_cycles"})
 		return
 	}
 
