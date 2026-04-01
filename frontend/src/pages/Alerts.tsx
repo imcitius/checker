@@ -20,7 +20,6 @@ import {
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TopBar } from '@/components/TopBar'
 import { StatusBar } from '@/components/StatusBar'
 import { useAlerts } from '@/hooks/useAlerts'
@@ -332,23 +331,13 @@ export function Alerts() {
                                 </Badge>
                               )}
                               {regionsByCheck[alert.CheckUUID]?.map((r) => (
-                                <Tooltip key={r.region}>
-                                  <TooltipTrigger asChild>
-                                    <span
-                                      className={`inline-block w-2 h-2 rounded-full shrink-0 ${
-                                        r.is_healthy ? 'bg-healthy' : 'bg-unhealthy'
-                                      }`}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-xs">
-                                      <span className="font-semibold">{r.region}</span>
-                                      {' — '}
-                                      <span>{r.is_healthy ? 'Healthy' : 'Failing'}</span>
-                                      {r.message && <div className="font-mono mt-0.5">{r.message}</div>}
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
+                                <Badge
+                                  key={r.region}
+                                  variant={r.is_healthy ? 'healthy' : 'unhealthy'}
+                                  className="text-[10px] px-1.5 py-0"
+                                >
+                                  {r.region}
+                                </Badge>
                               ))}
                             </div>
                             <div className="text-[10px] text-muted-foreground font-mono md:hidden">
