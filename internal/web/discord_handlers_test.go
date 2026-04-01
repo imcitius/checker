@@ -183,6 +183,9 @@ func (m *mockDiscordRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDef
 func (m *mockDiscordRepo) InsertCheckResult(_ context.Context, _ models.CheckResult) error {
 	return nil
 }
+func (m *mockDiscordRepo) GetLatestRegionResults(_ context.Context, _ string) ([]models.CheckResult, error) {
+	return nil, nil
+}
 func (m *mockDiscordRepo) GetUnevaluatedCycles(_ context.Context, _ int, _ time.Duration) ([]db.UnevaluatedCycle, error) {
 	return nil, nil
 }

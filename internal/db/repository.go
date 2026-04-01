@@ -87,6 +87,7 @@ type Repository interface {
 	SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error
 
 	// Multi-region check results
+	GetLatestRegionResults(ctx context.Context, checkUUID string) ([]models.CheckResult, error)
 	InsertCheckResult(ctx context.Context, result models.CheckResult) error
 	GetUnevaluatedCycles(ctx context.Context, minRegions int, timeout time.Duration) ([]UnevaluatedCycle, error)
 	ClaimCycleForEvaluation(ctx context.Context, checkUUID string, cycleKey time.Time) (bool, error)

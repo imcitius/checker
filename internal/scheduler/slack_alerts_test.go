@@ -284,6 +284,9 @@ func (r *mockRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) 
 	return nil
 }
 func (r *mockRepo) InsertCheckResult(_ context.Context, _ models.CheckResult) error { return nil }
+func (r *mockRepo) GetLatestRegionResults(_ context.Context, _ string) ([]models.CheckResult, error) {
+	return nil, nil
+}
 func (r *mockRepo) GetUnevaluatedCycles(_ context.Context, _ int, _ time.Duration) ([]db.UnevaluatedCycle, error) {
 	return nil, nil
 }

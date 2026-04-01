@@ -201,6 +201,9 @@ func (m *mockEscalationRepo) SaveCheckDefaults(_ context.Context, _ models.Check
 func (m *mockEscalationRepo) InsertCheckResult(_ context.Context, _ models.CheckResult) error {
 	return nil
 }
+func (m *mockEscalationRepo) GetLatestRegionResults(_ context.Context, _ string) ([]models.CheckResult, error) {
+	return nil, nil
+}
 func (m *mockEscalationRepo) GetUnevaluatedCycles(_ context.Context, _ int, _ time.Duration) ([]db.UnevaluatedCycle, error) {
 	return nil, nil
 }

@@ -199,6 +199,13 @@ export interface CheckDefaults {
   escalation_policy: string
 }
 
+export interface RegionResult {
+  region: string
+  is_healthy: boolean
+  message: string
+  created_at: string
+}
+
 export const api = {
   getChecks: () => request<CheckDefinition[]>('/api/check-definitions'),
   getCheck: (uuid: string) => request<CheckDefinition>(`/api/check-definitions/${uuid}`),
@@ -214,6 +221,8 @@ export const api = {
     }),
   deleteCheck: (uuid: string) =>
     request<void>(`/api/check-definitions/${uuid}`, { method: 'DELETE' }),
+  getCheckRegions: (uuid: string) =>
+    request<RegionResult[]>(`/api/check-definitions/${uuid}/regions`),
   toggleCheck: (uuid: string, enabled?: boolean) =>
     request<{ enabled: boolean }>(
       `/api/check-definitions/${uuid}/toggle${enabled !== undefined ? `?enabled=${enabled}` : ''}`,

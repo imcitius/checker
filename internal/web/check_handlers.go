@@ -68,6 +68,45 @@ func GetCheckDefinition(c *gin.Context) {
 	c.JSON(http.StatusOK, convertToCheckDefViewModel(def))
 }
 
+// GetCheckRegionResults returns the latest per-region check results for multi-region consensus.
+func GetCheckRegionResults(c *gin.Context) {
+	repo := c.MustGet("repo").(db.Repository)
+	uuid := c.Param("uuid")
+
+	if uuid == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "UUID is required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	results, err := repo.GetLatestRegionResults(ctx, uuid)
+	if err != nil {
+		logrus.Errorf("Failed to get region results for %s: %v", uuid, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get region results"})
+		return
+	}
+
+	type regionResultView struct {
+		Region    string `json:"region"`
+		IsHealthy bool   `json:"is_healthy"`
+		Message   string `json:"message"`
+		CreatedAt string `json:"created_at"`
+	}
+
+	out := make([]regionResultView, 0, len(results))
+	for _, r := range results {
+		out = append(out, regionResultView{
+			Region:    r.Region,
+			IsHealthy: r.IsHealthy,
+			Message:   r.Message,
+			CreatedAt: r.CreatedAt.Format(time.RFC3339),
+		})
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 // CreateCheckDefinition creates a new check definition
 func CreateCheckDefinition(c *gin.Context) {
 	repo := c.MustGet("repo").(db.Repository)

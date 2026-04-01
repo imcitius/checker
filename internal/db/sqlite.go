@@ -1252,6 +1252,43 @@ func (s *SQLiteDB) MigrateLegacyAlertFields(ctx context.Context) (int, error) {
 
 // --- Multi-region check results ---
 
+func (s *SQLiteDB) GetLatestRegionResults(ctx context.Context, checkUUID string) ([]models.CheckResult, error) {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT r.id, r.check_uuid, r.region, r.is_healthy, r.message, r.created_at, r.cycle_key, r.evaluated_at
+		 FROM check_results r
+		 INNER JOIN (
+		   SELECT region, MAX(created_at) AS max_created
+		   FROM check_results WHERE check_uuid = ?
+		   GROUP BY region
+		 ) latest ON r.region = latest.region AND r.created_at = latest.max_created
+		 WHERE r.check_uuid = ?
+		 ORDER BY r.region`, checkUUID, checkUUID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []models.CheckResult
+	for rows.Next() {
+		var r models.CheckResult
+		var isHealthyInt int
+		var createdStr, cycleStr string
+		var evalStr sql.NullString
+		if err := rows.Scan(&r.ID, &r.CheckUUID, &r.Region, &isHealthyInt, &r.Message, &createdStr, &cycleStr, &evalStr); err != nil {
+			return nil, err
+		}
+		r.IsHealthy = isHealthyInt != 0
+		r.CreatedAt, _ = time.Parse(time.RFC3339, createdStr)
+		r.CycleKey, _ = time.Parse(time.RFC3339, cycleStr)
+		if evalStr.Valid {
+			t, _ := time.Parse(time.RFC3339, evalStr.String)
+			r.EvaluatedAt = &t
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
 func (s *SQLiteDB) InsertCheckResult(ctx context.Context, result models.CheckResult) error {
 	_, err := s.DB.ExecContext(ctx,
 		`INSERT INTO check_results (check_uuid, region, is_healthy, message, created_at, cycle_key)

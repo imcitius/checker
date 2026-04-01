@@ -1151,6 +1151,28 @@ func (db *PostgresDB) MigrateLegacyAlertFields(ctx context.Context) (int, error)
 
 // --- Multi-region check results ---
 
+func (db *PostgresDB) GetLatestRegionResults(ctx context.Context, checkUUID string) ([]models.CheckResult, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT DISTINCT ON (region) id, check_uuid, region, is_healthy, message, created_at, cycle_key, evaluated_at
+		 FROM check_results
+		 WHERE check_uuid = $1
+		 ORDER BY region, created_at DESC`, checkUUID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []models.CheckResult
+	for rows.Next() {
+		var r models.CheckResult
+		if err := rows.Scan(&r.ID, &r.CheckUUID, &r.Region, &r.IsHealthy, &r.Message, &r.CreatedAt, &r.CycleKey, &r.EvaluatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
 func (db *PostgresDB) InsertCheckResult(ctx context.Context, result models.CheckResult) error {
 	_, err := db.Pool.Exec(ctx,
 		`INSERT INTO check_results (check_uuid, region, is_healthy, message, created_at, cycle_key)

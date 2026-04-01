@@ -193,6 +193,9 @@ func (m *mockTelegramRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDe
 func (m *mockTelegramRepo) InsertCheckResult(_ context.Context, _ models.CheckResult) error {
 	return nil
 }
+func (m *mockTelegramRepo) GetLatestRegionResults(_ context.Context, _ string) ([]models.CheckResult, error) {
+	return nil, nil
+}
 func (m *mockTelegramRepo) GetUnevaluatedCycles(_ context.Context, _ int, _ time.Duration) ([]db.UnevaluatedCycle, error) {
 	return nil, nil
 }

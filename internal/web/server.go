@@ -322,6 +322,7 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, webh
 		checkDefinitionsGroup.PUT("/:uuid", UpdateCheckDefinition)
 		checkDefinitionsGroup.DELETE("/:uuid", DeleteCheckDefinition)
 		checkDefinitionsGroup.PATCH("/:uuid/toggle", ToggleCheckDefinitionStatus)
+		checkDefinitionsGroup.GET("/:uuid/regions", GetCheckRegionResults)
 		checkDefinitionsGroup.PUT("/:uuid/maintenance", SetMaintenanceWindow)
 		checkDefinitionsGroup.DELETE("/:uuid/maintenance", ClearMaintenanceWindow)
 	}

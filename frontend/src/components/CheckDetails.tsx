@@ -1,12 +1,22 @@
+import { useState, useEffect } from 'react'
 import type { Check } from '@/lib/websocket'
+import { api, type RegionResult } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { relativeTime } from '@/lib/utils'
 
 interface CheckDetailsProps {
   check: Check
 }
 
 export function CheckDetails({ check }: CheckDetailsProps) {
+  const [regions, setRegions] = useState<RegionResult[]>([])
+
+  useEffect(() => {
+    api.getCheckRegions(check.UUID).then(setRegions).catch(() => setRegions([]))
+  }, [check.UUID, check.LastExec])
+
   return (
     <div className="px-6 py-3 bg-muted/30 border-t border-border/50 animate-slide-in">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -59,6 +69,36 @@ export function CheckDetails({ check }: CheckDetailsProps) {
               }`}
             >
               {check.Message}
+            </div>
+          </div>
+        </>
+      )}
+
+      {regions.length > 0 && (
+        <>
+          <Separator className="my-2" />
+          <div className="text-xs">
+            <span className="text-muted-foreground">Regions</span>
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {regions.map((r) => (
+                <Tooltip key={r.region}>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant={r.is_healthy ? 'healthy' : 'unhealthy'}
+                      className="text-[10px] px-1.5 py-0 cursor-default"
+                    >
+                      {r.region}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="text-xs">
+                      <div className="font-semibold">{r.is_healthy ? 'Healthy' : 'Failing'}</div>
+                      {r.message && <div className="font-mono mt-0.5">{r.message}</div>}
+                      <div className="text-muted-foreground mt-0.5">{relativeTime(r.created_at)}</div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
             </div>
           </div>
         </>
