@@ -1148,3 +1148,82 @@ func (db *PostgresDB) ResolveDiscordThread(ctx context.Context, checkUUID string
 func (db *PostgresDB) MigrateLegacyAlertFields(ctx context.Context) (int, error) {
 	return 0, nil
 }
+
+// --- Multi-region check results ---
+
+func (db *PostgresDB) InsertCheckResult(ctx context.Context, result models.CheckResult) error {
+	_, err := db.Pool.Exec(ctx,
+		`INSERT INTO check_results (check_uuid, region, is_healthy, message, created_at, cycle_key)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		result.CheckUUID, result.Region, result.IsHealthy, result.Message, result.CreatedAt, result.CycleKey)
+	return err
+}
+
+func (db *PostgresDB) GetUnevaluatedCycles(ctx context.Context, minRegions int, timeout time.Duration) ([]UnevaluatedCycle, error) {
+	cutoff := time.Now().Add(-timeout)
+	rows, err := db.Pool.Query(ctx,
+		`SELECT check_uuid, cycle_key, COUNT(DISTINCT region) AS region_count
+		 FROM check_results
+		 WHERE evaluated_at IS NULL
+		 GROUP BY check_uuid, cycle_key
+		 HAVING COUNT(DISTINCT region) >= $1 OR MIN(created_at) < $2
+		 ORDER BY cycle_key ASC
+		 LIMIT 500`, minRegions, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var cycles []UnevaluatedCycle
+	for rows.Next() {
+		var c UnevaluatedCycle
+		if err := rows.Scan(&c.CheckUUID, &c.CycleKey, &c.RegionCount); err != nil {
+			return nil, err
+		}
+		cycles = append(cycles, c)
+	}
+	return cycles, rows.Err()
+}
+
+func (db *PostgresDB) ClaimCycleForEvaluation(ctx context.Context, checkUUID string, cycleKey time.Time) (bool, error) {
+	cmdTag, err := db.Pool.Exec(ctx,
+		`UPDATE check_results SET evaluated_at = NOW()
+		 WHERE check_uuid = $1 AND cycle_key = $2 AND evaluated_at IS NULL`,
+		checkUUID, cycleKey)
+	if err != nil {
+		return false, err
+	}
+	return cmdTag.RowsAffected() > 0, nil
+}
+
+func (db *PostgresDB) GetCycleResults(ctx context.Context, checkUUID string, cycleKey time.Time) ([]models.CheckResult, error) {
+	rows, err := db.Pool.Query(ctx,
+		`SELECT id, check_uuid, region, is_healthy, message, created_at, cycle_key, evaluated_at
+		 FROM check_results
+		 WHERE check_uuid = $1 AND cycle_key = $2
+		 ORDER BY created_at ASC`, checkUUID, cycleKey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []models.CheckResult
+	for rows.Next() {
+		var r models.CheckResult
+		if err := rows.Scan(&r.ID, &r.CheckUUID, &r.Region, &r.IsHealthy, &r.Message, &r.CreatedAt, &r.CycleKey, &r.EvaluatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
+func (db *PostgresDB) PurgeOldCheckResults(ctx context.Context, olderThan time.Duration) (int64, error) {
+	cutoff := time.Now().Add(-olderThan)
+	cmdTag, err := db.Pool.Exec(ctx,
+		`DELETE FROM check_results WHERE created_at < $1`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return cmdTag.RowsAffected(), nil
+}

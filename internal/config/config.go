@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -75,6 +76,13 @@ type Config struct {
 		DefaultChannel string `yaml:"default_channel"` // Discord channel ID
 	} `yaml:"discord_app,omitempty"`
 
+	Consensus struct {
+		Region             string `yaml:"region"`              // empty = legacy single-instance mode
+		MinRegions         int    `yaml:"min_regions"`         // quorum threshold (default: 1)
+		EvaluationInterval string `yaml:"evaluation_interval"` // sweeper tick interval (default: "10s")
+		Timeout            string `yaml:"timeout"`             // max wait for slow probes (default: "30s")
+	} `yaml:"consensus"`
+
 	Auth struct {
 		OIDC struct {
 			IssuerURL    string `yaml:"issuer_url"`
@@ -88,6 +96,11 @@ type Config struct {
 	} `yaml:"auth"`
 
 	Projects map[string]ProjectConfig `yaml:"projects"`
+}
+
+// IsMultiRegion returns true when multi-region consensus is configured.
+func (cfg *Config) IsMultiRegion() bool {
+	return cfg.Consensus.Region != ""
 }
 
 // ProjectConfig represents a project's configuration
@@ -250,6 +263,16 @@ func (cfg *Config) applyEnvOverrides() {
 		cfg.DiscordApp.DefaultChannel = v
 	}
 
+	// Consensus overrides
+	if v := os.Getenv("CONSENSUS_REGION"); v != "" {
+		cfg.Consensus.Region = v
+	}
+	if v := os.Getenv("CONSENSUS_MIN_REGIONS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.Consensus.MinRegions = n
+		}
+	}
+
 	// Auth overrides
 	if v := os.Getenv("AUTH_OIDC_ISSUER_URL"); v != "" {
 		cfg.Auth.OIDC.IssuerURL = v
@@ -377,6 +400,19 @@ func (cfg *Config) setDefaults() {
 		} else {
 			cfg.Auth.JWTSecret = hex.EncodeToString(b)
 			logrus.Warn("AUTH_JWT_SECRET not set, generated random secret — sessions will not survive restarts")
+		}
+	}
+
+	// Set Consensus defaults.
+	if cfg.Consensus.Region != "" {
+		if cfg.Consensus.MinRegions <= 0 {
+			cfg.Consensus.MinRegions = 1
+		}
+		if cfg.Consensus.EvaluationInterval == "" {
+			cfg.Consensus.EvaluationInterval = "10s"
+		}
+		if cfg.Consensus.Timeout == "" {
+			cfg.Consensus.Timeout = "30s"
 		}
 	}
 

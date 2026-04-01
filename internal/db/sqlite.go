@@ -180,6 +180,19 @@ func (s *SQLiteDB) ensureSchema() error {
 		created_at DATETIME NOT NULL DEFAULT (datetime('now')),
 		updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
 	);
+
+	CREATE TABLE IF NOT EXISTS check_results (
+		id           INTEGER PRIMARY KEY AUTOINCREMENT,
+		check_uuid   TEXT NOT NULL,
+		region       TEXT NOT NULL,
+		is_healthy   INTEGER NOT NULL,
+		message      TEXT NOT NULL DEFAULT '',
+		created_at   DATETIME NOT NULL DEFAULT (datetime('now')),
+		cycle_key    DATETIME NOT NULL,
+		evaluated_at DATETIME
+	);
+	CREATE INDEX IF NOT EXISTS idx_check_results_unevaluated ON check_results(check_uuid, cycle_key);
+	CREATE INDEX IF NOT EXISTS idx_check_results_cleanup ON check_results(created_at);
 	`
 
 	_, err := s.DB.Exec(schema)
@@ -1235,6 +1248,100 @@ func (s *SQLiteDB) ResolveDiscordThread(ctx context.Context, checkUUID string) e
 // columns have been dropped. Kept for interface compatibility.
 func (s *SQLiteDB) MigrateLegacyAlertFields(ctx context.Context) (int, error) {
 	return 0, nil
+}
+
+// --- Multi-region check results ---
+
+func (s *SQLiteDB) InsertCheckResult(ctx context.Context, result models.CheckResult) error {
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO check_results (check_uuid, region, is_healthy, message, created_at, cycle_key)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		result.CheckUUID, result.Region, boolToInt(result.IsHealthy), result.Message,
+		result.CreatedAt.UTC().Format(time.RFC3339), result.CycleKey.UTC().Format(time.RFC3339))
+	return err
+}
+
+func (s *SQLiteDB) GetUnevaluatedCycles(ctx context.Context, minRegions int, timeout time.Duration) ([]UnevaluatedCycle, error) {
+	cutoff := time.Now().Add(-timeout).UTC().Format(time.RFC3339)
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT check_uuid, cycle_key, COUNT(DISTINCT region) AS region_count
+		 FROM check_results
+		 WHERE evaluated_at IS NULL
+		 GROUP BY check_uuid, cycle_key
+		 HAVING COUNT(DISTINCT region) >= ? OR MIN(created_at) < ?
+		 ORDER BY cycle_key ASC
+		 LIMIT 500`, minRegions, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var cycles []UnevaluatedCycle
+	for rows.Next() {
+		var c UnevaluatedCycle
+		var cycleKeyStr string
+		if err := rows.Scan(&c.CheckUUID, &cycleKeyStr, &c.RegionCount); err != nil {
+			return nil, err
+		}
+		c.CycleKey, _ = time.Parse(time.RFC3339, cycleKeyStr)
+		cycles = append(cycles, c)
+	}
+	return cycles, rows.Err()
+}
+
+func (s *SQLiteDB) ClaimCycleForEvaluation(ctx context.Context, checkUUID string, cycleKey time.Time) (bool, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	res, err := s.DB.ExecContext(ctx,
+		`UPDATE check_results SET evaluated_at = ?
+		 WHERE check_uuid = ? AND cycle_key = ? AND evaluated_at IS NULL`,
+		now, checkUUID, cycleKey.UTC().Format(time.RFC3339))
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+func (s *SQLiteDB) GetCycleResults(ctx context.Context, checkUUID string, cycleKey time.Time) ([]models.CheckResult, error) {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT id, check_uuid, region, is_healthy, message, created_at, cycle_key, evaluated_at
+		 FROM check_results
+		 WHERE check_uuid = ? AND cycle_key = ?
+		 ORDER BY created_at ASC`, checkUUID, cycleKey.UTC().Format(time.RFC3339))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []models.CheckResult
+	for rows.Next() {
+		var r models.CheckResult
+		var isHealthyInt int
+		var createdStr, cycleStr string
+		var evalStr sql.NullString
+		if err := rows.Scan(&r.ID, &r.CheckUUID, &r.Region, &isHealthyInt, &r.Message, &createdStr, &cycleStr, &evalStr); err != nil {
+			return nil, err
+		}
+		r.IsHealthy = isHealthyInt != 0
+		r.CreatedAt, _ = time.Parse(time.RFC3339, createdStr)
+		r.CycleKey, _ = time.Parse(time.RFC3339, cycleStr)
+		if evalStr.Valid {
+			t, _ := time.Parse(time.RFC3339, evalStr.String)
+			r.EvaluatedAt = &t
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
+func (s *SQLiteDB) PurgeOldCheckResults(ctx context.Context, olderThan time.Duration) (int64, error) {
+	cutoff := time.Now().Add(-olderThan).UTC().Format(time.RFC3339)
+	res, err := s.DB.ExecContext(ctx,
+		`DELETE FROM check_results WHERE created_at < ?`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }
 
 // ---------------------------------------------------------------------------

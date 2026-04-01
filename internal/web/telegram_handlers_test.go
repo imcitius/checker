@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"checker/internal/config"
+	"checker/internal/db"
 	"checker/internal/models"
 	"checker/internal/telegram"
 )
@@ -188,6 +189,21 @@ func (m *mockTelegramRepo) GetCheckDefaults(_ context.Context) (models.CheckDefa
 }
 func (m *mockTelegramRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
 	return nil
+}
+func (m *mockTelegramRepo) InsertCheckResult(_ context.Context, _ models.CheckResult) error {
+	return nil
+}
+func (m *mockTelegramRepo) GetUnevaluatedCycles(_ context.Context, _ int, _ time.Duration) ([]db.UnevaluatedCycle, error) {
+	return nil, nil
+}
+func (m *mockTelegramRepo) ClaimCycleForEvaluation(_ context.Context, _ string, _ time.Time) (bool, error) {
+	return false, nil
+}
+func (m *mockTelegramRepo) GetCycleResults(_ context.Context, _ string, _ time.Time) ([]models.CheckResult, error) {
+	return nil, nil
+}
+func (m *mockTelegramRepo) PurgeOldCheckResults(_ context.Context, _ time.Duration) (int64, error) {
+	return 0, nil
 }
 
 // mockTelegramClient wraps a test HTTP server to capture API calls.

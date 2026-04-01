@@ -39,11 +39,11 @@ type Scheduler struct {
 }
 
 // NewScheduler creates a new scheduler instance
-func NewScheduler(repo db.Repository, appAlerters []AppAlerter) *Scheduler {
+func NewScheduler(repo db.Repository, appAlerters []AppAlerter, consensusRegion string) *Scheduler {
 	h := &CheckHeap{}
 	heap.Init(h)
 	return &Scheduler{
-		workerPool:  NewWorkerPool(DefaultWorkerPoolSize, repo, appAlerters),
+		workerPool:  NewWorkerPool(DefaultWorkerPoolSize, repo, appAlerters, consensusRegion),
 		checkHeap:   h,
 		checkMap:    make(map[string]*CheckItem),
 		repo:        repo,
@@ -69,11 +69,24 @@ func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, a
 		logrus.Info("Email alerter configured")
 	}
 
-	s := NewScheduler(repo, appAlerters)
+	s := NewScheduler(repo, appAlerters, cfg.Consensus.Region)
 
 	// Start worker pool
 	s.workerPool.Start()
 	defer s.workerPool.Stop()
+
+	// Start consensus sweeper in multi-region mode
+	if cfg.IsMultiRegion() {
+		evalInterval := parseDuration(cfg.Consensus.EvaluationInterval)
+		if evalInterval <= 0 {
+			evalInterval = 10 * time.Second
+		}
+		timeout := parseDuration(cfg.Consensus.Timeout)
+		if timeout <= 0 {
+			timeout = 30 * time.Second
+		}
+		go RunConsensusSweeper(ctx, cfg.Consensus.Region, cfg.Consensus.MinRegions, evalInterval, timeout, repo, appAlerters)
+	}
 
 	// Initial Sync
 	if err := s.Sync(ctx); err != nil {
@@ -279,8 +292,9 @@ func (s *Scheduler) getAllChecks(ctx context.Context) ([]models.CheckDefinition,
 	return s.repo.GetEnabledCheckDefinitions(ctx)
 }
 
-// executeCheck runs a single check and updates its status
-func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerters []AppAlerter) error {
+// executeCheck runs a single check and updates its status.
+// When consensusRegion is non-empty, it writes to check_results and returns without alerting.
+func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerters []AppAlerter, consensusRegion string) error {
 	logger := logrus.WithFields(logrus.Fields{
 		"project": checkDef.Project,
 		// "group":   checkDef.GroupName,
@@ -333,6 +347,37 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 		LastAlertSent: checkDef.LastAlertSent,
 	}
 
+	// Multi-region mode: write result to check_results table, skip alerting.
+	// The consensus sweeper will evaluate and alert later.
+	if consensusRegion != "" {
+		dur := parseDuration(checkDef.Duration)
+		if dur <= 0 {
+			dur = 30 * time.Second
+		}
+		cycleKey := runTime.Truncate(dur)
+		result := models.CheckResult{
+			CheckUUID: checkDef.UUID,
+			Region:    consensusRegion,
+			IsHealthy: isHealthy,
+			Message:   errMessage,
+			CreatedAt: runTime,
+			CycleKey:  cycleKey,
+		}
+		if err := repo.InsertCheckResult(context.Background(), result); err != nil {
+			logger.WithError(err).Error("Failed to insert check result")
+			return fmt.Errorf("insert check result: %w", err)
+		}
+		return nil
+	}
+
+	// Single-instance mode: update status and alert directly.
+	processCheckResult(repo, checkDef, checkStatus, isHealthy, runTime, appAlerters, logger)
+	return nil
+}
+
+// processCheckResult handles status update, alert decisions, and alert dispatch.
+// Used by both the legacy single-instance path and the consensus sweeper.
+func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, checkStatus models.CheckStatus, isHealthy bool, runTime time.Time, appAlerters []AppAlerter, logger *logrus.Entry) {
 	// Read current health state from DB BEFORE updating, for accurate state
 	// transition detection. The in-memory checkDef.IsHealthy may be stale
 	// (only refreshed every 10s via Sync), which can cause HandleRecovery
@@ -347,7 +392,7 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 	// Update status in database
 	if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 		logger.WithError(err).Error("Failed to update check status")
-		return fmt.Errorf("update check status: %w", err)
+		return
 	}
 
 	// Detect state transition for Slack recovery using the DB-sourced previous state
@@ -438,8 +483,6 @@ func executeCheck(repo db.Repository, checkDef models.CheckDefinition, appAlerte
 		// Clear escalation notifications on recovery (reset for next incident)
 		clearEscalationNotifications(repo, checkDef.UUID)
 	}
-
-	return nil
 }
 
 // shouldSendAlert determines if a DOWN alert should be sent based on state transitions.

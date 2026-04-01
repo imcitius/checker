@@ -15,18 +15,20 @@ type WorkerPool struct {
 	jobs            chan models.CheckDefinition
 	wg              sync.WaitGroup
 	repo            db.Repository
-	appAlerters []AppAlerter
+	appAlerters     []AppAlerter
+	consensusRegion string // non-empty enables multi-region mode (write results only, no alerting)
 	quit            chan struct{}
 }
 
 // NewWorkerPool creates a new worker pool
-func NewWorkerPool(workers int, repo db.Repository, appAlerters []AppAlerter) *WorkerPool {
+func NewWorkerPool(workers int, repo db.Repository, appAlerters []AppAlerter, consensusRegion string) *WorkerPool {
 	return &WorkerPool{
-		workers:     workers,
-		jobs:        make(chan models.CheckDefinition, workers*2), // Buffer slightly
-		repo:        repo,
-		appAlerters: appAlerters,
-		quit:        make(chan struct{}),
+		workers:         workers,
+		jobs:            make(chan models.CheckDefinition, workers*2), // Buffer slightly
+		repo:            repo,
+		appAlerters:     appAlerters,
+		consensusRegion: consensusRegion,
+		quit:            make(chan struct{}),
 	}
 }
 
@@ -77,7 +79,7 @@ func (wp *WorkerPool) worker(id int) {
 			if !ok {
 				return
 			}
-			if err := executeCheck(wp.repo, check, wp.appAlerters); err != nil {
+			if err := executeCheck(wp.repo, check, wp.appAlerters, wp.consensusRegion); err != nil {
 				logrus.Errorf("Worker %d: Error executing check %s: %v", id, check.UUID, err)
 			}
 		case <-wp.quit:

@@ -85,4 +85,18 @@ type Repository interface {
 	SetSetting(ctx context.Context, key, value string) error
 	GetCheckDefaults(ctx context.Context) (models.CheckDefaults, error)
 	SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error
+
+	// Multi-region check results
+	InsertCheckResult(ctx context.Context, result models.CheckResult) error
+	GetUnevaluatedCycles(ctx context.Context, minRegions int, timeout time.Duration) ([]UnevaluatedCycle, error)
+	ClaimCycleForEvaluation(ctx context.Context, checkUUID string, cycleKey time.Time) (bool, error)
+	GetCycleResults(ctx context.Context, checkUUID string, cycleKey time.Time) ([]models.CheckResult, error)
+	PurgeOldCheckResults(ctx context.Context, olderThan time.Duration) (int64, error)
+}
+
+// UnevaluatedCycle represents a check cycle that has enough regional results for consensus evaluation.
+type UnevaluatedCycle struct {
+	CheckUUID   string
+	CycleKey    time.Time
+	RegionCount int
 }

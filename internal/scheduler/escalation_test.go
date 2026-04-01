@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"checker/internal/config"
+	"checker/internal/db"
 	"checker/internal/models"
 )
 
@@ -196,6 +197,21 @@ func (m *mockEscalationRepo) GetCheckDefaults(_ context.Context) (models.CheckDe
 }
 func (m *mockEscalationRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
 	return nil
+}
+func (m *mockEscalationRepo) InsertCheckResult(_ context.Context, _ models.CheckResult) error {
+	return nil
+}
+func (m *mockEscalationRepo) GetUnevaluatedCycles(_ context.Context, _ int, _ time.Duration) ([]db.UnevaluatedCycle, error) {
+	return nil, nil
+}
+func (m *mockEscalationRepo) ClaimCycleForEvaluation(_ context.Context, _ string, _ time.Time) (bool, error) {
+	return false, nil
+}
+func (m *mockEscalationRepo) GetCycleResults(_ context.Context, _ string, _ time.Time) ([]models.CheckResult, error) {
+	return nil, nil
+}
+func (m *mockEscalationRepo) PurgeOldCheckResults(_ context.Context, _ time.Duration) (int64, error) {
+	return 0, nil
 }
 
 // --- Tests ---

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"checker/internal/config"
+	"checker/internal/db"
 	"checker/internal/discord"
 	"checker/internal/models"
 
@@ -222,6 +223,21 @@ func (r *mockDiscordRepo) GetCheckDefaults(_ context.Context) (models.CheckDefau
 }
 func (r *mockDiscordRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
 	return nil
+}
+func (r *mockDiscordRepo) InsertCheckResult(_ context.Context, _ models.CheckResult) error {
+	return nil
+}
+func (r *mockDiscordRepo) GetUnevaluatedCycles(_ context.Context, _ int, _ time.Duration) ([]db.UnevaluatedCycle, error) {
+	return nil, nil
+}
+func (r *mockDiscordRepo) ClaimCycleForEvaluation(_ context.Context, _ string, _ time.Time) (bool, error) {
+	return false, nil
+}
+func (r *mockDiscordRepo) GetCycleResults(_ context.Context, _ string, _ time.Time) ([]models.CheckResult, error) {
+	return nil, nil
+}
+func (r *mockDiscordRepo) PurgeOldCheckResults(_ context.Context, _ time.Duration) (int64, error) {
+	return 0, nil
 }
 
 // --- Tests ---

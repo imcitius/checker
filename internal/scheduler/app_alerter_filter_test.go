@@ -129,7 +129,7 @@ func TestExecuteCheck_OnlyNtfyChannels_SlackAlerterNotFired(t *testing.T) {
 	repo.checkDefs[checkDef.UUID] = checkDef
 
 	// Execute the check (it will fail due to invalid URL)
-	_ = executeCheck(repo, checkDef, appAlerters)
+	_ = executeCheck(repo, checkDef, appAlerters, "")
 
 	// Slack and Telegram should NOT have fired — only ntfy channels selected
 	assert.Len(t, slackAlerter.sendAlertCalls, 0, "Slack should not fire for ntfy-only check")
@@ -156,7 +156,7 @@ func TestExecuteCheck_SlackChannelSelected_SlackAlerterFires(t *testing.T) {
 	}
 	repo.checkDefs[checkDef.UUID] = checkDef
 
-	_ = executeCheck(repo, checkDef, appAlerters)
+	_ = executeCheck(repo, checkDef, appAlerters, "")
 
 	require.Len(t, slackAlerter.sendAlertCalls, 1, "Slack should fire when slack channel selected")
 	assert.Equal(t, "check-slack", slackAlerter.sendAlertCalls[0].checkUUID)
@@ -182,7 +182,7 @@ func TestExecuteCheck_NoChannelsConfigured_AllAppAlertersFire(t *testing.T) {
 	}
 	repo.checkDefs[checkDef.UUID] = checkDef
 
-	_ = executeCheck(repo, checkDef, appAlerters)
+	_ = executeCheck(repo, checkDef, appAlerters, "")
 
 	assert.Len(t, slackAlerter.sendAlertCalls, 1, "Slack should fire when no channels configured (backward compat)")
 	assert.Len(t, telegramAlerter.sendAlertCalls, 1, "Telegram should fire when no channels configured (backward compat)")
@@ -210,7 +210,7 @@ func TestExecuteCheck_BothSlackAndNtfy_BothFire(t *testing.T) {
 	}
 	repo.checkDefs[checkDef.UUID] = checkDef
 
-	_ = executeCheck(repo, checkDef, appAlerters)
+	_ = executeCheck(repo, checkDef, appAlerters, "")
 
 	assert.Len(t, slackAlerter.sendAlertCalls, 1, "Slack should fire when slack channel selected")
 	assert.Len(t, ntfyAlerter.sendAlertCalls, 1, "Ntfy should fire when ntfy channel selected")
