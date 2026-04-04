@@ -1,4 +1,5 @@
 .idea
+.a5c
 testconfigs
 gitlabci*
 kubeconfig.json
@@ -17,3 +18,13 @@ internal/web/spa/*
 /app
 /dbcheck
 /migrate-config
+
+# E2E tests
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+
+# Babysitter orchestration
+.a5c/
+.a5c/creds.env
+.a5c/creds.env.tmp.*

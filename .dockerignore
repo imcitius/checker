@@ -1,5 +1,6 @@
 .stoneforge
 .git
+.a5c
 *.md
 main
 .gitignore

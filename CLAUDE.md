@@ -94,6 +94,14 @@ Migrations live in `migrations/` (golang-migrate). They run automatically on sta
 - Use conventional commits: `feat:`, `fix:`, `chore:`, `docs:`.
 - Default branch is `dev`.
 
+## Babysitter
+
+The `.a5c/` directory contains babysitter orchestration config (gitignored). Project profile: `.a5c/project-profile.json`. Default methodology: ATDD/TDD. Preferred processes: `gsd/feature-implementation`, `gsd/bugfix`, `specializations/qa-testing-automation`.
+
+### Related Projects
+
+`checker-cloud` (closed-source SaaS layer) imports checker's `pkg/` packages. Changes to `pkg/` interfaces may need propagation to checker-cloud.
+
 ## Stoneforge
 
 The `.stoneforge/` directory is a multi-agent orchestration workspace (task management, git worktrees). See `AGENTS.md` for details. Not part of the application runtime.

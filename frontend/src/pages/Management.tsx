@@ -17,7 +17,7 @@ import {
   Plus, Pencil, Trash2, RefreshCw, Upload, Download,
   ArrowUp, ArrowDown, ArrowUpDown, Copy, Power, PowerOff,
   CheckSquare, Square, MinusSquare, Clock, X,
-  ChevronRight, ChevronDown, FolderOpen,
+  ChevronRight, ChevronDown, FolderOpen, BellOff,
 } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -589,6 +589,21 @@ export function Management() {
         </td>
         <td className="px-3 py-2 text-right">
           <div className="flex items-center justify-end gap-1">
+            {(!def.alert_channels || def.alert_channels.length === 0) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-amber-500 hover:text-amber-600"
+                    onClick={() => handleEdit(def)}
+                  >
+                    <BellOff className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>No alert channels — notifications won't be sent</TooltipContent>
+              </Tooltip>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(def)}>
