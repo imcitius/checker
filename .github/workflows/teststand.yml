@@ -15,38 +15,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Create embedded SPA stub
-        run: mkdir -p internal/web/spa && touch internal/web/spa/.gitkeep
-
-      - name: Build checker binary
-        run: go build -o checker ./cmd/app/
-
-      - name: Start test stand
+      - name: Start test stand infrastructure
         run: cd test/teststand && docker compose up -d --build --wait
 
-      - name: Wait for services to settle
-        run: sleep 10
-
-      - name: Run checker against test stand
-        run: cp checker test/teststand/checker && ./checker --config test/teststand/config.yaml --test-run
+      - name: Run checker inside docker-compose network
+        run: |
+          cd test/teststand
+          docker compose --profile run run --rm checker 2>&1 | tee /tmp/checker-testrun.log
+          # Extract exit code from checker output
+          grep -q "Passed: 0" /tmp/checker-testrun.log && exit 1 || true
 
       - name: Validate results
-        run: bash test/teststand/validate.sh /tmp/checker-test-report.ndjson test/teststand/expectations.json
+        run: |
+          # The NDJSON file is written inside the container to /tmp which is mounted
+          bash test/teststand/validate.sh /tmp/checker-test-report.ndjson test/teststand/expectations.json
 
       - name: Upload artifacts on failure
         if: failure()

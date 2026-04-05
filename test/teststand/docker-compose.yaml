@@ -74,6 +74,7 @@ services:
     working_dir: /app
     volumes:
       - ../../:/app
+      - /tmp:/tmp
     command: >
       sh -c "
         mkdir -p internal/web/spa && touch internal/web/spa/.gitkeep &&
