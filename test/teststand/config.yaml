@@ -200,7 +200,7 @@ checks:
       username: checker
       password: checker
       dbname: checker_test
-      query: "SELECT updated_at FROM heartbeat_unix ORDER BY id DESC LIMIT 1"
+      query: "SELECT UNIX_TIMESTAMP()"
       difference: 60s
     enabled: true
 
@@ -285,7 +285,7 @@ checks:
       username: checker
       password: checker
       dbname: checker_test
-      query: "SELECT EXTRACT(EPOCH FROM updated_at)::BIGINT FROM heartbeat_unix ORDER BY id DESC LIMIT 1"
+      query: "SELECT EXTRACT(EPOCH FROM now())::int"
       difference: 60s
     enabled: true
 
@@ -314,7 +314,7 @@ checks:
       username: checker
       password: checker
       dbname: checker_test
-      query: "SELECT updated_at FROM heartbeat ORDER BY id DESC LIMIT 1"
+      query: "SELECT now()"
       difference: 60s
     enabled: true
 

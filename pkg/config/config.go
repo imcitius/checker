@@ -52,6 +52,8 @@ type Config struct {
 		From         string   `yaml:"from,omitempty"`
 		To           []string `yaml:"to,omitempty"`
 		UseTLS       bool     `yaml:"use_tls,omitempty"`
+		// Test report configs
+		OutputFile string `yaml:"output_file,omitempty" json:"output_file,omitempty"`
 	} `yaml:"alerts"`
 
 	Tickers map[string]TickerWithDuration
@@ -347,6 +349,7 @@ func (cfg *Config) setDefaults() {
 			From               string   `yaml:"from,omitempty"`
 			To                 []string `yaml:"to,omitempty"`
 			UseTLS             bool     `yaml:"use_tls,omitempty"`
+			OutputFile         string   `yaml:"output_file,omitempty" json:"output_file,omitempty"`
 		})
 	}
 	if _, exists := cfg.Alerts["telegram"]; !exists {
@@ -366,6 +369,7 @@ func (cfg *Config) setDefaults() {
 			From               string   `yaml:"from,omitempty"`
 			To                 []string `yaml:"to,omitempty"`
 			UseTLS             bool     `yaml:"use_tls,omitempty"`
+			OutputFile         string   `yaml:"output_file,omitempty" json:"output_file,omitempty"`
 		}{
 			Type: "telegram",
 		}
@@ -387,6 +391,7 @@ func (cfg *Config) setDefaults() {
 			From               string   `yaml:"from,omitempty"`
 			To                 []string `yaml:"to,omitempty"`
 			UseTLS             bool     `yaml:"use_tls,omitempty"`
+			OutputFile         string   `yaml:"output_file,omitempty" json:"output_file,omitempty"`
 		}{
 			Type: "slack",
 		}

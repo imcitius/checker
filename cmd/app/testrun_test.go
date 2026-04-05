@@ -155,6 +155,7 @@ func TestBuildAlertersFromConfig_WithTestReport(t *testing.T) {
 		From               string   `yaml:"from,omitempty"`
 		To                 []string `yaml:"to,omitempty"`
 		UseTLS             bool     `yaml:"use_tls,omitempty"`
+		OutputFile         string   `yaml:"output_file,omitempty" json:"output_file,omitempty"`
 	}{
 		Type: "test_report",
 	}

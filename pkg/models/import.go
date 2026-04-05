@@ -142,6 +142,7 @@ type DBImportConfig struct {
 	DBName     string   `json:"dbname,omitempty" yaml:"dbname,omitempty"`
 	Query      string   `json:"query,omitempty" yaml:"query,omitempty"`
 	Difference string   `json:"difference,omitempty" yaml:"difference,omitempty"`
+	Lag        string   `json:"lag,omitempty" yaml:"lag,omitempty"`
 	ServerList []string `json:"server_list,omitempty" yaml:"server_list,omitempty"`
 }
 

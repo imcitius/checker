@@ -214,6 +214,7 @@ func seedItemToCheckDefinition(item models.CheckImportItem) models.CheckDefiniti
 			cfg.DBName = item.MySQL.DBName
 			cfg.Query = item.MySQL.Query
 			cfg.Difference = item.MySQL.Difference
+			cfg.Lag = item.MySQL.Lag
 			cfg.ServerList = item.MySQL.ServerList
 		}
 		def.Config = cfg
@@ -229,6 +230,7 @@ func seedItemToCheckDefinition(item models.CheckImportItem) models.CheckDefiniti
 			cfg.DBName = item.PgSQL.DBName
 			cfg.Query = item.PgSQL.Query
 			cfg.Difference = item.PgSQL.Difference
+			cfg.Lag = item.PgSQL.Lag
 			cfg.ServerList = item.PgSQL.ServerList
 		}
 		def.Config = cfg

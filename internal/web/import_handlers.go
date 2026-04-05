@@ -478,6 +478,7 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 			cfg.DBName = item.MySQL.DBName
 			cfg.Query = item.MySQL.Query
 			cfg.Difference = item.MySQL.Difference
+			cfg.Lag = item.MySQL.Lag
 			cfg.ServerList = item.MySQL.ServerList
 		}
 		def.Config = cfg
@@ -498,6 +499,7 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 			cfg.DBName = item.PgSQL.DBName
 			cfg.Query = item.PgSQL.Query
 			cfg.Difference = item.PgSQL.Difference
+			cfg.Lag = item.PgSQL.Lag
 			cfg.ServerList = item.PgSQL.ServerList
 		}
 		def.Config = cfg
@@ -664,6 +666,7 @@ func ExportCheckDefinitions(c *gin.Context) {
 					DBName:     cfg.DBName,
 					Query:      cfg.Query,
 					Difference: cfg.Difference,
+					Lag:        cfg.Lag,
 					ServerList: cfg.ServerList,
 				}
 			case *models.MongoDBCheckConfig:
@@ -678,6 +681,7 @@ func ExportCheckDefinitions(c *gin.Context) {
 					DBName:     cfg.DBName,
 					Query:      cfg.Query,
 					Difference: cfg.Difference,
+					Lag:        cfg.Lag,
 					ServerList: cfg.ServerList,
 				}
 			case *models.DomainExpiryCheckConfig:
