@@ -69,6 +69,11 @@ func main() {
 				Usage:   "path to configuration file",
 				Value:   "config.yaml",
 			},
+			&cli.BoolFlag{
+				Name:  "test-run",
+				Usage: "run all checks once and exit (bypass scheduler, DB, and web server)",
+				Value: false,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			// Set log level based on debug flag
@@ -101,6 +106,16 @@ func main() {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
 			logrus.Infof("Configuration loaded successfully from %s", configPath)
+
+			// --test-run: run all checks once and exit, bypassing DB/scheduler/web
+			if c.Bool("test-run") {
+				logrus.Info("Test-run mode: running all checks once")
+				exitCode := runTestRun(cfg, configPath)
+				if exitCode != 0 {
+					return cli.Exit("test-run: some checks failed", exitCode)
+				}
+				return nil
+			}
 
 			// 2. Initialize Database
 			logrus.Infof("Connecting to database (driver: %s)", cfg.DB.Driver)

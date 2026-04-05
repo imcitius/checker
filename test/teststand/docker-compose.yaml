@@ -1,0 +1,90 @@
+services:
+  mockserver:
+    build: ./mockserver
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082"
+      - "9001:9001"
+      - "2222:2222"
+      - "2223:2223"
+      - "2525:2525"
+      - "2526:2526"
+      - "50051:50051"
+      - "50052:50052"
+      - "8091:8091"
+      - "8092:8092"
+      - "8443:8443"
+      - "8444:8444"
+      - "5353:5353/udp"
+    networks:
+      - testnet
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: checker
+      POSTGRES_PASSWORD: checker
+      POSTGRES_DB: checker_test
+    volumes:
+      - ./seeds/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U checker -d checker_test"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - testnet
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: checker_test
+      MYSQL_USER: checker
+      MYSQL_PASSWORD: checker
+    volumes:
+      - ./seeds/mysql-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    networks:
+      - testnet
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass testpass
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "testpass", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - testnet
+
+  mongodb:
+    image: mongo:7
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand('ping').ok"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+    networks:
+      - testnet
+
+networks:
+  testnet:
+    name: checker-testnet
+    driver: bridge

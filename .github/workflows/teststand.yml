@@ -1,0 +1,70 @@
+name: Test Stand
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+
+jobs:
+  teststand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build checker binary
+        run: go build -o checker ./cmd/app/
+
+      - name: Start test stand
+        run: cd test/teststand && docker compose up -d --build --wait
+
+      - name: Wait for services to settle
+        run: sleep 10
+
+      - name: Run checker against test stand
+        run: cp checker test/teststand/checker && ./checker --config test/teststand/config.yaml --test-run
+
+      - name: Validate results
+        run: bash test/teststand/validate.sh /tmp/checker-test-report.ndjson test/teststand/expectations.json
+
+      - name: Upload artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teststand-failure-artifacts
+          path: /tmp/checker-test-report.ndjson
+          if-no-files-found: ignore
+
+      - name: Collect docker logs on failure
+        if: failure()
+        run: cd test/teststand && docker compose logs > /tmp/docker-compose.log 2>&1 || true
+
+      - name: Upload docker logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teststand-docker-logs
+          path: /tmp/docker-compose.log
+          if-no-files-found: ignore
+
+      - name: Tear down test stand
+        if: always()
+        run: cd test/teststand && docker compose down -v --remove-orphans
