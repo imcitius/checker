@@ -90,6 +90,7 @@ checks:
     host: mockserver
     port: 2223
     timeout: 5s
+    expect_banner: "SSH-"
     enabled: true
 
   # ──────────────────────────────────────────────
@@ -170,6 +171,7 @@ checks:
     timeout: 10s
     mysql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT status FROM test_health WHERE status = 'healthy' LIMIT 1"
     enabled: true
@@ -181,6 +183,7 @@ checks:
     timeout: 10s
     mysql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT status FROM nonexistent_table LIMIT 1"
     enabled: true
@@ -195,8 +198,10 @@ checks:
     timeout: 10s
     mysql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT updated_at FROM heartbeat_unix ORDER BY id DESC LIMIT 1"
+      difference: 60s
     enabled: true
 
   - name: mysql_query_unixtime_fail
@@ -206,8 +211,10 @@ checks:
     timeout: 10s
     mysql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT updated_at FROM heartbeat_stale ORDER BY id DESC LIMIT 1"
+      difference: 60s
     enabled: true
 
   # ──────────────────────────────────────────────
@@ -220,6 +227,7 @@ checks:
     timeout: 10s
     mysql:
       username: checker
+      password: checker
       dbname: checker_test
       server_list:
         - "mysql:3306"
@@ -232,6 +240,7 @@ checks:
     timeout: 10s
     mysql:
       username: checker
+      password: checker
       dbname: checker_test
       server_list:
         - "nonexistent-host:3306"
@@ -247,6 +256,7 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT status FROM test_health WHERE status = 'healthy' LIMIT 1"
     enabled: true
@@ -258,6 +268,7 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT status FROM nonexistent_table LIMIT 1"
     enabled: true
@@ -272,8 +283,10 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT EXTRACT(EPOCH FROM updated_at)::BIGINT FROM heartbeat_unix ORDER BY id DESC LIMIT 1"
+      difference: 60s
     enabled: true
 
   - name: pgsql_query_unixtime_fail
@@ -283,8 +296,10 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT EXTRACT(EPOCH FROM updated_at)::BIGINT FROM heartbeat_stale ORDER BY id DESC LIMIT 1"
+      difference: 60s
     enabled: true
 
   # ──────────────────────────────────────────────
@@ -297,8 +312,10 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT updated_at FROM heartbeat ORDER BY id DESC LIMIT 1"
+      difference: 60s
     enabled: true
 
   - name: pgsql_query_timestamp_fail
@@ -308,8 +325,10 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
       query: "SELECT updated_at FROM heartbeat_stale ORDER BY id DESC LIMIT 1"
+      difference: 60s
     enabled: true
 
   # ──────────────────────────────────────────────
@@ -322,7 +341,9 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
+      lag: 3s
       server_list:
         - "postgres:5432"
     enabled: true
@@ -334,7 +355,9 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
+      lag: 3s
       server_list:
         - "nonexistent-host:5432"
     enabled: true
@@ -349,7 +372,9 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
+      lag: 3s
       server_list:
         - "postgres:5432"
     enabled: true
@@ -361,7 +386,9 @@ checks:
     timeout: 10s
     pgsql:
       username: checker
+      password: checker
       dbname: checker_test
+      lag: 3s
       server_list:
         - "nonexistent-host:5432"
     enabled: true

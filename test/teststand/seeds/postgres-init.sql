@@ -50,9 +50,9 @@ INSERT INTO test_health (status) VALUES ('healthy');
 -- The checker writes here and reads from the replica
 -- -----------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS repl_test (
-    id         SERIAL PRIMARY KEY,
+    id         INT         PRIMARY KEY,
     test_value INT         NOT NULL,
-    created_at TIMESTAMP   NOT NULL DEFAULT NOW()
+    timestamp  TIMESTAMP   NOT NULL DEFAULT NOW()
 );
 
 -- -----------------------------------------------------------------------

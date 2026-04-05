@@ -474,8 +474,10 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 		}
 		if item.MySQL != nil {
 			cfg.UserName = item.MySQL.UserName
+			cfg.Password = item.MySQL.Password
 			cfg.DBName = item.MySQL.DBName
 			cfg.Query = item.MySQL.Query
+			cfg.Difference = item.MySQL.Difference
 			cfg.ServerList = item.MySQL.ServerList
 		}
 		def.Config = cfg
@@ -492,8 +494,10 @@ func importItemToCheckDefinition(item models.CheckImportItem) models.CheckDefini
 		}
 		if item.PgSQL != nil {
 			cfg.UserName = item.PgSQL.UserName
+			cfg.Password = item.PgSQL.Password
 			cfg.DBName = item.PgSQL.DBName
 			cfg.Query = item.PgSQL.Query
+			cfg.Difference = item.PgSQL.Difference
 			cfg.ServerList = item.PgSQL.ServerList
 		}
 		def.Config = cfg
@@ -656,8 +660,10 @@ func ExportCheckDefinitions(c *gin.Context) {
 				item.Port = cfg.Port
 				item.MySQL = &models.DBImportConfig{
 					UserName:   cfg.UserName,
+					Password:   cfg.Password,
 					DBName:     cfg.DBName,
 					Query:      cfg.Query,
+					Difference: cfg.Difference,
 					ServerList: cfg.ServerList,
 				}
 			case *models.MongoDBCheckConfig:
@@ -668,8 +674,10 @@ func ExportCheckDefinitions(c *gin.Context) {
 				item.Port = cfg.Port
 				item.PgSQL = &models.DBImportConfig{
 					UserName:   cfg.UserName,
+					Password:   cfg.Password,
 					DBName:     cfg.DBName,
 					Query:      cfg.Query,
+					Difference: cfg.Difference,
 					ServerList: cfg.ServerList,
 				}
 			case *models.DomainExpiryCheckConfig:

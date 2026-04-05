@@ -138,8 +138,10 @@ type CheckImportItem struct {
 // DBImportConfig holds database-specific import fields
 type DBImportConfig struct {
 	UserName   string   `json:"username,omitempty" yaml:"username,omitempty"`
+	Password   string   `json:"password,omitempty" yaml:"password,omitempty"`
 	DBName     string   `json:"dbname,omitempty" yaml:"dbname,omitempty"`
 	Query      string   `json:"query,omitempty" yaml:"query,omitempty"`
+	Difference string   `json:"difference,omitempty" yaml:"difference,omitempty"`
 	ServerList []string `json:"server_list,omitempty" yaml:"server_list,omitempty"`
 }
 

@@ -7,22 +7,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 5s
-    ports:
-      - "8080:8080"
-      - "8081:8081"
-      - "8082:8082"
-      - "9001:9001"
-      - "2222:2222"
-      - "2223:2223"
-      - "2525:2525"
-      - "2526:2526"
-      - "50051:50051"
-      - "50052:50052"
-      - "8091:8091"
-      - "8092:8092"
-      - "8443:8443"
-      - "8444:8444"
-      - "5353:5353/udp"
+    # No host port mappings needed - checker runs inside docker-compose network
     networks:
       - testnet
 
@@ -83,6 +68,33 @@ services:
       start_period: 15s
     networks:
       - testnet
+
+  checker:
+    image: golang:1.26-alpine
+    working_dir: /app
+    volumes:
+      - ../../:/app
+    command: >
+      sh -c "
+        mkdir -p internal/web/spa && touch internal/web/spa/.gitkeep &&
+        go build -o /tmp/checker ./cmd/app/ &&
+        /tmp/checker --config test/teststand/config.yaml --test-run
+      "
+    depends_on:
+      mockserver:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks:
+      - testnet
+    profiles:
+      - run
 
 networks:
   testnet:

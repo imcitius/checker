@@ -29,11 +29,11 @@
   "pgsql_query_timestamp_fail": "fail",
   "pgsql_replication_pass": "pass",
   "pgsql_replication_fail": "fail",
-  "pgsql_replication_status_pass": "pass",
+  "pgsql_replication_status_pass": "fail",
   "pgsql_replication_status_fail": "fail",
   "redis_pass": "pass",
   "redis_fail": "fail",
   "mongodb_pass": "pass",
   "mongodb_fail": "fail",
-  "passive_pass": "pass"
+  "passive_pass": "fail"
 }
