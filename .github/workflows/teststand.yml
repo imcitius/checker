@@ -30,6 +30,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Create embedded SPA stub
+        run: mkdir -p internal/web/spa && touch internal/web/spa/.gitkeep
+
       - name: Build checker binary
         run: go build -o checker ./cmd/app/
 
