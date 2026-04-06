@@ -1,4 +1,4 @@
-.PHONY: build frontend build-frontend build-go docker clean dev-frontend dev-go install-hooks setup
+.PHONY: build frontend build-frontend build-go build-edge docker clean dev-frontend dev-go install-hooks setup
 
 # Build everything: frontend + Go binary
 build: frontend build-go
@@ -16,6 +16,10 @@ build-frontend: frontend
 # Build the Go binary (expects internal/web/spa/ to exist)
 build-go:
 	go build -ldflags="-s -w -X main.Version=$$(git rev-parse HEAD 2>/dev/null || echo unknown) -X main.BuildTime=$$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o checker ./cmd/app
+
+# Build the edge checker binary (no frontend needed)
+build-edge:
+	go build -o bin/checker-edge ./cmd/edge
 
 # Build Docker image
 docker:

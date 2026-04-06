@@ -72,7 +72,7 @@ func (db *PostgresDB) Close() {
 }
 
 // checkDefColumns is the shared SELECT column list for check_definitions queries.
-const checkDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name`
+const checkDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name, run_mode, target_regions`
 
 // scanCheckDef scans a row into a CheckDefinition, handling config unmarshaling
 // and alert_channels JSON parsing.
@@ -85,13 +85,15 @@ func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.
 	var retryInterval *string
 	var maintenanceUntil *time.Time
 	var escalationPolicyName *string
+	var runMode *string
+	var targetRegionsJSON *string
 
 	err := scanner.Scan(
 		&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &c.Enabled,
 		&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &c.IsHealthy, &c.LastMessage, &c.LastAlertSent,
 		&c.Duration, &c.ActorType, &configJSON, &actorConfigJSON,
 		&severity, &alertChannelsJSON, &reAlertInterval, &retryCount, &retryInterval, &maintenanceUntil,
-		&escalationPolicyName,
+		&escalationPolicyName, &runMode, &targetRegionsJSON,
 	)
 	if err != nil {
 		return models.CheckDefinition{}, err
@@ -132,6 +134,18 @@ func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.
 		c.EscalationPolicyName = *escalationPolicyName
 	}
 
+	// Set run_mode
+	if runMode != nil {
+		c.RunMode = *runMode
+	}
+
+	// Parse target_regions JSON array
+	if targetRegionsJSON != nil && *targetRegionsJSON != "" {
+		if err := json.Unmarshal([]byte(*targetRegionsJSON), &c.TargetRegions); err != nil {
+			logrus.Warnf("Failed to parse target_regions for %s: %v", c.UUID, err)
+		}
+	}
+
 	// Unmarshal Polymorphic Config
 	if len(configJSON) > 0 {
 		conf, err := unmarshalConfig(c.Type, configJSON)
@@ -158,6 +172,19 @@ func marshalAlertChannels(channels []string) *string {
 		return nil
 	}
 	data, err := json.Marshal(channels)
+	if err != nil {
+		return nil
+	}
+	s := string(data)
+	return &s
+}
+
+// marshalStringSlice converts a string slice to a JSON string for storage.
+func marshalStringSlice(slice []string) *string {
+	if len(slice) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(slice)
 	if err != nil {
 		return nil
 	}
@@ -216,6 +243,7 @@ func (db *PostgresDB) CreateCheckDefinition(ctx context.Context, def models.Chec
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
 	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
+	targetRegionsJSON := marshalStringSlice(def.TargetRegions)
 
 	if def.Severity == "" {
 		def.Severity = "critical"
@@ -223,9 +251,9 @@ func (db *PostgresDB) CreateCheckDefinition(ctx context.Context, def models.Chec
 
 	// insert
 	_, err := db.Pool.Exec(ctx, `INSERT INTO check_definitions
-    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName))
+    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name, run_mode, target_regions)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName), nilIfEmpty(def.RunMode), targetRegionsJSON)
 
 	if err != nil {
 		return "", err
@@ -237,6 +265,7 @@ func (db *PostgresDB) UpdateCheckDefinition(ctx context.Context, def models.Chec
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
 	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
+	targetRegionsJSON := marshalStringSlice(def.TargetRegions)
 
 	if def.Severity == "" {
 		def.Severity = "critical"
@@ -244,9 +273,9 @@ func (db *PostgresDB) UpdateCheckDefinition(ctx context.Context, def models.Chec
 
 	// update
 	cmdTag, err := db.Pool.Exec(ctx, `UPDATE check_definitions SET
-    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, config=$15, actor_config=$16, severity=$17, alert_channels=$18, re_alert_interval=$19, retry_count=$20, retry_interval=$21, maintenance_until=$22, escalation_policy_name=$23
+    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, config=$15, actor_config=$16, severity=$17, alert_channels=$18, re_alert_interval=$19, retry_count=$20, retry_interval=$21, maintenance_until=$22, escalation_policy_name=$23, run_mode=$24, target_regions=$25
     WHERE uuid=$1`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName))
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName), nilIfEmpty(def.RunMode), targetRegionsJSON)
 
 	if err != nil {
 		return err

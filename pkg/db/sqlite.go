@@ -85,7 +85,9 @@ func (s *SQLiteDB) ensureSchema() error {
 		retry_count        INTEGER NOT NULL DEFAULT 0,
 		retry_interval     TEXT,
 		maintenance_until  DATETIME,
-		escalation_policy_name TEXT
+		escalation_policy_name TEXT,
+		run_mode               TEXT,
+		target_regions         TEXT
 	);
 
 	CREATE TABLE IF NOT EXISTS alert_silences (
@@ -213,6 +215,8 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 	var retryInterval sql.NullString
 	var maintenanceUntil sql.NullTime
 	var escalationPolicyName sql.NullString
+	var runMode sql.NullString
+	var targetRegionsJSON sql.NullString
 	var enabled, isHealthy sql.NullInt64
 
 	err := scanner.Scan(
@@ -220,7 +224,7 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 		&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &isHealthy, &c.LastMessage, &c.LastAlertSent,
 		&c.Duration, &c.ActorType, &configJSON, &actorConfigJSON,
 		&severity, &alertChannelsJSON, &reAlertInterval, &retryCount, &retryInterval, &maintenanceUntil,
-		&escalationPolicyName,
+		&escalationPolicyName, &runMode, &targetRegionsJSON,
 	)
 	if err != nil {
 		return models.CheckDefinition{}, err
@@ -268,6 +272,18 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 		c.EscalationPolicyName = escalationPolicyName.String
 	}
 
+	// Set run_mode
+	if runMode.Valid {
+		c.RunMode = runMode.String
+	}
+
+	// Parse target_regions JSON array
+	if targetRegionsJSON.Valid && targetRegionsJSON.String != "" {
+		if err := json.Unmarshal([]byte(targetRegionsJSON.String), &c.TargetRegions); err != nil {
+			logrus.Warnf("Failed to parse target_regions for %s: %v", c.UUID, err)
+		}
+	}
+
 	// Unmarshal Polymorphic Config
 	if len(configJSON) > 0 {
 		conf, err := unmarshalConfig(c.Type, configJSON)
@@ -289,7 +305,7 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 }
 
 // sqliteCheckDefColumns is the column list for check_definitions queries.
-const sqliteCheckDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name`
+const sqliteCheckDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name, run_mode, target_regions`
 
 // placeholders generates "?, ?, ?" for n parameters.
 func placeholders(n int) string {
@@ -354,21 +370,23 @@ func (s *SQLiteDB) CreateCheckDefinition(ctx context.Context, def models.CheckDe
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
 	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
+	targetRegionsJSON := marshalStringSlice(def.TargetRegions)
 
 	if def.Severity == "" {
 		def.Severity = "critical"
 	}
 
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO check_definitions
-    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name, run_mode, target_regions)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, boolToInt(def.Enabled),
 		def.CreatedAt.UTC().Format(time.RFC3339), def.UpdatedAt.UTC().Format(time.RFC3339),
 		def.LastRun.UTC().Format(time.RFC3339), boolToInt(def.IsHealthy), def.LastMessage,
 		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType,
 		string(configJSON), string(actorConfigJSON), def.Severity,
 		alertChannelsJSON, nilIfEmpty(def.ReAlertInterval), def.RetryCount, nilIfEmpty(def.RetryInterval),
-		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName))
+		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName),
+		nilIfEmpty(def.RunMode), targetRegionsJSON)
 
 	if err != nil {
 		return "", err
@@ -380,6 +398,7 @@ func (s *SQLiteDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDe
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
 	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
+	targetRegionsJSON := marshalStringSlice(def.TargetRegions)
 
 	if def.Severity == "" {
 		def.Severity = "critical"
@@ -387,7 +406,7 @@ func (s *SQLiteDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDe
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	result, err := s.DB.ExecContext(ctx, `UPDATE check_definitions SET
-    name=?, project=?, group_name=?, type=?, description=?, enabled=?, updated_at=?, last_run=?, is_healthy=?, last_message=?, last_alert_sent=?, duration=?, actor_type=?, config=?, actor_config=?, severity=?, alert_channels=?, re_alert_interval=?, retry_count=?, retry_interval=?, maintenance_until=?, escalation_policy_name=?
+    name=?, project=?, group_name=?, type=?, description=?, enabled=?, updated_at=?, last_run=?, is_healthy=?, last_message=?, last_alert_sent=?, duration=?, actor_type=?, config=?, actor_config=?, severity=?, alert_channels=?, re_alert_interval=?, retry_count=?, retry_interval=?, maintenance_until=?, escalation_policy_name=?, run_mode=?, target_regions=?
     WHERE uuid=?`,
 		def.Name, def.Project, def.GroupName, def.Type, def.Description, boolToInt(def.Enabled),
 		now, def.LastRun.UTC().Format(time.RFC3339), boolToInt(def.IsHealthy), def.LastMessage,
@@ -395,6 +414,7 @@ func (s *SQLiteDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDe
 		string(configJSON), string(actorConfigJSON), def.Severity,
 		alertChannelsJSON, nilIfEmpty(def.ReAlertInterval), def.RetryCount, nilIfEmpty(def.RetryInterval),
 		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName),
+		nilIfEmpty(def.RunMode), targetRegionsJSON,
 		def.UUID)
 
 	if err != nil {
