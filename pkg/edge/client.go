@@ -101,7 +101,7 @@ func (c *Client) connect(ctx context.Context) error {
 	}
 	defer conn.Close()
 
-	logrus.Infof("EdgeClient: connected to %s", u)
+	logrus.Infof("EdgeClient: connected to %s", maskAPIKeyInURL(u))
 
 	// Create a fresh scheduler for this session.
 	sched := NewEdgeScheduler(c.cfg.MaxWorkers, c.results)
@@ -315,4 +315,33 @@ func nextBackoff(current time.Duration) time.Duration {
 		next = maxBackoff
 	}
 	return next
+}
+
+// maskToken redacts an API token for safe log output, keeping a recognisable
+// prefix and suffix so the token can be identified without being exposed.
+// e.g. "pk_20fe6eb213d2...370f"  (first 7 chars + "..." + last 4 chars)
+// Tokens shorter than 12 characters are fully redacted as "***".
+func maskToken(token string) string {
+	if len(token) < 12 {
+		return "***"
+	}
+	return token[:7] + "..." + token[len(token)-4:]
+}
+
+// maskAPIKeyInURL returns a copy of rawURL where the "api_key" query parameter
+// value is replaced with a masked representation suitable for log output.
+// The original URL (with the full token) is used for the actual dial; only the
+// logged string goes through this function.
+func maskAPIKeyInURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		// If we can't parse it, redact the whole thing to be safe.
+		return "[redacted-unparseable-url]"
+	}
+	q := u.Query()
+	if key := q.Get("api_key"); key != "" {
+		q.Set("api_key", maskToken(key))
+		u.RawQuery = q.Encode()
+	}
+	return u.String()
 }
