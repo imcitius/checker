@@ -51,6 +51,10 @@ type CheckDefinition struct {
 
 	// Escalation policy
 	EscalationPolicyName string `bson:"escalation_policy_name,omitempty" json:"escalation_policy_name,omitempty"`
+
+	// Edge checker routing
+	RunMode       string   `bson:"run_mode,omitempty" json:"run_mode,omitempty"`            // "saas_only", "multi_region", "edge_only"; empty = saas_only
+	TargetRegions []string `bson:"target_regions,omitempty" json:"target_regions,omitempty"` // region names; nil = all
 }
 
 // UnmarshalBSON implements a custom BSON unmarshaler to handle polymorphism
@@ -288,6 +292,8 @@ func (cd *CheckDefinition) MarshalBSON() ([]byte, error) {
 		"retry_interval":     cd.RetryInterval,
 		"maintenance_until":          cd.MaintenanceUntil,
 		"escalation_policy_name":     cd.EscalationPolicyName,
+		"run_mode":                   cd.RunMode,
+		"target_regions":             cd.TargetRegions,
 	}
 
 	// Flatten Check Config
@@ -518,4 +524,8 @@ type CheckDefinitionViewModel struct {
 
 	// Escalation policy
 	EscalationPolicyName string `json:"escalation_policy_name,omitempty"`
+
+	// Edge checker routing
+	RunMode       string   `json:"run_mode,omitempty"`
+	TargetRegions []string `json:"target_regions,omitempty"`
 }
