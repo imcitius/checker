@@ -40,7 +40,7 @@ primary_region = "iad"
 [http_service]
   internal_port = 9091
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = false
   auto_start_machines = true
   processes = ["app"]
   [[http_service.checks]]
