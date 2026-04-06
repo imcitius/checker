@@ -10,4 +10,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /build/checker-edge /usr/local/bin/checker-edge
+# Health check endpoint (liveness probe); not publicly exposed
+EXPOSE 9091
 ENTRYPOINT ["checker-edge"]

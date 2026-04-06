@@ -24,6 +24,7 @@ func main() {
 		APIKey:     envOrFatal("CHECKER_API_KEY"),
 		Region:     envOrDefault("CHECKER_EDGE_REGION", "edge-default"),
 		MaxWorkers: envIntOrDefault("CHECKER_EDGE_WORKERS", 10),
+		HealthPort: envOrDefault("CHECKER_EDGE_HEALTH_PORT", "9091"),
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

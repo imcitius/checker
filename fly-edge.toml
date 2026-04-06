@@ -1,7 +1,8 @@
 # fly-edge.toml — Fly.io deployment config for the edge checker worker
 #
-# The edge binary is a headless WebSocket client. It does NOT listen on any
-# port, so there is no [[services]] or [http_service] section.
+# The edge binary is a headless WebSocket client (outbound-only). It does NOT
+# expose a public-facing service. A minimal health check HTTP server listens
+# internally on port 9091 for Fly.io liveness probes.
 #
 # Deploy:
 #   fly deploy -a <your-app-name> --config fly-edge.toml
@@ -16,12 +17,12 @@ primary_region = "iad"
 [build]
   dockerfile = "Dockerfile.edge"
 
-# VM size — edge worker is lightweight (outbound-only, no HTTP)
+# VM size — edge worker is lightweight
 [vm]
   size = "shared-cpu-1x"
   memory = "256mb"
 
-# Worker process — no HTTP listener, no health check port
+# Worker process
 [processes]
   app = "/usr/local/bin/checker-edge"
 
@@ -29,9 +30,22 @@ primary_region = "iad"
 # CHECKER_SAAS_URL and CHECKER_API_KEY must be set via `fly secrets set`
 [env]
   CHECKER_EDGE_REGION = "fly-edge"
-  # CHECKER_EDGE_WORKERS = "10"  # Optional: number of concurrent check workers (default: 10)
+  # CHECKER_EDGE_WORKERS = "10"       # Optional: concurrent check workers (default: 10)
+  # CHECKER_EDGE_HEALTH_PORT = "9091" # Optional: health check port (default: 9091)
 
 # Machine lifecycle — auto-stop and auto-start for worker machines
 [machines]
   auto_stop_machines = true
   auto_start_machines = true
+
+# Internal health check — not publicly exposed.
+# Fly.io uses this to verify the machine is alive.
+[checks]
+  [checks.health]
+    type = "http"
+    port = 9091
+    method = "GET"
+    path = "/healthz"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"

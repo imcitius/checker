@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -22,10 +24,11 @@ const (
 
 // ClientConfig holds the configuration for the edge WebSocket client.
 type ClientConfig struct {
-	SaaSURL    string // wss://app.example.com/ws/edge
-	APIKey     string // ck_... token
-	Region     string // e.g. "edge-tokyo-1"
-	MaxWorkers int    // default 10
+	SaaSURL     string // wss://app.example.com/ws/edge
+	APIKey      string // ck_... token
+	Region      string // e.g. "edge-tokyo-1"
+	MaxWorkers  int    // default 10
+	HealthPort  string // HTTP health check port, default "9091"
 }
 
 // Client is the edge WebSocket client. It connects to the SaaS core, receives
@@ -54,6 +57,10 @@ func NewClient(cfg ClientConfig) *Client {
 // active.
 func (c *Client) Run(ctx context.Context) error {
 	c.startTime = time.Now()
+
+	// Start the health check HTTP server as a goroutine.
+	go c.runHealthServer(ctx)
+
 	backoff := initialBackoff
 
 	for {
@@ -252,6 +259,39 @@ func (c *Client) sendHeartbeats(ctx context.Context, conn *websocket.Conn, sched
 			logrus.Debugf("EdgeClient: sent heartbeat (active_checks=%d, uptime=%ds)",
 				hb.ActiveChecks, hb.UptimeSeconds)
 		}
+	}
+}
+
+// runHealthServer starts a minimal HTTP server for liveness checks.
+// It listens on c.cfg.HealthPort (default "9091") and responds to GET /healthz
+// with 200 OK as long as the client is running. The server shuts down gracefully
+// when ctx is cancelled.
+func (c *Client) runHealthServer(ctx context.Context) {
+	port := c.cfg.HealthPort
+	if port == "" {
+		port = "9091"
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+
+	srv := &http.Server{
+		Addr:    net.JoinHostPort("", port),
+		Handler: mux,
+	}
+
+	// Shut down the server when ctx is cancelled.
+	go func() {
+		<-ctx.Done()
+		_ = srv.Shutdown(context.Background())
+	}()
+
+	logrus.Infof("EdgeClient: health check server listening on :%s", port)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logrus.Warnf("EdgeClient: health server error: %v", err)
 	}
 }
 
