@@ -42,10 +42,9 @@ primary_region = "iad"
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
-  [http_service.checks]
-    [http_service.checks.health]
-      interval = "15s"
-      timeout = "5s"
-      grace_period = "10s"
-      method = "GET"
-      path = "/healthz"
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
