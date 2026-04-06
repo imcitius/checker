@@ -427,6 +427,8 @@ func convertToCheckDefViewModel(def models.CheckDefinition) models.CheckDefiniti
 		EscalationPolicyName: def.EscalationPolicyName,
 		AlertChannels:        def.AlertChannels,
 		Severity:             def.Severity,
+		RunMode:              def.RunMode,
+		TargetRegions:        def.TargetRegions,
 	}
 
 	// Set maintenance window
@@ -555,6 +557,8 @@ func convertFromCheckDefViewModel(vm models.CheckDefinitionViewModel) models.Che
 		EscalationPolicyName: vm.EscalationPolicyName,
 		AlertChannels:        vm.AlertChannels,
 		Severity:             vm.Severity,
+		RunMode:              vm.RunMode,
+		TargetRegions:        vm.TargetRegions,
 	}
 
 	// Create ID if present (parsed later usually)
