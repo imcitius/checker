@@ -1,12 +1,13 @@
 .idea
 .a5c
+.stoneforge
+.claude
 testconfigs
 gitlabci*
 kubeconfig.json
 build/*
 images-report.json
 dev/db
-/.stoneforge/.worktrees/
 frontend/node_modules/
 frontend/dist/
 internal/web/spa/*
@@ -18,13 +19,15 @@ internal/web/spa/*
 /app
 /dbcheck
 /migrate-config
+/edge
+/bin
 
 # E2E tests
 e2e/node_modules/
 e2e/test-results/
 e2e/playwright-report/
+/.stoneforge/.worktrees/
 
-# Babysitter orchestration
-.a5c/
-.a5c/creds.env
-.a5c/creds.env.tmp.*
+.a5c
+.stoneforge
+.claude
