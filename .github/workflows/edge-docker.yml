@@ -1,0 +1,66 @@
+---
+name: Build and Publish Edge Docker Image
+
+# NOTE: After the first push, ghcr.io/imcitius/checker-edge may need to be
+# made public via GitHub → Packages → checker-edge → Package settings.
+
+"on":
+  push:
+    branches:
+      - "dev"
+    paths:
+      - "cmd/edge/**"
+      - "pkg/edge/**"
+      - "Dockerfile.edge"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/imcitius/checker-edge
+          tags: |
+            # Tag as :dev on push to dev branch
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
+            # Tag as :latest and semver on release tags (v*)
+            type=raw,value=latest,enable=${{
+              startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}},enable=${{
+              startsWith(github.ref, 'refs/tags/v') }}
+            # Always tag with short SHA
+            type=sha,prefix=sha-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.edge
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
