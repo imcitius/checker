@@ -33,19 +33,19 @@ primary_region = "iad"
   # CHECKER_EDGE_WORKERS = "10"       # Optional: concurrent check workers (default: 10)
   # CHECKER_EDGE_HEALTH_PORT = "9091" # Optional: health check port (default: 9091)
 
-# Machine lifecycle — auto-stop and auto-start for worker machines
-[machines]
+# HTTP service — required for Fly.io to grant full network routing (including
+# outbound internet access). The edge binary does NOT expose a public service,
+# but declaring [http_service] on the internal health-check port ensures the
+# machine receives proper routing. auto_stop/auto_start replace [machines].
+[http_service]
+  internal_port = 9091
+  force_https = true
   auto_stop_machines = true
   auto_start_machines = true
-
-# Internal health check — not publicly exposed.
-# Fly.io uses this to verify the machine is alive.
-[checks]
-  [checks.health]
-    type = "http"
-    port = 9091
-    method = "GET"
-    path = "/healthz"
-    interval = "15s"
-    timeout = "5s"
-    grace_period = "10s"
+  [http_service.checks]
+    [http_service.checks.health]
+      interval = "15s"
+      timeout = "5s"
+      grace_period = "10s"
+      method = "GET"
+      path = "/healthz"
