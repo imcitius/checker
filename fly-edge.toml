@@ -1,0 +1,37 @@
+# fly-edge.toml — Fly.io deployment config for the edge checker worker
+#
+# The edge binary is a headless WebSocket client. It does NOT listen on any
+# port, so there is no [[services]] or [http_service] section.
+#
+# Deploy:
+#   fly deploy -a <your-app-name> --config fly-edge.toml
+#
+# Before deploying, set required secrets:
+#   fly secrets set CHECKER_SAAS_URL=wss://your-saas-host/ws/edge
+#   fly secrets set CHECKER_API_KEY=your-api-key
+
+app = "checker-edge"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.edge"
+
+# VM size — edge worker is lightweight (outbound-only, no HTTP)
+[vm]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+# Worker process — no HTTP listener, no health check port
+[processes]
+  app = "/usr/local/bin/checker-edge"
+
+# Environment variables
+# CHECKER_SAAS_URL and CHECKER_API_KEY must be set via `fly secrets set`
+[env]
+  CHECKER_EDGE_REGION = "fly-edge"
+  # CHECKER_EDGE_WORKERS = "10"  # Optional: number of concurrent check workers (default: 10)
+
+# Machine lifecycle — auto-stop and auto-start for worker machines
+[machines]
+  auto_stop_machines = true
+  auto_start_machines = true
