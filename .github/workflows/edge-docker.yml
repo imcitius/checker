@@ -8,8 +8,8 @@ name: Build and Publish Edge Docker Image
   push:
     branches:
       - "dev"
-      - "main"
-    # No paths filter — always rebuild on push to main/dev so the :main and
+      - "master"
+    # No paths filter — always rebuild on push to master/dev so the :master and
     # :dev tags stay current even when changes land outside cmd/edge or pkg/edge.
   release:
     types: [published]
@@ -44,8 +44,8 @@ jobs:
           tags: |
             # Tag as :dev on push to dev branch
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
-            # Tag as :main on push to main branch
-            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            # Tag as :master on push to master branch
+            type=raw,value=master,enable=${{ github.ref == 'refs/heads/master' }}
             # Tag as :latest and semver on release tags (v*)
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{version}}
