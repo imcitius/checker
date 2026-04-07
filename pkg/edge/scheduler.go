@@ -363,6 +363,7 @@ func viewModelToCheckDef(vm models.CheckDefinitionViewModel) models.CheckDefinit
 		EscalationPolicyName: vm.EscalationPolicyName,
 		RunMode:              vm.RunMode,
 		TargetRegions:        vm.TargetRegions,
+		EdgeMinUnhealthy:     vm.EdgeMinUnhealthy,
 	}
 
 	// Parse MaintenanceUntil string pointer to *time.Time.
