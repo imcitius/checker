@@ -23,4 +23,7 @@ type CheckStatus struct {
 	Periodicity   string             `bson:"periodicity" json:"periodicity"`
 	URL           string             `bson:"url" json:"url"`
 	IsSilenced    bool               `bson:"is_silenced" json:"is_silenced"`
+	// Region identifies the source region(s) for this status update.
+	// For multi-region consensus, this is a comma-separated list of failing regions.
+	Region        string             `bson:"region,omitempty" json:"region,omitempty"`
 }

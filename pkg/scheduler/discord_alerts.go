@@ -165,6 +165,7 @@ func (da *DiscordAppAlerter) SendAlert(ctx context.Context, checkDef models.Chec
 		CheckType: checkDef.Type,
 		Message:   status.Message,
 		AlertType: "discord",
+		Region:    status.Region,
 	}
 	if err := da.repo.CreateAlertEvent(ctx, alertEvent); err != nil {
 		logrus.Errorf("Failed to record alert event for check %s: %v", checkDef.UUID, err)

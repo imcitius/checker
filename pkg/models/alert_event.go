@@ -12,6 +12,7 @@ type AlertEvent struct {
 	CheckType  string
 	Message    string
 	AlertType  string
+	Region     string     `json:"region,omitempty"`
 	CreatedAt  time.Time
 	ResolvedAt *time.Time
 	IsResolved bool

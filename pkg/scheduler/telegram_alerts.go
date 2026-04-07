@@ -135,6 +135,7 @@ func (ta *TelegramAppAlerter) SendAlert(ctx context.Context, checkDef models.Che
 		CheckType: checkDef.Type,
 		Message:   status.Message,
 		AlertType: "telegram",
+		Region:    status.Region,
 	}
 	if err := ta.repo.CreateAlertEvent(ctx, alertEvent); err != nil {
 		logrus.Errorf("Failed to record alert event for check %s: %v", checkDef.UUID, err)

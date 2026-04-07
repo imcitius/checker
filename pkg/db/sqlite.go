@@ -124,6 +124,7 @@ func (s *SQLiteDB) ensureSchema() error {
 		check_type  TEXT NOT NULL DEFAULT '',
 		message     TEXT NOT NULL DEFAULT '',
 		alert_type  TEXT NOT NULL DEFAULT '',
+		region      TEXT NOT NULL DEFAULT '',
 		created_at  DATETIME NOT NULL DEFAULT (datetime('now')),
 		resolved_at DATETIME,
 		is_resolved INTEGER NOT NULL DEFAULT 0
@@ -931,9 +932,9 @@ func (s *SQLiteDB) GetUnhealthyChecks(ctx context.Context) ([]models.CheckDefini
 
 func (s *SQLiteDB) CreateAlertEvent(ctx context.Context, event models.AlertEvent) error {
 	_, err := s.DB.ExecContext(ctx,
-		`INSERT INTO alert_history (check_uuid, check_name, project, group_name, check_type, message, alert_type)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		event.CheckUUID, event.CheckName, event.Project, event.GroupName, event.CheckType, event.Message, event.AlertType)
+		`INSERT INTO alert_history (check_uuid, check_name, project, group_name, check_type, message, alert_type, region)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		event.CheckUUID, event.CheckName, event.Project, event.GroupName, event.CheckType, event.Message, event.AlertType, event.Region)
 	return err
 }
 
@@ -971,7 +972,7 @@ func (s *SQLiteDB) GetAlertHistory(ctx context.Context, limit, offset int, filte
 	}
 
 	// Get paginated results
-	query := "SELECT id, check_uuid, check_name, project, group_name, check_type, message, alert_type, created_at, resolved_at, is_resolved FROM alert_history WHERE 1=1" + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	query := "SELECT id, check_uuid, check_name, project, group_name, check_type, message, alert_type, region, created_at, resolved_at, is_resolved FROM alert_history WHERE 1=1" + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
 	rows, err := s.DB.QueryContext(ctx, query, args...)
@@ -984,7 +985,7 @@ func (s *SQLiteDB) GetAlertHistory(ctx context.Context, limit, offset int, filte
 	for rows.Next() {
 		var e models.AlertEvent
 		var isResolved sql.NullInt64
-		if err := rows.Scan(&e.ID, &e.CheckUUID, &e.CheckName, &e.Project, &e.GroupName, &e.CheckType, &e.Message, &e.AlertType, &e.CreatedAt, &e.ResolvedAt, &isResolved); err != nil {
+		if err := rows.Scan(&e.ID, &e.CheckUUID, &e.CheckName, &e.Project, &e.GroupName, &e.CheckType, &e.Message, &e.AlertType, &e.Region, &e.CreatedAt, &e.ResolvedAt, &isResolved); err != nil {
 			return nil, 0, err
 		}
 		e.IsResolved = isResolved.Valid && isResolved.Int64 != 0

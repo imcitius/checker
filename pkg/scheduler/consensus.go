@@ -74,7 +74,7 @@ func evaluateConsensus(ctx context.Context, minRegions int, timeout time.Duratio
 			continue
 		}
 
-		isHealthy, message := computeConsensus(results)
+		isHealthy, message, failingRegions := computeConsensus(results)
 
 		checkDef, err := repo.GetCheckDefinitionByUUID(ctx, cycle.CheckUUID)
 		if err != nil {
@@ -100,6 +100,7 @@ func evaluateConsensus(ctx context.Context, minRegions int, timeout time.Duratio
 			Host:          host,
 			Periodicity:   checkDef.Duration,
 			LastAlertSent: checkDef.LastAlertSent,
+			Region:        failingRegions,
 		}
 
 		logger := logrus.WithFields(logrus.Fields{
@@ -113,17 +114,20 @@ func evaluateConsensus(ctx context.Context, minRegions int, timeout time.Duratio
 
 // computeConsensus determines the overall health based on a majority quorum.
 // If more than half the reporting regions say unhealthy, the consensus is unhealthy.
-func computeConsensus(results []models.CheckResult) (isHealthy bool, message string) {
+// Returns isHealthy, message, and a comma-separated list of failing region names.
+func computeConsensus(results []models.CheckResult) (isHealthy bool, message string, failingRegions string) {
 	unhealthyCount := 0
 	var messages []string
+	var regions []string
 	for _, r := range results {
 		if !r.IsHealthy {
 			unhealthyCount++
 			messages = append(messages, fmt.Sprintf("[%s] %s", r.Region, r.Message))
+			regions = append(regions, r.Region)
 		}
 	}
 	if unhealthyCount > len(results)/2 {
-		return false, strings.Join(messages, "; ")
+		return false, strings.Join(messages, "; "), strings.Join(regions, ",")
 	}
-	return true, ""
+	return true, "", ""
 }
