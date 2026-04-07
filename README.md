@@ -32,6 +32,49 @@ go build -o checker ./cmd/app
 ./checker -config config.yaml
 ```
 
+## Kubernetes Deployment
+
+`checker-edge` is the lightweight agent that runs inside your network and reports back to the Ensafely SaaS. It is distributed as a Helm chart via GitHub Pages.
+
+### Add the Helm repository
+
+```bash
+helm repo add ensafely https://imcitius.github.io/checker
+helm repo update
+```
+
+### Install checker-edge
+
+```bash
+helm install checker-edge ensafely/checker-edge \
+  --set apiKey=ck_YOUR_KEY \
+  --set region=office-london
+```
+
+Replace `ck_YOUR_KEY` with your API key (create one at [app.ensafely.com → API Keys](https://app.ensafely.com)) and set `region` to a label that identifies this deployment (e.g. `us-east-k8s`, `office-london`).
+
+### Available values
+
+See [`charts/checker-edge/values.yaml`](charts/checker-edge/values.yaml) for the full list of configurable parameters, including resource limits, node selectors, tolerations, and pod annotations.
+
+### Production: use an existing Secret
+
+Avoid putting your API key in plain text on the command line. Create a Kubernetes Secret first, then reference it:
+
+```bash
+kubectl create secret generic checker-edge-secret \
+  --from-literal=api-key=ck_YOUR_KEY
+```
+
+```bash
+helm install checker-edge ensafely/checker-edge \
+  --set existingSecret.name=checker-edge-secret \
+  --set existingSecret.key=api-key \
+  --set region=office-london
+```
+
+---
+
 ## Configuration
 
 Configuration is provided via YAML files. A basic example:
