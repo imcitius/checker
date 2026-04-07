@@ -231,6 +231,17 @@ func (s *EdgeScheduler) executeCheck(def models.CheckDefinition) CheckResult {
 		msg = err.Error()
 	}
 
+	logMsg := msg
+	if logMsg == "" {
+		logMsg = "healthy"
+	}
+	logrus.WithFields(logrus.Fields{
+		"check_uuid": def.UUID,
+		"check_type": def.Type,
+		"healthy":    healthy,
+		"duration":   elapsed.Round(time.Millisecond),
+	}).Infof("check result: %s", logMsg)
+
 	return CheckResult{
 		CheckUUID: def.UUID,
 		IsHealthy: healthy,
@@ -267,6 +278,9 @@ func (s *EdgeScheduler) ReplaceAll(defs []models.CheckDefinition) {
 	}
 
 	heap.Init(s.heap)
+	for _, item := range *s.heap {
+		logrus.Debugf("EdgeScheduler: scheduled check %s (%s) next_run=%s", item.CheckDef.UUID, item.CheckDef.Type, item.NextRun.Format(time.RFC3339))
+	}
 	s.notifyChanged()
 }
 

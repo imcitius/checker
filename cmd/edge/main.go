@@ -19,7 +19,17 @@ func main() {
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
-	logrus.SetLevel(logrus.InfoLevel)
+	logLevel := logrus.InfoLevel
+	if levelStr := os.Getenv("CHECKER_LOG_LEVEL"); levelStr != "" {
+		parsed, err := logrus.ParseLevel(levelStr)
+		if err != nil {
+			logrus.Warnf("EdgeClient: invalid CHECKER_LOG_LEVEL %q, falling back to info", levelStr)
+		} else {
+			logLevel = parsed
+		}
+	}
+	logrus.SetLevel(logLevel)
+	logrus.Infof("EdgeClient: log level set to %s", logLevel)
 
 	if sentry.Init("edge-1.0.0") {
 		defer sentry.Flush(2 * time.Second)
