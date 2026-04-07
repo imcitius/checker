@@ -9,10 +9,8 @@ name: Build and Publish Edge Docker Image
     branches:
       - "dev"
       - "main"
-    paths:
-      - "cmd/edge/**"
-      - "pkg/edge/**"
-      - "Dockerfile.edge"
+    # No paths filter — always rebuild on push to main/dev so the :main and
+    # :dev tags stay current even when changes land outside cmd/edge or pkg/edge.
   release:
     types: [published]
   workflow_dispatch:
@@ -49,10 +47,10 @@ jobs:
             # Tag as :main on push to main branch
             type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
             # Tag as :latest and semver on release tags (v*)
-            type=raw,value=latest,enable=${{
-              startsWith(github.ref, 'refs/tags/v') }}
-            type=semver,pattern={{version}},enable=${{
-              startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
             # Always tag with short SHA
             type=sha,prefix=sha-
 
