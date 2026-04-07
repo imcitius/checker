@@ -7,12 +7,28 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/imcitius/checker/pkg/models"
 	"github.com/sirupsen/logrus"
 )
+
+// wsConn wraps *websocket.Conn with a mutex to serialize concurrent writes.
+// gorilla/websocket does not support concurrent writers; this wrapper ensures
+// all WriteMessage calls are serialized regardless of which goroutine calls them.
+type wsConn struct {
+	*websocket.Conn
+	mu sync.Mutex
+}
+
+// WriteMessage is the mutex-protected writer used by all goroutines.
+func (c *wsConn) WriteMessage(messageType int, data []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.Conn.WriteMessage(messageType, data)
+}
 
 const (
 	heartbeatInterval  = 30 * time.Second
@@ -68,7 +84,12 @@ func (c *Client) Run(ctx context.Context) error {
 			return nil
 		}
 		logrus.Infof("EdgeClient: connecting to %s (region=%s)", c.cfg.SaaSURL, c.cfg.Region)
-		err := c.connect(ctx)
+		connected, err := c.connect(ctx)
+		if connected {
+			// Dial succeeded — reset backoff regardless of how the session ended,
+			// so a brief successful connection doesn't leave the backoff inflated.
+			backoff = initialBackoff
+		}
 		if err != nil {
 			if ctx.Err() != nil {
 				// Cancelled — clean exit.
@@ -81,25 +102,26 @@ func (c *Client) Run(ctx context.Context) error {
 			case <-time.After(backoff):
 			}
 			backoff = nextBackoff(backoff)
-			continue
 		}
-		// Successful session — reset backoff.
-		backoff = initialBackoff
 	}
 }
 
 // connect establishes one WebSocket session and runs until it ends.
-func (c *Client) connect(ctx context.Context) error {
+// It returns (true, err) if the dial succeeded (even if the session later
+// ended with an error), and (false, err) if the dial itself failed.
+func (c *Client) connect(ctx context.Context) (connected bool, err error) {
 	u, err := buildURL(c.cfg.SaaSURL, c.cfg.APIKey, c.cfg.Region)
 	if err != nil {
-		return fmt.Errorf("invalid SaaSURL: %w", err)
+		return false, fmt.Errorf("invalid SaaSURL: %w", err)
 	}
 
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, u, nil)
+	rawConn, _, err := websocket.DefaultDialer.DialContext(ctx, u, nil)
 	if err != nil {
-		return fmt.Errorf("dial: %w", err)
+		return false, fmt.Errorf("dial: %w", err)
 	}
-	defer conn.Close()
+	// Wrap in mutex-protected writer to prevent concurrent-write panics.
+	wc := &wsConn{Conn: rawConn}
+	defer wc.Close()
 
 	logrus.Infof("EdgeClient: connected to %s", maskAPIKeyInURL(u))
 
@@ -116,17 +138,17 @@ func (c *Client) connect(ctx context.Context) error {
 	}()
 
 	// Start result sender.
-	go c.sendResults(schedCtx, conn)
+	go c.sendResults(schedCtx, wc)
 
 	// Start heartbeat sender.
-	go c.sendHeartbeats(schedCtx, conn, sched)
+	go c.sendHeartbeats(schedCtx, wc, sched)
 
 	// Read loop (blocks until connection closes or ctx cancelled).
-	return c.readLoop(ctx, conn, sched)
+	return true, c.readLoop(ctx, wc, sched)
 }
 
 // readLoop reads incoming messages from the WebSocket connection and dispatches them.
-func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn, sched *EdgeScheduler) error {
+func (c *Client) readLoop(ctx context.Context, conn *wsConn, sched *EdgeScheduler) error {
 	for {
 		// Set a generous read deadline; heartbeats keep the connection alive.
 		_ = conn.SetReadDeadline(time.Now().Add(2 * heartbeatInterval))
@@ -146,7 +168,7 @@ func (c *Client) readLoop(ctx context.Context, conn *websocket.Conn, sched *Edge
 }
 
 // handleMessage decodes and dispatches a single incoming message.
-func (c *Client) handleMessage(raw []byte, conn *websocket.Conn, sched *EdgeScheduler) error {
+func (c *Client) handleMessage(raw []byte, conn *wsConn, sched *EdgeScheduler) error {
 	// Peek at the type field.
 	var base models.EdgeMessage
 	if err := json.Unmarshal(raw, &base); err != nil {
@@ -199,7 +221,7 @@ func (c *Client) handleMessage(raw []byte, conn *websocket.Conn, sched *EdgeSche
 }
 
 // sendResults drains the results channel and sends each result over the WebSocket.
-func (c *Client) sendResults(ctx context.Context, conn *websocket.Conn) {
+func (c *Client) sendResults(ctx context.Context, conn *wsConn) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -230,7 +252,7 @@ func (c *Client) sendResults(ctx context.Context, conn *websocket.Conn) {
 }
 
 // sendHeartbeats sends a heartbeat message every heartbeatInterval.
-func (c *Client) sendHeartbeats(ctx context.Context, conn *websocket.Conn, sched *EdgeScheduler) {
+func (c *Client) sendHeartbeats(ctx context.Context, conn *wsConn, sched *EdgeScheduler) {
 	ticker := time.NewTicker(heartbeatInterval)
 	defer ticker.Stop()
 
