@@ -3,9 +3,9 @@ entries:
   checker-edge:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-04-07T15:09:37.947894956Z"
+    created: "2026-04-07T19:02:54.863490295Z"
     description: Ensafely on-premises checker for monitoring internal infrastructure
-    digest: ca353a6dcdd588a863c07ba46e0589739a997f7ae27ea42df6540d9c88b2e2c8
+    digest: 1bec85bfc02b66d91692865d8c64d7b3f5300dbcc0d38373adff2c53ec8e86c7
     home: https://ensafely.com
     keywords:
     - monitoring
@@ -19,4 +19,4 @@ entries:
     urls:
     - https://imcitius.github.io/checker/checker-edge-0.1.0.tgz
     version: 0.1.0
-generated: "2026-04-07T15:09:37.94704413Z"
+generated: "2026-04-07T19:02:54.863067557Z"
