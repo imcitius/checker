@@ -14,6 +14,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Version is injected at build time via -ldflags.
+// It defaults to "dev" so that local/unversioned builds are distinguishable.
+var Version = "dev"
+
 func main() {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
@@ -31,7 +35,7 @@ func main() {
 	logrus.SetLevel(logLevel)
 	logrus.Infof("EdgeClient: log level set to %s", logLevel)
 
-	if sentry.Init("edge-1.0.0") {
+	if sentry.Init(Version) {
 		defer sentry.Flush(2 * time.Second)
 	}
 

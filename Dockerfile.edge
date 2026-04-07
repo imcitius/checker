@@ -3,8 +3,9 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+ARG VERSION=dev
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-s -w" \
+    -ldflags="-s -w -X main.Version=${VERSION} -X github.com/imcitius/checker/pkg/edge.edgeClientVersion=${VERSION}" \
     -o checker-edge ./cmd/edge
 
 FROM alpine:3.21

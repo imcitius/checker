@@ -32,12 +32,15 @@ func (c *wsConn) WriteMessage(messageType int, data []byte) error {
 }
 
 const (
-	heartbeatInterval  = 30 * time.Second
-	initialBackoff     = 1 * time.Second
-	maxBackoff         = 60 * time.Second
-	resultBufferSize   = 256
-	edgeClientVersion  = "1.0.0"
+	heartbeatInterval = 30 * time.Second
+	initialBackoff    = 1 * time.Second
+	maxBackoff        = 60 * time.Second
+	resultBufferSize  = 256
 )
+
+// edgeClientVersion is injected at build time via -ldflags.
+// It defaults to "dev" so that local/unversioned builds are distinguishable.
+var edgeClientVersion = "dev"
 
 // ClientConfig holds the configuration for the edge WebSocket client.
 type ClientConfig struct {
