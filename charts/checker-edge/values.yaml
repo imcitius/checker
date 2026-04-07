@@ -19,6 +19,9 @@ region: ""
 # Number of concurrent check workers
 workers: 10
 
+# Port for the health check HTTP server (used by liveness and readiness probes)
+healthPort: 9091
+
 replicaCount: 1
 
 resources:

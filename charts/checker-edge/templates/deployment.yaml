@@ -50,17 +50,23 @@ spec:
               value: {{ .Values.region | quote }}
             - name: CHECKER_EDGE_WORKERS
               value: {{ .Values.workers | quote }}
+            - name: CHECKER_EDGE_HEALTH_PORT
+              value: {{ .Values.healthPort | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - "pgrep -x checker || pgrep -x checker-edge || pgrep -x edge"
-            initialDelaySeconds: 10
-            periodSeconds: 30
+            httpGet:
+              path: /healthz
+              port: {{ .Values.healthPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 15
             failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.healthPort }}
+            initialDelaySeconds: 3
+            periodSeconds: 10
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
