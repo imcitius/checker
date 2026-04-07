@@ -1,0 +1,14 @@
+apiVersion: v2
+name: checker-edge
+description: Ensafely on-premises checker for monitoring internal infrastructure
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://ensafely.com
+sources:
+  - https://github.com/imcitius/checker
+keywords:
+  - monitoring
+  - health-check
+  - uptime
+  - ensafely

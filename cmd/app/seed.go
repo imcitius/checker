@@ -175,6 +175,77 @@ func seedItemToCheckDefinition(item models.CheckImportItem) models.CheckDefiniti
 			URI:     item.MongoDBURI,
 			Timeout: item.Timeout,
 		}
+	case "ssh":
+		def.Config = &models.SSHCheckConfig{
+			Host:         item.Host,
+			Port:         item.Port,
+			Timeout:      item.Timeout,
+			ExpectBanner: item.ExpectBanner,
+		}
+	case "smtp":
+		def.Config = &models.SMTPCheckConfig{
+			Host:     item.Host,
+			Port:     item.Port,
+			Timeout:  item.Timeout,
+			StartTLS: item.StartTLS,
+			Username: item.SMTPUsername,
+			Password: item.SMTPPassword,
+		}
+	case "grpc_health":
+		def.Config = &models.GRPCHealthCheckConfig{
+			Host:    item.Host,
+			Timeout: item.Timeout,
+			UseTLS:  item.UseTLS,
+		}
+	case "websocket":
+		def.Config = &models.WebSocketCheckConfig{
+			URL:     item.URL,
+			Timeout: item.Timeout,
+		}
+	case "mysql_query", "mysql_query_unixtime", "mysql_replication":
+		cfg := &models.MySQLCheckConfig{
+			Host:    item.Host,
+			Port:    item.Port,
+			Timeout: item.Timeout,
+		}
+		if item.MySQL != nil {
+			cfg.UserName = item.MySQL.UserName
+			cfg.Password = item.MySQL.Password
+			cfg.DBName = item.MySQL.DBName
+			cfg.Query = item.MySQL.Query
+			cfg.Difference = item.MySQL.Difference
+			cfg.Lag = item.MySQL.Lag
+			cfg.ServerList = item.MySQL.ServerList
+		}
+		def.Config = cfg
+	case "pgsql_query", "pgsql_query_unixtime", "pgsql_query_timestamp", "pgsql_replication", "pgsql_replication_status":
+		cfg := &models.PostgreSQLCheckConfig{
+			Host:    item.Host,
+			Port:    item.Port,
+			Timeout: item.Timeout,
+		}
+		if item.PgSQL != nil {
+			cfg.UserName = item.PgSQL.UserName
+			cfg.Password = item.PgSQL.Password
+			cfg.DBName = item.PgSQL.DBName
+			cfg.Query = item.PgSQL.Query
+			cfg.Difference = item.PgSQL.Difference
+			cfg.Lag = item.PgSQL.Lag
+			cfg.ServerList = item.PgSQL.ServerList
+		}
+		def.Config = cfg
+	case "redis":
+		def.Config = &models.RedisCheckConfig{
+			Host:     item.Host,
+			Port:     item.Port,
+			Timeout:  item.Timeout,
+			Password: item.RedisPassword,
+			DB:       item.RedisDB,
+		}
+	case "passive":
+		def.Config = &models.PassiveCheckConfig{
+			Timeout: item.Timeout,
+		}
 	}
 
 	return def

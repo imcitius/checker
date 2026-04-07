@@ -1,0 +1,436 @@
+# =============================================================================
+# Checker test stand configuration
+# Defines all checks for the mock test stand (pass + fail variants)
+# =============================================================================
+
+# --- Application config sections (parsed by pkg/config.LoadConfig) -----------
+
+db:
+  driver: sqlite
+  dsn: /tmp/checker-test.db
+
+defaults:
+  duration: 5s
+  alerts_channel: test_report
+
+alerts:
+  test_report:
+    type: test_report
+    output_file: /tmp/checker-test-report.ndjson
+
+# --- Checks (parsed by import / seed mechanism) -----------------------------
+
+project: teststand
+environment: integration
+
+checks:
+  # ──────────────────────────────────────────────
+  # HTTP
+  # ──────────────────────────────────────────────
+  - name: http_pass
+    type: http
+    url: http://mockserver:8081/health
+    timeout: 5s
+    enabled: true
+
+  - name: http_fail
+    type: http
+    url: http://mockserver:8082/health
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # TCP
+  # ──────────────────────────────────────────────
+  - name: tcp_pass
+    type: tcp
+    host: mockserver
+    port: 9001
+    timeout: 5s
+    enabled: true
+
+  - name: tcp_fail
+    type: tcp
+    host: mockserver
+    port: 9002
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # DNS
+  # ──────────────────────────────────────────────
+  - name: dns_pass
+    type: dns
+    host: mockserver:5353
+    domain: pass.test
+    record_type: A
+    timeout: 5s
+    enabled: true
+
+  - name: dns_fail
+    type: dns
+    host: mockserver:5353
+    domain: fail.test
+    record_type: A
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # SSH
+  # ──────────────────────────────────────────────
+  - name: ssh_pass
+    type: ssh
+    host: mockserver
+    port: 2222
+    timeout: 5s
+    enabled: true
+
+  - name: ssh_fail
+    type: ssh
+    host: mockserver
+    port: 2223
+    timeout: 5s
+    expect_banner: "SSH-"
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # SMTP
+  # ──────────────────────────────────────────────
+  - name: smtp_pass
+    type: smtp
+    host: mockserver
+    port: 2525
+    timeout: 5s
+    enabled: true
+
+  - name: smtp_fail
+    type: smtp
+    host: mockserver
+    port: 2526
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # gRPC
+  # ──────────────────────────────────────────────
+  - name: grpc_pass
+    type: grpc_health
+    host: mockserver:50051
+    timeout: 5s
+    enabled: true
+
+  - name: grpc_fail
+    type: grpc_health
+    host: mockserver:50052
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # WebSocket
+  # ──────────────────────────────────────────────
+  - name: websocket_pass
+    type: websocket
+    url: ws://mockserver:8091
+    timeout: 5s
+    enabled: true
+
+  - name: websocket_fail
+    type: websocket
+    url: ws://mockserver:8092
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # SSL Certificate
+  # ──────────────────────────────────────────────
+  - name: ssl_cert_pass
+    type: ssl_cert
+    host: mockserver
+    port: 8443
+    expiry_warning_days: 30
+    validate_chain: false
+    timeout: 5s
+    enabled: true
+
+  - name: ssl_cert_fail
+    type: ssl_cert
+    host: mockserver
+    port: 8444
+    expiry_warning_days: 30
+    validate_chain: false
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # MySQL Query
+  # ──────────────────────────────────────────────
+  - name: mysql_query_pass
+    type: mysql_query
+    host: mysql
+    port: 3306
+    timeout: 10s
+    mysql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT status FROM test_health WHERE status = 'healthy' LIMIT 1"
+    enabled: true
+
+  - name: mysql_query_fail
+    type: mysql_query
+    host: mysql
+    port: 3306
+    timeout: 10s
+    mysql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT status FROM nonexistent_table LIMIT 1"
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # MySQL Query Unixtime
+  # ──────────────────────────────────────────────
+  - name: mysql_query_unixtime_pass
+    type: mysql_query_unixtime
+    host: mysql
+    port: 3306
+    timeout: 10s
+    mysql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT UNIX_TIMESTAMP()"
+      difference: 60s
+    enabled: true
+
+  - name: mysql_query_unixtime_fail
+    type: mysql_query_unixtime
+    host: mysql
+    port: 3306
+    timeout: 10s
+    mysql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT updated_at FROM heartbeat_stale ORDER BY id DESC LIMIT 1"
+      difference: 60s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # MySQL Replication
+  # ──────────────────────────────────────────────
+  - name: mysql_replication_pass
+    type: mysql_replication
+    host: mysql
+    port: 3306
+    timeout: 10s
+    mysql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      server_list:
+        - "mysql:3306"
+    enabled: true
+
+  - name: mysql_replication_fail
+    type: mysql_replication
+    host: mysql
+    port: 3306
+    timeout: 10s
+    mysql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      server_list:
+        - "nonexistent-host:3306"
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # PostgreSQL Query
+  # ──────────────────────────────────────────────
+  - name: pgsql_query_pass
+    type: pgsql_query
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT status FROM test_health WHERE status = 'healthy' LIMIT 1"
+    enabled: true
+
+  - name: pgsql_query_fail
+    type: pgsql_query
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT status FROM nonexistent_table LIMIT 1"
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # PostgreSQL Query Unixtime
+  # ──────────────────────────────────────────────
+  - name: pgsql_query_unixtime_pass
+    type: pgsql_query_unixtime
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT EXTRACT(EPOCH FROM now())::int"
+      difference: 60s
+    enabled: true
+
+  - name: pgsql_query_unixtime_fail
+    type: pgsql_query_unixtime
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT EXTRACT(EPOCH FROM updated_at)::BIGINT FROM heartbeat_stale ORDER BY id DESC LIMIT 1"
+      difference: 60s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # PostgreSQL Query Timestamp
+  # ──────────────────────────────────────────────
+  - name: pgsql_query_timestamp_pass
+    type: pgsql_query_timestamp
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT now()"
+      difference: 60s
+    enabled: true
+
+  - name: pgsql_query_timestamp_fail
+    type: pgsql_query_timestamp
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      query: "SELECT updated_at FROM heartbeat_stale ORDER BY id DESC LIMIT 1"
+      difference: 60s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # PostgreSQL Replication
+  # ──────────────────────────────────────────────
+  - name: pgsql_replication_pass
+    type: pgsql_replication
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      lag: 3s
+      server_list:
+        - "postgres:5432"
+    enabled: true
+
+  - name: pgsql_replication_fail
+    type: pgsql_replication
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      lag: 3s
+      server_list:
+        - "nonexistent-host:5432"
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # PostgreSQL Replication Status
+  # ──────────────────────────────────────────────
+  - name: pgsql_replication_status_pass
+    type: pgsql_replication_status
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      lag: 3s
+      server_list:
+        - "postgres:5432"
+    enabled: true
+
+  - name: pgsql_replication_status_fail
+    type: pgsql_replication_status
+    host: postgres
+    port: 5432
+    timeout: 10s
+    pgsql:
+      username: checker
+      password: checker
+      dbname: checker_test
+      lag: 3s
+      server_list:
+        - "nonexistent-host:5432"
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # Redis
+  # ──────────────────────────────────────────────
+  - name: redis_pass
+    type: redis
+    host: redis
+    port: 6379
+    redis_password: testpass
+    timeout: 5s
+    enabled: true
+
+  - name: redis_fail
+    type: redis
+    host: redis
+    port: 6379
+    redis_password: wrongpassword
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # MongoDB
+  # ──────────────────────────────────────────────
+  - name: mongodb_pass
+    type: mongodb
+    mongodb_uri: mongodb://mongodb:27017
+    timeout: 5s
+    enabled: true
+
+  - name: mongodb_fail
+    type: mongodb
+    mongodb_uri: mongodb://nonexistent-host:27017
+    timeout: 5s
+    enabled: true
+
+  # ──────────────────────────────────────────────
+  # Passive (no fail variant)
+  # ──────────────────────────────────────────────
+  - name: passive_pass
+    type: passive
+    timeout: 30s
+    enabled: true

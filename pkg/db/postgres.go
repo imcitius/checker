@@ -756,9 +756,9 @@ func (db *PostgresDB) GetUnhealthyChecks(ctx context.Context) ([]models.CheckDef
 
 func (db *PostgresDB) CreateAlertEvent(ctx context.Context, event models.AlertEvent) error {
 	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO alert_history (check_uuid, check_name, project, group_name, check_type, message, alert_type)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		event.CheckUUID, event.CheckName, event.Project, event.GroupName, event.CheckType, event.Message, event.AlertType)
+		`INSERT INTO alert_history (check_uuid, check_name, project, group_name, check_type, message, alert_type, region)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		event.CheckUUID, event.CheckName, event.Project, event.GroupName, event.CheckType, event.Message, event.AlertType, event.Region)
 	return err
 }
 
@@ -800,7 +800,7 @@ func (db *PostgresDB) GetAlertHistory(ctx context.Context, limit, offset int, fi
 
 	// Get paginated results
 	query := fmt.Sprintf(
-		"SELECT id, check_uuid, check_name, project, group_name, check_type, message, alert_type, created_at, resolved_at, is_resolved FROM alert_history WHERE 1=1%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		"SELECT id, check_uuid, check_name, project, group_name, check_type, message, alert_type, region, created_at, resolved_at, is_resolved FROM alert_history WHERE 1=1%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
 		where, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
@@ -813,7 +813,7 @@ func (db *PostgresDB) GetAlertHistory(ctx context.Context, limit, offset int, fi
 	var events []models.AlertEvent
 	for rows.Next() {
 		var e models.AlertEvent
-		if err := rows.Scan(&e.ID, &e.CheckUUID, &e.CheckName, &e.Project, &e.GroupName, &e.CheckType, &e.Message, &e.AlertType, &e.CreatedAt, &e.ResolvedAt, &e.IsResolved); err != nil {
+		if err := rows.Scan(&e.ID, &e.CheckUUID, &e.CheckName, &e.Project, &e.GroupName, &e.CheckType, &e.Message, &e.AlertType, &e.Region, &e.CreatedAt, &e.ResolvedAt, &e.IsResolved); err != nil {
 			return nil, 0, err
 		}
 		events = append(events, e)

@@ -1,0 +1,103 @@
+services:
+  mockserver:
+    build: ./mockserver
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    # No host port mappings needed - checker runs inside docker-compose network
+    networks:
+      - testnet
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: checker
+      POSTGRES_PASSWORD: checker
+      POSTGRES_DB: checker_test
+    volumes:
+      - ./seeds/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U checker -d checker_test"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - testnet
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: checker_test
+      MYSQL_USER: checker
+      MYSQL_PASSWORD: checker
+    volumes:
+      - ./seeds/mysql-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    networks:
+      - testnet
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass testpass
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "testpass", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - testnet
+
+  mongodb:
+    image: mongo:7
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand('ping').ok"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+    networks:
+      - testnet
+
+  checker:
+    image: golang:1.26-alpine
+    working_dir: /app
+    volumes:
+      - ../../:/app
+      - /tmp:/tmp
+    command: >
+      sh -c "
+        mkdir -p internal/web/spa && touch internal/web/spa/.gitkeep &&
+        go build -o /tmp/checker ./cmd/app/ &&
+        /tmp/checker --config test/teststand/config.yaml --test-run
+      "
+    depends_on:
+      mockserver:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks:
+      - testnet
+    profiles:
+      - run
+
+networks:
+  testnet:
+    name: checker-testnet
+    driver: bridge

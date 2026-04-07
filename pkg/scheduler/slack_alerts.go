@@ -137,6 +137,7 @@ func (sa *SlackAlerter) SendAlert(ctx context.Context, checkDef models.CheckDefi
 		CheckType: checkDef.Type,
 		Message:   status.Message,
 		AlertType: "slack",
+		Region:    status.Region,
 	}
 	if err := sa.repo.CreateAlertEvent(ctx, alertEvent); err != nil {
 		logrus.Errorf("Failed to record alert event for check %s: %v", checkDef.UUID, err)
