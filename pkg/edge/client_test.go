@@ -1,6 +1,7 @@
 package edge
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -33,6 +34,36 @@ func echoServer(t *testing.T) (string, func()) {
 	}))
 	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
 	return wsURL, srv.Close
+}
+
+// TestIsGoingAway verifies that isGoingAway correctly identifies 1001 close errors,
+// including when the error is wrapped with fmt.Errorf("%w", ...).
+func TestIsGoingAway(t *testing.T) {
+	goingAway := &websocket.CloseError{Code: websocket.CloseGoingAway, Text: "server shutting down"}
+	normalClose := &websocket.CloseError{Code: websocket.CloseNormalClosure, Text: "normal"}
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"direct going-away", goingAway, true},
+		{"wrapped going-away", fmt.Errorf("read: %w", goingAway), true},
+		{"double-wrapped going-away", fmt.Errorf("outer: %w", fmt.Errorf("read: %w", goingAway)), true},
+		{"normal close", normalClose, false},
+		{"wrapped normal close", fmt.Errorf("read: %w", normalClose), false},
+		{"generic error", fmt.Errorf("some other error"), false},
+		{"nil", nil, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isGoingAway(tc.err)
+			if got != tc.want {
+				t.Errorf("isGoingAway(%v) = %v, want %v", tc.err, got, tc.want)
+			}
+		})
+	}
 }
 
 // TestWsConn_ConcurrentWrites verifies that wsConn serialises concurrent

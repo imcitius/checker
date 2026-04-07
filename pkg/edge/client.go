@@ -3,6 +3,7 @@ package edge
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -95,13 +96,25 @@ func (c *Client) Run(ctx context.Context) error {
 				// Cancelled — clean exit.
 				return nil
 			}
-			logrus.Errorf("EdgeClient: connection error: %v — reconnecting in %s", err, backoff)
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-time.After(backoff):
+			if isGoingAway(err) {
+				// Server is restarting cleanly (Railway redeploy, rolling restart, etc.).
+				// It will be back in seconds — reconnect quickly with a fixed 1s delay
+				// and do NOT advance the exponential backoff counter.
+				logrus.Infof("EdgeClient: server shutting down (1001 going away) — reconnecting in 1s")
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-time.After(time.Second):
+				}
+			} else {
+				logrus.Errorf("EdgeClient: connection error: %v — reconnecting in %s", err, backoff)
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-time.After(backoff):
+				}
+				backoff = nextBackoff(backoff)
 			}
-			backoff = nextBackoff(backoff)
 		}
 	}
 }
@@ -337,6 +350,14 @@ func nextBackoff(current time.Duration) time.Duration {
 		next = maxBackoff
 	}
 	return next
+}
+
+// isGoingAway reports whether err (possibly wrapped) is a WebSocket close frame
+// with code 1001 (Going Away). This code is sent by the server during a clean
+// shutdown such as a Railway redeploy — the server is expected to return quickly.
+func isGoingAway(err error) bool {
+	var ce *websocket.CloseError
+	return errors.As(err, &ce) && ce.Code == websocket.CloseGoingAway
 }
 
 // maskToken redacts an API token for safe log output, keeping a recognisable
