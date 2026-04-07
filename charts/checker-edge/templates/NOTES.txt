@@ -1,0 +1,36 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your Ensafely edge checker has been deployed. Here's how to verify it's running:
+
+1. Check pod status:
+   kubectl get pods -l app.kubernetes.io/name=checker-edge -n {{ .Release.Namespace }}
+
+2. View logs:
+   kubectl logs -l app.kubernetes.io/name=checker-edge -n {{ .Release.Namespace }} -f
+
+3. Verify connection in your Ensafely dashboard:
+   → Log in at https://app.ensafely.com
+   → Navigate to Edge Instances
+   → You should see "{{ .Values.region | default "your-region" }}" listed as connected
+
+4. The checker will automatically receive check configurations from your Ensafely workspace.
+   No manual configuration is needed — checks are managed centrally from your dashboard.
+
+{{- if not .Values.region }}
+
+⚠️  WARNING: No region was specified (.Values.region is empty).
+    Set a region label to identify this deployment:
+    helm upgrade {{ .Release.Name }} {{ .Chart.Name }} --set region=my-region
+{{- end }}
+
+{{- if and (not .Values.apiKey) (not .Values.existingSecret.name) }}
+
+⚠️  WARNING: No API key configured. The edge checker will not be able to connect.
+    Provide your Ensafely API key:
+    helm upgrade {{ .Release.Name }} {{ .Chart.Name }} --set apiKey=ck_your_key_here
+
+    Or reference an existing secret:
+    helm upgrade {{ .Release.Name }} {{ .Chart.Name }} \
+      --set existingSecret.name=my-secret \
+      --set existingSecret.key=api-key
+{{- end }}

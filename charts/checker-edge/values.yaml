@@ -1,0 +1,42 @@
+image:
+  repository: ghcr.io/imcitius/checker-edge
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Required: Ensafely API key (create at app.ensafely.com → API Keys)
+apiKey: ""
+# Or reference an existing Kubernetes Secret:
+existingSecret:
+  name: ""
+  key: "api-key"
+
+# Ensafely SaaS WebSocket endpoint
+saasUrl: "wss://app.ensafely.com/ws/edge"
+
+# Region label for this deployment (e.g. "us-east-k8s", "office-london")
+region: ""
+
+# Number of concurrent check workers
+workers: 10
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+podAnnotations: {}
+podLabels: {}
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
