@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - dev
+      - main
     paths:
       - "charts/**"
   release:
@@ -30,6 +31,18 @@ jobs:
 
       - name: Lint chart
         run: helm lint charts/checker-edge
+
+      - name: Set release version
+        if: github.event_name == 'release'
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION_NO_V="${VERSION#v}"
+          # Update Chart.yaml appVersion
+          sed -i "s/^appVersion:.*/appVersion: \"${VERSION_NO_V}\"/" charts/checker-edge/Chart.yaml
+          # Update Chart.yaml version to match
+          sed -i "s/^version:.*/version: ${VERSION_NO_V}/" charts/checker-edge/Chart.yaml
+          # Update default image tag in values.yaml
+          sed -i "s/^  tag:.*/  tag: ${VERSION_NO_V}/" charts/checker-edge/values.yaml
 
       - name: Package chart
         run: |
