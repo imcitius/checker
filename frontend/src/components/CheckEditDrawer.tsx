@@ -1133,42 +1133,7 @@ export function CheckEditDrawer({
             )}
           </section>
 
-          {/* ─── Legacy Alert Configuration ─── */}
-          <section className="space-y-4">
-            <SectionHeader>Legacy Alert (deprecated)</SectionHeader>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground">Alert Type</label>
-                <Select
-                  value={editingCheck.alert_type || 'none'}
-                  onValueChange={(v) => updateForm('alert_type', v === 'none' ? '' : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="slack">Slack</SelectItem>
-                    <SelectItem value="webhook">Webhook</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Alert Destination</label>
-                <Input
-                  value={editingCheck.alert_destination || ''}
-                  onChange={(e) => updateForm('alert_destination', e.target.value)}
-                  placeholder={
-                    editingCheck.alert_type === 'slack'
-                      ? '#channel or @user'
-                      : editingCheck.alert_type === 'webhook'
-                        ? 'https://webhook.example.com/...'
-                        : 'Select an alert type first'
-                  }
-                />
-              </div>
-            </div>
-          </section>
+          {/* ─── Cloud Extensions Anchor ─── */}
 
           {/* ─── Maintenance Window ─── */}
           {editingCheck.uuid && (

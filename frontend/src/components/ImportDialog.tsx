@@ -22,8 +22,6 @@ environment: prod
 defaults:
   duration: 30s
   timeout: 10s
-  alert_type: slack
-  alert_destination: "#my-service-alerts"
 
 checks:
   - name: "API Health"
