@@ -7,7 +7,9 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
+	"github.com/imcitius/checker/internal/sentry"
 	"github.com/imcitius/checker/pkg/edge"
 	"github.com/sirupsen/logrus"
 )
@@ -18,6 +20,10 @@ func main() {
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
 	logrus.SetLevel(logrus.InfoLevel)
+
+	if sentry.Init("edge-1.0.0") {
+		defer sentry.Flush(2 * time.Second)
+	}
 
 	cfg := edge.ClientConfig{
 		SaaSURL:    envOrFatal("CHECKER_SAAS_URL"),
