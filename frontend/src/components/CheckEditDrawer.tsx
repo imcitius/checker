@@ -490,7 +490,7 @@ export function CheckEditDrawer({
           {/* ─── General ─── */}
           <section className="space-y-4">
             <SectionHeader>General</SectionHeader>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div>
                 <label className="text-xs text-muted-foreground">Name *</label>
                 <Input
