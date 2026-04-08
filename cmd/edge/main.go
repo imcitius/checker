@@ -7,17 +7,37 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
+	"github.com/imcitius/checker/internal/sentry"
 	"github.com/imcitius/checker/pkg/edge"
 	"github.com/sirupsen/logrus"
 )
+
+// Version is injected at build time via -ldflags.
+// It defaults to "dev" so that local/unversioned builds are distinguishable.
+var Version = "dev"
 
 func main() {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
-	logrus.SetLevel(logrus.InfoLevel)
+	logLevel := logrus.InfoLevel
+	if levelStr := os.Getenv("CHECKER_LOG_LEVEL"); levelStr != "" {
+		parsed, err := logrus.ParseLevel(levelStr)
+		if err != nil {
+			logrus.Warnf("EdgeClient: invalid CHECKER_LOG_LEVEL %q, falling back to info", levelStr)
+		} else {
+			logLevel = parsed
+		}
+	}
+	logrus.SetLevel(logLevel)
+	logrus.Infof("EdgeClient: log level set to %s", logLevel)
+
+	if sentry.Init(Version) {
+		defer sentry.Flush(2 * time.Second)
+	}
 
 	cfg := edge.ClientConfig{
 		SaaSURL:    envOrFatal("CHECKER_SAAS_URL"),

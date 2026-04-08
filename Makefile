@@ -18,8 +18,9 @@ build-go:
 	go build -ldflags="-s -w -X main.Version=$$(git rev-parse HEAD 2>/dev/null || echo unknown) -X main.BuildTime=$$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o checker ./cmd/app
 
 # Build the edge checker binary (no frontend needed)
+GIT_TAG_OR_SHA = $(shell git describe --tags --exact-match 2>/dev/null || echo dev-$(shell git rev-parse --short HEAD 2>/dev/null || echo unknown))
 build-edge:
-	go build -o bin/checker-edge ./cmd/edge
+	go build -ldflags="-s -w -X main.Version=$(GIT_TAG_OR_SHA) -X github.com/imcitius/checker/pkg/edge.edgeClientVersion=$(GIT_TAG_OR_SHA)" -o bin/checker-edge ./cmd/edge
 
 # Build Docker image
 docker:
