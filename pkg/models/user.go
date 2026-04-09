@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BUSL-1.1
+
 package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
