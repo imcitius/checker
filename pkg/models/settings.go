@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BUSL-1.1
+
 package models
 
 // CheckDefaults holds checker-wide default values applied to new checks.

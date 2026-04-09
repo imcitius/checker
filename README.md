@@ -576,4 +576,21 @@ INTEGRATION_TESTS=true TEST_MYSQL_USERNAME=root TEST_MYSQL_PASSWORD=password go 
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the [Business Source License 1.1](LICENSE) (BSL 1.1).
+
+### What is allowed
+
+- Self-hosting for internal use
+- Modifying the source code
+- Using the software for personal or internal business purposes
+- Non-competing commercial use (e.g. running checks for your own infrastructure)
+
+### What is NOT allowed
+
+- Offering this software as a **managed monitoring, health-checking, or uptime-tracking service** to third parties (i.e. you cannot build a SaaS product on top of this software that competes with Ensafely)
+
+### Change Date
+
+On **May 1, 2031**, the license automatically converts to the **Apache License 2.0**, making the software fully open source.
+
+For alternative licensing arrangements, please contact [Ensafely](https://ensafely.com).

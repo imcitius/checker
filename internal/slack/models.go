@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BUSL-1.1
+
 package slack
 
 // CheckAlertInfo contains the check information used when posting alerts to Slack.
