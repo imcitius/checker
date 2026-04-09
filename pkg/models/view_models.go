@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BUSL-1.1
+
 package models
 
 // CheckViewModel represents the data structure used by the dashboard view
