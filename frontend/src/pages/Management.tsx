@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Layers } from 'lucide-react'
 import { api, type CheckDefinition } from '@/lib/api'
+import { type Check } from '@/lib/websocket'
 import { Button } from '@/components/ui/button'
+import { StatusDot } from '@/components/StatusDot'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -31,10 +34,10 @@ import { Input } from '@/components/ui/input'
 import { api as apiClient } from '@/lib/api'
 import { toast } from 'sonner'
 
-type SortColumn = 'name' | 'type' | 'group' | 'duration' | 'enabled'
+type SortColumn = 'name' | 'type' | 'group' | 'duration' | 'enabled' | 'status'
 type SortDirection = 'asc' | 'desc'
 
-const VALID_SORT_COLUMNS: readonly string[] = ['name', 'type', 'group', 'duration', 'enabled'] as const
+const VALID_SORT_COLUMNS: readonly string[] = ['name', 'type', 'group', 'duration', 'enabled', 'status'] as const
 const VALID_SORT_DIRECTIONS: readonly string[] = ['asc', 'desc'] as const
 const COLLAPSED_KEY = 'checker-manage-collapsed'
 const SORT_KEY = 'checker-manage-sort'
@@ -113,8 +116,34 @@ interface ProjectGroup {
   disabledCount: number
 }
 
+// Returns a numeric priority for sorting by status (lower = more urgent)
+function getStatusPriority(def: CheckDefinition, liveCheck: Check | undefined): number {
+  if (!def.enabled) return 5
+  if (!liveCheck) return 2 // pending (no live data yet)
+  if (liveCheck.IsSilenced) return liveCheck.LastResult ? 3 : 1
+  if (!liveCheck.LastResult) return 0 // failing
+  return 4 // ok
+}
+
+// Returns label + dot props for a check definition given live websocket data
+function getCheckStatus(def: CheckDefinition, liveCheck: Check | undefined) {
+  if (!def.enabled) {
+    return { label: 'Disabled', healthy: false, enabled: false, silenced: false }
+  }
+  if (!liveCheck) {
+    return { label: 'Pending', healthy: false, enabled: true, silenced: false, pending: true }
+  }
+  if (liveCheck.IsSilenced) {
+    return { label: 'Silenced', healthy: liveCheck.LastResult, enabled: true, silenced: true }
+  }
+  if (liveCheck.LastResult) {
+    return { label: 'OK', healthy: true, enabled: true, silenced: false }
+  }
+  return { label: 'Failing', healthy: false, enabled: true, silenced: false }
+}
+
 export function Management() {
-  const { wsStatus } = useChecks()
+  const { wsStatus, checksMap } = useChecks()
   const [definitions, setDefinitions] = useState<CheckDefinition[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -249,6 +278,12 @@ export function Management() {
   const sortChecks = useCallback((checks: CheckDefinition[]) => {
     if (!sortColumn) return checks
     return [...checks].sort((a, b) => {
+      if (sortColumn === 'status') {
+        const aPriority = getStatusPriority(a, checksMap.get(a.uuid))
+        const bPriority = getStatusPriority(b, checksMap.get(b.uuid))
+        const cmp = aPriority - bPriority
+        return sortDirection === 'asc' ? cmp : -cmp
+      }
       let aVal: string | boolean
       let bVal: string | boolean
       switch (sortColumn) {
@@ -282,7 +317,7 @@ export function Management() {
       const cmp = (aVal as string).localeCompare(bVal as string)
       return sortDirection === 'asc' ? cmp : -cmp
     })
-  }, [sortColumn, sortDirection])
+  }, [sortColumn, sortDirection, checksMap])
 
   // Two-level grouping: Project → Group (group_name)
   const groups: ProjectGroup[] = useMemo(() => {
@@ -539,6 +574,8 @@ export function Management() {
 
   const renderCheckRow = (def: CheckDefinition) => {
     const isSelected = selectedUUIDs.has(def.uuid)
+    const liveCheck = checksMap.get(def.uuid)
+    const status = getCheckStatus(def, liveCheck)
     return (
       <tr
         key={def.uuid}
@@ -559,6 +596,35 @@ export function Management() {
               <Square className="h-4 w-4" />
             )}
           </button>
+        </td>
+        <td className="px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            {status.pending ? (
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-muted-foreground/40 shrink-0" />
+            ) : (
+              <StatusDot
+                healthy={status.healthy}
+                enabled={status.enabled}
+                silenced={status.silenced}
+              />
+            )}
+            <span
+              className={cn(
+                'font-mono text-xs whitespace-nowrap',
+                !def.enabled
+                  ? 'text-muted-foreground'
+                  : status.silenced
+                    ? 'text-warning'
+                    : status.pending
+                      ? 'text-muted-foreground/60'
+                      : status.healthy
+                        ? 'text-healthy'
+                        : 'text-unhealthy font-semibold'
+              )}
+            >
+              {status.label}
+            </span>
+          </div>
         </td>
         <td className="px-3 py-2 overflow-hidden">
           <div className="font-medium break-words">{def.name}</div>
@@ -857,6 +923,7 @@ export function Management() {
                                   <table className="w-full text-sm table-fixed">
                                     <colgroup>
                                       <col className="w-10" />
+                                      <col className="w-[100px]" />
                                       <col className="w-[200px]" />
                                       <col />
                                       <col className="w-[70px]" />
@@ -879,6 +946,9 @@ export function Management() {
                                               <Square className="h-3.5 w-3.5" />
                                             )}
                                           </button>
+                                        </th>
+                                        <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('status')}>
+                                          <span className="inline-flex items-center">Status<SortIcon column="status" /></span>
                                         </th>
                                         <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('name')}>
                                           <span className="inline-flex items-center">Name<SortIcon column="name" /></span>
@@ -993,10 +1063,24 @@ export function Management() {
                                         <Badge variant="secondary" className="text-[10px]">
                                           {def.type}
                                         </Badge>
-                                        <div
-                                          className={`h-2.5 w-2.5 rounded-full ${def.enabled ? 'bg-healthy' : 'bg-disabled'}`}
-                                          title={def.enabled ? 'Enabled' : 'Disabled'}
-                                        />
+                                        {(() => {
+                                          const liveCheck = checksMap.get(def.uuid)
+                                          const status = getCheckStatus(def, liveCheck)
+                                          return (
+                                            <div className="flex items-center gap-1" title={status.label}>
+                                              {status.pending ? (
+                                                <span className="inline-block h-2.5 w-2.5 rounded-full bg-muted-foreground/40 shrink-0" />
+                                              ) : (
+                                                <StatusDot
+                                                  healthy={status.healthy}
+                                                  enabled={status.enabled}
+                                                  silenced={status.silenced}
+                                                  size="sm"
+                                                />
+                                              )}
+                                            </div>
+                                          )
+                                        })()}
                                       </div>
                                     </div>
                                     <div className="flex items-center justify-between mt-3">
