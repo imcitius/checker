@@ -37,6 +37,7 @@ export const CheckRow = memo(function CheckRow({
 
   return (
     <div
+      id={`check-${check.UUID}`}
       className={cn(
         'flex items-center gap-3 px-3 py-1.5 cursor-pointer transition-colors text-sm',
         'hover:bg-muted/50',
