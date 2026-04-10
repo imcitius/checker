@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Layers } from 'lucide-react'
-import { api, type CheckDefinition } from '@/lib/api'
+import { api, type CheckDefinition, type AlertChannel } from '@/lib/api'
 import { type Check } from '@/lib/websocket'
 import { Button } from '@/components/ui/button'
 import { StatusDot } from '@/components/StatusDot'
@@ -207,6 +207,7 @@ export function Management() {
   const [bulkAlertChannelsDialogOpen, setBulkAlertChannelsDialogOpen] = useState(false)
   const [bulkAlertAction, setBulkAlertAction] = useState<'add' | 'remove' | 'replace'>('add')
   const [bulkAlertSelectedChannels, setBulkAlertSelectedChannels] = useState<Set<string>>(new Set())
+  const [allAlertChannels, setAllAlertChannels] = useState<AlertChannel[]>([])
 
   // Bulk selection
   const [selectedUUIDs, setSelectedUUIDs] = useState<Set<string>>(new Set())
@@ -221,14 +222,16 @@ export function Management() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [defs, projs, types] = await Promise.all([
+      const [defs, projs, types, channels] = await Promise.all([
         api.getChecks(),
         api.getProjects().catch(() => [] as string[]),
         api.getCheckTypes().catch(() => [] as string[]),
+        api.getAlertChannels().catch(() => [] as AlertChannel[]),
       ])
       setDefinitions(defs || [])
       setProjects(projs || [])
       setCheckTypes(types || [])
+      setAllAlertChannels(channels || [])
       // Clear selection of items that no longer exist
       setSelectedUUIDs((prev) => {
         const validUUIDs = new Set((defs || []).map((d) => d.uuid))
@@ -608,16 +611,11 @@ export function Management() {
     }
   }
 
-  // Collect all unique alert channel names from loaded checks
-  const availableChannelNames = useMemo(() => {
-    const names = new Set<string>()
-    for (const def of definitions) {
-      if (def.alert_channels) {
-        for (const ch of def.alert_channels) names.add(ch)
-      }
-    }
-    return Array.from(names).sort()
-  }, [definitions])
+  // All alert channels available system-wide (fetched from API)
+  const availableChannelNames = useMemo(
+    () => allAlertChannels.map((ch) => ch.name).sort(),
+    [allAlertChannels]
+  )
 
   const handleBulkAlertChannels = async () => {
     if (bulkAlertSelectedChannels.size === 0) return
@@ -1424,21 +1422,21 @@ export function Management() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Channels</label>
                 <div className="flex flex-wrap gap-2">
-                  {availableChannelNames.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No alert channels found in current checks.</p>
+                  {allAlertChannels.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No alert channels configured in the system.</p>
                   ) : (
-                    availableChannelNames.map((ch) => {
-                      const meta = CHANNEL_TYPES.find((ct) => ct.value === ch)
-                      const isSelected = bulkAlertSelectedChannels.has(ch)
+                    allAlertChannels.map((channel) => {
+                      const meta = CHANNEL_TYPES.find((ct) => ct.value === channel.type)
+                      const isSelected = bulkAlertSelectedChannels.has(channel.name)
                       return (
                         <button
-                          key={ch}
+                          key={channel.name}
                           type="button"
                           onClick={() => {
                             setBulkAlertSelectedChannels((prev) => {
                               const next = new Set(prev)
-                              if (next.has(ch)) next.delete(ch)
-                              else next.add(ch)
+                              if (next.has(channel.name)) next.delete(channel.name)
+                              else next.add(channel.name)
                               return next
                             })
                           }}
@@ -1451,7 +1449,8 @@ export function Management() {
                         >
                           {isSelected && <CheckSquare className="h-3.5 w-3.5" />}
                           {!isSelected && <Square className="h-3.5 w-3.5" />}
-                          {meta?.label ?? ch}
+                          {channel.name}
+                          {meta && <span className="text-xs opacity-70">({meta.label})</span>}
                         </button>
                       )
                     })
