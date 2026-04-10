@@ -272,18 +272,26 @@ func (s *Scheduler) processNextCheck() {
 
 // Sync fetches checks from DB and updates the heap
 func (s *Scheduler) Sync(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	// Reload default alert channels from settings
 	if defaults, err := s.repo.GetCheckDefaults(ctx); err == nil {
-		defaultAlertChannels = defaults.AlertChannels
+		if len(defaults.AlertChannels) > 0 {
+			defaultAlertChannels = defaults.AlertChannels
+			logrus.Debugf("Sync: reloaded default alert channels: %v", defaultAlertChannels)
+		}
+		// Don't overwrite existing defaults with empty — only update when the setting has channels
+	} else {
+		logrus.WithError(err).Warn("Sync: failed to reload check defaults")
 	}
 
 	defs, err := s.getAllChecks(ctx)
 	if err != nil {
 		return fmt.Errorf("fetching check definitions: %w", err)
 	}
+
+	logrus.Debugf("Sync: loaded %d enabled check definitions from DB", len(defs))
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -324,14 +332,18 @@ func (s *Scheduler) Sync(ctx context.Context) error {
 	// If we simply delete from checkMap, the item is still in heap.
 	// We should remove from heap.
 
+	removed := 0
 	for uuid, item := range s.checkMap {
 		if !activeUUIDs[uuid] {
 			// Check was deleted or became invalid
 			heap.Remove(s.checkHeap, item.Index)
 			delete(s.checkMap, uuid)
 			logrus.Infof("Descheduled check %s", uuid)
+			removed++
 		}
 	}
+
+	logrus.Debugf("Sync complete: %d checks in heap, %d removed", len(s.checkMap), removed)
 
 	return nil
 }
@@ -583,6 +595,13 @@ var defaultAlertChannels []string
 func getEffectiveAlertChannels(checkDef models.CheckDefinition) []string {
 	if len(checkDef.AlertChannels) > 0 {
 		return checkDef.AlertChannels
+	}
+	if len(defaultAlertChannels) > 0 {
+		logrus.Debugf("Check %q (%s) has no alert_channels, falling back to system defaults: %v",
+			checkDef.Name, checkDef.UUID, defaultAlertChannels)
+	} else {
+		logrus.Debugf("Check %q (%s) has no alert_channels and no system defaults configured",
+			checkDef.Name, checkDef.UUID)
 	}
 	return defaultAlertChannels
 }

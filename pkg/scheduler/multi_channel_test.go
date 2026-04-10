@@ -22,10 +22,49 @@ func TestGetEffectiveAlertChannels_UsesAlertChannels(t *testing.T) {
 }
 
 func TestGetEffectiveAlertChannels_NoChannels(t *testing.T) {
+	// Save and restore the package-level default
+	saved := defaultAlertChannels
+	defaultAlertChannels = nil
+	defer func() { defaultAlertChannels = saved }()
+
 	def := models.CheckDefinition{}
 	channels := getEffectiveAlertChannels(def)
 	if len(channels) != 0 {
 		t.Fatalf("expected empty channels, got %v", channels)
+	}
+}
+
+func TestGetEffectiveAlertChannels_FallsBackToSystemDefaults(t *testing.T) {
+	// Save and restore the package-level default
+	saved := defaultAlertChannels
+	defaultAlertChannels = []string{"slack-ops", "telegram-alerts"}
+	defer func() { defaultAlertChannels = saved }()
+
+	def := models.CheckDefinition{} // no alert channels set
+	channels := getEffectiveAlertChannels(def)
+	if len(channels) != 2 {
+		t.Fatalf("expected 2 default channels, got %d: %v", len(channels), channels)
+	}
+	if channels[0] != "slack-ops" || channels[1] != "telegram-alerts" {
+		t.Fatalf("expected [slack-ops telegram-alerts], got %v", channels)
+	}
+}
+
+func TestGetEffectiveAlertChannels_CheckChannelsOverrideDefaults(t *testing.T) {
+	// Save and restore the package-level default
+	saved := defaultAlertChannels
+	defaultAlertChannels = []string{"slack-ops", "telegram-alerts"}
+	defer func() { defaultAlertChannels = saved }()
+
+	def := models.CheckDefinition{
+		AlertChannels: []string{"pagerduty"},
+	}
+	channels := getEffectiveAlertChannels(def)
+	if len(channels) != 1 {
+		t.Fatalf("expected 1 channel, got %d: %v", len(channels), channels)
+	}
+	if channels[0] != "pagerduty" {
+		t.Fatalf("expected [pagerduty], got %v", channels)
 	}
 }
 

@@ -114,6 +114,45 @@ func parseImportPayload(c *gin.Context) (*models.CheckImportPayload, error) {
 	return &payload, nil
 }
 
+// resolveChecksWithSystemDefaults applies payload-level defaults, then falls back to
+// system-wide check defaults from the database for alert_channels when still empty.
+func resolveChecksWithSystemDefaults(payload *models.CheckImportPayload, repo db.Repository, ctx context.Context) []models.CheckImportItem {
+	resolved := resolveChecks(payload)
+
+	// If any checks still have no alert_channels after payload defaults, try system defaults
+	needsSystemDefaults := false
+	for _, check := range resolved {
+		if len(check.AlertChannels) == 0 {
+			needsSystemDefaults = true
+			break
+		}
+	}
+
+	if needsSystemDefaults {
+		defaults, err := repo.GetCheckDefaults(ctx)
+		if err != nil {
+			logrus.WithError(err).Warn("Failed to load system check defaults for import fallback")
+		} else if len(defaults.AlertChannels) > 0 {
+			logrus.Debugf("Applying system default alert channels to imported checks: %v", defaults.AlertChannels)
+			applySystemDefaultAlertChannels(resolved, defaults.AlertChannels)
+		} else {
+			logrus.Debug("No system default alert channels configured; imported checks will have empty alert_channels")
+		}
+	}
+
+	return resolved
+}
+
+// applySystemDefaultAlertChannels sets the given default channels on any checks
+// that have no alert_channels configured. Modifies the slice in place.
+func applySystemDefaultAlertChannels(checks []models.CheckImportItem, systemDefaults []string) {
+	for i := range checks {
+		if len(checks[i].AlertChannels) == 0 {
+			checks[i].AlertChannels = systemDefaults
+		}
+	}
+}
+
 // resolveChecks applies payload-level defaults and project/environment to each check.
 func resolveChecks(payload *models.CheckImportPayload) []models.CheckImportItem {
 	resolved := make([]models.CheckImportItem, 0, len(payload.Checks))
@@ -177,6 +216,25 @@ func resolveChecks(payload *models.CheckImportPayload) []models.CheckImportItem 
 // validateChecks returns validation errors for each check.
 func validateChecks(checks []models.CheckImportItem) []models.CheckImportError {
 	errors := make([]models.CheckImportError, 0)
+
+	// Detect duplicate check names within the same project+group scope
+	type checkKey struct {
+		project   string
+		groupName string
+		name      string
+	}
+	seen := make(map[checkKey]int) // key -> first index
+	for i, check := range checks {
+		key := checkKey{project: check.Project, groupName: check.GroupName, name: check.Name}
+		if firstIdx, exists := seen[key]; exists {
+			errors = append(errors, models.CheckImportError{
+				Name:    check.Name,
+				Index:   i,
+				Message: fmt.Sprintf("duplicate check name %q in project=%q group=%q (first at index %d); later definition will overwrite the earlier one", check.Name, check.Project, check.GroupName, firstIdx),
+			})
+		}
+		seen[key] = i
+	}
 
 	for i, check := range checks {
 		if check.Name == "" {
@@ -243,7 +301,7 @@ func validateChecks(checks []models.CheckImportItem) []models.CheckImportError {
 
 // executeImport performs the actual import: upsert checks, optionally prune.
 func executeImport(ctx context.Context, repo db.Repository, payload *models.CheckImportPayload) (*models.CheckImportResult, error) {
-	resolved := resolveChecks(payload)
+	resolved := resolveChecksWithSystemDefaults(payload, repo, ctx)
 	validationErrors := validateChecks(resolved)
 
 	result := &models.CheckImportResult{
