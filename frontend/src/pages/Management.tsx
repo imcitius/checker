@@ -6,6 +6,7 @@ import { type Check } from '@/lib/websocket'
 import { Button } from '@/components/ui/button'
 import { StatusDot } from '@/components/StatusDot'
 import { cn } from '@/lib/utils'
+import { CHANNEL_TYPES } from '@/lib/channels'
 import {
   Dialog,
   DialogContent,
@@ -140,6 +141,38 @@ function getCheckStatus(def: CheckDefinition, liveCheck: Check | undefined) {
     return { label: 'OK', healthy: true, enabled: true, silenced: false }
   }
   return { label: 'Failing', healthy: false, enabled: true, silenced: false }
+}
+
+function AlertChannelBadges({ channels }: { channels?: string[] }) {
+  if (!channels || channels.length === 0) {
+    return (
+      <span className="text-[10px] text-amber-500 font-medium whitespace-nowrap">No alerts</span>
+    )
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {channels.map((ch) => {
+        const meta = CHANNEL_TYPES.find((ct) => ct.value === ch)
+        const label = meta?.label ?? ch
+        const color = meta?.color ?? 'bg-gray-500'
+        return (
+          <Tooltip key={ch}>
+            <TooltipTrigger asChild>
+              <span
+                className={cn(
+                  'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium text-white leading-none',
+                  color
+                )}
+              >
+                {label}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{ch}</TooltipContent>
+          </Tooltip>
+        )
+      })}
+    </div>
+  )
 }
 
 export function Management() {
@@ -645,6 +678,9 @@ export function Management() {
             {def.type}
           </Badge>
         </td>
+        <td className="px-3 py-2">
+          <AlertChannelBadges channels={def.alert_channels} />
+        </td>
         <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{def.duration}</td>
         <td className="px-3 py-2">
           <Switch
@@ -927,6 +963,7 @@ export function Management() {
                                       <col className="w-[200px]" />
                                       <col />
                                       <col className="w-[70px]" />
+                                      <col className="w-[160px]" />
                                       <col className="w-[90px]" />
                                       <col className="w-[70px]" />
                                       <col className="w-[100px]" />
@@ -958,6 +995,9 @@ export function Management() {
                                         </th>
                                         <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('type')}>
                                           <span className="inline-flex items-center">Type<SortIcon column="type" /></span>
+                                        </th>
+                                        <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">
+                                          Alert Channels
                                         </th>
                                         <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('duration')}>
                                           <span className="inline-flex items-center">Freq<SortIcon column="duration" /></span>
@@ -1058,6 +1098,9 @@ export function Management() {
                                         {(def.url || def.host || def.domain || def.mongodb_uri) && (
                                           <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">{def.url || def.host || def.domain || def.mongodb_uri}</div>
                                         )}
+                                        <div className="mt-1.5">
+                                          <AlertChannelBadges channels={def.alert_channels} />
+                                        </div>
                                       </div>
                                       <div className="flex items-center gap-2 shrink-0">
                                         <Badge variant="secondary" className="text-[10px]">
