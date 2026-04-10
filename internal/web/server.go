@@ -31,6 +31,13 @@ type WebhookRegistrar interface {
 	RegisterRoutes(router *gin.Engine, repo db.Repository)
 }
 
+// CheckTriggerer can trigger an immediate check execution.
+// Implemented by *scheduler.Scheduler; declared here as an interface to avoid
+// an import cycle (pkg/scheduler already imports internal/web).
+type CheckTriggerer interface {
+	TriggerCheck(uuid string)
+}
+
 var (
 	// WebSocket upgrader with more explicit configuration
 	upgrader = websocket.Upgrader{
@@ -203,8 +210,10 @@ func BroadcastAlertResolved(checkUUID string) {
 	}
 }
 
-// RunServer starts the web server and returns an error if it fails
-func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, webhooks []WebhookRegistrar, authMgr *auth.AuthManager) error {
+// RunServer starts the web server and returns an error if it fails.
+// triggerer is an optional CheckTriggerer (e.g. *scheduler.Scheduler); when non-nil it is
+// injected into the Gin context so handlers can call TriggerCheck for immediate check execution.
+func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, webhooks []WebhookRegistrar, authMgr *auth.AuthManager, triggerer CheckTriggerer) error {
 	// Create a router with default middleware
 	router := gin.Default()
 
@@ -215,9 +224,12 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, webh
 		}))
 	}
 
-	// Add Repository to context
+	// Add Repository and CheckTriggerer to context
 	router.Use(func(c *gin.Context) {
 		c.Set("repo", repo)
+		if triggerer != nil {
+			c.Set("triggerer", triggerer)
+		}
 		c.Next()
 	})
 

@@ -196,6 +196,14 @@ func CreateCheckDefinition(c *gin.Context) {
 		def.UUID = id
 	}
 
+	// Trigger an immediate check execution so the result is visible right away
+	// rather than waiting up to 10 seconds for the scheduler's sync cycle.
+	if triggererVal, ok := c.Get("triggerer"); ok {
+		if t, ok := triggererVal.(CheckTriggerer); ok {
+			t.TriggerCheck(def.UUID)
+		}
+	}
+
 	c.JSON(http.StatusCreated, convertToCheckDefViewModel(def))
 }
 

@@ -9,6 +9,29 @@ interface HealthMapProps {
   onSelectCheck: (uuid: string) => void
 }
 
+function truncateName(name: string, maxChars = 9): string {
+  if (name.length <= maxChars) return name
+  return name.slice(0, maxChars - 1) + '…'
+}
+
+function getFailureDuration(lastExec: string): string {
+  if (!lastExec) return ''
+  const date = new Date(lastExec)
+  if (isNaN(date.getTime())) return ''
+  const diffMs = Date.now() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return '<1m'
+  if (diffMins < 60) return `${diffMins}m`
+  const hours = Math.floor(diffMins / 60)
+  if (hours < 24) {
+    const mins = diffMins % 60
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  }
+  const days = Math.floor(hours / 24)
+  const remHours = hours % 24
+  return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`
+}
+
 const HealthTile = memo(function HealthTile({
   check,
   onSelect,
@@ -28,21 +51,37 @@ const HealthTile = memo(function HealthTile({
           ? 'healthy'
           : 'unhealthy'
 
+  const isUnhealthy = status === 'unhealthy'
+  const failureDuration = isUnhealthy ? getFailureDuration(check.LastExec) : ''
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           className={cn(
-            'h-10 w-10 sm:h-8 sm:w-8 rounded-sm transition-all cursor-pointer border',
+            'rounded-sm transition-all cursor-pointer border relative',
             'hover:scale-110 hover:z-10',
+            // Failing tiles are slightly larger than healthy ones
+            isUnhealthy
+              ? 'h-12 w-12 sm:h-10 sm:w-10'
+              : 'h-10 w-10 sm:h-8 sm:w-8',
             status === 'healthy' && 'bg-healthy/80 border-healthy/40 hover:bg-healthy',
-            status === 'unhealthy' && 'bg-unhealthy/80 border-unhealthy/40 hover:bg-unhealthy animate-pulse-unhealthy',
+            isUnhealthy && [
+              'bg-unhealthy/80 border-unhealthy/40 hover:bg-unhealthy animate-pulse-unhealthy',
+              'shadow-[0_0_8px_2px_rgba(239,68,68,0.4)]',
+            ],
             status === 'disabled' && 'bg-disabled/30 border-disabled/20 hover:bg-disabled/50',
             status === 'silenced' && 'bg-warning/40 border-warning/30 hover:bg-warning/60',
             status === 'partial' && 'bg-warning/25 border-warning/20 hover:bg-warning/40'
           )}
           onClick={onSelect}
-        />
+        >
+          {isUnhealthy && (
+            <span className="absolute inset-x-0 bottom-0.5 text-center text-[9px] text-white/90 truncate px-0.5 leading-none pointer-events-none select-none">
+              {truncateName(check.Name)}
+            </span>
+          )}
+        </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-[300px]">
         <div className="space-y-1">
@@ -59,9 +98,20 @@ const HealthTile = memo(function HealthTile({
               (status === 'silenced' || status === 'partial') && 'text-warning'
             )}
           >
-            {status === 'healthy' ? 'Healthy' : status === 'unhealthy' ? 'FAILING' : status === 'disabled' ? 'Disabled' : status === 'partial' ? `Partially silenced (${check.SilencedChannels?.join(', ')})` : 'Silenced'}
+            {status === 'healthy'
+              ? 'Healthy'
+              : status === 'unhealthy'
+                ? 'FAILING'
+                : status === 'disabled'
+                  ? 'Disabled'
+                  : status === 'partial'
+                    ? `Partially silenced (${check.SilencedChannels?.join(', ')})`
+                    : 'Silenced'}
+            {isUnhealthy && failureDuration && (
+              <span className="text-muted-foreground ml-1 font-normal">· failing for {failureDuration}</span>
+            )}
           </div>
-          {check.Message && status === 'unhealthy' && (
+          {check.Message && isUnhealthy && (
             <div className="text-[10px] text-unhealthy/80 truncate">{check.Message}</div>
           )}
         </div>
@@ -94,7 +144,7 @@ export function HealthMap({ groups, onSelectCheck }: HealthMapProps) {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,2.75rem)] sm:grid-cols-[repeat(auto-fill,2rem)] gap-1.5">
+          <div className="flex flex-wrap gap-1.5 items-center">
             {group.checks.map((check) => (
               <HealthTile
                 key={check.UUID}

@@ -24,6 +24,7 @@ import {
   CollapsibleContent,
 } from '@/components/ui/collapsible'
 import { Plus, X, ChevronDown, ChevronRight, Wrench, Play } from 'lucide-react'
+import { Combobox } from '@/components/ui/combobox'
 import { api } from '@/lib/api'
 
 /** Inline string list editor — add/remove entries (used for server_list, analytic_replicas) */
@@ -501,31 +502,23 @@ export function CheckEditDrawer({
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Project</label>
-                <Input
+                <Combobox
                   value={editingCheck.project || ''}
-                  onChange={(e) => updateForm('project', e.target.value)}
-                  list="project-suggestions"
-                  autoComplete="off"
+                  onChange={(v) => updateForm('project', v)}
+                  options={existingProjects}
+                  placeholder="Select or enter project…"
+                  emptyMessage="No existing projects."
                 />
-                <datalist id="project-suggestions">
-                  {existingProjects.map((p) => (
-                    <option key={p} value={p} />
-                  ))}
-                </datalist>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Group</label>
-                <Input
+                <Combobox
                   value={editingCheck.group_name || ''}
-                  onChange={(e) => updateForm('group_name', e.target.value)}
-                  list="group-suggestions"
-                  autoComplete="off"
+                  onChange={(v) => updateForm('group_name', v)}
+                  options={existingGroups}
+                  placeholder="Select or enter group…"
+                  emptyMessage="No existing groups."
                 />
-                <datalist id="group-suggestions">
-                  {existingGroups.map((g) => (
-                    <option key={g} value={g} />
-                  ))}
-                </datalist>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">

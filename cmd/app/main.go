@@ -282,12 +282,15 @@ func main() {
 			}
 
 			// 4. Start Scheduler in background
+			// Create the scheduler instance before launching the goroutine so the
+			// web server can hold a reference and call TriggerCheck on check creation.
 			logrus.Info("Starting scheduler")
+			sched := scheduler.NewScheduler(repo, appAlerters, cfg.Consensus.Region)
 			schedulerCtx, schedulerCancel := context.WithCancel(ctx)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := scheduler.RunScheduler(schedulerCtx, cfg, repo, appAlerters); err != nil {
+				if err := scheduler.RunScheduler(schedulerCtx, cfg, repo, appAlerters, sched); err != nil {
 					logrus.Errorf("Scheduler error: %v", err)
 				}
 			}()
@@ -298,7 +301,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := web.RunServer(serverCtx, cfg, repo, webhooks, authMgr); err != nil {
+				if err := web.RunServer(serverCtx, cfg, repo, webhooks, authMgr, sched); err != nil {
 					logrus.Errorf("Web server error: %v", err)
 					// Trigger app shutdown if web server fails
 					cancel()
