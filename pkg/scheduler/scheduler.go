@@ -38,7 +38,8 @@ type Scheduler struct {
 	checkMap        map[string]*CheckItem // Map UUID -> CheckItem
 	lock            sync.Mutex
 	repo            db.Repository
-	appAlerters []AppAlerter
+	appAlerters     []AppAlerter
+	triggerCh       chan string // buffered channel for immediate check triggers
 }
 
 // NewScheduler creates a new scheduler instance
@@ -51,11 +52,26 @@ func NewScheduler(repo db.Repository, appAlerters []AppAlerter, consensusRegion 
 		checkMap:    make(map[string]*CheckItem),
 		repo:        repo,
 		appAlerters: appAlerters,
+		triggerCh:   make(chan string, 1),
+	}
+}
+
+// TriggerCheck queues an immediate execution of the check with the given UUID.
+// This is a non-blocking operation: if a trigger is already pending, this is a no-op.
+func (s *Scheduler) TriggerCheck(uuid string) {
+	select {
+	case s.triggerCh <- uuid:
+		logrus.Infof("Queued immediate trigger for check %s", uuid)
+	default:
+		logrus.Debugf("Trigger channel full, skipping trigger for check %s", uuid)
 	}
 }
 
 // RunScheduler starts the health check scheduler.
-func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, appAlerters []AppAlerter) error {
+// If s is nil, a new Scheduler is created internally (backward-compatible).
+// Pass an existing *Scheduler created via NewScheduler when you need a reference
+// to call TriggerCheck from outside (e.g. from HTTP handlers).
+func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, appAlerters []AppAlerter, s *Scheduler) error {
 	logrus.Info("Starting event-driven health check scheduler")
 
 	// Initialize email alert configuration from config
@@ -78,7 +94,9 @@ func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, a
 		logrus.Infof("Default alert channels: %v", defaultAlertChannels)
 	}
 
-	s := NewScheduler(repo, appAlerters, cfg.Consensus.Region)
+	if s == nil {
+		s = NewScheduler(repo, appAlerters, cfg.Consensus.Region)
+	}
 
 	// Start worker pool
 	s.workerPool.Start()
@@ -142,6 +160,23 @@ func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, a
 			if err := s.Sync(ctx); err != nil {
 				logrus.Errorf("Sync failed: %v", err)
 			}
+
+		case uuid := <-s.triggerCh:
+			timer.Stop()
+			logrus.Infof("Immediate trigger: syncing and executing check %s", uuid)
+			// Sync to pick up the newly created check (adds it to heap with NextRun=now)
+			if err := s.Sync(ctx); err != nil {
+				logrus.Errorf("Sync failed during trigger for check %s: %v", uuid, err)
+			}
+			// Set the triggered check's NextRun to now so it is processed first
+			s.lock.Lock()
+			if item, exists := s.checkMap[uuid]; exists {
+				item.NextRun = time.Now()
+				heap.Init(s.checkHeap)
+			}
+			s.lock.Unlock()
+			// Dispatch the triggered check immediately
+			s.processNextCheck()
 
 		case <-timer.C:
 			// Time to maybe run a check
