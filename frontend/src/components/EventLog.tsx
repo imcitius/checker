@@ -7,6 +7,27 @@ interface EventLogProps {
   entries: EventLogEntry[]
 }
 
+function relativeTime(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 5) return 'just now'
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+function statusLabel(status: EventLogEntry['status']): string {
+  switch (status) {
+    case 'healthy': return 'HEALTHY'
+    case 'unhealthy': return 'FAILING'
+    case 'disabled': return 'DISABLED'
+    case 'enabled': return 'ENABLED'
+  }
+}
+
 export function EventLog({ entries }: EventLogProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -34,26 +55,58 @@ export function EventLog({ entries }: EventLogProps) {
       <ScrollArea className="h-[140px]">
         <div className="p-2 space-y-0.5">
           {entries.map((entry) => (
-            <div key={entry.id} className="flex items-center gap-2 font-mono text-xs animate-slide-in">
+            <div key={entry.id} className="flex items-start gap-1.5 font-mono text-xs animate-slide-in">
               <span className="text-disabled shrink-0">{'>'}_</span>
-              <span className="text-muted-foreground shrink-0">
-                {entry.timestamp.toLocaleTimeString('en-US', { hour12: false })}
+              {/* Relative timestamp */}
+              <span className="text-muted-foreground shrink-0 w-[56px] text-right">
+                {relativeTime(entry.timestamp)}
               </span>
-              <span className="text-foreground truncate shrink-0 max-w-[100px] sm:max-w-[140px] sm:w-[140px]">{entry.checkName}</span>
-              <span className="text-muted-foreground shrink-0">&rarr;</span>
-              <span
-                className={cn(
-                  'font-semibold shrink-0',
-                  entry.status === 'healthy' && 'text-healthy',
-                  entry.status === 'unhealthy' && 'text-unhealthy',
-                  entry.status === 'disabled' && 'text-disabled',
-                  entry.status === 'enabled' && 'text-info'
+              {/* Check name + project */}
+              <span className="text-foreground shrink-0 truncate max-w-[130px]">
+                {entry.checkName}
+                {entry.project && (
+                  <span className="text-muted-foreground"> ({entry.project})</span>
                 )}
-              >
-                {entry.status}
               </span>
+              <span className="text-muted-foreground shrink-0">&mdash;</span>
+              {/* old → new state transition */}
+              <span className="shrink-0 flex items-center gap-1">
+                {entry.previousStatus && (
+                  <>
+                    <span className={cn(
+                      'opacity-60',
+                      entry.previousStatus === 'healthy' && 'text-healthy',
+                      entry.previousStatus === 'unhealthy' && 'text-unhealthy',
+                      (entry.previousStatus === 'disabled' || entry.previousStatus === 'enabled') && 'text-disabled',
+                    )}>
+                      {statusLabel(entry.previousStatus as EventLogEntry['status'])}
+                    </span>
+                    <span className="text-muted-foreground">&rarr;</span>
+                  </>
+                )}
+                <span
+                  className={cn(
+                    'font-semibold',
+                    entry.status === 'healthy' && 'text-healthy',
+                    entry.status === 'unhealthy' && 'text-unhealthy',
+                    entry.status === 'disabled' && 'text-disabled',
+                    entry.status === 'enabled' && 'text-info'
+                  )}
+                >
+                  {statusLabel(entry.status)}
+                </span>
+              </span>
+              {/* Error / info message */}
               {entry.message && (
-                <span className="text-muted-foreground truncate">{entry.message}</span>
+                <>
+                  <span className="text-muted-foreground shrink-0">&mdash;</span>
+                  <span className={cn(
+                    'truncate',
+                    entry.status === 'unhealthy' ? 'text-unhealthy/75' : 'text-muted-foreground'
+                  )}>
+                    {entry.message}
+                  </span>
+                </>
               )}
             </div>
           ))}
