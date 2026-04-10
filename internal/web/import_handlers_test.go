@@ -200,6 +200,117 @@ checks:
 	}
 }
 
+func TestValidateChecks_DuplicateCheckNamesWarning(t *testing.T) {
+	payload := &models.CheckImportPayload{
+		Project:     "my-service",
+		Environment: "prod",
+		Checks: []models.CheckImportItem{
+			{Name: "Dashboard", Type: "http", URL: "https://example.com/dash1"},
+			{Name: "API Health", Type: "http", URL: "https://example.com/api"},
+			{Name: "Dashboard", Type: "http", URL: "https://example.com/dash2"}, // duplicate
+		},
+	}
+
+	resolved := resolveChecks(payload)
+	errors := validateChecks(resolved)
+
+	// Should have a duplicate warning for the second "Dashboard"
+	found := false
+	for _, e := range errors {
+		if e.Index == 2 && e.Name == "Dashboard" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected duplicate check name warning for 'Dashboard' at index 2")
+	}
+}
+
+func TestValidateChecks_NoDuplicateWarningForDifferentScopes(t *testing.T) {
+	// Same name but different project+group = not duplicates
+	checks := []models.CheckImportItem{
+		{Name: "Health", Type: "http", URL: "https://a.com", Project: "svc-a", GroupName: "prod"},
+		{Name: "Health", Type: "http", URL: "https://b.com", Project: "svc-b", GroupName: "prod"},
+	}
+
+	errors := validateChecks(checks)
+
+	for _, e := range errors {
+		if e.Message != "" && e.Name == "Health" && e.Index == 1 {
+			t.Errorf("should not flag duplicate for different project scopes, got: %s", e.Message)
+		}
+	}
+}
+
+func TestResolveChecks_PayloadDefaultAlertChannels(t *testing.T) {
+	payload := &models.CheckImportPayload{
+		Project:     "my-service",
+		Environment: "prod",
+		Defaults: models.CheckImportDefaults{
+			Duration:      "1m",
+			AlertChannels: []string{"slack-ops", "pagerduty"},
+		},
+		Checks: []models.CheckImportItem{
+			{Name: "Check A", Type: "http", URL: "https://example.com"},
+			{Name: "Check B", Type: "http", URL: "https://example.com/b", AlertChannels: []string{"telegram"}},
+		},
+	}
+
+	resolved := resolveChecks(payload)
+
+	// Check A should inherit payload defaults
+	if len(resolved[0].AlertChannels) != 2 || resolved[0].AlertChannels[0] != "slack-ops" {
+		t.Errorf("Check A: expected payload default alert channels [slack-ops pagerduty], got %v", resolved[0].AlertChannels)
+	}
+	// Check B should keep its own
+	if len(resolved[1].AlertChannels) != 1 || resolved[1].AlertChannels[0] != "telegram" {
+		t.Errorf("Check B: expected own alert channels [telegram], got %v", resolved[1].AlertChannels)
+	}
+}
+
+func TestApplySystemDefaultAlertChannels(t *testing.T) {
+	checks := []models.CheckImportItem{
+		{Name: "A", AlertChannels: nil},
+		{Name: "B", AlertChannels: []string{"pagerduty"}},
+		{Name: "C", AlertChannels: nil},
+	}
+
+	systemDefaults := []string{"slack-ops", "telegram"}
+	applySystemDefaultAlertChannels(checks, systemDefaults)
+
+	// A should get system defaults
+	if len(checks[0].AlertChannels) != 2 || checks[0].AlertChannels[0] != "slack-ops" {
+		t.Errorf("Check A: expected system defaults [slack-ops telegram], got %v", checks[0].AlertChannels)
+	}
+	// B should keep its own
+	if len(checks[1].AlertChannels) != 1 || checks[1].AlertChannels[0] != "pagerduty" {
+		t.Errorf("Check B: expected own [pagerduty], got %v", checks[1].AlertChannels)
+	}
+	// C should get system defaults
+	if len(checks[2].AlertChannels) != 2 || checks[2].AlertChannels[0] != "slack-ops" {
+		t.Errorf("Check C: expected system defaults [slack-ops telegram], got %v", checks[2].AlertChannels)
+	}
+}
+
+func TestApplySystemDefaultAlertChannels_NoOp(t *testing.T) {
+	checks := []models.CheckImportItem{
+		{Name: "A", AlertChannels: []string{"discord"}},
+		{Name: "B", AlertChannels: []string{"slack"}},
+	}
+
+	systemDefaults := []string{"slack-ops"}
+	applySystemDefaultAlertChannels(checks, systemDefaults)
+
+	// All checks already have channels, no changes
+	if checks[0].AlertChannels[0] != "discord" {
+		t.Errorf("Check A: should be unchanged, got %v", checks[0].AlertChannels)
+	}
+	if checks[1].AlertChannels[0] != "slack" {
+		t.Errorf("Check B: should be unchanged, got %v", checks[1].AlertChannels)
+	}
+}
+
 func TestImportItemToCheckDefinition_HTTPWithAllFields(t *testing.T) {
 	ap := true
 	sc := false

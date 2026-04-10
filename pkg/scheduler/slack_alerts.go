@@ -41,6 +41,15 @@ func NewSlackAlerter(client *slack.SlackClient, repo db.Repository, defaultChann
 	}
 }
 
+// NewSlackAppAlerterFromConfig creates a SlackAlerter from bot token + channel config.
+// This allows external importers (like checker-cloud) to use the full Slack App
+// alerter with thread support without importing internal/slack.
+// The signingSecret is not required for alert sending and can be left empty.
+func NewSlackAppAlerterFromConfig(botToken, defaultChannel string, repo db.Repository) AppAlerter {
+	client := slack.NewSlackClient(botToken, "", defaultChannel)
+	return NewSlackAlerter(client, repo, defaultChannel)
+}
+
 // newSlackAlerterWithSender creates a SlackAlerter with a custom SlackSender (for testing).
 func newSlackAlerterWithSender(sender SlackSender, repo db.Repository, defaultChannel string) *SlackAlerter {
 	return &SlackAlerter{

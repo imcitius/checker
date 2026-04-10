@@ -92,6 +92,9 @@ func (m *mockDiscordRepo) BulkToggleCheckDefinitions(_ context.Context, _ []stri
 func (m *mockDiscordRepo) BulkDeleteCheckDefinitions(_ context.Context, _ []string) (int64, error) {
 	return 0, nil
 }
+func (m *mockDiscordRepo) BulkUpdateAlertChannels(_ context.Context, _ []string, _ string, _ []string) (int64, error) {
+	return 0, nil
+}
 func (m *mockDiscordRepo) GetAllProjects(_ context.Context) ([]string, error) { return nil, nil }
 func (m *mockDiscordRepo) GetAllCheckTypes(_ context.Context) ([]string, error) { return nil, nil }
 func (m *mockDiscordRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.Config) error {

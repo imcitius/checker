@@ -198,6 +198,7 @@ func (r *mockDiscordRepo) CountCheckDefinitions(_ context.Context) (int, error) 
 func (r *mockDiscordRepo) SetMaintenanceWindow(_ context.Context, _ string, _ *time.Time) error { return nil }
 func (r *mockDiscordRepo) BulkToggleCheckDefinitions(_ context.Context, _ []string, _ bool) (int64, error) { return 0, nil }
 func (r *mockDiscordRepo) BulkDeleteCheckDefinitions(_ context.Context, _ []string) (int64, error) { return 0, nil }
+func (r *mockDiscordRepo) BulkUpdateAlertChannels(_ context.Context, _ []string, _ string, _ []string) (int64, error) { return 0, nil }
 func (r *mockDiscordRepo) GetAllEscalationPolicies(_ context.Context) ([]models.EscalationPolicy, error) { return nil, nil }
 func (r *mockDiscordRepo) GetEscalationPolicyByName(_ context.Context, _ string) (models.EscalationPolicy, error) { return models.EscalationPolicy{}, nil }
 func (r *mockDiscordRepo) CreateEscalationPolicy(_ context.Context, _ models.EscalationPolicy) error { return nil }

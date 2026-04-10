@@ -318,6 +318,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ uuids }),
     }),
+  bulkAlertChannels: (uuids: string[], action: string, channels: string[]) =>
+    request<{ success: boolean; count: number }>('/api/checks/bulk-alert-channels', {
+      method: 'POST',
+      body: JSON.stringify({ uuids, action, channels }),
+    }),
 
   // Bulk import/export
   importChecks: (yamlContent: string) => {

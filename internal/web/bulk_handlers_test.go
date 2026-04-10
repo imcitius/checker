@@ -176,3 +176,128 @@ func TestBulkDisableChecks_InvalidJSON(t *testing.T) {
 		t.Fatalf("expected status 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+func TestBulkUpdateAlertChannels_Add(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body := `{"uuids":["uuid-1","uuid-2"],"action":"add","channels":["telegram","slack"]}`
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/checks/bulk-alert-channels", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("repo", db.Repository(repo))
+
+	BulkUpdateAlertChannels(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if resp["success"] != true {
+		t.Fatal("expected success to be true")
+	}
+	if int(resp["count"].(float64)) != 2 {
+		t.Fatalf("expected count 2, got %v", resp["count"])
+	}
+
+	if repo.lastBulkAlertAction != "add" {
+		t.Fatalf("expected action 'add', got %q", repo.lastBulkAlertAction)
+	}
+	if len(repo.lastBulkAlertChannels) != 2 {
+		t.Fatalf("expected 2 channels, got %d", len(repo.lastBulkAlertChannels))
+	}
+}
+
+func TestBulkUpdateAlertChannels_Replace(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body := `{"uuids":["uuid-1"],"action":"replace","channels":["email"]}`
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/checks/bulk-alert-channels", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("repo", db.Repository(repo))
+
+	BulkUpdateAlertChannels(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if repo.lastBulkAlertAction != "replace" {
+		t.Fatalf("expected action 'replace', got %q", repo.lastBulkAlertAction)
+	}
+}
+
+func TestBulkUpdateAlertChannels_Remove(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body := `{"uuids":["uuid-1","uuid-2","uuid-3"],"action":"remove","channels":["slack"]}`
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/checks/bulk-alert-channels", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("repo", db.Repository(repo))
+
+	BulkUpdateAlertChannels(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if repo.lastBulkAlertAction != "remove" {
+		t.Fatalf("expected action 'remove', got %q", repo.lastBulkAlertAction)
+	}
+	if len(repo.lastBulkUUIDs) != 3 {
+		t.Fatalf("expected 3 UUIDs, got %d", len(repo.lastBulkUUIDs))
+	}
+}
+
+func TestBulkUpdateAlertChannels_InvalidAction(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body := `{"uuids":["uuid-1"],"action":"invalid","channels":["slack"]}`
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/checks/bulk-alert-channels", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("repo", db.Repository(repo))
+
+	BulkUpdateAlertChannels(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestBulkUpdateAlertChannels_EmptyUUIDs(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &stubRepo{}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body := `{"uuids":[],"action":"add","channels":["slack"]}`
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/checks/bulk-alert-channels", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("repo", db.Repository(repo))
+
+	BulkUpdateAlertChannels(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d: %s", w.Code, w.Body.String())
+	}
+}

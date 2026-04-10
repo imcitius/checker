@@ -97,6 +97,9 @@ func (m *mockEscalationRepo) BulkToggleCheckDefinitions(_ context.Context, _ []s
 func (m *mockEscalationRepo) BulkDeleteCheckDefinitions(_ context.Context, _ []string) (int64, error) {
 	return 0, nil
 }
+func (m *mockEscalationRepo) BulkUpdateAlertChannels(_ context.Context, _ []string, _ string, _ []string) (int64, error) {
+	return 0, nil
+}
 func (m *mockEscalationRepo) GetAllProjects(_ context.Context) ([]string, error) { return nil, nil }
 func (m *mockEscalationRepo) GetAllCheckTypes(_ context.Context) ([]string, error) {
 	return nil, nil

@@ -131,30 +131,60 @@ export function HealthMap({ groups, onSelectCheck }: HealthMapProps) {
 
   return (
     <div className="space-y-4">
-      {groups.map((group) => (
-        <div key={group.name} className="rounded-lg border bg-card p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="font-semibold text-sm text-foreground">{group.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {group.checks.length} check{group.checks.length !== 1 ? 's' : ''}
-            </span>
-            {group.failingCount > 0 && (
-              <span className="text-[10px] text-unhealthy font-medium">
-                {group.failingCount} failing
-              </span>
+      {groups.map((group) => {
+        const hasFailing = group.failingCount > 0
+        const failingChecks = group.checks.filter((c) => c.Enabled && !c.LastResult)
+
+        return (
+          <div
+            key={group.name}
+            className={cn(
+              'rounded-lg border bg-card p-3 transition-colors',
+              hasFailing && 'border-unhealthy/40 bg-unhealthy/5'
             )}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-semibold text-sm text-foreground">{group.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {group.checks.length} check{group.checks.length !== 1 ? 's' : ''}
+              </span>
+              {hasFailing && (
+                <span className="text-[10px] text-unhealthy font-medium">
+                  {group.failingCount} failing
+                </span>
+              )}
+            </div>
+            {hasFailing && (
+              <div className="mb-2 space-y-0.5">
+                {failingChecks.map((check) => {
+                  const duration = getFailureDuration(check.LastExec)
+                  return (
+                    <div key={check.UUID} className="text-[10px] text-unhealthy leading-snug truncate">
+                      <span className="mr-0.5">⚠</span>
+                      <span className="font-medium">{check.Name}</span>
+                      {check.Message && (
+                        <span className="text-unhealthy/70"> — {check.Message}</span>
+                      )}
+                      {duration && (
+                        <span className="text-unhealthy/60"> — {duration}</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {group.checks.map((check) => (
+                <HealthTile
+                  key={check.UUID}
+                  check={check}
+                  onSelect={() => onSelectCheck(check.UUID)}
+                />
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5 items-center">
-            {group.checks.map((check) => (
-              <HealthTile
-                key={check.UUID}
-                check={check}
-                onSelect={() => onSelectCheck(check.UUID)}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

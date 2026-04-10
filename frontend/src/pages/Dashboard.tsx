@@ -291,7 +291,32 @@ export function Dashboard() {
         />
 
         <main className="mx-auto max-w-[1600px] px-4 py-4 space-y-4">
-          <MetricsRow stats={stats} />
+          <MetricsRow
+            stats={stats}
+            failingChecks={checks.filter((c) => c.Enabled && !c.LastResult)}
+            onSelectCheck={(uuid) => {
+              setSelectedUUID(uuid)
+              setExpandedUUID(uuid)
+              // Expand the project group containing this check if collapsed
+              const group = groups.find((g) => g.checks.some((c) => c.UUID === uuid))
+              if (group) {
+                const projectKey = `p:${group.name}`
+                setCollapsedGroups((prev) => {
+                  if (prev.has(projectKey)) {
+                    const next = new Set(prev)
+                    next.delete(projectKey)
+                    saveCollapsed(next)
+                    return next
+                  }
+                  return prev
+                })
+              }
+              // Scroll to the check after a short delay to allow render
+              setTimeout(() => {
+                document.getElementById(`check-${uuid}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }, 100)
+            }}
+          />
 
           {/* View mode toggle */}
           <div className="flex items-center justify-between">

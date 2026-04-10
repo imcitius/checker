@@ -2,7 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Layers } from 'lucide-react'
 import { api, type CheckDefinition } from '@/lib/api'
+import { type Check } from '@/lib/websocket'
 import { Button } from '@/components/ui/button'
+import { StatusDot } from '@/components/StatusDot'
+import { cn } from '@/lib/utils'
+import { CHANNEL_TYPES } from '@/lib/channels'
 import {
   Dialog,
   DialogContent,
@@ -17,7 +21,7 @@ import {
   Plus, Pencil, Trash2, RefreshCw, Upload, Download,
   ArrowUp, ArrowDown, ArrowUpDown, Copy, Power, PowerOff,
   CheckSquare, Square, MinusSquare, Clock, X,
-  ChevronRight, ChevronDown, FolderOpen, BellOff,
+  ChevronRight, ChevronDown, FolderOpen, BellOff, Bell,
 } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -31,10 +35,10 @@ import { Input } from '@/components/ui/input'
 import { api as apiClient } from '@/lib/api'
 import { toast } from 'sonner'
 
-type SortColumn = 'name' | 'type' | 'group' | 'duration' | 'enabled'
+type SortColumn = 'name' | 'type' | 'group' | 'duration' | 'enabled' | 'status'
 type SortDirection = 'asc' | 'desc'
 
-const VALID_SORT_COLUMNS: readonly string[] = ['name', 'type', 'group', 'duration', 'enabled'] as const
+const VALID_SORT_COLUMNS: readonly string[] = ['name', 'type', 'group', 'duration', 'enabled', 'status'] as const
 const VALID_SORT_DIRECTIONS: readonly string[] = ['asc', 'desc'] as const
 const COLLAPSED_KEY = 'checker-manage-collapsed'
 const SORT_KEY = 'checker-manage-sort'
@@ -113,8 +117,66 @@ interface ProjectGroup {
   disabledCount: number
 }
 
+// Returns a numeric priority for sorting by status (lower = more urgent)
+function getStatusPriority(def: CheckDefinition, liveCheck: Check | undefined): number {
+  if (!def.enabled) return 5
+  if (!liveCheck) return 2 // pending (no live data yet)
+  if (liveCheck.IsSilenced) return liveCheck.LastResult ? 3 : 1
+  if (!liveCheck.LastResult) return 0 // failing
+  return 4 // ok
+}
+
+// Returns label + dot props for a check definition given live websocket data
+function getCheckStatus(def: CheckDefinition, liveCheck: Check | undefined) {
+  if (!def.enabled) {
+    return { label: 'Disabled', healthy: false, enabled: false, silenced: false }
+  }
+  if (!liveCheck) {
+    return { label: 'Pending', healthy: false, enabled: true, silenced: false, pending: true }
+  }
+  if (liveCheck.IsSilenced) {
+    return { label: 'Silenced', healthy: liveCheck.LastResult, enabled: true, silenced: true }
+  }
+  if (liveCheck.LastResult) {
+    return { label: 'OK', healthy: true, enabled: true, silenced: false }
+  }
+  return { label: 'Failing', healthy: false, enabled: true, silenced: false }
+}
+
+function AlertChannelBadges({ channels }: { channels?: string[] }) {
+  if (!channels || channels.length === 0) {
+    return (
+      <span className="text-[10px] text-amber-500 font-medium whitespace-nowrap">No alerts</span>
+    )
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {channels.map((ch) => {
+        const meta = CHANNEL_TYPES.find((ct) => ct.value === ch)
+        const label = meta?.label ?? ch
+        const color = meta?.color ?? 'bg-gray-500'
+        return (
+          <Tooltip key={ch}>
+            <TooltipTrigger asChild>
+              <span
+                className={cn(
+                  'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium text-white leading-none',
+                  color
+                )}
+              >
+                {label}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{ch}</TooltipContent>
+          </Tooltip>
+        )
+      })}
+    </div>
+  )
+}
+
 export function Management() {
-  const { wsStatus } = useChecks()
+  const { wsStatus, checksMap } = useChecks()
   const [definitions, setDefinitions] = useState<CheckDefinition[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -142,6 +204,9 @@ export function Management() {
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [bulkMaintenanceDialogOpen, setBulkMaintenanceDialogOpen] = useState(false)
   const [bulkMaintenanceUntil, setBulkMaintenanceUntil] = useState('')
+  const [bulkAlertChannelsDialogOpen, setBulkAlertChannelsDialogOpen] = useState(false)
+  const [bulkAlertAction, setBulkAlertAction] = useState<'add' | 'remove' | 'replace'>('add')
+  const [bulkAlertSelectedChannels, setBulkAlertSelectedChannels] = useState<Set<string>>(new Set())
 
   // Bulk selection
   const [selectedUUIDs, setSelectedUUIDs] = useState<Set<string>>(new Set())
@@ -249,6 +314,12 @@ export function Management() {
   const sortChecks = useCallback((checks: CheckDefinition[]) => {
     if (!sortColumn) return checks
     return [...checks].sort((a, b) => {
+      if (sortColumn === 'status') {
+        const aPriority = getStatusPriority(a, checksMap.get(a.uuid))
+        const bPriority = getStatusPriority(b, checksMap.get(b.uuid))
+        const cmp = aPriority - bPriority
+        return sortDirection === 'asc' ? cmp : -cmp
+      }
       let aVal: string | boolean
       let bVal: string | boolean
       switch (sortColumn) {
@@ -282,7 +353,7 @@ export function Management() {
       const cmp = (aVal as string).localeCompare(bVal as string)
       return sortDirection === 'asc' ? cmp : -cmp
     })
-  }, [sortColumn, sortDirection])
+  }, [sortColumn, sortDirection, checksMap])
 
   // Two-level grouping: Project → Group (group_name)
   const groups: ProjectGroup[] = useMemo(() => {
@@ -537,8 +608,44 @@ export function Management() {
     }
   }
 
+  // Collect all unique alert channel names from loaded checks
+  const availableChannelNames = useMemo(() => {
+    const names = new Set<string>()
+    for (const def of definitions) {
+      if (def.alert_channels) {
+        for (const ch of def.alert_channels) names.add(ch)
+      }
+    }
+    return Array.from(names).sort()
+  }, [definitions])
+
+  const handleBulkAlertChannels = async () => {
+    if (bulkAlertSelectedChannels.size === 0) return
+    setBulkActing(true)
+    try {
+      const result = await api.bulkAlertChannels(
+        [...selectedInView],
+        bulkAlertAction,
+        [...bulkAlertSelectedChannels]
+      )
+      const actionLabel = bulkAlertAction === 'add' ? 'Added channels to' : bulkAlertAction === 'remove' ? 'Removed channels from' : 'Replaced channels on'
+      toast.success(`${actionLabel} ${result.count} checks`)
+      setSelectedUUIDs(new Set())
+      setBulkAlertChannelsDialogOpen(false)
+      setBulkAlertSelectedChannels(new Set())
+      fetchData()
+    } catch (err) {
+      console.error('Bulk alert channels failed:', err)
+      toast.error('Failed to update alert channels')
+    } finally {
+      setBulkActing(false)
+    }
+  }
+
   const renderCheckRow = (def: CheckDefinition) => {
     const isSelected = selectedUUIDs.has(def.uuid)
+    const liveCheck = checksMap.get(def.uuid)
+    const status = getCheckStatus(def, liveCheck)
     return (
       <tr
         key={def.uuid}
@@ -560,6 +667,35 @@ export function Management() {
             )}
           </button>
         </td>
+        <td className="px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            {status.pending ? (
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-muted-foreground/40 shrink-0" />
+            ) : (
+              <StatusDot
+                healthy={status.healthy}
+                enabled={status.enabled}
+                silenced={status.silenced}
+              />
+            )}
+            <span
+              className={cn(
+                'font-mono text-xs whitespace-nowrap',
+                !def.enabled
+                  ? 'text-muted-foreground'
+                  : status.silenced
+                    ? 'text-warning'
+                    : status.pending
+                      ? 'text-muted-foreground/60'
+                      : status.healthy
+                        ? 'text-healthy'
+                        : 'text-unhealthy font-semibold'
+              )}
+            >
+              {status.label}
+            </span>
+          </div>
+        </td>
         <td className="px-3 py-2 overflow-hidden">
           <div className="font-medium break-words">{def.name}</div>
           <div className="font-mono text-[10px] text-muted-foreground truncate">{def.uuid}</div>
@@ -578,6 +714,9 @@ export function Management() {
           <Badge variant="secondary" className="text-[10px]">
             {def.type}
           </Badge>
+        </td>
+        <td className="px-3 py-2">
+          <AlertChannelBadges channels={def.alert_channels} />
         </td>
         <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{def.duration}</td>
         <td className="px-3 py-2">
@@ -857,9 +996,11 @@ export function Management() {
                                   <table className="w-full text-sm table-fixed">
                                     <colgroup>
                                       <col className="w-10" />
+                                      <col className="w-[100px]" />
                                       <col className="w-[200px]" />
                                       <col />
                                       <col className="w-[70px]" />
+                                      <col className="w-[160px]" />
                                       <col className="w-[90px]" />
                                       <col className="w-[70px]" />
                                       <col className="w-[100px]" />
@@ -880,6 +1021,9 @@ export function Management() {
                                             )}
                                           </button>
                                         </th>
+                                        <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('status')}>
+                                          <span className="inline-flex items-center">Status<SortIcon column="status" /></span>
+                                        </th>
                                         <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('name')}>
                                           <span className="inline-flex items-center">Name<SortIcon column="name" /></span>
                                         </th>
@@ -888,6 +1032,9 @@ export function Management() {
                                         </th>
                                         <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('type')}>
                                           <span className="inline-flex items-center">Type<SortIcon column="type" /></span>
+                                        </th>
+                                        <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">
+                                          Alert Channels
                                         </th>
                                         <th className="text-left px-3 py-1.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => handleSort('duration')}>
                                           <span className="inline-flex items-center">Freq<SortIcon column="duration" /></span>
@@ -988,15 +1135,32 @@ export function Management() {
                                         {(def.url || def.host || def.domain || def.mongodb_uri) && (
                                           <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate">{def.url || def.host || def.domain || def.mongodb_uri}</div>
                                         )}
+                                        <div className="mt-1.5">
+                                          <AlertChannelBadges channels={def.alert_channels} />
+                                        </div>
                                       </div>
                                       <div className="flex items-center gap-2 shrink-0">
                                         <Badge variant="secondary" className="text-[10px]">
                                           {def.type}
                                         </Badge>
-                                        <div
-                                          className={`h-2.5 w-2.5 rounded-full ${def.enabled ? 'bg-healthy' : 'bg-disabled'}`}
-                                          title={def.enabled ? 'Enabled' : 'Disabled'}
-                                        />
+                                        {(() => {
+                                          const liveCheck = checksMap.get(def.uuid)
+                                          const status = getCheckStatus(def, liveCheck)
+                                          return (
+                                            <div className="flex items-center gap-1" title={status.label}>
+                                              {status.pending ? (
+                                                <span className="inline-block h-2.5 w-2.5 rounded-full bg-muted-foreground/40 shrink-0" />
+                                              ) : (
+                                                <StatusDot
+                                                  healthy={status.healthy}
+                                                  enabled={status.enabled}
+                                                  silenced={status.silenced}
+                                                  size="sm"
+                                                />
+                                              )}
+                                            </div>
+                                          )
+                                        })()}
                                       </div>
                                     </div>
                                     <div className="flex items-center justify-between mt-3">
@@ -1088,6 +1252,24 @@ export function Management() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Set maintenance window on {selectedInView.size} selected checks</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setBulkAlertAction('add')
+                        setBulkAlertSelectedChannels(new Set())
+                        setBulkAlertChannelsDialogOpen(true)
+                      }}
+                      disabled={bulkActing}
+                    >
+                      <Bell className="h-4 w-4 mr-1" />
+                      Set Alert Channels
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Change alert channels on {selectedInView.size} selected checks</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1203,6 +1385,89 @@ export function Management() {
               </Button>
               <Button onClick={handleBulkMaintenance} disabled={bulkActing || !bulkMaintenanceUntil}>
                 {bulkActing ? 'Setting...' : `Set Maintenance on ${selectedInView.size} Checks`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Alert Channels Dialog */}
+        <Dialog open={bulkAlertChannelsDialogOpen} onOpenChange={(open) => {
+          setBulkAlertChannelsDialogOpen(open)
+          if (!open) {
+            setBulkAlertSelectedChannels(new Set())
+            setBulkAlertAction('add')
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Set Alert Channels</DialogTitle>
+              <DialogDescription>
+                Update alert channels for {selectedInView.size} selected {selectedInView.size === 1 ? 'check' : 'checks'}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Action</label>
+                <div className="flex gap-2">
+                  {(['add', 'remove', 'replace'] as const).map((action) => (
+                    <Button
+                      key={action}
+                      variant={bulkAlertAction === action ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setBulkAlertAction(action)}
+                    >
+                      {action === 'add' ? 'Add to existing' : action === 'remove' ? 'Remove from existing' : 'Replace all'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Channels</label>
+                <div className="flex flex-wrap gap-2">
+                  {availableChannelNames.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No alert channels found in current checks.</p>
+                  ) : (
+                    availableChannelNames.map((ch) => {
+                      const meta = CHANNEL_TYPES.find((ct) => ct.value === ch)
+                      const isSelected = bulkAlertSelectedChannels.has(ch)
+                      return (
+                        <button
+                          key={ch}
+                          type="button"
+                          onClick={() => {
+                            setBulkAlertSelectedChannels((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(ch)) next.delete(ch)
+                              else next.add(ch)
+                              return next
+                            })
+                          }}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors',
+                            isSelected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-card hover:bg-muted'
+                          )}
+                        >
+                          {isSelected && <CheckSquare className="h-3.5 w-3.5" />}
+                          {!isSelected && <Square className="h-3.5 w-3.5" />}
+                          {meta?.label ?? ch}
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkAlertChannelsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkAlertChannels}
+                disabled={bulkActing || bulkAlertSelectedChannels.size === 0}
+              >
+                {bulkActing ? 'Updating...' : `Update ${selectedInView.size} ${selectedInView.size === 1 ? 'Check' : 'Checks'}`}
               </Button>
             </DialogFooter>
           </DialogContent>

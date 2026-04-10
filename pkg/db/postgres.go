@@ -344,6 +344,70 @@ func (db *PostgresDB) BulkDeleteCheckDefinitions(ctx context.Context, uuids []st
 	return cmdTag.RowsAffected(), nil
 }
 
+func (db *PostgresDB) BulkUpdateAlertChannels(ctx context.Context, uuids []string, action string, channels []string) (int64, error) {
+	if len(uuids) == 0 {
+		return 0, nil
+	}
+
+	channelsJSON, err := json.Marshal(channels)
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal channels: %w", err)
+	}
+
+	var query string
+	now := time.Now()
+
+	switch action {
+	case "replace":
+		// Set alert_channels to the provided list directly
+		query = `UPDATE check_definitions SET alert_channels=$1, updated_at=$2 WHERE uuid = ANY($3)`
+		cmdTag, err := db.Pool.Exec(ctx, query, string(channelsJSON), now, uuids)
+		if err != nil {
+			return 0, err
+		}
+		return cmdTag.RowsAffected(), nil
+
+	case "add":
+		// For each row, parse existing JSON array, merge with new channels (dedup), write back
+		query = `UPDATE check_definitions SET
+			alert_channels = (
+				SELECT json_agg(DISTINCT ch)::text FROM (
+					SELECT jsonb_array_elements_text(COALESCE(NULLIF(alert_channels,''),'[]')::jsonb) AS ch
+					UNION
+					SELECT jsonb_array_elements_text($1::jsonb) AS ch
+				) sub
+			),
+			updated_at=$2
+			WHERE uuid = ANY($3)`
+		cmdTag, err := db.Pool.Exec(ctx, query, string(channelsJSON), now, uuids)
+		if err != nil {
+			return 0, err
+		}
+		return cmdTag.RowsAffected(), nil
+
+	case "remove":
+		// For each row, parse existing JSON array, filter out the specified channels, write back
+		query = `UPDATE check_definitions SET
+			alert_channels = (
+				SELECT COALESCE(json_agg(ch)::text, '[]') FROM (
+					SELECT jsonb_array_elements_text(COALESCE(NULLIF(alert_channels,''),'[]')::jsonb) AS ch
+					EXCEPT
+					SELECT jsonb_array_elements_text($1::jsonb) AS ch
+				) sub
+			),
+			updated_at=$2
+			WHERE uuid = ANY($3)`
+		cmdTag, err := db.Pool.Exec(ctx, query, string(channelsJSON), now, uuids)
+		if err != nil {
+			return 0, err
+		}
+		return cmdTag.RowsAffected(), nil
+
+	default:
+		return 0, fmt.Errorf("invalid action: %s (must be add, remove, or replace)", action)
+	}
+}
+
 func (db *PostgresDB) SetMaintenanceWindow(ctx context.Context, uuid string, until *time.Time) error {
 	cmdTag, err := db.Pool.Exec(ctx,
 		`UPDATE check_definitions SET maintenance_until=$2, updated_at=$3 WHERE uuid=$1`,
