@@ -25,6 +25,7 @@ import { StatusBar } from '@/components/StatusBar'
 import { useAlerts } from '@/hooks/useAlerts'
 import { api } from '@/lib/api'
 import type { AlertChannel, RegionResult } from '@/lib/api'
+import { getChannelMeta } from '@/lib/channels'
 import {
   Bell,
   BellOff,
@@ -403,7 +404,7 @@ export function Alerts() {
                                             <Radio className="h-3.5 w-3.5 mr-2" />
                                             {ch.name}
                                             <Badge variant="secondary" className="text-[9px] ml-auto py-0">
-                                              {ch.type}
+                                              {getChannelMeta(ch.type).label}
                                             </Badge>
                                           </DropdownMenuSubTrigger>
                                           <DropdownMenuSubContent>
@@ -446,7 +447,7 @@ export function Alerts() {
                                             <Radio className="h-3.5 w-3.5 mr-2" />
                                             {ch.name}
                                             <Badge variant="secondary" className="text-[9px] ml-auto py-0">
-                                              {ch.type}
+                                              {getChannelMeta(ch.type).label}
                                             </Badge>
                                           </DropdownMenuSubTrigger>
                                           <DropdownMenuSubContent>
