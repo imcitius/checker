@@ -508,6 +508,112 @@ func (s *SQLiteDB) BulkDeleteCheckDefinitions(ctx context.Context, uuids []strin
 	return result.RowsAffected()
 }
 
+func (s *SQLiteDB) BulkUpdateAlertChannels(ctx context.Context, uuids []string, action string, channels []string) (int64, error) {
+	if len(uuids) == 0 {
+		return 0, nil
+	}
+
+	switch action {
+	case "add", "remove", "replace":
+		// valid
+	default:
+		return 0, fmt.Errorf("invalid action: %s (must be add, remove, or replace)", action)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	// For SQLite we need to do this row-by-row in a transaction since SQLite
+	// doesn't have jsonb_array_elements or similar set-returning functions.
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	var totalAffected int64
+
+	for _, u := range uuids {
+		if action == "replace" {
+			// Simple case: just set the value
+			channelsJSON := marshalAlertChannels(channels)
+			var val interface{}
+			if channelsJSON != nil {
+				val = *channelsJSON
+			}
+			result, err := tx.ExecContext(ctx,
+				`UPDATE check_definitions SET alert_channels=?, updated_at=? WHERE uuid=?`,
+				val, now, u)
+			if err != nil {
+				return 0, err
+			}
+			n, _ := result.RowsAffected()
+			totalAffected += n
+			continue
+		}
+
+		// For add/remove, we need to read-modify-write
+		var existingJSON sql.NullString
+		err := tx.QueryRowContext(ctx,
+			`SELECT alert_channels FROM check_definitions WHERE uuid=?`, u).
+			Scan(&existingJSON)
+		if err != nil {
+			continue // skip if not found
+		}
+
+		var existing []string
+		if existingJSON.Valid && existingJSON.String != "" {
+			json.Unmarshal([]byte(existingJSON.String), &existing)
+		}
+
+		var updated []string
+		if action == "add" {
+			// Merge: existing + new, deduplicated
+			seen := make(map[string]bool, len(existing)+len(channels))
+			for _, ch := range existing {
+				if !seen[ch] {
+					updated = append(updated, ch)
+					seen[ch] = true
+				}
+			}
+			for _, ch := range channels {
+				if !seen[ch] {
+					updated = append(updated, ch)
+					seen[ch] = true
+				}
+			}
+		} else { // remove
+			removeSet := make(map[string]bool, len(channels))
+			for _, ch := range channels {
+				removeSet[ch] = true
+			}
+			for _, ch := range existing {
+				if !removeSet[ch] {
+					updated = append(updated, ch)
+				}
+			}
+		}
+
+		updatedJSON := marshalAlertChannels(updated)
+		var val interface{}
+		if updatedJSON != nil {
+			val = *updatedJSON
+		}
+		result, err2 := tx.ExecContext(ctx,
+			`UPDATE check_definitions SET alert_channels=?, updated_at=? WHERE uuid=?`,
+			val, now, u)
+		if err2 != nil {
+			return 0, err2
+		}
+		n, _ := result.RowsAffected()
+		totalAffected += n
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return totalAffected, nil
+}
+
 func (s *SQLiteDB) SetMaintenanceWindow(ctx context.Context, uuid string, until *time.Time) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 	result, err := s.DB.ExecContext(ctx,

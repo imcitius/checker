@@ -359,6 +359,7 @@ func RunServer(ctx context.Context, cfg *config.Config, repo db.Repository, webh
 		bulkGroup.POST("/bulk-enable", BulkEnableChecks)
 		bulkGroup.POST("/bulk-disable", BulkDisableChecks)
 		bulkGroup.POST("/bulk-delete", BulkDeleteChecks)
+		bulkGroup.POST("/bulk-alert-channels", BulkUpdateAlertChannels)
 	}
 
 	// Alert history endpoints

@@ -224,6 +224,9 @@ func (r *mockRepo) BulkToggleCheckDefinitions(_ context.Context, _ []string, _ b
 func (r *mockRepo) BulkDeleteCheckDefinitions(_ context.Context, _ []string) (int64, error) {
 	return 0, nil
 }
+func (r *mockRepo) BulkUpdateAlertChannels(_ context.Context, _ []string, _ string, _ []string) (int64, error) {
+	return 0, nil
+}
 func (r *mockRepo) GetAllEscalationPolicies(_ context.Context) ([]models.EscalationPolicy, error) {
 	return nil, nil
 }

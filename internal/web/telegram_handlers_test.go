@@ -105,6 +105,9 @@ func (m *mockTelegramRepo) BulkToggleCheckDefinitions(_ context.Context, _ []str
 func (m *mockTelegramRepo) BulkDeleteCheckDefinitions(_ context.Context, _ []string) (int64, error) {
 	return 0, nil
 }
+func (m *mockTelegramRepo) BulkUpdateAlertChannels(_ context.Context, _ []string, _ string, _ []string) (int64, error) {
+	return 0, nil
+}
 func (m *mockTelegramRepo) GetAllProjects(_ context.Context) ([]string, error) { return nil, nil }
 func (m *mockTelegramRepo) GetAllCheckTypes(_ context.Context) ([]string, error) { return nil, nil }
 func (m *mockTelegramRepo) ConvertConfigToCheckDefinitions(_ context.Context, _ *config.Config) error {

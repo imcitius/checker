@@ -21,7 +21,7 @@ import {
   Plus, Pencil, Trash2, RefreshCw, Upload, Download,
   ArrowUp, ArrowDown, ArrowUpDown, Copy, Power, PowerOff,
   CheckSquare, Square, MinusSquare, Clock, X,
-  ChevronRight, ChevronDown, FolderOpen, BellOff,
+  ChevronRight, ChevronDown, FolderOpen, BellOff, Bell,
 } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -204,6 +204,9 @@ export function Management() {
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [bulkMaintenanceDialogOpen, setBulkMaintenanceDialogOpen] = useState(false)
   const [bulkMaintenanceUntil, setBulkMaintenanceUntil] = useState('')
+  const [bulkAlertChannelsDialogOpen, setBulkAlertChannelsDialogOpen] = useState(false)
+  const [bulkAlertAction, setBulkAlertAction] = useState<'add' | 'remove' | 'replace'>('add')
+  const [bulkAlertSelectedChannels, setBulkAlertSelectedChannels] = useState<Set<string>>(new Set())
 
   // Bulk selection
   const [selectedUUIDs, setSelectedUUIDs] = useState<Set<string>>(new Set())
@@ -600,6 +603,40 @@ export function Management() {
     } catch (err) {
       console.error('Bulk maintenance failed:', err)
       toast.error('Failed to set maintenance on some checks')
+    } finally {
+      setBulkActing(false)
+    }
+  }
+
+  // Collect all unique alert channel names from loaded checks
+  const availableChannelNames = useMemo(() => {
+    const names = new Set<string>()
+    for (const def of definitions) {
+      if (def.alert_channels) {
+        for (const ch of def.alert_channels) names.add(ch)
+      }
+    }
+    return Array.from(names).sort()
+  }, [definitions])
+
+  const handleBulkAlertChannels = async () => {
+    if (bulkAlertSelectedChannels.size === 0) return
+    setBulkActing(true)
+    try {
+      const result = await api.bulkAlertChannels(
+        [...selectedInView],
+        bulkAlertAction,
+        [...bulkAlertSelectedChannels]
+      )
+      const actionLabel = bulkAlertAction === 'add' ? 'Added channels to' : bulkAlertAction === 'remove' ? 'Removed channels from' : 'Replaced channels on'
+      toast.success(`${actionLabel} ${result.count} checks`)
+      setSelectedUUIDs(new Set())
+      setBulkAlertChannelsDialogOpen(false)
+      setBulkAlertSelectedChannels(new Set())
+      fetchData()
+    } catch (err) {
+      console.error('Bulk alert channels failed:', err)
+      toast.error('Failed to update alert channels')
     } finally {
       setBulkActing(false)
     }
@@ -1221,6 +1258,24 @@ export function Management() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => {
+                        setBulkAlertAction('add')
+                        setBulkAlertSelectedChannels(new Set())
+                        setBulkAlertChannelsDialogOpen(true)
+                      }}
+                      disabled={bulkActing}
+                    >
+                      <Bell className="h-4 w-4 mr-1" />
+                      Set Alert Channels
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Change alert channels on {selectedInView.size} selected checks</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setBulkDeleteDialogOpen(true)}
                       disabled={bulkActing}
                       className="text-unhealthy hover:text-unhealthy"
@@ -1330,6 +1385,89 @@ export function Management() {
               </Button>
               <Button onClick={handleBulkMaintenance} disabled={bulkActing || !bulkMaintenanceUntil}>
                 {bulkActing ? 'Setting...' : `Set Maintenance on ${selectedInView.size} Checks`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Alert Channels Dialog */}
+        <Dialog open={bulkAlertChannelsDialogOpen} onOpenChange={(open) => {
+          setBulkAlertChannelsDialogOpen(open)
+          if (!open) {
+            setBulkAlertSelectedChannels(new Set())
+            setBulkAlertAction('add')
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Set Alert Channels</DialogTitle>
+              <DialogDescription>
+                Update alert channels for {selectedInView.size} selected {selectedInView.size === 1 ? 'check' : 'checks'}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Action</label>
+                <div className="flex gap-2">
+                  {(['add', 'remove', 'replace'] as const).map((action) => (
+                    <Button
+                      key={action}
+                      variant={bulkAlertAction === action ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setBulkAlertAction(action)}
+                    >
+                      {action === 'add' ? 'Add to existing' : action === 'remove' ? 'Remove from existing' : 'Replace all'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Channels</label>
+                <div className="flex flex-wrap gap-2">
+                  {availableChannelNames.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No alert channels found in current checks.</p>
+                  ) : (
+                    availableChannelNames.map((ch) => {
+                      const meta = CHANNEL_TYPES.find((ct) => ct.value === ch)
+                      const isSelected = bulkAlertSelectedChannels.has(ch)
+                      return (
+                        <button
+                          key={ch}
+                          type="button"
+                          onClick={() => {
+                            setBulkAlertSelectedChannels((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(ch)) next.delete(ch)
+                              else next.add(ch)
+                              return next
+                            })
+                          }}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors',
+                            isSelected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-card hover:bg-muted'
+                          )}
+                        >
+                          {isSelected && <CheckSquare className="h-3.5 w-3.5" />}
+                          {!isSelected && <Square className="h-3.5 w-3.5" />}
+                          {meta?.label ?? ch}
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkAlertChannelsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkAlertChannels}
+                disabled={bulkActing || bulkAlertSelectedChannels.size === 0}
+              >
+                {bulkActing ? 'Updating...' : `Update ${selectedInView.size} ${selectedInView.size === 1 ? 'Check' : 'Checks'}`}
               </Button>
             </DialogFooter>
           </DialogContent>

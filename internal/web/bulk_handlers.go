@@ -66,6 +66,42 @@ func BulkDisableChecks(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "count": count})
 }
 
+// bulkAlertChannelsRequest is the request body for bulk alert channel updates.
+type bulkAlertChannelsRequest struct {
+	UUIDs    []string `json:"uuids" binding:"required"`
+	Action   string   `json:"action" binding:"required"`
+	Channels []string `json:"channels" binding:"required"`
+}
+
+// BulkUpdateAlertChannels updates alert channels on multiple check definitions at once.
+// POST /api/checks/bulk-alert-channels
+func BulkUpdateAlertChannels(c *gin.Context) {
+	repo := c.MustGet("repo").(db.Repository)
+
+	var req bulkAlertChannelsRequest
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.UUIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Fields 'uuids', 'action', and 'channels' are required; 'uuids' must be non-empty"})
+		return
+	}
+
+	if req.Action != "add" && req.Action != "remove" && req.Action != "replace" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Action must be 'add', 'remove', or 'replace'"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	count, err := repo.BulkUpdateAlertChannels(ctx, req.UUIDs, req.Action, req.Channels)
+	if err != nil {
+		logrus.Errorf("Failed to bulk update alert channels: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update alert channels"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "count": count})
+}
+
 // BulkDeleteChecks deletes multiple check definitions at once.
 // POST /api/checks/bulk-delete
 func BulkDeleteChecks(c *gin.Context) {

@@ -22,11 +22,13 @@ import (
 // stubRepo implements db.Repository with minimal stubs for testing CreateCheckDefinition.
 type stubRepo struct {
 	db.Repository
-	lastCreated          models.CheckDefinition
-	lastMaintenanceUUID  string
-	lastMaintenanceUntil *time.Time
-	lastBulkUUIDs        []string
-	lastBulkEnabled      bool
+	lastCreated               models.CheckDefinition
+	lastMaintenanceUUID       string
+	lastMaintenanceUntil      *time.Time
+	lastBulkUUIDs             []string
+	lastBulkEnabled           bool
+	lastBulkAlertAction       string
+	lastBulkAlertChannels     []string
 }
 
 func (s *stubRepo) CreateCheckDefinition(_ context.Context, def models.CheckDefinition) (string, error) {
@@ -100,6 +102,12 @@ func (s *stubRepo) BulkToggleCheckDefinitions(_ context.Context, uuids []string,
 }
 func (s *stubRepo) BulkDeleteCheckDefinitions(_ context.Context, uuids []string) (int64, error) {
 	s.lastBulkUUIDs = uuids
+	return int64(len(uuids)), nil
+}
+func (s *stubRepo) BulkUpdateAlertChannels(_ context.Context, uuids []string, action string, channels []string) (int64, error) {
+	s.lastBulkUUIDs = uuids
+	s.lastBulkAlertAction = action
+	s.lastBulkAlertChannels = channels
 	return int64(len(uuids)), nil
 }
 func (s *stubRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, error) {
