@@ -2,7 +2,19 @@
 
 package models
 
-import "time"
+import (
+	"time"
+)
+
+// EdgeSchedulerStats holds execution counters reported by edge probes.
+// Defined in models so both checker-core and checker-cloud can use it.
+type EdgeSchedulerStats struct {
+	ChecksDispatched int64 `json:"checks_dispatched"` // successfully queued to worker pool
+	ChecksDeferred   int64 `json:"checks_deferred"`   // worker pool full, retried later
+	ChecksExecuted   int64 `json:"checks_executed"`   // completed by workers (healthy + failed)
+	ChecksFailed     int64 `json:"checks_failed"`     // completed unhealthy
+	TotalChecks      int   `json:"total_checks"`      // current check count in heap
+}
 
 // EdgeMessage is the base envelope for Edge WebSocket messages.
 // Type values: "config_sync", "config_patch", "result", "heartbeat", "ping", "pong"
@@ -38,10 +50,11 @@ type EdgeResult struct {
 
 // EdgeHeartbeat is sent Edge -> SaaS to report liveness and capacity.
 type EdgeHeartbeat struct {
-	Type          string `json:"type"`          // "heartbeat"
-	Version       string `json:"version"`
-	Region        string `json:"region"`
-	WorkerCount   int    `json:"worker_count"`
-	ActiveChecks  int    `json:"active_checks"`
-	UptimeSeconds int64  `json:"uptime_seconds"`
+	Type          string              `json:"type"`          // "heartbeat"
+	Version       string              `json:"version"`
+	Region        string              `json:"region"`
+	WorkerCount   int                 `json:"worker_count"`
+	ActiveChecks  int                 `json:"active_checks"`
+	UptimeSeconds int64               `json:"uptime_seconds"`
+	Stats         *EdgeSchedulerStats `json:"stats,omitempty"`
 }

@@ -3,8 +3,16 @@
 # Build everything: frontend + Go binary
 build: frontend build-go
 
-# Build the React frontend, copy to internal/web/spa/ for Go embed
+# Build the React frontend from standalone-ui package, copy to internal/web/spa/ for Go embed
+STANDALONE_UI_DIR = $(shell cd ../.. && pwd)/packages/checker-standalone-ui
 frontend:
+	cd $(STANDALONE_UI_DIR) && npm ci && VITE_GIT_SHA=$$(git rev-parse HEAD 2>/dev/null || echo "unknown") npm run build
+	rm -rf internal/web/spa
+	cp -r $(STANDALONE_UI_DIR)/dist internal/web/spa
+	git rev-parse HEAD > internal/web/spa/.version 2>/dev/null || echo "unknown" > internal/web/spa/.version
+
+# Legacy: build from checker-core's own frontend/ directory
+frontend-legacy:
 	cd frontend && npm ci && VITE_GIT_SHA=$$(git rev-parse HEAD 2>/dev/null || echo "unknown") npm run build
 	rm -rf internal/web/spa
 	cp -r frontend/dist internal/web/spa
@@ -32,7 +40,7 @@ clean:
 
 # Run frontend dev server (proxies API to Go backend on :8080)
 dev-frontend:
-	cd frontend && npm run dev
+	cd $(STANDALONE_UI_DIR) && npm run dev
 
 # Run Go backend
 dev-go:

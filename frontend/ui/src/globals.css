@@ -1,0 +1,157 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 215 28% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 12%;
+    --primary: 212 100% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 14% 93%;
+    --secondary-foreground: 215 28% 12%;
+    --muted: 215 14% 93%;
+    --muted-foreground: 215 14% 40%;
+    --accent: 215 14% 93%;
+    --accent-foreground: 215 28% 12%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 14% 85%;
+    --input: 215 14% 85%;
+    --ring: 212 100% 47%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 215 28% 7%;
+    --foreground: 213 27% 92%;
+    --card: 215 25% 11%;
+    --card-foreground: 213 27% 92%;
+    --popover: 215 25% 11%;
+    --popover-foreground: 213 27% 92%;
+    --primary: 212 100% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 14% 16%;
+    --secondary-foreground: 213 27% 92%;
+    --muted: 215 14% 16%;
+    --muted-foreground: 215 14% 55%;
+    --accent: 215 14% 16%;
+    --accent-foreground: 213 27% 92%;
+    --destructive: 0 72% 63%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 14% 20%;
+    --input: 215 14% 20%;
+    --ring: 212 100% 67%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+.scanline-bg {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.03) 2px,
+    rgba(255, 255, 255, 0.03) 4px
+  );
+}
+
+.dark .scanline-bg {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.03) 2px,
+    rgba(255, 255, 255, 0.03) 4px
+  );
+}
+
+:root .scanline-bg {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.02) 2px,
+    rgba(0, 0, 0, 0.02) 4px
+  );
+}
+
+.glow-healthy {
+  box-shadow: 0 0 8px rgba(63, 185, 80, 0.3);
+}
+
+.glow-unhealthy {
+  box-shadow: 0 0 8px rgba(248, 81, 73, 0.3);
+}
+
+.glow-warning {
+  box-shadow: 0 0 8px rgba(210, 153, 34, 0.3);
+}
+
+.mono-data {
+  @apply font-mono text-sm tracking-tight;
+}
+
+.terminal-prompt::before {
+  content: '>_ ';
+  @apply text-muted-foreground;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark ::-webkit-scrollbar-track,
+.dark::-webkit-scrollbar-track {
+  background: hsl(215 28% 7%);
+}
+
+.dark ::-webkit-scrollbar-thumb,
+.dark::-webkit-scrollbar-thumb {
+  background: hsl(215 14% 20%);
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover,
+.dark::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 14% 30%);
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(210 20% 96%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(215 14% 80%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 14% 65%);
+}
+
+kbd {
+  @apply inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-mono rounded border border-border bg-muted text-muted-foreground;
+  min-width: 1.5em;
+}
+
+.surface-header {
+  background-color: hsl(var(--card));
+}

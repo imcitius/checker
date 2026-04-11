@@ -42,7 +42,7 @@ func main() {
 	}
 
 	cfg := edge.ClientConfig{
-		SaaSURL:    envOrFatal("CHECKER_SAAS_URL"),
+		SaaSURL:    envOrDefault("CHECKER_SAAS_URL", "wss://app.ensafely.com/ws/edge"),
 		APIKey:     envOrFatal("CHECKER_API_KEY"),
 		Region:     envOrDefault("CHECKER_EDGE_REGION", "edge-default"),
 		MaxWorkers: envIntOrDefault("CHECKER_EDGE_WORKERS", 10),

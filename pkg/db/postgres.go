@@ -300,7 +300,17 @@ func (db *PostgresDB) DeleteCheckDefinition(ctx context.Context, uuid string) er
 }
 
 func (db *PostgresDB) ToggleCheckDefinition(ctx context.Context, uuid string, enabled bool) error {
-	cmdTag, err := db.Pool.Exec(ctx, "UPDATE check_definitions SET enabled=$2, updated_at=$3 WHERE uuid=$1", uuid, enabled, time.Now())
+	var query string
+	now := time.Now()
+	if enabled {
+		// When re-enabling, reset health status so it shows as "pending"
+		// until the first probe result arrives, instead of displaying
+		// stale failure state from before the check was disabled.
+		query = "UPDATE check_definitions SET enabled=$2, is_healthy=true, last_message='', updated_at=$3 WHERE uuid=$1"
+	} else {
+		query = "UPDATE check_definitions SET enabled=$2, updated_at=$3 WHERE uuid=$1"
+	}
+	cmdTag, err := db.Pool.Exec(ctx, query, uuid, enabled, now)
 	if err != nil {
 		return err
 	}

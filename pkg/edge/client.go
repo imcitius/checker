@@ -279,6 +279,7 @@ func (c *Client) sendHeartbeats(ctx context.Context, conn *wsConn, sched *EdgeSc
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			stats := sched.Stats()
 			hb := models.EdgeHeartbeat{
 				Type:          "heartbeat",
 				Version:       edgeClientVersion,
@@ -286,6 +287,7 @@ func (c *Client) sendHeartbeats(ctx context.Context, conn *wsConn, sched *EdgeSc
 				WorkerCount:   c.cfg.MaxWorkers,
 				ActiveChecks:  sched.ActiveCount(),
 				UptimeSeconds: int64(time.Since(c.startTime).Seconds()),
+				Stats:         &stats,
 			}
 			data, err := json.Marshal(hb)
 			if err != nil {

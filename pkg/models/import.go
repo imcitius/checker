@@ -135,6 +135,9 @@ type CheckImportItem struct {
 	ReAlertInterval  string   `json:"re_alert_interval,omitempty" yaml:"re_alert_interval,omitempty"`
 	RetryCount       int      `json:"retry_count,omitempty" yaml:"retry_count,omitempty"`
 	RetryInterval    string   `json:"retry_interval,omitempty" yaml:"retry_interval,omitempty"`
+
+	// Region targeting
+	TargetRegions []string `json:"target_regions,omitempty" yaml:"target_regions,omitempty"`
 }
 
 // DBImportConfig holds database-specific import fields

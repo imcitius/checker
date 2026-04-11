@@ -6,6 +6,7 @@ import (
 	"container/heap"
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/imcitius/checker/pkg/models"
@@ -13,6 +14,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 )
+
+// EdgeSchedulerStats is an alias for the wire-format type in models.
+type EdgeSchedulerStats = models.EdgeSchedulerStats
 
 const (
 	defaultEdgeWorkers = 10
@@ -82,6 +86,12 @@ type EdgeScheduler struct {
 
 	// notify the scheduling loop that the heap changed
 	changed chan struct{}
+
+	// Execution counters (atomic).
+	checksDispatched atomic.Int64
+	checksDeferred   atomic.Int64
+	checksExecuted   atomic.Int64
+	checksFailed     atomic.Int64
 }
 
 // NewEdgeScheduler creates a new EdgeScheduler. results is the channel that
@@ -98,7 +108,7 @@ func NewEdgeScheduler(workers int, results chan<- CheckResult) *EdgeScheduler {
 		checkMap:    make(map[string]*edgeCheckItem),
 		workers:     workers,
 		results:     results,
-		jobs:        make(chan models.CheckDefinition, workers*2),
+		jobs:        make(chan models.CheckDefinition, workers*100),
 		stopWorkers: make(chan struct{}),
 		changed:     make(chan struct{}, 1),
 	}
@@ -159,25 +169,35 @@ func (s *EdgeScheduler) dispatchDue() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	var dispatched, deferred int
+
 	for s.heap.peek() != nil && !s.heap.peek().NextRun.After(now) {
 		item := heap.Pop(s.heap).(*edgeCheckItem)
 
-		// Reschedule.
 		d := parseDuration(item.CheckDef.Duration)
 		if d <= 0 {
 			d = time.Minute
 		}
-		item.NextRun = now.Add(d)
-		heap.Push(s.heap, item)
-		// Also update checkMap reference (same pointer, heap updated it).
 
-		// Submit to worker pool (non-blocking; if full, skip this cycle).
+		// Submit to worker pool (non-blocking; if full, retry soon).
 		def := item.CheckDef
 		select {
 		case s.jobs <- def:
+			// Successfully submitted — reschedule for next interval.
+			item.NextRun = now.Add(d)
+			dispatched++
+			s.checksDispatched.Add(1)
 		default:
-			logrus.Warnf("EdgeScheduler: worker pool full, skipping check %s", def.UUID)
+			// Workers busy — retry soon instead of waiting a full interval.
+			item.NextRun = now.Add(2 * time.Second)
+			deferred++
+			s.checksDeferred.Add(1)
 		}
+		heap.Push(s.heap, item)
+	}
+
+	if deferred > 0 {
+		logrus.Warnf("EdgeScheduler: dispatched %d checks, %d deferred (worker pool full — consider increasing CHECKER_EDGE_WORKERS)", dispatched, deferred)
 	}
 }
 
@@ -193,6 +213,10 @@ func (s *EdgeScheduler) worker(ctx context.Context, id int) {
 			}
 			log.Debugf("executing check %s (%s)", def.UUID, def.Type)
 			result := s.executeCheck(def)
+			s.checksExecuted.Add(1)
+			if !result.IsHealthy {
+				s.checksFailed.Add(1)
+			}
 			select {
 			case s.results <- result:
 			case <-ctx.Done():
@@ -254,15 +278,21 @@ func (s *EdgeScheduler) executeCheck(def models.CheckDefinition) CheckResult {
 }
 
 // ReplaceAll replaces the entire check set (used on config_sync).
+// Preserves existing NextRun times for checks that haven't changed,
+// so periodic config_syncs don't keep pushing checks into the future.
 func (s *EdgeScheduler) ReplaceAll(defs []models.CheckDefinition) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Snapshot existing checks to preserve their NextRun times.
+	oldMap := s.checkMap
 
 	// Rebuild heap and map from scratch.
 	*s.heap = (*s.heap)[:0]
 	s.checkMap = make(map[string]*edgeCheckItem, len(defs))
 
 	now := time.Now()
+	newCount := 0
 	for _, def := range defs {
 		if !def.Enabled {
 			continue
@@ -271,9 +301,23 @@ func (s *EdgeScheduler) ReplaceAll(defs []models.CheckDefinition) {
 		if d <= 0 {
 			d = time.Minute
 		}
+
+		var nextRun time.Time
+		if existing, ok := oldMap[def.UUID]; ok {
+			// Existing check: preserve scheduled NextRun so periodic
+			// config_syncs don't reset the countdown.
+			nextRun = existing.NextRun
+		} else {
+			// New check: stagger initial runs to avoid thundering herd.
+			// Spread across the first interval so workers aren't overwhelmed.
+			stagger := time.Duration(newCount) * (d / time.Duration(len(defs)+1))
+			nextRun = now.Add(stagger)
+			newCount++
+		}
+
 		item := &edgeCheckItem{
 			CheckDef: def,
-			NextRun:  now.Add(d),
+			NextRun:  nextRun,
 		}
 		heap.Push(s.heap, item)
 		s.checkMap[def.UUID] = item
@@ -334,6 +378,18 @@ func (s *EdgeScheduler) ActiveCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return len(s.checkMap)
+}
+
+// Stats returns a snapshot of the scheduler's execution counters.
+// Counters are cumulative since the scheduler was created.
+func (s *EdgeScheduler) Stats() EdgeSchedulerStats {
+	return EdgeSchedulerStats{
+		ChecksDispatched: s.checksDispatched.Load(),
+		ChecksDeferred:   s.checksDeferred.Load(),
+		ChecksExecuted:   s.checksExecuted.Load(),
+		ChecksFailed:     s.checksFailed.Load(),
+		TotalChecks:      s.ActiveCount(),
+	}
 }
 
 // notifyChanged sends a non-blocking signal to the scheduling loop.
