@@ -1,73 +1,64 @@
----
 name: Publish Helm Chart
 
 on:
-  push:
-    branches:
-      - dev
-      - master
-    paths:
-      - "charts/**"
   release:
     types: [published]
-  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
 
 jobs:
-  lint-and-publish:
+  publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # needed to push to gh-pages branch
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+
+      - name: Extract version from release tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          CHART_VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "chart_version=$CHART_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install Helm
         uses: azure/setup-helm@v4
-        with:
-          version: "latest"
 
-      - name: Lint chart
-        run: helm lint charts/checker-edge
-
-      - name: Set release version
-        if: github.event_name == 'release'
+      - name: Package Helm chart
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION_NO_V="${VERSION#v}"
-          # Update Chart.yaml appVersion
-          sed -i "s/^appVersion:.*/appVersion: \"${VERSION_NO_V}\"/" charts/checker-edge/Chart.yaml
-          # Update Chart.yaml version to match
-          sed -i "s/^version:.*/version: ${VERSION_NO_V}/" charts/checker-edge/Chart.yaml
-          # Update default image tag in values.yaml
-          sed -i "s/^  tag:.*/  tag: ${VERSION_NO_V}/" charts/checker-edge/values.yaml
-
-      - name: Package chart
-        run: |
-          mkdir -p .helm-packages
-          helm package charts/checker-edge -d .helm-packages/
+          helm package charts/checker-edge \
+            --version "${{ steps.version.outputs.chart_version }}" \
+            --app-version "${{ steps.version.outputs.version }}" \
+            -d .helm-out/
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: gh-pages
-          # Create the branch automatically if it doesn't exist yet
           fetch-depth: 0
 
-      - name: Copy packaged chart and rebuild index
+      - name: Update Helm repo index
         run: |
-          cp .helm-packages/*.tgz gh-pages/
-          helm repo index gh-pages/ --url https://imcitius.github.io/checker --merge gh-pages/index.yaml
+          cp .helm-out/*.tgz gh-pages/
+          cd gh-pages
+          helm repo index . --url "https://imcitius.github.io/checker"
 
-      - name: Commit and push to gh-pages
+      - name: Push to gh-pages
         run: |
           cd gh-pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          # Only commit if there are changes
-          git diff --cached --quiet || git commit -m "chore: publish Helm chart from ${{ github.sha }}"
+          git commit -m "Publish Helm chart ${{ steps.version.outputs.chart_version }}" || true
           git push origin gh-pages
+
+      - name: Attach chart to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.version.outputs.version }}" \
+            .helm-out/*.tgz \
+            --clobber

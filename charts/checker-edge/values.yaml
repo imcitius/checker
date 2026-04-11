@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/imcitius/checker-edge
-  tag: v1.1.3
+  tag: v1.1.4
   pullPolicy: IfNotPresent
 
 # Required: Ensafely API key (create at app.ensafely.com → Account → API Keys)
