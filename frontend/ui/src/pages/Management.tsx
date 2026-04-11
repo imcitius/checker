@@ -21,7 +21,7 @@ import {
   Plus, Pencil, Trash2, RefreshCw, Upload, Download,
   ArrowUp, ArrowDown, ArrowUpDown, Copy, Power, PowerOff,
   CheckSquare, Square, MinusSquare, Clock, X,
-  ChevronRight, ChevronDown, FolderOpen, BellOff, Bell,
+  ChevronRight, ChevronDown, FolderOpen, BellOff, Bell, ChevronsUpDown, ChevronsDownUp,
 } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -469,6 +469,35 @@ export function Management(_props: ManagementProps = {}) {
     })
   }, [])
 
+  // Collect all collapsible group keys
+  const allGroupKeys = useMemo(() => {
+    const keys: string[] = []
+    for (const group of groups) {
+      keys.push(`p:${group.project}`)
+      for (const sg of group.subGroups) {
+        keys.push(`g:${group.project}/${sg.group}`)
+      }
+    }
+    return keys
+  }, [groups])
+
+  const allCollapsed = allGroupKeys.length > 0 && allGroupKeys.every((k) => collapsedGroups.has(k))
+
+  const toggleAllGroups = useCallback(() => {
+    setCollapsedGroups((prev) => {
+      const allKeys = allGroupKeys
+      const allCurrentlyCollapsed = allKeys.length > 0 && allKeys.every((k) => prev.has(k))
+      const next = new Set(prev)
+      if (allCurrentlyCollapsed) {
+        for (const k of allKeys) next.delete(k)
+      } else {
+        for (const k of allKeys) next.add(k)
+      }
+      saveCollapsed(next)
+      return next
+    })
+  }, [allGroupKeys])
+
   const handleCreate = () => {
     setEditingCheck({ ...EMPTY_FORM })
     setEditDialogOpen(true)
@@ -862,6 +891,21 @@ export function Management(_props: ManagementProps = {}) {
                 <Badge variant="info" className="text-xs">
                   {selectedInView.size} selected
                 </Badge>
+              )}
+              {groups.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={toggleAllGroups}
+                >
+                  {allCollapsed ? (
+                    <ChevronsUpDown className="h-3.5 w-3.5 mr-1" />
+                  ) : (
+                    <ChevronsDownUp className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  {allCollapsed ? 'Expand All' : 'Collapse All'}
+                </Button>
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">

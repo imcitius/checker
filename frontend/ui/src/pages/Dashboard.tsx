@@ -15,7 +15,7 @@ import { useKeyboard } from '@/hooks/useKeyboard'
 import { api } from '@/lib/api'
 import { useTopBarConfig } from '@/lib/topbar-context'
 import type { Check } from '@/lib/websocket'
-import { LayoutGrid, List, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { LayoutGrid, List, ArrowUp, ArrowDown, ArrowUpDown, ChevronsUpDown, ChevronsDownUp } from 'lucide-react'
 
 const COLLAPSED_KEY = 'checker-collapsed-groups'
 const VIEW_MODE_KEY = 'checker-view-mode'
@@ -222,6 +222,37 @@ export function Dashboard() {
     })
   }, [])
 
+  // Collect all collapsible group keys
+  const allGroupKeys = useMemo(() => {
+    const keys: string[] = []
+    for (const group of groups) {
+      keys.push(`p:${group.name}`)
+      for (const sg of group.subGroups) {
+        keys.push(`g:${group.name}/${sg.name}`)
+      }
+    }
+    return keys
+  }, [groups])
+
+  const allCollapsed = allGroupKeys.length > 0 && allGroupKeys.every((k) => collapsedGroups.has(k))
+
+  const toggleAllGroups = useCallback(() => {
+    setCollapsedGroups((prev) => {
+      const allKeys = allGroupKeys
+      const allCurrentlyCollapsed = allKeys.length > 0 && allKeys.every((k) => prev.has(k))
+      const next = new Set(prev)
+      if (allCurrentlyCollapsed) {
+        // Expand all
+        for (const k of allKeys) next.delete(k)
+      } else {
+        // Collapse all
+        for (const k of allKeys) next.add(k)
+      }
+      saveCollapsed(next)
+      return next
+    })
+  }, [allGroupKeys])
+
   const handleSelectCheck = useCallback(
     (uuid: string) => {
       if (selectedUUID === uuid) {
@@ -329,25 +360,42 @@ export function Dashboard() {
                 ? ' (filtered)'
                 : ''}
             </div>
-            <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted/50">
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => handleSetViewMode('list')}
-              >
-                <List className="h-3.5 w-3.5 mr-1" />
-                List
-              </Button>
-              <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => handleSetViewMode('grid')}
-              >
-                <LayoutGrid className="h-3.5 w-3.5 mr-1" />
-                Map
-              </Button>
+            <div className="flex items-center gap-2">
+              {viewMode === 'list' && groups.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={toggleAllGroups}
+                >
+                  {allCollapsed ? (
+                    <ChevronsUpDown className="h-3.5 w-3.5 mr-1" />
+                  ) : (
+                    <ChevronsDownUp className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  {allCollapsed ? 'Expand All' : 'Collapse All'}
+                </Button>
+              )}
+              <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted/50">
+                <Button
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => handleSetViewMode('list')}
+                >
+                  <List className="h-3.5 w-3.5 mr-1" />
+                  List
+                </Button>
+                <Button
+                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => handleSetViewMode('grid')}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+                  Map
+                </Button>
+              </div>
             </div>
           </div>
 
