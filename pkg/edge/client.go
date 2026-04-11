@@ -279,7 +279,7 @@ func (c *Client) sendHeartbeats(ctx context.Context, conn *wsConn, sched *EdgeSc
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			stats := sched.Stats()
+			stats := sched.StatsAndReset()
 			hb := models.EdgeHeartbeat{
 				Type:          "heartbeat",
 				Version:       edgeClientVersion,

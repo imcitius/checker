@@ -392,6 +392,19 @@ func (s *EdgeScheduler) Stats() EdgeSchedulerStats {
 	}
 }
 
+// StatsAndReset returns a snapshot of the scheduler's execution counters
+// and atomically resets them to zero. This is used for per-period heartbeat
+// reporting so the SaaS can aggregate incremental deltas into time buckets.
+func (s *EdgeScheduler) StatsAndReset() EdgeSchedulerStats {
+	return EdgeSchedulerStats{
+		ChecksDispatched: s.checksDispatched.Swap(0),
+		ChecksDeferred:   s.checksDeferred.Swap(0),
+		ChecksExecuted:   s.checksExecuted.Swap(0),
+		ChecksFailed:     s.checksFailed.Swap(0),
+		TotalChecks:      s.ActiveCount(),
+	}
+}
+
 // notifyChanged sends a non-blocking signal to the scheduling loop.
 // Must be called with s.mu held.
 func (s *EdgeScheduler) notifyChanged() {
