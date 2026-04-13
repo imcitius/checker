@@ -12,6 +12,8 @@ export function useAlerts() {
   const [loading, setLoading] = useState(true)
   const [projectFilter, setProjectFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [since, setSince] = useState<string | undefined>(undefined)
+  const [until, setUntil] = useState<string | undefined>(undefined)
 
   const [silences, setSilences] = useState<AlertSilence[]>([])
   const [silencesLoading, setSilencesLoading] = useState(true)
@@ -31,6 +33,8 @@ export function useAlerts() {
         offset: effectiveOffset,
         project: projectFilter !== 'all' ? projectFilter : undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
+        since,
+        until,
       })
       setAlerts(result.alerts || [])
       setTotal(result.total)
@@ -39,7 +43,7 @@ export function useAlerts() {
     } finally {
       setLoading(false)
     }
-  }, [offset, projectFilter, statusFilter])
+  }, [offset, projectFilter, statusFilter, since, until])
 
   const fetchSilences = useCallback(async () => {
     setSilencesLoading(true)
@@ -108,7 +112,7 @@ export function useAlerts() {
   useEffect(() => {
     setOffset(0)
     fetchAlerts(0)
-  }, [projectFilter, statusFilter]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectFilter, statusFilter, since, until]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch alerts when offset changes
   useEffect(() => {
@@ -135,6 +139,10 @@ export function useAlerts() {
     setProjectFilter,
     statusFilter,
     setStatusFilter,
+    since,
+    setSince,
+    until,
+    setUntil,
     silences,
     silencesLoading,
     wsStatus,

@@ -25,4 +25,6 @@ type AlertHistoryFilters struct {
 	Project    string
 	CheckUUID  string
 	IsResolved *bool
+	Since      *time.Time
+	Until      *time.Time
 }

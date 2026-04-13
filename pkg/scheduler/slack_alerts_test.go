@@ -304,6 +304,24 @@ func (r *mockRepo) GetCycleResults(_ context.Context, _ string, _ time.Time) ([]
 func (r *mockRepo) PurgeOldCheckResults(_ context.Context, _ time.Duration) (int64, error) {
 	return 0, nil
 }
+func (r *mockRepo) GetProjectSettings(_ context.Context, _ string) (*models.ProjectSettings, error) {
+	return nil, nil
+}
+func (r *mockRepo) UpsertProjectSettings(_ context.Context, _ models.ProjectSettings) error {
+	return nil
+}
+func (r *mockRepo) GetAllProjectSettings(_ context.Context) ([]models.ProjectSettings, error) {
+	return nil, nil
+}
+func (r *mockRepo) GetGroupSettings(_ context.Context, _, _ string) (*models.GroupSettings, error) {
+	return nil, nil
+}
+func (r *mockRepo) UpsertGroupSettings(_ context.Context, _ models.GroupSettings) error {
+	return nil
+}
+func (r *mockRepo) GetAllGroupSettings(_ context.Context) ([]models.GroupSettings, error) {
+	return nil, nil
+}
 
 // --- Tests ---
 

@@ -52,6 +52,18 @@ func ListAlerts(c *gin.Context) {
 	// "all" leaves IsResolved as nil (no filter)
 	}
 
+	// Parse time range filters (RFC3339 or ISO8601)
+	if sinceStr := c.Query("since"); sinceStr != "" {
+		if t, err := time.Parse(time.RFC3339, sinceStr); err == nil {
+			filters.Since = &t
+		}
+	}
+	if untilStr := c.Query("until"); untilStr != "" {
+		if t, err := time.Parse(time.RFC3339, untilStr); err == nil {
+			filters.Until = &t
+		}
+	}
+
 	ctx := c.Request.Context()
 	alerts, total, err := repo.GetAlertHistory(ctx, limit, offset, filters)
 	if err != nil {

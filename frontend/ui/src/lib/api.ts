@@ -79,7 +79,9 @@ export interface CheckDefinition {
   actor_type?: string
   alert_channels?: string[]
   target_regions?: string[]
+  run_mode?: string
   maintenance_until?: string | null
+  re_alert_interval?: string
 }
 
 export interface CheckImportResultItem {
@@ -149,8 +151,50 @@ export interface RegionResult {
   region: string; is_healthy: boolean; message: string; created_at: string
 }
 
+export interface ProjectSettings {
+  project: string
+  enabled?: boolean | null
+  duration?: string | null
+  re_alert_interval?: string | null
+  maintenance_until?: string | null
+  maintenance_reason: string
+  updated_at: string
+}
+
+export interface GroupSettings {
+  project: string
+  group_name: string
+  enabled?: boolean | null
+  duration?: string | null
+  re_alert_interval?: string | null
+  maintenance_until?: string | null
+  maintenance_reason: string
+  updated_at: string
+}
+
 export interface TenantRegionsResponse {
   regions: string[]
+  quota: { current: number; limit: number }
+}
+
+export interface EdgeInstance {
+  id: string
+  tenant_id: string
+  api_key_id: string
+  region: string
+  status: string
+  version?: string
+  last_heartbeat_at?: string
+  connected_at?: string
+  disconnected_at?: string
+  remote_addr?: string
+  metadata?: unknown
+  created_at: string
+  updated_at: string
+}
+
+export interface EdgeInstancesResponse {
+  edge_instances: EdgeInstance[]
   quota: { current: number; limit: number }
 }
 
@@ -228,12 +272,14 @@ export function createApiClient(config: ApiClientConfig = {}) {
         `/api/check-definitions/${uuid}/maintenance`,
         { method: 'DELETE' }
       ),
-    getAlerts: (params?: { limit?: number; offset?: number; project?: string; status?: string }) => {
+    getAlerts: (params?: { limit?: number; offset?: number; project?: string; status?: string; since?: string; until?: string }) => {
       const searchParams = new URLSearchParams()
       if (params?.limit) searchParams.set('limit', String(params.limit))
       if (params?.offset) searchParams.set('offset', String(params.offset))
       if (params?.project) searchParams.set('project', params.project)
       if (params?.status) searchParams.set('status', params.status)
+      if (params?.since) searchParams.set('since', params.since)
+      if (params?.until) searchParams.set('until', params.until)
       const query = searchParams.toString()
       return request<AlertsResponse>(`/api/alerts${query ? '?' + query : ''}`)
     },
@@ -268,6 +314,7 @@ export function createApiClient(config: ApiClientConfig = {}) {
     getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),
     getCheckDefaults: () => request<CheckDefaults>('/api/settings/check-defaults'),
     getPlatformRegions: () => request<TenantRegionsResponse>('/api/platform-regions').catch(() => null),
+    getEdgeInstances: () => request<EdgeInstancesResponse>('/api/edge-instances').catch(() => null),
     updateCheckDefaults: (data: CheckDefaults) =>
       request<CheckDefaults>('/api/settings/check-defaults', {
         method: 'PUT', body: JSON.stringify(data),
@@ -322,6 +369,41 @@ export function createApiClient(config: ApiClientConfig = {}) {
         return data as CheckImportValidation
       })
     },
+    // Project & Group hierarchical settings
+    getAllProjectSettings: () => request<ProjectSettings[]>('/api/project-settings'),
+    getProjectSettings: (project: string) =>
+      request<ProjectSettings>(`/api/project-settings/${encodeURIComponent(project)}`),
+    updateProjectSettings: (project: string, data: { enabled?: boolean | null; duration?: string | null; re_alert_interval?: string | null }) =>
+      request<{ message: string }>(`/api/project-settings/${encodeURIComponent(project)}`, {
+        method: 'PUT', body: JSON.stringify(data),
+      }),
+    setProjectMaintenance: (project: string, duration: string, reason: string) =>
+      request<{ message: string; maintenance_until: string; maintenance_reason: string }>(
+        `/api/project-settings/${encodeURIComponent(project)}/maintenance`,
+        { method: 'POST', body: JSON.stringify({ duration, reason }) }
+      ),
+    clearProjectMaintenance: (project: string) =>
+      request<{ message: string }>(
+        `/api/project-settings/${encodeURIComponent(project)}/maintenance`,
+        { method: 'DELETE' }
+      ),
+    getAllGroupSettings: () => request<GroupSettings[]>('/api/group-settings'),
+    getGroupSettings: (project: string, group: string) =>
+      request<GroupSettings>(`/api/group-settings/${encodeURIComponent(project)}/${encodeURIComponent(group)}`),
+    updateGroupSettings: (project: string, group: string, data: { enabled?: boolean | null; duration?: string | null; re_alert_interval?: string | null }) =>
+      request<{ message: string }>(`/api/group-settings/${encodeURIComponent(project)}/${encodeURIComponent(group)}`, {
+        method: 'PUT', body: JSON.stringify(data),
+      }),
+    setGroupMaintenance: (project: string, group: string, duration: string, reason: string) =>
+      request<{ message: string; maintenance_until: string; maintenance_reason: string }>(
+        `/api/group-settings/${encodeURIComponent(project)}/${encodeURIComponent(group)}/maintenance`,
+        { method: 'POST', body: JSON.stringify({ duration, reason }) }
+      ),
+    clearGroupMaintenance: (project: string, group: string) =>
+      request<{ message: string }>(
+        `/api/group-settings/${encodeURIComponent(project)}/${encodeURIComponent(group)}/maintenance`,
+        { method: 'DELETE' }
+      ),
     exportChecks: (project?: string, environment?: string) => {
       const params = new URLSearchParams()
       if (project) params.set('project', project)

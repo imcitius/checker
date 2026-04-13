@@ -461,10 +461,15 @@ func (db *PostgresDB) ToggleCheckDefinition(ctx context.Context, uuid string, en
 
 func (db *PostgresDB) UpdateCheckStatus(ctx context.Context, status models.CheckStatus) error {
 	s := db.scope(ctx)
+	// Do NOT update updated_at here. updated_at tracks configuration changes
+	// (name, URL, channels, etc.), not health status updates.
+	// configChangedSinceLastAlert() compares updated_at vs last_alert_sent
+	// to detect config changes — advancing updated_at on every status update
+	// causes false "config changed" alerts on every evaluation cycle.
 	query := `UPDATE check_definitions SET
-    last_run=$2, is_healthy=$3, last_message=$4, last_alert_sent=$5, updated_at=$6
-    WHERE uuid=$1` + s.and(7)
-	args := []interface{}{status.UUID, status.LastRun, status.IsHealthy, status.Message, status.LastAlertSent, time.Now().UTC()}
+    last_run=$2, is_healthy=$3, last_message=$4, last_alert_sent=$5
+    WHERE uuid=$1` + s.and(6)
+	args := []interface{}{status.UUID, status.LastRun, status.IsHealthy, status.Message, status.LastAlertSent}
 	args = append(args, s.args()...)
 	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
@@ -1091,6 +1096,16 @@ func (db *PostgresDB) GetAlertHistory(ctx context.Context, limit, offset int, fi
 		args = append(args, *filters.IsResolved)
 		argIdx++
 	}
+	if filters.Since != nil {
+		where += fmt.Sprintf(" AND created_at >= $%d", argIdx)
+		args = append(args, *filters.Since)
+		argIdx++
+	}
+	if filters.Until != nil {
+		where += fmt.Sprintf(" AND created_at <= $%d", argIdx)
+		args = append(args, *filters.Until)
+		argIdx++
+	}
 
 	// Get total count
 	countQuery := "SELECT COUNT(*) FROM alert_history WHERE 1=1" + where
@@ -1642,6 +1657,134 @@ func (db *PostgresDB) GetCycleResults(ctx context.Context, checkUUID string, cyc
 		results = append(results, r)
 	}
 	return results, rows.Err()
+}
+
+// --- Project & Group Settings (hierarchical overrides) ---
+
+func (db *PostgresDB) GetProjectSettings(ctx context.Context, project string) (*models.ProjectSettings, error) {
+	s := db.scope(ctx)
+	query := `SELECT project, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at FROM project_settings WHERE project = $1` + s.and(2)
+	args := []interface{}{project}
+	args = append(args, s.args()...)
+	row := db.Pool.QueryRow(ctx, query, args...)
+
+	var ps models.ProjectSettings
+	var maintenanceUntil *time.Time
+	err := row.Scan(&ps.Project, &ps.Enabled, &ps.Duration, &ps.ReAlertInterval, &maintenanceUntil, &ps.MaintenanceReason, &ps.UpdatedAt)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	ps.MaintenanceUntil = maintenanceUntil
+	return &ps, nil
+}
+
+func (db *PostgresDB) UpsertProjectSettings(ctx context.Context, settings models.ProjectSettings) error {
+	s := db.scope(ctx)
+	query := fmt.Sprintf(`INSERT INTO project_settings (project, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at%s)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW()%s)
+		ON CONFLICT (project%s) DO UPDATE SET
+			enabled = $2, duration = $3, re_alert_interval = $4,
+			maintenance_until = $5, maintenance_reason = $6, updated_at = NOW()`,
+		s.insertCol(), s.insertPlaceholder(7),
+		func() string {
+			if s != nil {
+				return ", tenant_id"
+			}
+			return ""
+		}())
+	args := []interface{}{settings.Project, settings.Enabled, settings.Duration, settings.ReAlertInterval, settings.MaintenanceUntil, settings.MaintenanceReason}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
+	return err
+}
+
+func (db *PostgresDB) GetAllProjectSettings(ctx context.Context) ([]models.ProjectSettings, error) {
+	s := db.scope(ctx)
+	query := `SELECT project, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at FROM project_settings` + s.where(1)
+	args := s.args()
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.ProjectSettings
+	for rows.Next() {
+		var ps models.ProjectSettings
+		var maintenanceUntil *time.Time
+		if err := rows.Scan(&ps.Project, &ps.Enabled, &ps.Duration, &ps.ReAlertInterval, &maintenanceUntil, &ps.MaintenanceReason, &ps.UpdatedAt); err != nil {
+			return nil, err
+		}
+		ps.MaintenanceUntil = maintenanceUntil
+		result = append(result, ps)
+	}
+	return result, rows.Err()
+}
+
+func (db *PostgresDB) GetGroupSettings(ctx context.Context, project, groupName string) (*models.GroupSettings, error) {
+	s := db.scope(ctx)
+	query := `SELECT project, group_name, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at FROM group_settings WHERE project = $1 AND group_name = $2` + s.and(3)
+	args := []interface{}{project, groupName}
+	args = append(args, s.args()...)
+	row := db.Pool.QueryRow(ctx, query, args...)
+
+	var gs models.GroupSettings
+	var maintenanceUntil *time.Time
+	err := row.Scan(&gs.Project, &gs.GroupName, &gs.Enabled, &gs.Duration, &gs.ReAlertInterval, &maintenanceUntil, &gs.MaintenanceReason, &gs.UpdatedAt)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	gs.MaintenanceUntil = maintenanceUntil
+	return &gs, nil
+}
+
+func (db *PostgresDB) UpsertGroupSettings(ctx context.Context, settings models.GroupSettings) error {
+	s := db.scope(ctx)
+	query := fmt.Sprintf(`INSERT INTO group_settings (project, group_name, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at%s)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()%s)
+		ON CONFLICT (project, group_name%s) DO UPDATE SET
+			enabled = $3, duration = $4, re_alert_interval = $5,
+			maintenance_until = $6, maintenance_reason = $7, updated_at = NOW()`,
+		s.insertCol(), s.insertPlaceholder(8),
+		func() string {
+			if s != nil {
+				return ", tenant_id"
+			}
+			return ""
+		}())
+	args := []interface{}{settings.Project, settings.GroupName, settings.Enabled, settings.Duration, settings.ReAlertInterval, settings.MaintenanceUntil, settings.MaintenanceReason}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
+	return err
+}
+
+func (db *PostgresDB) GetAllGroupSettings(ctx context.Context) ([]models.GroupSettings, error) {
+	s := db.scope(ctx)
+	query := `SELECT project, group_name, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at FROM group_settings` + s.where(1)
+	args := s.args()
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.GroupSettings
+	for rows.Next() {
+		var gs models.GroupSettings
+		var maintenanceUntil *time.Time
+		if err := rows.Scan(&gs.Project, &gs.GroupName, &gs.Enabled, &gs.Duration, &gs.ReAlertInterval, &maintenanceUntil, &gs.MaintenanceReason, &gs.UpdatedAt); err != nil {
+			return nil, err
+		}
+		gs.MaintenanceUntil = maintenanceUntil
+		result = append(result, gs)
+	}
+	return result, rows.Err()
 }
 
 func (db *PostgresDB) PurgeOldCheckResults(ctx context.Context, olderThan time.Duration) (int64, error) {

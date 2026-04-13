@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -42,6 +42,7 @@ import {
   Shield,
   Trash2,
   Radio,
+  Calendar,
 } from 'lucide-react'
 import { useRef } from 'react'
 
@@ -94,6 +95,57 @@ const SILENCE_DURATIONS = [
   { label: 'Indefinite', value: 'indefinite' },
 ]
 
+const TIME_FRAME_PRESETS = [
+  { label: '1 Day', value: '1d', days: 1 },
+  { label: '1 Week', value: '1w', days: 7 },
+  { label: '1 Month', value: '1m', days: 30 },
+  { label: '3 Months', value: '3m', days: 90 },
+] as const
+
+type TimeFramePreset = typeof TIME_FRAME_PRESETS[number]['value'] | 'custom'
+
+const STORAGE_KEY_TIMEFRAME = 'alerts-timeframe'
+const STORAGE_KEY_CUSTOM_FROM = 'alerts-custom-from'
+const STORAGE_KEY_CUSTOM_TO = 'alerts-custom-to'
+
+function getStoredTimeFrame(): TimeFramePreset {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_TIMEFRAME)
+    if (stored && (TIME_FRAME_PRESETS.some(p => p.value === stored) || stored === 'custom')) {
+      return stored as TimeFramePreset
+    }
+  } catch {}
+  return '1w' // Default: 1 Week
+}
+
+function getStoredCustomDates(): { from: string; to: string } {
+  try {
+    return {
+      from: localStorage.getItem(STORAGE_KEY_CUSTOM_FROM) || '',
+      to: localStorage.getItem(STORAGE_KEY_CUSTOM_TO) || '',
+    }
+  } catch {
+    return { from: '', to: '' }
+  }
+}
+
+function computeSinceFromPreset(preset: TimeFramePreset): string | undefined {
+  const match = TIME_FRAME_PRESETS.find(p => p.value === preset)
+  if (!match) return undefined
+  const d = new Date()
+  d.setDate(d.getDate() - match.days)
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString()
+}
+
+/** Format a date string as YYYY-MM-DD for <input type="date"> */
+function toDateInputValue(isoStr: string): string {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  if (isNaN(d.getTime())) return ''
+  return d.toISOString().slice(0, 10)
+}
+
 export function Alerts() {
   const topBarConfig = useTopBarConfig()
   const {
@@ -104,6 +156,10 @@ export function Alerts() {
     setProjectFilter,
     statusFilter,
     setStatusFilter,
+    since,
+    setSince,
+    until,
+    setUntil,
     silences,
     silencesLoading,
     wsStatus,
@@ -123,6 +179,53 @@ export function Alerts() {
   const [checkTypes, setCheckTypes] = useState<string[]>([])
   const [alertChannels, setAlertChannels] = useState<AlertChannel[]>([])
   const [regionsByCheck, setRegionsByCheck] = useState<Record<string, RegionResult[]>>({})
+
+  // Time frame state
+  const [timeFrame, setTimeFrame] = useState<TimeFramePreset>(getStoredTimeFrame)
+  const [customFrom, setCustomFrom] = useState(() => getStoredCustomDates().from)
+  const [customTo, setCustomTo] = useState(() => getStoredCustomDates().to)
+
+  // Apply time frame to the hook's since/until
+  const applyTimeFrame = useCallback((preset: TimeFramePreset, from?: string, to?: string) => {
+    if (preset === 'custom') {
+      setSince(from ? new Date(from + 'T00:00:00').toISOString() : undefined)
+      setUntil(to ? new Date(to + 'T23:59:59').toISOString() : undefined)
+    } else {
+      setSince(computeSinceFromPreset(preset))
+      setUntil(undefined)
+    }
+  }, [setSince, setUntil])
+
+  // Initialize time frame on mount
+  useEffect(() => {
+    const stored = getStoredTimeFrame()
+    if (stored === 'custom') {
+      const { from, to } = getStoredCustomDates()
+      applyTimeFrame('custom', from, to)
+    } else {
+      applyTimeFrame(stored)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePresetClick = useCallback((preset: typeof TIME_FRAME_PRESETS[number]['value']) => {
+    setTimeFrame(preset)
+    setCustomFrom('')
+    setCustomTo('')
+    localStorage.setItem(STORAGE_KEY_TIMEFRAME, preset)
+    localStorage.removeItem(STORAGE_KEY_CUSTOM_FROM)
+    localStorage.removeItem(STORAGE_KEY_CUSTOM_TO)
+    applyTimeFrame(preset)
+  }, [applyTimeFrame])
+
+  const handleCustomDateChange = useCallback((from: string, to: string) => {
+    setCustomFrom(from)
+    setCustomTo(to)
+    setTimeFrame('custom')
+    localStorage.setItem(STORAGE_KEY_TIMEFRAME, 'custom')
+    if (from) localStorage.setItem(STORAGE_KEY_CUSTOM_FROM, from)
+    if (to) localStorage.setItem(STORAGE_KEY_CUSTOM_TO, to)
+    applyTimeFrame('custom', from, to)
+  }, [applyTimeFrame])
 
   // Fetch projects list for filters and alert channels
   useEffect(() => {
@@ -256,6 +359,48 @@ export function Alerts() {
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
+          </div>
+
+          {/* Time frame selector */}
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
+            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground font-medium mr-1">Period:</span>
+            {TIME_FRAME_PRESETS.map((preset) => (
+              <Button
+                key={preset.value}
+                variant={timeFrame === preset.value ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => handlePresetClick(preset.value)}
+              >
+                {preset.label}
+              </Button>
+            ))}
+            <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground hidden sm:inline">Custom:</span>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => handleCustomDateChange(e.target.value, customTo)}
+                className="h-7 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                max={customTo || undefined}
+              />
+              <span className="text-xs text-muted-foreground">to</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => handleCustomDateChange(customFrom, e.target.value)}
+                className="h-7 rounded-md border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                min={customFrom || undefined}
+              />
+            </div>
+            {since && (
+              <span className="text-[10px] text-muted-foreground ml-auto hidden md:inline">
+                Showing from {new Date(since).toLocaleDateString()}
+                {until ? ` to ${new Date(until).toLocaleDateString()}` : ' to now'}
+              </span>
+            )}
           </div>
 
           {/* Alert history table */}

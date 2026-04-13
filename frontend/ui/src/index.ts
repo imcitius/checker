@@ -64,6 +64,7 @@ export { MetricsRow } from './components/MetricsRow'
 export { ProjectGroup } from './components/ProjectGroup'
 export { StatusBar } from './components/StatusBar'
 export { StatusDot } from './components/StatusDot'
+export { HierarchySettingsPanel, HierarchyStatusBadges } from './components/HierarchySettingsPanel'
 export { VersionBadge } from './components/VersionBadge'
 
 // ─── Pages ───
@@ -90,6 +91,7 @@ export {
   type AlertSilence, type SilencesResponse, type CreateSilenceRequest,
   type AlertChannel, type AlertChannelInput,
   type CheckDefaults, type RegionResult,
+  type EdgeInstance, type EdgeInstancesResponse, type TenantRegionsResponse,
 } from './lib/api'
 export {
   createWebSocket, WebSocketManager,

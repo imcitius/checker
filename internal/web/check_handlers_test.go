@@ -116,6 +116,24 @@ func (s *stubRepo) GetCheckDefaults(_ context.Context) (models.CheckDefaults, er
 func (s *stubRepo) SaveCheckDefaults(_ context.Context, _ models.CheckDefaults) error {
 	return nil
 }
+func (s *stubRepo) GetProjectSettings(_ context.Context, _ string) (*models.ProjectSettings, error) {
+	return nil, nil
+}
+func (s *stubRepo) UpsertProjectSettings(_ context.Context, _ models.ProjectSettings) error {
+	return nil
+}
+func (s *stubRepo) GetAllProjectSettings(_ context.Context) ([]models.ProjectSettings, error) {
+	return nil, nil
+}
+func (s *stubRepo) GetGroupSettings(_ context.Context, _, _ string) (*models.GroupSettings, error) {
+	return nil, nil
+}
+func (s *stubRepo) UpsertGroupSettings(_ context.Context, _ models.GroupSettings) error {
+	return nil
+}
+func (s *stubRepo) GetAllGroupSettings(_ context.Context) ([]models.GroupSettings, error) {
+	return nil, nil
+}
 
 func TestCreateCheckDefinition_GeneratesUUID(t *testing.T) {
 	gin.SetMode(gin.TestMode)

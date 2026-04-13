@@ -34,7 +34,7 @@ func (c *wsConn) WriteMessage(messageType int, data []byte) error {
 }
 
 const (
-	heartbeatInterval = 30 * time.Second
+	heartbeatInterval = 10 * time.Second
 	initialBackoff    = 1 * time.Second
 	maxBackoff        = 60 * time.Second
 	resultBufferSize  = 256

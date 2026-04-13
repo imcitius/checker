@@ -89,6 +89,14 @@ type Repository interface {
 	GetCheckDefaults(ctx context.Context) (models.CheckDefaults, error)
 	SaveCheckDefaults(ctx context.Context, defaults models.CheckDefaults) error
 
+	// Project and group settings (hierarchical overrides)
+	GetProjectSettings(ctx context.Context, project string) (*models.ProjectSettings, error)
+	UpsertProjectSettings(ctx context.Context, settings models.ProjectSettings) error
+	GetAllProjectSettings(ctx context.Context) ([]models.ProjectSettings, error)
+	GetGroupSettings(ctx context.Context, project, groupName string) (*models.GroupSettings, error)
+	UpsertGroupSettings(ctx context.Context, settings models.GroupSettings) error
+	GetAllGroupSettings(ctx context.Context) ([]models.GroupSettings, error)
+
 	// Multi-region check results
 	GetLatestRegionResults(ctx context.Context, checkUUID string) ([]models.CheckResult, error)
 	InsertCheckResult(ctx context.Context, result models.CheckResult) error

@@ -1,5 +1,5 @@
-import { useState, useEffect, type ReactNode } from 'react'
-import { type CheckDefinition, type AlertChannel, type CheckDefaults, type TenantRegionsResponse } from '@/lib/api'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { type CheckDefinition, type AlertChannel, type CheckDefaults, type TenantRegionsResponse, type EdgeInstancesResponse } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -405,15 +405,34 @@ export function CheckEditDrawer({
   const [alertChannels, setAlertChannels] = useState<AlertChannel[]>([])
   const [checkDefaults, setCheckDefaults] = useState<CheckDefaults | null>(null)
   const [platformRegions, setPlatformRegions] = useState<TenantRegionsResponse | null>(null)
+  const [edgeInstances, setEdgeInstances] = useState<EdgeInstancesResponse | null>(null)
 
-  // Fetch available alert channels, check defaults, and platform regions
+  // Fetch available alert channels, check defaults, platform regions, and edge instances
   useEffect(() => {
     if (open) {
       api.getAlertChannels().then(setAlertChannels).catch(() => setAlertChannels([]))
       api.getCheckDefaults().then(setCheckDefaults).catch(() => setCheckDefaults(null))
       api.getPlatformRegions().then(setPlatformRegions).catch(() => setPlatformRegions(null))
+      api.getEdgeInstances().then(setEdgeInstances).catch(() => setEdgeInstances(null))
     }
   }, [open])
+
+  // Compute run_mode based on selected regions vs edge instances
+  const computeRunMode = useCallback((targetRegions: string[]) => {
+    if (targetRegions.length === 0) return undefined // default: all platform regions
+
+    const edgeRegionNames = new Set(
+      (edgeInstances?.edge_instances || []).map((e) => e.region)
+    )
+    const platformRegionNames = new Set(platformRegions?.regions || [])
+
+    const hasEdge = targetRegions.some((r) => edgeRegionNames.has(r))
+    const hasPlatform = targetRegions.some((r) => platformRegionNames.has(r))
+
+    if (hasEdge && hasPlatform) return 'multi_region'
+    if (hasEdge) return 'edge_only'
+    return undefined // platform-only or default
+  }, [edgeInstances, platformRegions])
 
   // Sync advanced section open state when check changes
   useEffect(() => {
@@ -599,6 +618,17 @@ export function CheckEditDrawer({
                   value={editingCheck.timeout || ''}
                   onChange={(e) => updateForm('timeout', e.target.value)}
                 />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Re-Alert Interval</label>
+                <Input
+                  value={editingCheck.re_alert_interval || ''}
+                  onChange={(e) => updateForm('re_alert_interval', e.target.value)}
+                  placeholder="e.g., 30m, 1h, 2h"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Default: {checkDefaults?.re_alert_interval || '1h'}
+                </p>
               </div>
               <div className="flex items-end pb-1.5 gap-2">
                 <Switch
@@ -1301,48 +1331,111 @@ export function CheckEditDrawer({
             })()}
           </section>
 
-          {/* ─── Platform Regions ─── */}
-          {platformRegions && platformRegions.regions.length > 0 && (
+          {/* ─── Regions & Edge Probes ─── */}
+          {((platformRegions && platformRegions.regions.length > 0) ||
+            (edgeInstances && edgeInstances.edge_instances.length > 0)) && (
             <section className="space-y-4">
               <SectionHeader>Regions</SectionHeader>
-              <div className="space-y-2">
-                {platformRegions.regions.map((region) => {
-                  const selected = (editingCheck.target_regions || []).includes(region)
-                  return (
-                    <label
-                      key={region}
-                      className={`flex items-center gap-3 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
-                        selected
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-muted-foreground/30'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="accent-primary h-4 w-4"
-                        checked={selected}
-                        onChange={() => {
-                          const current = editingCheck.target_regions || []
-                          const next = selected
-                            ? current.filter((r) => r !== region)
-                            : [...current, region]
-                          updateForm('target_regions', next)
-                        }}
-                      />
-                      <span className="text-sm font-medium">{region}</span>
-                    </label>
-                  )
-                })}
-              </div>
+
+              {/* Platform Regions */}
+              {platformRegions && platformRegions.regions.length > 0 && (
+                <div className="space-y-2">
+                  {edgeInstances && edgeInstances.edge_instances.length > 0 && (
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Platform Regions</p>
+                  )}
+                  {platformRegions.regions.map((region) => {
+                    const selected = (editingCheck.target_regions || []).includes(region)
+                    return (
+                      <label
+                        key={`platform-${region}`}
+                        className={`flex items-center gap-3 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                          selected
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-primary h-4 w-4"
+                          checked={selected}
+                          onChange={() => {
+                            const current = editingCheck.target_regions || []
+                            const next = selected
+                              ? current.filter((r) => r !== region)
+                              : [...current, region]
+                            const runMode = computeRunMode(next)
+                            onCheckChange({ ...editingCheck, target_regions: next, run_mode: runMode })
+                            setTestResult(null)
+                          }}
+                        />
+                        <span className="text-sm font-medium">{region}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Tenant Edge Probes */}
+              {edgeInstances && edgeInstances.edge_instances.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-3">Your Edge Probes</p>
+                  {edgeInstances.edge_instances.map((edge) => {
+                    const selected = (editingCheck.target_regions || []).includes(edge.region)
+                    const statusColor =
+                      edge.status === 'connected'
+                        ? 'text-emerald-500'
+                        : edge.status === 'stale'
+                          ? 'text-amber-500'
+                          : 'text-muted-foreground'
+                    const statusLabel =
+                      edge.status === 'connected'
+                        ? 'Connected'
+                        : edge.status === 'stale'
+                          ? 'Stale'
+                          : 'Disconnected'
+                    return (
+                      <label
+                        key={`edge-${edge.id}`}
+                        className={`flex items-center gap-3 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                          selected
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-primary h-4 w-4"
+                          checked={selected}
+                          onChange={() => {
+                            const current = editingCheck.target_regions || []
+                            const next = selected
+                              ? current.filter((r) => r !== edge.region)
+                              : [...current, edge.region]
+                            const runMode = computeRunMode(next)
+                            onCheckChange({ ...editingCheck, target_regions: next, run_mode: runMode })
+                            setTestResult(null)
+                          }}
+                        />
+                        <span className="text-sm font-medium">{edge.region}</span>
+                        <span className={`text-xs ml-auto ${statusColor}`}>{statusLabel}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+
               {(editingCheck.target_regions || []).length === 0 ? (
                 <p className="text-xs text-muted-foreground mt-2">
-                  No regions selected — check runs in all {platformRegions.regions.length} tenant region{platformRegions.regions.length !== 1 ? 's' : ''} (default)
+                  No regions selected — check runs in all {platformRegions?.regions.length ?? 0} tenant region{(platformRegions?.regions.length ?? 0) !== 1 ? 's' : ''} (default)
                 </p>
               ) : (
                 <button
                   type="button"
                   className="text-xs text-muted-foreground hover:text-foreground underline mt-1"
-                  onClick={() => updateForm('target_regions', [])}
+                  onClick={() => {
+                    onCheckChange({ ...editingCheck, target_regions: [], run_mode: undefined })
+                    setTestResult(null)
+                  }}
                 >
                   Clear selection (use all regions)
                 </button>

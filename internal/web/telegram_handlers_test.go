@@ -213,6 +213,24 @@ func (m *mockTelegramRepo) GetCycleResults(_ context.Context, _ string, _ time.T
 func (m *mockTelegramRepo) PurgeOldCheckResults(_ context.Context, _ time.Duration) (int64, error) {
 	return 0, nil
 }
+func (m *mockTelegramRepo) GetProjectSettings(_ context.Context, _ string) (*models.ProjectSettings, error) {
+	return nil, nil
+}
+func (m *mockTelegramRepo) UpsertProjectSettings(_ context.Context, _ models.ProjectSettings) error {
+	return nil
+}
+func (m *mockTelegramRepo) GetAllProjectSettings(_ context.Context) ([]models.ProjectSettings, error) {
+	return nil, nil
+}
+func (m *mockTelegramRepo) GetGroupSettings(_ context.Context, _, _ string) (*models.GroupSettings, error) {
+	return nil, nil
+}
+func (m *mockTelegramRepo) UpsertGroupSettings(_ context.Context, _ models.GroupSettings) error {
+	return nil
+}
+func (m *mockTelegramRepo) GetAllGroupSettings(_ context.Context) ([]models.GroupSettings, error) {
+	return nil, nil
+}
 
 // mockTelegramClient wraps a test HTTP server to capture API calls.
 type mockTelegramClient struct {

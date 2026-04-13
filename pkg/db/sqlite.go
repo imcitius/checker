@@ -198,6 +198,28 @@ func (s *SQLiteDB) ensureSchema() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_check_results_unevaluated ON check_results(check_uuid, cycle_key);
 	CREATE INDEX IF NOT EXISTS idx_check_results_cleanup ON check_results(created_at);
+
+	CREATE TABLE IF NOT EXISTS project_settings (
+		project            TEXT PRIMARY KEY,
+		enabled            INTEGER,
+		duration           TEXT,
+		re_alert_interval  TEXT,
+		maintenance_until  DATETIME,
+		maintenance_reason TEXT NOT NULL DEFAULT '',
+		updated_at         DATETIME NOT NULL DEFAULT (datetime('now'))
+	);
+
+	CREATE TABLE IF NOT EXISTS group_settings (
+		project            TEXT NOT NULL,
+		group_name         TEXT NOT NULL,
+		enabled            INTEGER,
+		duration           TEXT,
+		re_alert_interval  TEXT,
+		maintenance_until  DATETIME,
+		maintenance_reason TEXT NOT NULL DEFAULT '',
+		updated_at         DATETIME NOT NULL DEFAULT (datetime('now')),
+		PRIMARY KEY (project, group_name)
+	);
 	`
 
 	_, err := s.DB.Exec(schema)
@@ -1071,6 +1093,14 @@ func (s *SQLiteDB) GetAlertHistory(ctx context.Context, limit, offset int, filte
 		where += " AND is_resolved = ?"
 		args = append(args, boolToInt(*filters.IsResolved))
 	}
+	if filters.Since != nil {
+		where += " AND created_at >= ?"
+		args = append(args, filters.Since.UTC().Format(time.RFC3339))
+	}
+	if filters.Until != nil {
+		where += " AND created_at <= ?"
+		args = append(args, filters.Until.UTC().Format(time.RFC3339))
+	}
 
 	// Get total count
 	countQuery := "SELECT COUNT(*) FROM alert_history WHERE 1=1" + where
@@ -1508,6 +1538,159 @@ func (s *SQLiteDB) PurgeOldCheckResults(ctx context.Context, olderThan time.Dura
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+// ---------------------------------------------------------------------------
+// Project & Group Settings
+// ---------------------------------------------------------------------------
+
+func (s *SQLiteDB) GetProjectSettings(ctx context.Context, project string) (*models.ProjectSettings, error) {
+	row := s.DB.QueryRowContext(ctx,
+		`SELECT project, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at FROM project_settings WHERE project = ?`, project)
+	var ps models.ProjectSettings
+	var enabled *int
+	var maintenanceUntil *string
+	var updatedAt string
+	err := row.Scan(&ps.Project, &enabled, &ps.Duration, &ps.ReAlertInterval, &maintenanceUntil, &ps.MaintenanceReason, &updatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if enabled != nil {
+		b := *enabled != 0
+		ps.Enabled = &b
+	}
+	if maintenanceUntil != nil {
+		t, _ := time.Parse(time.RFC3339, *maintenanceUntil)
+		ps.MaintenanceUntil = &t
+	}
+	ps.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	return &ps, nil
+}
+
+func (s *SQLiteDB) UpsertProjectSettings(ctx context.Context, settings models.ProjectSettings) error {
+	var enabledVal *int
+	if settings.Enabled != nil {
+		v := boolToInt(*settings.Enabled)
+		enabledVal = &v
+	}
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO project_settings (project, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+		 ON CONFLICT (project) DO UPDATE SET
+			enabled = excluded.enabled, duration = excluded.duration, re_alert_interval = excluded.re_alert_interval,
+			maintenance_until = excluded.maintenance_until, maintenance_reason = excluded.maintenance_reason, updated_at = datetime('now')`,
+		settings.Project, enabledVal, settings.Duration, settings.ReAlertInterval,
+		nullableTime(settings.MaintenanceUntil), settings.MaintenanceReason)
+	return err
+}
+
+func (s *SQLiteDB) GetAllProjectSettings(ctx context.Context) ([]models.ProjectSettings, error) {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT project, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at FROM project_settings`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.ProjectSettings
+	for rows.Next() {
+		var ps models.ProjectSettings
+		var enabled *int
+		var maintenanceUntil *string
+		var updatedAt string
+		if err := rows.Scan(&ps.Project, &enabled, &ps.Duration, &ps.ReAlertInterval, &maintenanceUntil, &ps.MaintenanceReason, &updatedAt); err != nil {
+			return nil, err
+		}
+		if enabled != nil {
+			b := *enabled != 0
+			ps.Enabled = &b
+		}
+		if maintenanceUntil != nil {
+			t, _ := time.Parse(time.RFC3339, *maintenanceUntil)
+			ps.MaintenanceUntil = &t
+		}
+		ps.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		result = append(result, ps)
+	}
+	return result, rows.Err()
+}
+
+func (s *SQLiteDB) GetGroupSettings(ctx context.Context, project, groupName string) (*models.GroupSettings, error) {
+	row := s.DB.QueryRowContext(ctx,
+		`SELECT project, group_name, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at FROM group_settings WHERE project = ? AND group_name = ?`,
+		project, groupName)
+	var gs models.GroupSettings
+	var enabled *int
+	var maintenanceUntil *string
+	var updatedAt string
+	err := row.Scan(&gs.Project, &gs.GroupName, &enabled, &gs.Duration, &gs.ReAlertInterval, &maintenanceUntil, &gs.MaintenanceReason, &updatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if enabled != nil {
+		b := *enabled != 0
+		gs.Enabled = &b
+	}
+	if maintenanceUntil != nil {
+		t, _ := time.Parse(time.RFC3339, *maintenanceUntil)
+		gs.MaintenanceUntil = &t
+	}
+	gs.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+	return &gs, nil
+}
+
+func (s *SQLiteDB) UpsertGroupSettings(ctx context.Context, settings models.GroupSettings) error {
+	var enabledVal *int
+	if settings.Enabled != nil {
+		v := boolToInt(*settings.Enabled)
+		enabledVal = &v
+	}
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO group_settings (project, group_name, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+		 ON CONFLICT (project, group_name) DO UPDATE SET
+			enabled = excluded.enabled, duration = excluded.duration, re_alert_interval = excluded.re_alert_interval,
+			maintenance_until = excluded.maintenance_until, maintenance_reason = excluded.maintenance_reason, updated_at = datetime('now')`,
+		settings.Project, settings.GroupName, enabledVal, settings.Duration, settings.ReAlertInterval,
+		nullableTime(settings.MaintenanceUntil), settings.MaintenanceReason)
+	return err
+}
+
+func (s *SQLiteDB) GetAllGroupSettings(ctx context.Context) ([]models.GroupSettings, error) {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT project, group_name, enabled, duration, re_alert_interval, maintenance_until, maintenance_reason, updated_at FROM group_settings`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.GroupSettings
+	for rows.Next() {
+		var gs models.GroupSettings
+		var enabled *int
+		var maintenanceUntil *string
+		var updatedAt string
+		if err := rows.Scan(&gs.Project, &gs.GroupName, &enabled, &gs.Duration, &gs.ReAlertInterval, &maintenanceUntil, &gs.MaintenanceReason, &updatedAt); err != nil {
+			return nil, err
+		}
+		if enabled != nil {
+			b := *enabled != 0
+			gs.Enabled = &b
+		}
+		if maintenanceUntil != nil {
+			t, _ := time.Parse(time.RFC3339, *maintenanceUntil)
+			gs.MaintenanceUntil = &t
+		}
+		gs.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAt)
+		result = append(result, gs)
+	}
+	return result, rows.Err()
 }
 
 // ---------------------------------------------------------------------------

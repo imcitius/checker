@@ -221,6 +221,24 @@ func (m *mockEscalationRepo) GetCycleResults(_ context.Context, _ string, _ time
 func (m *mockEscalationRepo) PurgeOldCheckResults(_ context.Context, _ time.Duration) (int64, error) {
 	return 0, nil
 }
+func (m *mockEscalationRepo) GetProjectSettings(_ context.Context, _ string) (*models.ProjectSettings, error) {
+	return nil, nil
+}
+func (m *mockEscalationRepo) UpsertProjectSettings(_ context.Context, _ models.ProjectSettings) error {
+	return nil
+}
+func (m *mockEscalationRepo) GetAllProjectSettings(_ context.Context) ([]models.ProjectSettings, error) {
+	return nil, nil
+}
+func (m *mockEscalationRepo) GetGroupSettings(_ context.Context, _, _ string) (*models.GroupSettings, error) {
+	return nil, nil
+}
+func (m *mockEscalationRepo) UpsertGroupSettings(_ context.Context, _ models.GroupSettings) error {
+	return nil
+}
+func (m *mockEscalationRepo) GetAllGroupSettings(_ context.Context) ([]models.GroupSettings, error) {
+	return nil, nil
+}
 
 // --- Tests ---
 

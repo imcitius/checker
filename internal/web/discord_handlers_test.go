@@ -203,6 +203,24 @@ func (m *mockDiscordRepo) GetCycleResults(_ context.Context, _ string, _ time.Ti
 func (m *mockDiscordRepo) PurgeOldCheckResults(_ context.Context, _ time.Duration) (int64, error) {
 	return 0, nil
 }
+func (m *mockDiscordRepo) GetProjectSettings(_ context.Context, _ string) (*models.ProjectSettings, error) {
+	return nil, nil
+}
+func (m *mockDiscordRepo) UpsertProjectSettings(_ context.Context, _ models.ProjectSettings) error {
+	return nil
+}
+func (m *mockDiscordRepo) GetAllProjectSettings(_ context.Context) ([]models.ProjectSettings, error) {
+	return nil, nil
+}
+func (m *mockDiscordRepo) GetGroupSettings(_ context.Context, _, _ string) (*models.GroupSettings, error) {
+	return nil, nil
+}
+func (m *mockDiscordRepo) UpsertGroupSettings(_ context.Context, _ models.GroupSettings) error {
+	return nil
+}
+func (m *mockDiscordRepo) GetAllGroupSettings(_ context.Context) ([]models.GroupSettings, error) {
+	return nil, nil
+}
 
 // --- Test helpers ---
 

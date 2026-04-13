@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Layers } from 'lucide-react'
-import { api, type CheckDefinition, type AlertChannel, type CheckDefaults } from '@/lib/api'
+import { api, type CheckDefinition, type AlertChannel, type CheckDefaults, type ProjectSettings, type GroupSettings } from '@/lib/api'
 import { type Check } from '@/lib/websocket'
 import { Button } from '@/components/ui/button'
 import { StatusDot } from '@/components/StatusDot'
@@ -35,6 +35,7 @@ import { CheckEditDrawer, type ExtraFieldRenderer, type ExtraSectionRenderer } f
 import { Input } from '@/components/ui/input'
 import { api as apiClient } from '@/lib/api'
 import { toast } from 'sonner'
+import { HierarchySettingsPanel } from '@/components/HierarchySettingsPanel'
 
 type SortColumn = 'name' | 'type' | 'group' | 'duration' | 'enabled' | 'status'
 type SortDirection = 'asc' | 'desc'
@@ -256,6 +257,8 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
   const [allAlertChannels, setAllAlertChannels] = useState<AlertChannel[]>([])
   const [checkDefaults, setCheckDefaults] = useState<CheckDefaults | null>(null)
   const [tenantRegionCount, setTenantRegionCount] = useState(0)
+  const [projectSettingsMap, setProjectSettingsMap] = useState<Map<string, ProjectSettings>>(new Map())
+  const [groupSettingsMap, setGroupSettingsMap] = useState<Map<string, GroupSettings>>(new Map())
 
   // Bulk selection
   const [selectedUUIDs, setSelectedUUIDs] = useState<Set<string>>(new Set())
@@ -270,13 +273,15 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [defs, projs, types, channels, defaults, regions] = await Promise.all([
+      const [defs, projs, types, channels, defaults, regions, projSettings, grpSettings] = await Promise.all([
         api.getChecks(),
         api.getProjects().catch(() => [] as string[]),
         api.getCheckTypes().catch(() => [] as string[]),
         api.getAlertChannels().catch(() => [] as AlertChannel[]),
         api.getCheckDefaults().catch(() => null as CheckDefaults | null),
         api.getPlatformRegions().catch(() => null),
+        api.getAllProjectSettings().catch(() => [] as ProjectSettings[]),
+        api.getAllGroupSettings().catch(() => [] as GroupSettings[]),
       ])
       setDefinitions(defs || [])
       setProjects(projs || [])
@@ -284,6 +289,17 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
       setAllAlertChannels(channels || [])
       setCheckDefaults(defaults)
       setTenantRegionCount(regions?.regions?.length ?? 0)
+      // Build lookup maps for project/group settings
+      const psMap = new Map<string, ProjectSettings>()
+      for (const ps of (projSettings || [])) {
+        psMap.set(ps.project, ps)
+      }
+      setProjectSettingsMap(psMap)
+      const gsMap = new Map<string, GroupSettings>()
+      for (const gs of (grpSettings || [])) {
+        gsMap.set(`${gs.project}/${gs.group_name}`, gs)
+      }
+      setGroupSettingsMap(gsMap)
       // Clear selection of items that no longer exist
       setSelectedUUIDs((prev) => {
         const validUUIDs = new Set((defs || []).map((d) => d.uuid))
@@ -796,6 +812,9 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
         </td>
         <td className="px-3 py-2">
           <AlertChannelBadges channels={def.alert_channels} defaultChannels={checkDefaults?.alert_channels} />
+          {def.re_alert_interval && (
+            <Badge variant="outline" className="text-[10px] mt-1">re-alert: {def.re_alert_interval}</Badge>
+          )}
         </td>
         {tenantRegionCount > 0 && (
           <td className="px-3 py-2">
@@ -1004,42 +1023,55 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
                 return (
                   <div key={group.project} className="rounded-lg border bg-card overflow-hidden">
                     {/* Project header */}
-                    <button
-                      onClick={() => toggleGroup(projectKey)}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 bg-muted/50 hover:bg-muted/80 transition-colors text-left"
-                    >
-                      <div
-                        className="flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleSelectGroup(group.checks)
-                        }}
+                    <div className="relative">
+                      <button
+                        onClick={() => toggleGroup(projectKey)}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-3 py-2.5 hover:bg-muted/80 transition-colors text-left",
+                          projectSettingsMap.get(group.project)?.enabled === false
+                            ? "bg-muted/30 opacity-70"
+                            : "bg-muted/50"
+                        )}
                       >
-                        {allProjectSelected ? (
-                          <CheckSquare className="h-4 w-4 text-primary" />
-                        ) : someProjectSelected ? (
-                          <MinusSquare className="h-4 w-4 text-primary" />
+                        <div
+                          className="flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSelectGroup(group.checks)
+                          }}
+                        >
+                          {allProjectSelected ? (
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                          ) : someProjectSelected ? (
+                            <MinusSquare className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Square className="h-4 w-4" />
+                          )}
+                        </div>
+                        {isProjectCollapsed ? (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                         ) : (
-                          <Square className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                         )}
-                      </div>
-                      {isProjectCollapsed ? (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                      )}
-                      <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="font-semibold text-sm">{group.project}</span>
-                      <Badge variant="secondary" className="text-[10px] ml-1">
-                        {group.checks.length}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {group.enabledCount} enabled
-                        {group.disabledCount > 0 && (
-                          <span className="text-muted-foreground/60"> / {group.disabledCount} disabled</span>
-                        )}
-                      </span>
-                    </button>
+                        <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="font-semibold text-sm">{group.project}</span>
+                        <Badge variant="secondary" className="text-[10px] ml-1">
+                          {group.checks.length}
+                        </Badge>
+                        <HierarchySettingsPanel
+                          level="project"
+                          project={group.project}
+                          settings={projectSettingsMap.get(group.project) ?? null}
+                          onSettingsChanged={fetchData}
+                        />
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {group.enabledCount} enabled
+                          {group.disabledCount > 0 && (
+                            <span className="text-muted-foreground/60"> / {group.disabledCount} disabled</span>
+                          )}
+                        </span>
+                      </button>
+                    </div>
 
                     {/* Project content */}
                     {!isProjectCollapsed && (
@@ -1055,39 +1087,55 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
                             <div key={sg.group} className={showSubGroupHeaders ? 'border-t border-border/50' : ''}>
                               {/* Sub-group header (only if project has multiple groups) */}
                               {showSubGroupHeaders && (
-                                <button
-                                  onClick={() => toggleGroup(subGroupKey)}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 pl-8 bg-muted/25 hover:bg-muted/40 transition-colors text-left"
-                                >
-                                  <div
-                                    className="flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleSelectGroup(sg.checks)
-                                    }}
-                                  >
-                                    {allSgSelected ? (
-                                      <CheckSquare className="h-3.5 w-3.5 text-primary" />
-                                    ) : someSgSelected ? (
-                                      <MinusSquare className="h-3.5 w-3.5 text-primary" />
-                                    ) : (
-                                      <Square className="h-3.5 w-3.5" />
+                                <div className="relative">
+                                  <button
+                                    onClick={() => toggleGroup(subGroupKey)}
+                                    className={cn(
+                                      "w-full flex items-center gap-2 px-3 py-1.5 pl-8 hover:bg-muted/40 transition-colors text-left",
+                                      groupSettingsMap.get(`${group.project}/${sg.group}`)?.enabled === false
+                                        ? "bg-muted/10 opacity-70"
+                                        : "bg-muted/25"
                                     )}
-                                  </div>
-                                  {isSubGroupCollapsed ? (
-                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                  ) : (
-                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                  )}
-                                  <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                  <span className="text-xs font-medium text-muted-foreground">{sg.group || '(no group)'}</span>
-                                  <Badge variant="secondary" className="text-[10px] ml-1">
-                                    {sg.checks.length}
-                                  </Badge>
-                                  <span className="text-[11px] text-muted-foreground/60 ml-auto">
-                                    {sg.enabledCount} on{sg.disabledCount > 0 && ` / ${sg.disabledCount} off`}
-                                  </span>
-                                </button>
+                                  >
+                                    <div
+                                      className="flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        toggleSelectGroup(sg.checks)
+                                      }}
+                                    >
+                                      {allSgSelected ? (
+                                        <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                                      ) : someSgSelected ? (
+                                        <MinusSquare className="h-3.5 w-3.5 text-primary" />
+                                      ) : (
+                                        <Square className="h-3.5 w-3.5" />
+                                      )}
+                                    </div>
+                                    {isSubGroupCollapsed ? (
+                                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    ) : (
+                                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    )}
+                                    <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    <span className="text-xs font-medium text-muted-foreground">{sg.group || '(no group)'}</span>
+                                    <Badge variant="secondary" className="text-[10px] ml-1">
+                                      {sg.checks.length}
+                                    </Badge>
+                                    {sg.group && (
+                                      <HierarchySettingsPanel
+                                        level="group"
+                                        project={group.project}
+                                        group={sg.group}
+                                        settings={groupSettingsMap.get(`${group.project}/${sg.group}`) ?? null}
+                                        onSettingsChanged={fetchData}
+                                      />
+                                    )}
+                                    <span className="text-[11px] text-muted-foreground/60 ml-auto">
+                                      {sg.enabledCount} on{sg.disabledCount > 0 && ` / ${sg.disabledCount} off`}
+                                    </span>
+                                  </button>
+                                </div>
                               )}
 
                               {/* Checks table */}
@@ -1182,21 +1230,29 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
                 return (
                   <div key={group.project}>
                     {/* Mobile project header */}
-                    <button
-                      onClick={() => toggleGroup(projectKey)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 mb-2"
-                    >
-                      {isProjectCollapsed ? (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-semibold text-sm">{group.project}</span>
-                      <Badge variant="secondary" className="text-[10px] ml-auto">
-                        {group.checks.length}
-                      </Badge>
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => toggleGroup(projectKey)}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 mb-2"
+                      >
+                        {isProjectCollapsed ? (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold text-sm">{group.project}</span>
+                        <HierarchySettingsPanel
+                          level="project"
+                          project={group.project}
+                          settings={projectSettingsMap.get(group.project) ?? null}
+                          onSettingsChanged={fetchData}
+                        />
+                        <Badge variant="secondary" className="text-[10px] ml-auto">
+                          {group.checks.length}
+                        </Badge>
+                      </button>
+                    </div>
 
                     {!isProjectCollapsed && group.subGroups.map((sg) => {
                       const subGroupKey = `g:${group.project}/${sg.group}`
@@ -1205,21 +1261,32 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
                       return (
                         <div key={sg.group} className="mb-2">
                           {showSubGroupHeaders && (
-                            <button
-                              onClick={() => toggleGroup(subGroupKey)}
-                              className="w-full flex items-center gap-2 px-3 py-1.5 pl-6 rounded-md bg-muted/25 mb-1"
-                            >
-                              {isSubGroupCollapsed ? (
-                                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                              ) : (
-                                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                              )}
-                              <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-xs font-medium text-muted-foreground">{sg.group || '(no group)'}</span>
-                              <Badge variant="secondary" className="text-[10px] ml-auto">
-                                {sg.checks.length}
-                              </Badge>
-                            </button>
+                            <div className="relative">
+                              <button
+                                onClick={() => toggleGroup(subGroupKey)}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 pl-6 rounded-md bg-muted/25 mb-1"
+                              >
+                                {isSubGroupCollapsed ? (
+                                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                ) : (
+                                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                )}
+                                <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground">{sg.group || '(no group)'}</span>
+                                {sg.group && (
+                                  <HierarchySettingsPanel
+                                    level="group"
+                                    project={group.project}
+                                    group={sg.group}
+                                    settings={groupSettingsMap.get(`${group.project}/${sg.group}`) ?? null}
+                                    onSettingsChanged={fetchData}
+                                  />
+                                )}
+                                <Badge variant="secondary" className="text-[10px] ml-auto">
+                                  {sg.checks.length}
+                                </Badge>
+                              </button>
+                            </div>
                           )}
 
                           {!(showSubGroupHeaders && isSubGroupCollapsed) && (
@@ -1242,6 +1309,9 @@ export function Management({ checkEditExtraFields, checkEditExtraSections }: Man
                                         )}
                                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
                                           <AlertChannelBadges channels={def.alert_channels} defaultChannels={checkDefaults?.alert_channels} />
+                                          {def.re_alert_interval && (
+                                            <Badge variant="outline" className="text-[10px]">re-alert: {def.re_alert_interval}</Badge>
+                                          )}
                                           {tenantRegionCount > 0 && <RegionBadges regions={def.target_regions} totalRegions={tenantRegionCount} />}
                                         </div>
                                       </div>

@@ -88,10 +88,18 @@ func RunScheduler(ctx context.Context, cfg *config.Config, repo db.Repository, a
 		logrus.Info("Email alerter configured")
 	}
 
-	// Load checker-wide default alert channels
-	if defaults, err := repo.GetCheckDefaults(ctx); err == nil && len(defaults.AlertChannels) > 0 {
-		defaultAlertChannels = defaults.AlertChannels
-		logrus.Infof("Default alert channels: %v", defaultAlertChannels)
+	// Load checker-wide defaults
+	if defaults, err := repo.GetCheckDefaults(ctx); err == nil {
+		if len(defaults.AlertChannels) > 0 {
+			defaultAlertChannels = defaults.AlertChannels
+			logrus.Infof("Default alert channels: %v", defaultAlertChannels)
+		}
+		if defaults.ReAlertInterval != "" {
+			if d, parseErr := time.ParseDuration(defaults.ReAlertInterval); parseErr == nil && d > 0 {
+				defaultReAlertInterval = d
+				logrus.Infof("Default re-alert interval: %s", d)
+			}
+		}
 	}
 
 	if s == nil {
@@ -246,14 +254,12 @@ func (s *Scheduler) processNextCheck() {
 	// Pop the item
 	heap.Pop(s.checkHeap)
 
-	// Submit to worker pool if enabled and not in maintenance window
+	// Submit to worker pool if enabled.
+	// Note: maintenance mode does NOT prevent execution — checks still run so
+	// that recovery is detected when maintenance ends. Alerts are suppressed
+	// in processCheckResult instead.
 	if item.CheckDef.Enabled {
-		if item.CheckDef.MaintenanceUntil != nil && time.Now().Before(*item.CheckDef.MaintenanceUntil) {
-			// Skip check during maintenance window — do not execute or alert
-			logrus.Debugf("Skipping check %s — in maintenance until %s", item.CheckDef.UUID, item.CheckDef.MaintenanceUntil.Format(time.RFC3339))
-		} else {
-			s.workerPool.Submit(item.CheckDef)
-		}
+		s.workerPool.Submit(item.CheckDef)
 	}
 
 	// Schedule next run
@@ -281,7 +287,11 @@ func (s *Scheduler) Sync(ctx context.Context) error {
 			defaultAlertChannels = defaults.AlertChannels
 			logrus.Debugf("Sync: reloaded default alert channels: %v", defaultAlertChannels)
 		}
-		// Don't overwrite existing defaults with empty — only update when the setting has channels
+		if defaults.ReAlertInterval != "" {
+			if d, parseErr := time.ParseDuration(defaults.ReAlertInterval); parseErr == nil && d > 0 {
+				defaultReAlertInterval = d
+			}
+		}
 	} else {
 		logrus.WithError(err).Warn("Sync: failed to reload check defaults")
 	}
@@ -472,10 +482,39 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 	// Detect state transition for Slack recovery using the DB-sourced previous state
 	wasUnhealthy := !previouslyHealthy
 
-	// Parse ReAlertInterval for state-transition dedup logic
+	// Check hierarchical maintenance mode: if any level (project, group, or
+	// check itself) is in maintenance, suppress all alerts but keep executing.
+	inMaintenance := checkDef.MaintenanceUntil != nil && checkDef.MaintenanceUntil.After(time.Now())
+	if !inMaintenance {
+		// Check project/group-level maintenance
+		projSettings, _ := repo.GetProjectSettings(context.Background(), checkDef.Project)
+		if projSettings != nil && projSettings.IsInMaintenance() {
+			inMaintenance = true
+			logger.WithField("project", checkDef.Project).Info("processCheckResult: project in maintenance — suppressing alerts")
+		}
+		if !inMaintenance {
+			grpSettings, _ := repo.GetGroupSettings(context.Background(), checkDef.Project, checkDef.GroupName)
+			if grpSettings != nil && grpSettings.IsInMaintenance() {
+				inMaintenance = true
+				logger.WithFields(logrus.Fields{"project": checkDef.Project, "group": checkDef.GroupName}).Info("processCheckResult: group in maintenance — suppressing alerts")
+			}
+		}
+	}
+	if inMaintenance {
+		logger.Info("processCheckResult: check/project/group in maintenance — alerts suppressed, status updated")
+		return
+	}
+
+	// Parse ReAlertInterval for state-transition dedup logic.
+	// Falls back to the system default (1h) when neither the check nor
+	// check defaults specify a value. This prevents alert spam from
+	// ongoing failures while ensuring re-alerts eventually fire.
 	var reAlertInterval time.Duration
 	if checkDef.ReAlertInterval != "" {
 		reAlertInterval, _ = time.ParseDuration(checkDef.ReAlertInterval)
+	}
+	if reAlertInterval <= 0 && defaultReAlertInterval > 0 {
+		reAlertInterval = defaultReAlertInterval
 	}
 
 	// Handle alerts if check fails
@@ -630,6 +669,11 @@ func configChangedSinceLastAlert(checkDef models.CheckDefinition, status models.
 
 // defaultAlertChannels holds the checker-wide default alert channels, loaded at scheduler startup.
 var defaultAlertChannels []string
+
+// defaultReAlertInterval is the fallback re-alert interval used when neither
+// the check nor check defaults specify one. Prevents alert spam (only first
+// alert fires) while ensuring re-alerts for ongoing failures. Default: 1h.
+var defaultReAlertInterval = time.Hour
 
 // getEffectiveAlertChannels returns the list of alert channels to dispatch to.
 // Falls back to checker-wide default alert channels when the check has none configured.
