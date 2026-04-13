@@ -506,15 +506,27 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 	}
 
 	// Parse ReAlertInterval for state-transition dedup logic.
-	// Falls back to the system default (1h) when neither the check nor
-	// check defaults specify a value. This prevents alert spam from
-	// ongoing failures while ensuring re-alerts eventually fire.
+	// Resolution order:
+	//   1. Per-check override (checkDef.ReAlertInterval)
+	//   2. System default (from check defaults settings)
+	//   3. Smart fallback: max(1h, checkInterval × 3)
+	//      — ensures slow checks (SSL 6h, domain 24h) don't re-alert too often
 	var reAlertInterval time.Duration
 	if checkDef.ReAlertInterval != "" {
 		reAlertInterval, _ = time.ParseDuration(checkDef.ReAlertInterval)
 	}
 	if reAlertInterval <= 0 && defaultReAlertInterval > 0 {
 		reAlertInterval = defaultReAlertInterval
+	}
+	// For slow checks, ensure re-alert interval is at least 3× the check interval.
+	// A check that runs every 6h shouldn't re-alert every 1h.
+	if checkDef.Duration != "" {
+		if checkInterval, err := time.ParseDuration(checkDef.Duration); err == nil && checkInterval > 0 {
+			minReAlert := checkInterval * 3
+			if minReAlert > reAlertInterval {
+				reAlertInterval = minReAlert
+			}
+		}
 	}
 
 	// Handle alerts if check fails

@@ -8,7 +8,9 @@ import { CheckList } from '@/components/CheckList'
 import { HealthMap } from '@/components/HealthMap'
 import { EventLog } from '@/components/EventLog'
 import { StatusBar } from '@/components/StatusBar'
+import { QuickTestInline } from '@/components/QuickTestButton'
 import { useChecks } from '@/hooks/useChecks'
+import { useCheckQuickTest } from '@/hooks/useCheckQuickTest'
 import { useEventLog } from '@/hooks/useEventLog'
 import { useFavicon } from '@/hooks/useFavicon'
 import { useKeyboard } from '@/hooks/useKeyboard'
@@ -72,6 +74,22 @@ export function Dashboard() {
   const { checks, previousChecks, stats, wsStatus, getGrouped } = useChecks()
   const { entries } = useEventLog(checks, previousChecks)
   useFavicon(stats.unhealthy, stats.total - stats.disabled)
+
+  // Quick-test from dashboard
+  const { getCheckState, runTest, isDisabled, getCooldownLabel } = useCheckQuickTest()
+
+  const trailingAction = useCallback(
+    (check: Check) => (
+      <QuickTestInline
+        uuid={check.UUID}
+        state={getCheckState(check.UUID)}
+        disabled={isDisabled(check.UUID) || !check.Enabled}
+        cooldownLabel={getCooldownLabel(check.UUID)}
+        onTest={runTest}
+      />
+    ),
+    [getCheckState, isDisabled, getCooldownLabel, runTest]
+  )
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode)
@@ -410,9 +428,20 @@ export function Dashboard() {
               sortColumn={sortColumn}
               sortDirection={sortDirection}
               onSort={handleSort}
+              trailingAction={trailingAction}
             />
           ) : (
-            <HealthMap groups={groups} onSelectCheck={handleSelectCheck} />
+            <HealthMap
+              groups={groups}
+              onSelectCheck={handleSelectCheck}
+              onQuickTest={runTest}
+              getQuickTestState={getCheckState}
+              isQuickTestDisabled={(uuid) => {
+                const check = checks.find((c) => c.UUID === uuid)
+                return isDisabled(uuid) || (check ? !check.Enabled : true)
+              }}
+              getQuickTestCooldownLabel={getCooldownLabel}
+            />
           )}
 
           <EventLog entries={entries} />

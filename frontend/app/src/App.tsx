@@ -14,14 +14,24 @@ import {
   Login,
   VersionBadge,
   CommandPalette,
+  TestCooldownProvider,
+  TopBarConfigProvider,
   useTheme,
 } from '@ensafely/checker-ui'
+
+/**
+ * Standalone logout: cookie-based auth — navigate to server-side logout
+ * endpoint which clears the session cookie and redirects to login.
+ */
+function handleLogout() {
+  window.location.href = '/auth/logout'
+}
 
 function AppContent() {
   const { resolved } = useTheme()
 
   return (
-    <>
+    <TopBarConfigProvider brandName="Checker" onLogout={handleLogout}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/manage" element={<Management />} />
@@ -32,14 +42,16 @@ function AppContent() {
       <CommandPalette />
       <VersionBadge />
       <Toaster theme={resolved} richColors position="bottom-right" />
-    </>
+    </TopBarConfigProvider>
   )
 }
 
 export function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <TestCooldownProvider>
+        <AppContent />
+      </TestCooldownProvider>
     </BrowserRouter>
   )
 }

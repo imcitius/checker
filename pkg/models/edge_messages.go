@@ -58,3 +58,21 @@ type EdgeHeartbeat struct {
 	UptimeSeconds int64               `json:"uptime_seconds"`
 	Stats         *EdgeSchedulerStats `json:"stats,omitempty"`
 }
+
+// EdgeTestCheck is sent SaaS -> Edge to request a one-off check execution.
+// The edge runs the check once and responds with an EdgeTestResult carrying
+// the same RequestID for correlation.
+type EdgeTestCheck struct {
+	Type      string                   `json:"type"`       // "test_check"
+	RequestID string                   `json:"request_id"` // UUID for correlating request/response
+	Check     CheckDefinitionViewModel `json:"check"`
+}
+
+// EdgeTestResult is sent Edge -> SaaS with the result of a test_check request.
+type EdgeTestResult struct {
+	Type       string `json:"type"`        // "test_result"
+	RequestID  string `json:"request_id"`  // matches EdgeTestCheck.RequestID
+	Healthy    bool   `json:"healthy"`
+	Message    string `json:"message"`
+	DurationMs int64  `json:"duration_ms"`
+}

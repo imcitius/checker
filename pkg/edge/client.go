@@ -16,6 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/imcitius/checker/pkg/models"
+	"github.com/imcitius/checker/pkg/scheduler"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,7 +35,7 @@ func (c *wsConn) WriteMessage(messageType int, data []byte) error {
 	return c.Conn.WriteMessage(messageType, data)
 }
 
-const (
+var (
 	heartbeatInterval = 30 * time.Second
 	initialBackoff    = 1 * time.Second
 	maxBackoff        = 60 * time.Second
@@ -44,6 +45,15 @@ const (
 // edgeClientVersion is injected at build time via -ldflags.
 // It defaults to "dev" so that local/unversioned builds are distinguishable.
 var edgeClientVersion = "dev"
+
+// SetHeartbeatInterval overrides the default heartbeat interval.
+// Must be called before Client.Run().
+func SetHeartbeatInterval(d time.Duration) {
+	if d > 0 {
+		heartbeatInterval = d
+		logrus.Infof("EdgeClient: heartbeat interval set to %s", d)
+	}
+}
 
 // ClientConfig holds the configuration for the edge WebSocket client.
 type ClientConfig struct {
@@ -228,6 +238,14 @@ func (c *Client) handleMessage(raw []byte, conn *wsConn, sched *EdgeScheduler) e
 			logrus.Warnf("EdgeClient: unknown config_patch action %q", msg.Action)
 		}
 
+	case "test_check":
+		var msg models.EdgeTestCheck
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			return fmt.Errorf("unmarshal test_check: %w", err)
+		}
+		logrus.Infof("EdgeClient: test_check request_id=%s check_type=%s", msg.RequestID, msg.Check.Type)
+		go c.executeTestCheck(msg, conn)
+
 	case "ping":
 		// Respond with a pong.
 		pong := models.EdgeMessage{Type: "pong"}
@@ -399,6 +417,56 @@ func maskAPIKeyInURL(rawURL string) string {
 		u.RawQuery = q.Encode()
 	}
 	return u.String()
+}
+
+// executeTestCheck runs a single check definition on demand and sends back
+// the result as an EdgeTestResult message. Used for the "Test" button in the UI.
+func (c *Client) executeTestCheck(msg models.EdgeTestCheck, conn *wsConn) {
+	def := viewModelToCheckDef(msg.Check)
+	logger := logrus.WithFields(logrus.Fields{
+		"handler":    "test_check",
+		"request_id": msg.RequestID,
+		"check_type": msg.Check.Type,
+	})
+
+	checker := scheduler.CheckerFactory(def, logger)
+	if checker == nil {
+		result := models.EdgeTestResult{
+			Type:       "test_result",
+			RequestID:  msg.RequestID,
+			Healthy:    false,
+			Message:    fmt.Sprintf("unsupported or misconfigured check type: %s", msg.Check.Type),
+			DurationMs: 0,
+		}
+		data, _ := json.Marshal(result)
+		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			logrus.Warnf("EdgeClient: failed to send test_result: %v", err)
+		}
+		return
+	}
+
+	duration, runErr := checker.Run()
+	result := models.EdgeTestResult{
+		Type:       "test_result",
+		RequestID:  msg.RequestID,
+		Healthy:    runErr == nil,
+		Message:    "OK",
+		DurationMs: duration.Milliseconds(),
+	}
+	if runErr != nil {
+		result.Message = runErr.Error()
+	}
+
+	data, err := json.Marshal(result)
+	if err != nil {
+		logrus.Errorf("EdgeClient: marshal test_result: %v", err)
+		return
+	}
+	if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		logrus.Warnf("EdgeClient: failed to send test_result: %v", err)
+	}
+	logrus.Infof("EdgeClient: test_check completed request_id=%s healthy=%v duration=%s",
+		msg.RequestID, result.Healthy, duration)
 }
 
 // httpProxyURL returns the proxy URL from HTTP_PROXY / HTTPS_PROXY env vars.

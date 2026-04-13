@@ -47,13 +47,14 @@ export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './comp
 
 // ─── Components (with customization props) ───
 export { TopBar, type TopBarProps, type NavItem, type MenuItem } from './components/TopBar'
-export { CheckRow, type CheckRowProps, type ExtraBadgeRenderer as CheckRowExtraBadgeRenderer } from './components/CheckRow'
+export { CheckRow, type CheckRowProps, type ExtraBadgeRenderer as CheckRowExtraBadgeRenderer, type TrailingActionRenderer } from './components/CheckRow'
 export { CheckDetails, type CheckDetailsProps, type ExtraBadgeRenderer as CheckDetailsExtraBadgeRenderer } from './components/CheckDetails'
 export {
   CheckEditDrawer, type CheckEditDrawerProps,
   type ExtraFieldRenderer, type ExtraSectionRenderer, type FieldTooltips,
 } from './components/CheckEditDrawer'
 export { CommandPalette, openCommandPalette } from './components/CommandPalette'
+export { QuickTestInline, QuickTestTile } from './components/QuickTestButton'
 
 // ─── Components (no customization needed) ───
 export { CheckList } from './components/CheckList'
@@ -77,6 +78,7 @@ export { Login } from './pages/Login'
 // ─── Hooks ───
 export { useAlerts } from './hooks/useAlerts'
 export { useChecks } from './hooks/useChecks'
+export { useCheckQuickTest, type QuickTestResult } from './hooks/useCheckQuickTest'
 export { useEventLog } from './hooks/useEventLog'
 export { useFavicon } from './hooks/useFavicon'
 export { useKeyboard } from './hooks/useKeyboard'
@@ -92,6 +94,7 @@ export {
   type AlertChannel, type AlertChannelInput,
   type CheckDefaults, type RegionResult,
   type EdgeInstance, type EdgeInstancesResponse, type TenantRegionsResponse,
+  type TestRemoteLocationResult,
 } from './lib/api'
 export {
   createWebSocket, WebSocketManager,
@@ -105,6 +108,7 @@ export {
   TopBarConfigProvider, useTopBarConfig,
   type TopBarConfig, type TopBarConfigProviderProps,
 } from './lib/topbar-context'
+export { TestCooldownProvider, useTestCooldown } from './lib/test-cooldown-context'
 export {
   CHANNEL_TYPES, getChannelMeta,
   type ChannelType, type ChannelTypeMeta,

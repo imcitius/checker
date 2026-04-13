@@ -1,5 +1,6 @@
 import { ProjectGroup } from '@/components/ProjectGroup'
 import type { ProjectGroup as ProjectGroupType } from '@/hooks/useChecks'
+import type { TrailingActionRenderer } from '@/components/CheckRow'
 import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 
 type SortColumn = 'name' | 'type' | 'status' | 'host' | 'frequency'
@@ -15,6 +16,8 @@ interface CheckListProps {
   sortColumn: SortColumn | null
   sortDirection: SortDirection
   onSort: (column: SortColumn) => void
+  /** Optional trailing action for each CheckRow (e.g. quick-test button) */
+  trailingAction?: TrailingActionRenderer
 }
 
 function SortIcon({ column, sortColumn, sortDirection }: { column: SortColumn; sortColumn: SortColumn | null; sortDirection: SortDirection }) {
@@ -33,6 +36,7 @@ export function CheckList({
   sortColumn,
   sortDirection,
   onSort,
+  trailingAction,
 }: CheckListProps) {
   if (groups.length === 0) {
     return (
@@ -63,6 +67,7 @@ export function CheckList({
           Freq<SortIcon column="frequency" sortColumn={sortColumn} sortDirection={sortDirection} />
         </button>
         <span className="w-[60px] shrink-0 text-right">Last Run</span>
+        {trailingAction && <span className="w-[90px] shrink-0" />}
         <span className="w-4 shrink-0" />
       </div>
 
@@ -75,6 +80,7 @@ export function CheckList({
           selectedUUID={selectedUUID}
           expandedUUID={expandedUUID}
           onSelectCheck={onSelectCheck}
+          trailingAction={trailingAction}
         />
       ))}
     </div>

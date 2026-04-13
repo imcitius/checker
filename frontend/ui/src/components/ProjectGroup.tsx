@@ -2,6 +2,7 @@ import { ChevronRight, Layers } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
 import { CheckRow } from '@/components/CheckRow'
+import type { TrailingActionRenderer } from '@/components/CheckRow'
 import { CheckDetails } from '@/components/CheckDetails'
 import type { ProjectGroup as ProjectGroupType } from '@/hooks/useChecks'
 import { cn } from '@/lib/utils'
@@ -13,6 +14,8 @@ interface ProjectGroupProps {
   selectedUUID: string | null
   expandedUUID: string | null
   onSelectCheck: (uuid: string) => void
+  /** Optional trailing action for each CheckRow */
+  trailingAction?: TrailingActionRenderer
 }
 
 export function ProjectGroup({
@@ -22,6 +25,7 @@ export function ProjectGroup({
   selectedUUID,
   expandedUUID,
   onSelectCheck,
+  trailingAction,
 }: ProjectGroupProps) {
   const projectKey = `p:${group.name}`
   const isProjectOpen = !collapsedGroups.has(projectKey)
@@ -80,6 +84,7 @@ export function ProjectGroup({
                           isSelected={selectedUUID === check.UUID}
                           isExpanded={expandedUUID === check.UUID}
                           onSelect={() => onSelectCheck(check.UUID)}
+                          trailingAction={trailingAction}
                         />
                         {expandedUUID === check.UUID && <CheckDetails check={check} />}
                       </div>
@@ -99,6 +104,7 @@ export function ProjectGroup({
                   isSelected={selectedUUID === check.UUID}
                   isExpanded={expandedUUID === check.UUID}
                   onSelect={() => onSelectCheck(check.UUID)}
+                  trailingAction={trailingAction}
                 />
                 {expandedUUID === check.UUID && <CheckDetails check={check} />}
               </div>

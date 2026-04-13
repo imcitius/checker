@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils'
 /** Render function type for extra badges displayed in a CheckRow */
 export type ExtraBadgeRenderer = (check: Check) => ReactNode
 
+/** Render function for a trailing action slot (e.g. quick-test button) */
+export type TrailingActionRenderer = (check: Check) => ReactNode
+
 export interface CheckRowProps {
   check: Check
   isSelected: boolean
@@ -19,6 +22,8 @@ export interface CheckRowProps {
   // --- Customization props ---
   /** Extra badges rendered after the type badge */
   extraBadges?: ExtraBadgeRenderer
+  /** Trailing action rendered before the expand chevron */
+  trailingAction?: TrailingActionRenderer
 }
 
 function getTypeBadgeVariant(type: string): 'info' | 'database' | 'warning' | 'secondary' {
@@ -34,6 +39,7 @@ export const CheckRow = memo(function CheckRow({
   isExpanded,
   onSelect,
   extraBadges,
+  trailingAction,
 }: CheckRowProps) {
   const hasPartialSilence = !check.IsSilenced && check.SilencedChannels && check.SilencedChannels.length > 0
 
@@ -131,6 +137,9 @@ export const CheckRow = memo(function CheckRow({
         </TooltipTrigger>
         <TooltipContent>{check.LastExec}</TooltipContent>
       </Tooltip>
+
+      {/* Trailing action (e.g. quick test) */}
+      {trailingAction && trailingAction(check)}
 
       {/* Expand indicator */}
       {isExpanded ? (

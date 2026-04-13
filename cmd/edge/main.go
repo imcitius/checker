@@ -41,6 +41,14 @@ func main() {
 		defer sentry.Flush(2 * time.Second)
 	}
 
+	if v := os.Getenv("CHECKER_EDGE_HEARTBEAT_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			edge.SetHeartbeatInterval(d)
+		} else {
+			logrus.Warnf("Invalid CHECKER_EDGE_HEARTBEAT_INTERVAL %q, using default: %v", v, err)
+		}
+	}
+
 	cfg := edge.ClientConfig{
 		SaaSURL:    envOrDefault("CHECKER_SAAS_URL", "wss://app.ensafely.com/ws/edge"),
 		APIKey:     envOrFatal("CHECKER_API_KEY"),

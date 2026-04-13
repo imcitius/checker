@@ -198,6 +198,14 @@ export interface EdgeInstancesResponse {
   quota: { current: number; limit: number }
 }
 
+export interface TestRemoteLocationResult {
+  source: 'platform' | 'on-premises'
+  region: string
+  healthy: boolean
+  message: string
+  duration_ms: number
+}
+
 export type ApiClient = ReturnType<typeof createApiClient>
 
 export function createApiClient(config: ApiClientConfig = {}) {
@@ -308,6 +316,10 @@ export function createApiClient(config: ApiClientConfig = {}) {
     testCheck: (data: Partial<CheckDefinition>) =>
       request<{ success: boolean; duration_ms: number; message: string }>(
         '/api/check-definitions/test', { method: 'POST', body: JSON.stringify(data) }
+      ),
+    testCheckRemote: (data: Partial<CheckDefinition>) =>
+      request<{ results: TestRemoteLocationResult[] }>(
+        '/api/check-definitions/test-remote', { method: 'POST', body: JSON.stringify(data) }
       ),
     getProjects: () => request<string[]>('/api/metadata/projects'),
     getCheckTypes: () => request<string[]>('/api/metadata/check-types'),

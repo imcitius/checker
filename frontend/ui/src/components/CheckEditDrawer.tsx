@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
-import { type CheckDefinition, type AlertChannel, type CheckDefaults, type TenantRegionsResponse, type EdgeInstancesResponse } from '@/lib/api'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
+import { type CheckDefinition, type AlertChannel, type CheckDefaults, type TenantRegionsResponse, type EdgeInstancesResponse, type TestRemoteLocationResult } from '@/lib/api'
+import { useTestCooldown } from '@/lib/test-cooldown-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -23,7 +24,7 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from '@/components/ui/collapsible'
-import { Plus, X, ChevronDown, ChevronRight, Wrench, Play } from 'lucide-react'
+import { Plus, X, ChevronDown, ChevronRight, Wrench, Play, Loader2 } from 'lucide-react'
 import { Combobox } from '@/components/ui/combobox'
 import { api } from '@/lib/api'
 
@@ -402,10 +403,40 @@ export function CheckEditDrawer({
     duration_ms: number
     message: string
   } | null>(null)
+  const [testRemoteResults, setTestRemoteResults] = useState<TestRemoteLocationResult[] | null>(null)
+
+  // Per-region test state: region -> result/loading/cooldown
+  const [regionTestLoading, setRegionTestLoading] = useState<Record<string, boolean>>({})
+  const [regionTestResults, setRegionTestResults] = useState<Record<string, TestRemoteLocationResult>>({})
+  const [regionTestCooldowns, setRegionTestCooldowns] = useState<Record<string, number>>({})
+  const cooldownIntervalsRef = useRef<Record<string, ReturnType<typeof setInterval>>>({})
+
+  // Global cooldown: shared via TestCooldownProvider so Dashboard + Drawer stay in sync
+  const { globalCooldownRemaining, startGlobalCooldown } = useTestCooldown()
+
+  // Helper to clear all test results at once.
+  const clearTestResults = () => {
+    setTestResult(null)
+    setTestRemoteResults(null)
+    setRegionTestResults({})
+  }
   const [alertChannels, setAlertChannels] = useState<AlertChannel[]>([])
   const [checkDefaults, setCheckDefaults] = useState<CheckDefaults | null>(null)
   const [platformRegions, setPlatformRegions] = useState<TenantRegionsResponse | null>(null)
   const [edgeInstances, setEdgeInstances] = useState<EdgeInstancesResponse | null>(null)
+
+  // Clear all test results and cooldowns when switching to a different check
+  useEffect(() => {
+    setTestResult(null)
+    setTestRemoteResults(null)
+    setRegionTestResults({})
+    setRegionTestLoading({})
+    setRegionTestCooldowns({})
+    // Clear all countdown intervals
+    Object.values(cooldownIntervalsRef.current).forEach(clearInterval)
+    cooldownIntervalsRef.current = {}
+    // Note: global cooldown is managed by TestCooldownProvider (shared state)
+  }, [editingCheck.uuid])
 
   // Fetch available alert channels, check defaults, platform regions, and edge instances
   useEffect(() => {
@@ -441,7 +472,7 @@ export function CheckEditDrawer({
 
   const updateForm = (field: string, value: string | number | boolean | number[] | string[] | Record<string, string>[]) => {
     onCheckChange({ ...editingCheck, [field]: value })
-    setTestResult(null)
+    clearTestResults()
   }
 
   const updateDBField = (field: string, value: string | string[]) => {
@@ -449,7 +480,7 @@ export function CheckEditDrawer({
       ...editingCheck,
       [dbKey]: { ...(isMySQL ? editingCheck.mysql : editingCheck.pgsql), [field]: value },
     })
-    setTestResult(null)
+    clearTestResults()
   }
 
   const updateAuth = (field: string, value: string) => {
@@ -457,7 +488,7 @@ export function CheckEditDrawer({
       ...editingCheck,
       auth: { ...editingCheck.auth, [field]: value },
     })
-    setTestResult(null)
+    clearTestResults()
   }
 
   const validate = (): boolean => {
@@ -478,21 +509,126 @@ export function CheckEditDrawer({
     }
   }
 
+  // Determine if any selected regions are on-premises probes.
+  const hasOnPremisesSelected = (() => {
+    const selected = editingCheck.target_regions || []
+    if (selected.length === 0) return false
+    const edgeRegionNames = new Set(
+      (edgeInstances?.edge_instances || []).map((e) => e.region)
+    )
+    return selected.some((r) => edgeRegionNames.has(r))
+  })()
+
   const handleTest = async () => {
     if (!validate()) return
     setTesting(true)
     setTestResult(null)
+    setTestRemoteResults(null)
     try {
-      const result = await api.testCheck(editingCheck)
-      setTestResult(result)
+      if (hasOnPremisesSelected) {
+        // Use the remote test endpoint that supports on-premises probes.
+        const response = await api.testCheckRemote(editingCheck)
+        setTestRemoteResults(response.results)
+      } else {
+        // Platform-only: use the existing local test endpoint.
+        const result = await api.testCheck(editingCheck)
+        setTestResult(result)
+      }
     } catch (err) {
+      let message = err instanceof Error ? err.message : 'Unknown error'
+      if (err instanceof Error) {
+        try {
+          const parsed = JSON.parse(err.message)
+          if (parsed.retry_after) {
+            const retryAfter = Number(parsed.retry_after)
+            message = `Rate limited — try again in ${parsed.retry_after}s`
+            if (retryAfter > 0) startGlobalCooldown(retryAfter)
+          } else if (parsed.error) {
+            message = parsed.error
+          }
+        } catch {
+          // not JSON, use raw message
+        }
+      }
       setTestResult({
         success: false,
         duration_ms: 0,
-        message: err instanceof Error ? err.message : 'Unknown error',
+        message,
       })
     } finally {
       setTesting(false)
+    }
+  }
+
+  // Test a single region/probe
+  const handleRegionTest = async (region: string) => {
+    if (!validate()) return
+    setRegionTestLoading((prev) => ({ ...prev, [region]: true }))
+    setRegionTestResults((prev) => {
+      const next = { ...prev }
+      delete next[region]
+      return next
+    })
+    try {
+      const response = await api.testCheckRemote({ ...editingCheck, target_regions: [region] })
+      const result = response.results[0]
+      if (result) {
+        setRegionTestResults((prev) => ({ ...prev, [region]: result }))
+      }
+    } catch (err) {
+      // Parse rate-limit or other JSON error responses into friendly messages
+      let message = 'Unknown error'
+      let retryAfter: number | null = null
+      if (err instanceof Error) {
+        try {
+          const parsed = JSON.parse(err.message)
+          if (parsed.retry_after) {
+            retryAfter = Number(parsed.retry_after)
+            message = `Rate limited — try again in ${parsed.retry_after}s`
+          } else if (parsed.error) {
+            message = parsed.error
+          } else {
+            message = err.message
+          }
+        } catch {
+          message = err.message
+        }
+      }
+      // 429 with retry_after → global cooldown on ALL test buttons
+      if (retryAfter && retryAfter > 0) {
+        startGlobalCooldown(retryAfter)
+      }
+      setRegionTestResults((prev) => ({
+        ...prev,
+        [region]: {
+          source: 'platform' as const,
+          region,
+          healthy: false,
+          message,
+          duration_ms: 0,
+        },
+      }))
+    } finally {
+      setRegionTestLoading((prev) => ({ ...prev, [region]: false }))
+      // 10-second countdown cooldown
+      const COOLDOWN_SECONDS = 10
+      setRegionTestCooldowns((prev) => ({ ...prev, [region]: COOLDOWN_SECONDS }))
+      // Clear any existing interval for this region
+      if (cooldownIntervalsRef.current[region]) {
+        clearInterval(cooldownIntervalsRef.current[region])
+      }
+      cooldownIntervalsRef.current[region] = setInterval(() => {
+        setRegionTestCooldowns((prev) => {
+          const remaining = (prev[region] || 0) - 1
+          if (remaining <= 0) {
+            clearInterval(cooldownIntervalsRef.current[region])
+            delete cooldownIntervalsRef.current[region]
+            const { [region]: _, ...rest } = prev
+            return rest
+          }
+          return { ...prev, [region]: remaining }
+        })
+      }, 1000)
     }
   }
 
@@ -1345,31 +1481,60 @@ export function CheckEditDrawer({
                   )}
                   {platformRegions.regions.map((region) => {
                     const selected = (editingCheck.target_regions || []).includes(region)
+                    const rLoading = regionTestLoading[region]
+                    const rResult = regionTestResults[region]
+                    const rCooldown = regionTestCooldowns[region]
+                    const effectiveCooldown = globalCooldownRemaining > 0 ? Math.max(globalCooldownRemaining, rCooldown || 0) : (rCooldown || 0)
                     return (
-                      <label
+                      <div
                         key={`platform-${region}`}
-                        className={`flex items-center gap-3 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                        className={`flex items-center gap-3 rounded-md border px-3 py-2 transition-colors ${
                           selected
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-muted-foreground/30'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          className="accent-primary h-4 w-4"
-                          checked={selected}
-                          onChange={() => {
-                            const current = editingCheck.target_regions || []
-                            const next = selected
-                              ? current.filter((r) => r !== region)
-                              : [...current, region]
-                            const runMode = computeRunMode(next)
-                            onCheckChange({ ...editingCheck, target_regions: next, run_mode: runMode })
-                            setTestResult(null)
+                        <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="accent-primary h-4 w-4"
+                            checked={selected}
+                            onChange={() => {
+                              const current = editingCheck.target_regions || []
+                              const next = selected
+                                ? current.filter((r) => r !== region)
+                                : [...current, region]
+                              const runMode = computeRunMode(next)
+                              onCheckChange({ ...editingCheck, target_regions: next, run_mode: runMode })
+                              clearTestResults()
+                            }}
+                          />
+                          <span className="text-sm font-medium">{region}</span>
+                        </label>
+                        {rResult && !rLoading && (
+                          <span className={`text-xs whitespace-nowrap ${rResult.healthy ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {rResult.healthy ? '✅' : '❌'} {rResult.message}{rResult.duration_ms > 0 ? ` (${rResult.duration_ms}ms)` : ''}
+                          </span>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs shrink-0"
+                          disabled={rLoading || !!effectiveCooldown || !canTest}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            handleRegionTest(region)
                           }}
-                        />
-                        <span className="text-sm font-medium">{region}</span>
-                      </label>
+                        >
+                          {rLoading ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <Play className="h-3 w-3 mr-1" />
+                          )}
+                          {effectiveCooldown ? `Test (${effectiveCooldown}s)` : 'Test'}
+                        </Button>
+                      </div>
                     )
                   })}
                 </div>
@@ -1381,6 +1546,7 @@ export function CheckEditDrawer({
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-3">Your On-Premises Probes</p>
                   {edgeInstances.edge_instances.map((edge) => {
                     const selected = (editingCheck.target_regions || []).includes(edge.region)
+                    const isDisconnected = edge.status === 'disconnected'
                     const statusColor =
                       edge.status === 'connected'
                         ? 'text-emerald-500'
@@ -1393,32 +1559,62 @@ export function CheckEditDrawer({
                         : edge.status === 'stale'
                           ? 'Stale'
                           : 'Disconnected'
+                    const rLoading = regionTestLoading[edge.region]
+                    const rResult = regionTestResults[edge.region]
+                    const rCooldown = regionTestCooldowns[edge.region]
+                    const effectiveCooldown = globalCooldownRemaining > 0 ? Math.max(globalCooldownRemaining, rCooldown || 0) : (rCooldown || 0)
                     return (
-                      <label
+                      <div
                         key={`edge-${edge.id}`}
-                        className={`flex items-center gap-3 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                        className={`flex items-center gap-3 rounded-md border px-3 py-2 transition-colors ${
                           selected
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-muted-foreground/30'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          className="accent-primary h-4 w-4"
-                          checked={selected}
-                          onChange={() => {
-                            const current = editingCheck.target_regions || []
-                            const next = selected
-                              ? current.filter((r) => r !== edge.region)
-                              : [...current, edge.region]
-                            const runMode = computeRunMode(next)
-                            onCheckChange({ ...editingCheck, target_regions: next, run_mode: runMode })
-                            setTestResult(null)
+                        <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="accent-primary h-4 w-4"
+                            checked={selected}
+                            onChange={() => {
+                              const current = editingCheck.target_regions || []
+                              const next = selected
+                                ? current.filter((r) => r !== edge.region)
+                                : [...current, edge.region]
+                              const runMode = computeRunMode(next)
+                              onCheckChange({ ...editingCheck, target_regions: next, run_mode: runMode })
+                              clearTestResults()
+                            }}
+                          />
+                          <span className="text-sm font-medium">{edge.region}</span>
+                          <span className={`text-xs ${statusColor}`}>{statusLabel}</span>
+                        </label>
+                        {rResult && !rLoading && (
+                          <span className={`text-xs whitespace-nowrap ${rResult.healthy ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {rResult.healthy ? '✅' : '❌'} {rResult.message}{rResult.duration_ms > 0 ? ` (${rResult.duration_ms}ms)` : ''}
+                          </span>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs shrink-0"
+                          disabled={isDisconnected || rLoading || !!effectiveCooldown || !canTest}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            handleRegionTest(edge.region)
                           }}
-                        />
-                        <span className="text-sm font-medium">{edge.region}</span>
-                        <span className={`text-xs ml-auto ${statusColor}`}>{statusLabel}</span>
-                      </label>
+                          title={isDisconnected ? 'Probe is offline' : undefined}
+                        >
+                          {rLoading ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <Play className="h-3 w-3 mr-1" />
+                          )}
+                          {effectiveCooldown ? `Test (${effectiveCooldown}s)` : 'Test'}
+                        </Button>
+                      </div>
                     )
                   })}
                 </div>
@@ -1434,7 +1630,7 @@ export function CheckEditDrawer({
                   className="text-xs text-muted-foreground hover:text-foreground underline mt-1"
                   onClick={() => {
                     onCheckChange({ ...editingCheck, target_regions: [], run_mode: undefined })
-                    setTestResult(null)
+                    clearTestResults()
                   }}
                 >
                   Clear selection (use all regions)
@@ -1468,16 +1664,16 @@ export function CheckEditDrawer({
             <Button
               variant="outline"
               onClick={handleTest}
-              disabled={testing || !canTest}
+              disabled={testing || !canTest || globalCooldownRemaining > 0}
             >
               <Play className="h-3.5 w-3.5 mr-1.5" />
-              {testing ? 'Testing...' : 'Test'}
+              {testing ? 'Testing...' : globalCooldownRemaining > 0 ? `Test (${globalCooldownRemaining}s)` : 'Test'}
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : editingCheck.uuid ? 'Update' : 'Create'}
             </Button>
           </div>
-          {testResult && (
+          {testResult && !testRemoteResults && (
             <div
               className={`text-sm px-1 ${
                 testResult.success
@@ -1488,6 +1684,22 @@ export function CheckEditDrawer({
               {testResult.success
                 ? `\u2713 Check passed (${testResult.duration_ms}ms)`
                 : `\u2717 Check failed: ${testResult.message} (${testResult.duration_ms}ms)`}
+            </div>
+          )}
+          {testRemoteResults && (
+            <div className="space-y-1 px-1">
+              {testRemoteResults.map((r, i) => (
+                <div
+                  key={`${r.region}-${i}`}
+                  className={`text-sm ${
+                    r.healthy
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {r.healthy ? '\u2705' : '\u274c'} {r.region}: {r.message}{r.duration_ms > 0 ? ` (${r.duration_ms}ms)` : ''}
+                </div>
+              ))}
             </div>
           )}
         </div>

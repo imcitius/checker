@@ -2,11 +2,18 @@ import { memo } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Check } from '@/lib/websocket'
 import type { ProjectGroup } from '@/hooks/useChecks'
+import type { QuickTestResult } from '@/hooks/useCheckQuickTest'
+import { QuickTestTile } from '@/components/QuickTestButton'
 import { cn } from '@/lib/utils'
 
 interface HealthMapProps {
   groups: ProjectGroup[]
   onSelectCheck: (uuid: string) => void
+  /** Quick-test callbacks. When present, tiles show a test overlay on hover. */
+  onQuickTest?: (uuid: string) => void
+  getQuickTestState?: (uuid: string) => QuickTestResult
+  isQuickTestDisabled?: (uuid: string) => boolean
+  getQuickTestCooldownLabel?: (uuid: string) => string | null
 }
 
 function truncateName(name: string, maxChars = 9): string {
@@ -35,9 +42,17 @@ function getFailureDuration(lastExec: string): string {
 const HealthTile = memo(function HealthTile({
   check,
   onSelect,
+  onQuickTest,
+  quickTestState,
+  quickTestDisabled,
+  quickTestCooldownLabel,
 }: {
   check: Check
   onSelect: () => void
+  onQuickTest?: (uuid: string) => void
+  quickTestState?: QuickTestResult
+  quickTestDisabled?: boolean
+  quickTestCooldownLabel?: string | null
 }) {
   const hasPartialSilence = !check.IsSilenced && check.SilencedChannels && check.SilencedChannels.length > 0
 
@@ -59,7 +74,7 @@ const HealthTile = memo(function HealthTile({
       <TooltipTrigger asChild>
         <button
           className={cn(
-            'rounded-sm transition-all cursor-pointer border relative',
+            'rounded-sm transition-all cursor-pointer border relative group/tile',
             'hover:scale-110 hover:z-10',
             // Failing tiles are slightly larger than healthy ones
             isUnhealthy
@@ -80,6 +95,15 @@ const HealthTile = memo(function HealthTile({
             <span className="absolute inset-x-0 bottom-0.5 text-center text-[9px] text-white/90 truncate px-0.5 leading-none pointer-events-none select-none">
               {truncateName(check.Name)}
             </span>
+          )}
+          {onQuickTest && quickTestState && (
+            <QuickTestTile
+              uuid={check.UUID}
+              state={quickTestState}
+              disabled={quickTestDisabled ?? false}
+              cooldownLabel={quickTestCooldownLabel ?? null}
+              onTest={onQuickTest}
+            />
           )}
         </button>
       </TooltipTrigger>
@@ -120,7 +144,14 @@ const HealthTile = memo(function HealthTile({
   )
 })
 
-export function HealthMap({ groups, onSelectCheck }: HealthMapProps) {
+export function HealthMap({
+  groups,
+  onSelectCheck,
+  onQuickTest,
+  getQuickTestState,
+  isQuickTestDisabled,
+  getQuickTestCooldownLabel,
+}: HealthMapProps) {
   if (groups.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground text-sm">
@@ -179,6 +210,10 @@ export function HealthMap({ groups, onSelectCheck }: HealthMapProps) {
                   key={check.UUID}
                   check={check}
                   onSelect={() => onSelectCheck(check.UUID)}
+                  onQuickTest={onQuickTest}
+                  quickTestState={getQuickTestState?.(check.UUID)}
+                  quickTestDisabled={isQuickTestDisabled?.(check.UUID)}
+                  quickTestCooldownLabel={getQuickTestCooldownLabel?.(check.UUID)}
                 />
               ))}
             </div>
