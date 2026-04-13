@@ -2,8 +2,26 @@ apiVersion: v1
 entries:
   checker-edge:
   - apiVersion: v2
+    appVersion: v1.1.9
+    created: "2026-04-13T16:12:03.086763745Z"
+    description: Ensafely on-premises checker for monitoring internal infrastructure
+    digest: 9a3618c91f22ae3691f2229e18f297939cd2540fd886b9574edc5b6a42f87b68
+    home: https://ensafely.com
+    keywords:
+    - monitoring
+    - health-check
+    - uptime
+    - ensafely
+    name: checker-edge
+    sources:
+    - https://github.com/imcitius/checker
+    type: application
+    urls:
+    - https://imcitius.github.io/checker/checker-edge-1.1.9.tgz
+    version: 1.1.9
+  - apiVersion: v2
     appVersion: v1.1.6
-    created: "2026-04-13T15:13:53.764063149Z"
+    created: "2026-04-13T16:12:03.086436705Z"
     description: Ensafely on-premises checker for monitoring internal infrastructure
     digest: 87c711e24f1bef6561d865184356ecfb4af4105ca3f9d44a9efaaaeeea2a94c7
     home: https://ensafely.com
@@ -21,7 +39,7 @@ entries:
     version: 1.1.6
   - apiVersion: v2
     appVersion: v1.1.5
-    created: "2026-04-13T15:13:53.763786573Z"
+    created: "2026-04-13T16:12:03.086132777Z"
     description: Ensafely on-premises checker for monitoring internal infrastructure
     digest: 67986af6bc4f8d33d5fb7b86594c0f95b38e09c0cd78d3b0b9b82f833fed7e5d
     home: https://ensafely.com
@@ -39,7 +57,7 @@ entries:
     version: 1.1.5
   - apiVersion: v2
     appVersion: v1.1.4
-    created: "2026-04-13T15:13:53.763466346Z"
+    created: "2026-04-13T16:12:03.085472725Z"
     description: Ensafely on-premises checker for monitoring internal infrastructure
     digest: 51dea537bea11b2877361b4208224688aa8a45d3cd2507114c4fee0f9a4b4acf
     home: https://ensafely.com
@@ -55,4 +73,4 @@ entries:
     urls:
     - https://imcitius.github.io/checker/checker-edge-1.1.4.tgz
     version: 1.1.4
-generated: "2026-04-13T15:13:53.762978846Z"
+generated: "2026-04-13T16:12:03.084568717Z"
