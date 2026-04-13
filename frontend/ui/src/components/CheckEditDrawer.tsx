@@ -1331,7 +1331,7 @@ export function CheckEditDrawer({
             })()}
           </section>
 
-          {/* ─── Regions & Edge Probes ─── */}
+          {/* ─── Regions & On-Premises Probes ─── */}
           {((platformRegions && platformRegions.regions.length > 0) ||
             (edgeInstances && edgeInstances.edge_instances.length > 0)) && (
             <section className="space-y-4">
@@ -1375,10 +1375,10 @@ export function CheckEditDrawer({
                 </div>
               )}
 
-              {/* Tenant Edge Probes */}
+              {/* Tenant On-Premises Probes */}
               {edgeInstances && edgeInstances.edge_instances.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-3">Your Edge Probes</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-3">Your On-Premises Probes</p>
                   {edgeInstances.edge_instances.map((edge) => {
                     const selected = (editingCheck.target_regions || []).includes(edge.region)
                     const statusColor =

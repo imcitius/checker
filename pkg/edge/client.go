@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -34,7 +35,7 @@ func (c *wsConn) WriteMessage(messageType int, data []byte) error {
 }
 
 const (
-	heartbeatInterval = 10 * time.Second
+	heartbeatInterval = 30 * time.Second
 	initialBackoff    = 1 * time.Second
 	maxBackoff        = 60 * time.Second
 	resultBufferSize  = 256
@@ -133,7 +134,11 @@ func (c *Client) connect(ctx context.Context) (connected bool, err error) {
 		return false, fmt.Errorf("invalid SaaSURL: %w", err)
 	}
 
-	rawConn, _, err := websocket.DefaultDialer.DialContext(ctx, u, nil)
+	dialer := *websocket.DefaultDialer
+	if proxyURL := httpProxyURL(); proxyURL != nil {
+		dialer.Proxy = http.ProxyURL(proxyURL)
+	}
+	rawConn, _, err := dialer.DialContext(ctx, u, nil)
 	if err != nil {
 		return false, fmt.Errorf("dial: %w", err)
 	}
@@ -394,4 +399,18 @@ func maskAPIKeyInURL(rawURL string) string {
 		u.RawQuery = q.Encode()
 	}
 	return u.String()
+}
+
+// httpProxyURL returns the proxy URL from HTTP_PROXY / HTTPS_PROXY env vars.
+// Used for the WebSocket connection to the SaaS platform (not for check execution).
+func httpProxyURL() *url.URL {
+	for _, env := range []string{"HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy"} {
+		if v := os.Getenv(env); v != "" {
+			if u, err := url.Parse(v); err == nil {
+				logrus.Infof("EdgeClient: using proxy %s from %s", v, env)
+				return u
+			}
+		}
+	}
+	return nil
 }
