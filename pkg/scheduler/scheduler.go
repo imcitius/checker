@@ -449,6 +449,13 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 	var previouslyHealthy bool
 	if prevDef, prevErr := repo.GetCheckDefinitionByUUID(context.Background(), checkDef.UUID); prevErr == nil {
 		previouslyHealthy = prevDef.IsHealthy
+		// Use DB-loaded AlertChannels which includes tenant defaults
+		// (the adapter populates them via GetCheckDefaults when empty).
+		// The incoming checkDef may have empty AlertChannels from the
+		// consensus sweeper or edge result path.
+		if len(checkDef.AlertChannels) == 0 && len(prevDef.AlertChannels) > 0 {
+			checkDef.AlertChannels = prevDef.AlertChannels
+		}
 	} else {
 		previouslyHealthy = checkDef.IsHealthy // fallback to in-memory
 	}
@@ -473,7 +480,16 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 
 	// Handle alerts if check fails
 	if !isHealthy {
+		effectiveChannels := getEffectiveAlertChannels(checkDef)
+		logger.WithFields(logrus.Fields{
+			"previously_healthy": previouslyHealthy,
+			"re_alert_interval":  reAlertInterval,
+			"alert_channels":     effectiveChannels,
+			"last_alert_sent":    checkStatus.LastAlertSent,
+		}).Info("processCheckResult: check unhealthy, evaluating alert dispatch")
+
 		if shouldSendAlert(previouslyHealthy, reAlertInterval, checkStatus) {
+			logger.Info("processCheckResult: shouldSendAlert=true, dispatching standard alerts")
 			sendAlerts(repo, checkStatus, checkDef, appAlerters)
 
 			checkStatus.LastAlertSent = runTime
@@ -481,26 +497,42 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 				logger.WithError(err).Error("Failed to update last alert time")
 			}
 		} else if configChangedSinceLastAlert(checkDef, checkStatus) {
-			// Fire stateless alerters when check config was updated after the last
-			// alert (e.g. user added new alert channels on an ongoing failure).
+			logger.Info("processCheckResult: config changed since last alert, dispatching")
 			sendAlerts(repo, checkStatus, checkDef, appAlerters)
 
 			checkStatus.LastAlertSent = runTime
 			if err := repo.UpdateCheckStatus(context.Background(), checkStatus); err != nil {
 				logger.WithError(err).Error("Failed to update last alert time")
 			}
+		} else {
+			logger.Info("processCheckResult: shouldSendAlert=false, skipping standard alerts")
 		}
 
 		// App alerters — only fire if the check has a matching channel type selected
+		// and the check is not silenced.
 		isNewIncident := previouslyHealthy
-		channels := getEffectiveAlertChannels(checkDef)
-		if len(channels) == 0 {
-			// No channels configured and no default — skip app alerters
+		checkSilenced, silErr := repo.IsCheckSilenced(context.Background(), checkDef.UUID, checkDef.Project)
+		if silErr != nil {
+			logger.WithError(silErr).Warn("processCheckResult: failed to check silence for app alerters")
+			// Don't suppress on error
+		}
+		if checkSilenced {
+			logger.Info("processCheckResult: check is silenced — skipping app alerters")
+		} else if len(effectiveChannels) == 0 {
+			logger.Warn("processCheckResult: no alert channels — skipping app alerters")
 		} else {
 			selectedTypes := resolveSelectedChannelTypes(repo, checkDef)
+			logger.WithFields(logrus.Fields{
+				"selected_types": selectedTypes,
+				"app_alerters":   len(appAlerters),
+				"is_new_incident": isNewIncident,
+			}).Info("processCheckResult: evaluating app alerters")
 			for _, aa := range appAlerters {
 				if shouldAppAlerterFire(aa, selectedTypes) {
+					logger.Infof("processCheckResult: firing app alerter (owned types: %v)", aa.OwnedTypes())
 					aa.SendAlert(context.Background(), checkDef, checkStatus, isNewIncident)
+				} else {
+					logger.Debugf("processCheckResult: skipping app alerter (owned types: %v, not in selected)", aa.OwnedTypes())
 				}
 			}
 		}
@@ -529,14 +561,23 @@ func processCheckResult(repo db.Repository, checkDef models.CheckDefinition, che
 		sendRecoveryAlerts(repo, checkStatus, checkDef, appAlerters)
 
 		// Handle app alerter recovery — only fire if the check has a matching channel type selected
-		recoveryChannels := getEffectiveAlertChannels(checkDef)
-		if len(recoveryChannels) == 0 {
-			// No channels configured and no default — skip app alerters
+		// and the check is not silenced.
+		recoverySilenced, recSilErr := repo.IsCheckSilenced(context.Background(), checkDef.UUID, checkDef.Project)
+		if recSilErr != nil {
+			logrus.WithError(recSilErr).Warn("processCheckResult: failed to check silence for recovery app alerters")
+		}
+		if recoverySilenced {
+			// Check is silenced — skip recovery app alerters
 		} else {
-			recoveryTypes := resolveSelectedChannelTypes(repo, checkDef)
-			for _, aa := range appAlerters {
-				if shouldAppAlerterFire(aa, recoveryTypes) {
-					aa.HandleRecovery(context.Background(), checkDef)
+			recoveryChannels := getEffectiveAlertChannels(checkDef)
+			if len(recoveryChannels) == 0 {
+				// No channels configured and no default — skip app alerters
+			} else {
+				recoveryTypes := resolveSelectedChannelTypes(repo, checkDef)
+				for _, aa := range appAlerters {
+					if shouldAppAlerterFire(aa, recoveryTypes) {
+						aa.HandleRecovery(context.Background(), checkDef)
+					}
 				}
 			}
 		}
@@ -640,10 +681,24 @@ func getEffectiveSeverity(checkDef models.CheckDefinition) string {
 	return "critical"
 }
 
+// AlerterResolver is an optional interface that db.Repository implementations can
+// satisfy to override how alerters are created. This allows adapters (e.g. the
+// cloud multi-tenant adapter) to wrap alerters with tracking or other middleware
+// without remapping channel types in the data layer.
+type AlerterResolver interface {
+	ResolveAlerter(ctx context.Context, channelName string) (alerts.Alerter, error)
+}
+
 // resolveAlerter resolves an Alerter for the given channel name from the DB alert_channels table.
+// If the repo implements AlerterResolver, it delegates to that for custom alerter creation.
 func resolveAlerter(repo db.Repository, channelName string) (alerts.Alerter, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// Allow the repo to override alerter creation (e.g. to wrap with tracking).
+	if resolver, ok := repo.(AlerterResolver); ok {
+		return resolver.ResolveAlerter(ctx, channelName)
+	}
 
 	ch, err := repo.GetAlertChannelByName(ctx, channelName)
 	if err != nil {

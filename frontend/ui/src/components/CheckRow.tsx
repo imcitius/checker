@@ -39,9 +39,11 @@ export const CheckRow = memo(function CheckRow({
 
   const statusText = !check.Enabled
     ? 'Disabled'
-    : check.LastResult
-      ? 'Healthy'
-      : 'FAILING'
+    : check.IsSilenced
+      ? 'Silenced'
+      : check.LastResult
+        ? 'Healthy'
+        : 'FAILING'
 
   return (
     <div
@@ -86,9 +88,11 @@ export const CheckRow = memo(function CheckRow({
           'font-mono text-xs w-[70px] shrink-0',
           !check.Enabled
             ? 'text-disabled'
-            : check.LastResult
-              ? 'text-healthy'
-              : 'text-unhealthy font-semibold'
+            : check.IsSilenced
+              ? 'text-warning'
+              : check.LastResult
+                ? 'text-healthy'
+                : 'text-unhealthy font-semibold'
         )}
       >
         {statusText}

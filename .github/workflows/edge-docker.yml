@@ -5,12 +5,6 @@ name: Build and Publish Edge Docker Image
 # made public via GitHub → Packages → checker-edge → Package settings.
 
 "on":
-  push:
-    branches:
-      - "dev"
-      - "master"
-    # No paths filter — always rebuild on push to master/dev so the :master and
-    # :dev tags stay current even when changes land outside cmd/edge or pkg/edge.
   release:
     types: [published]
   workflow_dispatch:

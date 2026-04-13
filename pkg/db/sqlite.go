@@ -289,7 +289,7 @@ func scanCheckDefSQL(scanner interface{ Scan(dest ...interface{}) error }) (mode
 
 	// Unmarshal Polymorphic Config
 	if len(configJSON) > 0 {
-		conf, err := unmarshalConfig(c.Type, configJSON)
+		conf, err := UnmarshalConfig(c.Type, configJSON)
 		if err != nil {
 			logrus.Errorf("Failed to unmarshal config for %s: %v", c.UUID, err)
 		} else {
@@ -372,8 +372,8 @@ func (s *SQLiteDB) GetCheckDefinitionByUUID(ctx context.Context, uuid string) (m
 func (s *SQLiteDB) CreateCheckDefinition(ctx context.Context, def models.CheckDefinition) (string, error) {
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
-	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
-	targetRegionsJSON := marshalStringSlice(def.TargetRegions)
+	alertChannelsJSON := MarshalAlertChannels(def.AlertChannels)
+	targetRegionsJSON := MarshalStringSlice(def.TargetRegions)
 
 	if def.Severity == "" {
 		def.Severity = "critical"
@@ -387,9 +387,9 @@ func (s *SQLiteDB) CreateCheckDefinition(ctx context.Context, def models.CheckDe
 		def.LastRun.UTC().Format(time.RFC3339), boolToInt(def.IsHealthy), def.LastMessage,
 		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType,
 		string(configJSON), string(actorConfigJSON), def.Severity,
-		alertChannelsJSON, nilIfEmpty(def.ReAlertInterval), def.RetryCount, nilIfEmpty(def.RetryInterval),
-		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName),
-		nilIfEmpty(def.RunMode), targetRegionsJSON)
+		alertChannelsJSON, NilIfEmpty(def.ReAlertInterval), def.RetryCount, NilIfEmpty(def.RetryInterval),
+		nullableTime(def.MaintenanceUntil), NilIfEmpty(def.EscalationPolicyName),
+		NilIfEmpty(def.RunMode), targetRegionsJSON)
 
 	if err != nil {
 		return "", err
@@ -400,8 +400,8 @@ func (s *SQLiteDB) CreateCheckDefinition(ctx context.Context, def models.CheckDe
 func (s *SQLiteDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDefinition) error {
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
-	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
-	targetRegionsJSON := marshalStringSlice(def.TargetRegions)
+	alertChannelsJSON := MarshalAlertChannels(def.AlertChannels)
+	targetRegionsJSON := MarshalStringSlice(def.TargetRegions)
 
 	if def.Severity == "" {
 		def.Severity = "critical"
@@ -415,9 +415,9 @@ func (s *SQLiteDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDe
 		now, def.LastRun.UTC().Format(time.RFC3339), boolToInt(def.IsHealthy), def.LastMessage,
 		def.LastAlertSent.UTC().Format(time.RFC3339), def.Duration, def.ActorType,
 		string(configJSON), string(actorConfigJSON), def.Severity,
-		alertChannelsJSON, nilIfEmpty(def.ReAlertInterval), def.RetryCount, nilIfEmpty(def.RetryInterval),
-		nullableTime(def.MaintenanceUntil), nilIfEmpty(def.EscalationPolicyName),
-		nilIfEmpty(def.RunMode), targetRegionsJSON,
+		alertChannelsJSON, NilIfEmpty(def.ReAlertInterval), def.RetryCount, NilIfEmpty(def.RetryInterval),
+		nullableTime(def.MaintenanceUntil), NilIfEmpty(def.EscalationPolicyName),
+		NilIfEmpty(def.RunMode), targetRegionsJSON,
 		def.UUID)
 
 	if err != nil {
@@ -535,7 +535,7 @@ func (s *SQLiteDB) BulkUpdateAlertChannels(ctx context.Context, uuids []string, 
 	for _, u := range uuids {
 		if action == "replace" {
 			// Simple case: just set the value
-			channelsJSON := marshalAlertChannels(channels)
+			channelsJSON := MarshalAlertChannels(channels)
 			var val interface{}
 			if channelsJSON != nil {
 				val = *channelsJSON
@@ -593,7 +593,7 @@ func (s *SQLiteDB) BulkUpdateAlertChannels(ctx context.Context, uuids []string, 
 			}
 		}
 
-		updatedJSON := marshalAlertChannels(updated)
+		updatedJSON := MarshalAlertChannels(updated)
 		var val interface{}
 		if updatedJSON != nil {
 			val = *updatedJSON

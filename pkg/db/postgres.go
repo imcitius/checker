@@ -21,6 +21,64 @@ import (
 
 type PostgresDB struct {
 	Pool *pgxpool.Pool
+	// TenantIDFunc, when non-nil, enables multi-tenant mode.
+	// All queries include tenant_id filtering using the value returned by this function.
+	// When nil (default), queries run without tenant scoping (single-tenant / standalone mode).
+	TenantIDFunc func(ctx context.Context) string
+}
+
+// tenantScope holds tenant scoping state for query building.
+type tenantScope struct {
+	id string
+}
+
+// scope returns the tenant scope for the current context.
+// Returns nil if not in multi-tenant mode.
+func (db *PostgresDB) scope(ctx context.Context) *tenantScope {
+	if db.TenantIDFunc == nil {
+		return nil
+	}
+	return &tenantScope{id: db.TenantIDFunc(ctx)}
+}
+
+// where returns " WHERE tenant_id = $N" or empty string.
+func (s *tenantScope) where(argIdx int) string {
+	if s == nil {
+		return ""
+	}
+	return fmt.Sprintf(" WHERE tenant_id = $%d", argIdx)
+}
+
+// and returns " AND tenant_id = $N" or empty string.
+func (s *tenantScope) and(argIdx int) string {
+	if s == nil {
+		return ""
+	}
+	return fmt.Sprintf(" AND tenant_id = $%d", argIdx)
+}
+
+// insertCol returns ", tenant_id" or empty string.
+func (s *tenantScope) insertCol() string {
+	if s == nil {
+		return ""
+	}
+	return ", tenant_id"
+}
+
+// insertPlaceholder returns ", $N" or empty string.
+func (s *tenantScope) insertPlaceholder(argIdx int) string {
+	if s == nil {
+		return ""
+	}
+	return fmt.Sprintf(", $%d", argIdx)
+}
+
+// args returns the tenant ID as a single-element slice, or nil.
+func (s *tenantScope) args() []interface{} {
+	if s == nil {
+		return nil
+	}
+	return []interface{}{s.id}
 }
 
 func NewPostgresDB(cfg *config.Config) (*PostgresDB, error) {
@@ -69,16 +127,23 @@ func NewPostgresDB(cfg *config.Config) (*PostgresDB, error) {
 	return &PostgresDB{Pool: pool}, nil
 }
 
+// NewPostgresDBFromPool creates a PostgresDB using an existing connection pool.
+// No migrations are run. Use this when the caller manages the pool lifecycle
+// (e.g. the SaaS layer sharing a pool with its own migration runner).
+func NewPostgresDBFromPool(pool *pgxpool.Pool) *PostgresDB {
+	return &PostgresDB{Pool: pool}
+}
+
 func (db *PostgresDB) Close() {
 	db.Pool.Close()
 }
 
-// checkDefColumns is the shared SELECT column list for check_definitions queries.
-const checkDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name, run_mode, target_regions`
+// CheckDefColumns is the shared SELECT column list for check_definitions queries.
+const CheckDefColumns = `uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name, run_mode, target_regions, edge_min_unhealthy`
 
-// scanCheckDef scans a row into a CheckDefinition, handling config unmarshaling
-// and alert_channels JSON parsing.
-func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.CheckDefinition, error) {
+// ScanCheckDef scans a row into a CheckDefinition, handling config unmarshaling
+// and alert_channels JSON parsing. The row must contain columns matching CheckDefColumns.
+func ScanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.CheckDefinition, error) {
 	var c models.CheckDefinition
 	var configJSON, actorConfigJSON []byte
 	var alertChannelsJSON *string
@@ -88,17 +153,43 @@ func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.
 	var maintenanceUntil *time.Time
 	var escalationPolicyName *string
 	var runMode *string
-	var targetRegionsJSON *string
+	var targetRegionsJSON []byte
+	var edgeMinUnhealthy int
+
+	// Nullable status columns — use pointers so NULL doesn't cause a scan error.
+	var lastRun, lastAlertSent *time.Time
+	var isHealthy *bool
+	var lastMessage *string
+	var duration, actorType *string
 
 	err := scanner.Scan(
 		&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.Description, &c.Enabled,
-		&c.CreatedAt, &c.UpdatedAt, &c.LastRun, &c.IsHealthy, &c.LastMessage, &c.LastAlertSent,
-		&c.Duration, &c.ActorType, &configJSON, &actorConfigJSON,
+		&c.CreatedAt, &c.UpdatedAt, &lastRun, &isHealthy, &lastMessage, &lastAlertSent,
+		&duration, &actorType, &configJSON, &actorConfigJSON,
 		&severity, &alertChannelsJSON, &reAlertInterval, &retryCount, &retryInterval, &maintenanceUntil,
-		&escalationPolicyName, &runMode, &targetRegionsJSON,
+		&escalationPolicyName, &runMode, &targetRegionsJSON, &edgeMinUnhealthy,
 	)
 	if err != nil {
 		return models.CheckDefinition{}, err
+	}
+
+	if lastRun != nil {
+		c.LastRun = *lastRun
+	}
+	if isHealthy != nil {
+		c.IsHealthy = *isHealthy
+	}
+	if lastMessage != nil {
+		c.LastMessage = *lastMessage
+	}
+	if lastAlertSent != nil {
+		c.LastAlertSent = *lastAlertSent
+	}
+	if duration != nil {
+		c.Duration = *duration
+	}
+	if actorType != nil {
+		c.ActorType = *actorType
 	}
 
 	// Set severity with default
@@ -142,15 +233,17 @@ func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.
 	}
 
 	// Parse target_regions JSON array
-	if targetRegionsJSON != nil && *targetRegionsJSON != "" {
-		if err := json.Unmarshal([]byte(*targetRegionsJSON), &c.TargetRegions); err != nil {
+	if len(targetRegionsJSON) > 0 {
+		if err := json.Unmarshal(targetRegionsJSON, &c.TargetRegions); err != nil {
 			logrus.Warnf("Failed to parse target_regions for %s: %v", c.UUID, err)
 		}
 	}
 
+	c.EdgeMinUnhealthy = edgeMinUnhealthy
+
 	// Unmarshal Polymorphic Config
 	if len(configJSON) > 0 {
-		conf, err := unmarshalConfig(c.Type, configJSON)
+		conf, err := UnmarshalConfig(c.Type, configJSON)
 		if err != nil {
 			logrus.Errorf("Failed to unmarshal config for %s: %v", c.UUID, err)
 		} else {
@@ -168,8 +261,8 @@ func scanCheckDef(scanner interface{ Scan(dest ...interface{}) error }) (models.
 	return c, nil
 }
 
-// marshalAlertChannels converts the AlertChannels slice to a JSON string for storage.
-func marshalAlertChannels(channels []string) *string {
+// MarshalAlertChannels converts the AlertChannels slice to a JSON string for storage.
+func MarshalAlertChannels(channels []string) *string {
 	if len(channels) == 0 {
 		return nil
 	}
@@ -181,8 +274,8 @@ func marshalAlertChannels(channels []string) *string {
 	return &s
 }
 
-// marshalStringSlice converts a string slice to a JSON string for storage.
-func marshalStringSlice(slice []string) *string {
+// MarshalStringSlice converts a string slice to a JSON string for storage.
+func MarshalStringSlice(slice []string) *string {
 	if len(slice) == 0 {
 		return nil
 	}
@@ -195,31 +288,39 @@ func marshalStringSlice(slice []string) *string {
 }
 
 func (db *PostgresDB) CountCheckDefinitions(ctx context.Context) (int, error) {
+	s := db.scope(ctx)
 	var count int
-	err := db.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM check_definitions").Scan(&count)
+	query := "SELECT COUNT(*) FROM check_definitions" + s.where(1)
+	err := db.Pool.QueryRow(ctx, query, s.args()...).Scan(&count)
 	return count, err
 }
 
 func (db *PostgresDB) GetAllCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error) {
-	rows, err := db.Pool.Query(ctx, "SELECT "+checkDefColumns+" FROM check_definitions")
+	s := db.scope(ctx)
+	query := "SELECT " + CheckDefColumns + " FROM check_definitions" + s.where(1)
+	rows, err := db.Pool.Query(ctx, query, s.args()...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var checks []models.CheckDefinition
+	checks := make([]models.CheckDefinition, 0)
 	for rows.Next() {
-		c, err := scanCheckDef(rows)
+		c, err := ScanCheckDef(rows)
 		if err != nil {
 			return nil, err
 		}
 		checks = append(checks, c)
 	}
-	return checks, nil
+	return checks, rows.Err()
 }
 
 func (db *PostgresDB) GetEnabledCheckDefinitions(ctx context.Context) ([]models.CheckDefinition, error) {
-	rows, err := db.Pool.Query(ctx, "SELECT "+checkDefColumns+" FROM check_definitions WHERE enabled=$1", true)
+	s := db.scope(ctx)
+	query := "SELECT " + CheckDefColumns + " FROM check_definitions WHERE enabled = $1" + s.and(2)
+	args := []interface{}{true}
+	args = append(args, s.args()...)
+	rows, err := db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -227,36 +328,54 @@ func (db *PostgresDB) GetEnabledCheckDefinitions(ctx context.Context) ([]models.
 
 	var checks []models.CheckDefinition
 	for rows.Next() {
-		c, err := scanCheckDef(rows)
+		c, err := ScanCheckDef(rows)
 		if err != nil {
 			return nil, err
 		}
 		checks = append(checks, c)
 	}
-	return checks, nil
+	return checks, rows.Err()
 }
 
 func (db *PostgresDB) GetCheckDefinitionByUUID(ctx context.Context, uuid string) (models.CheckDefinition, error) {
-	row := db.Pool.QueryRow(ctx, "SELECT "+checkDefColumns+" FROM check_definitions WHERE uuid=$1", uuid)
-	return scanCheckDef(row)
+	s := db.scope(ctx)
+	query := "SELECT " + CheckDefColumns + " FROM check_definitions WHERE uuid = $1" + s.and(2)
+	args := []interface{}{uuid}
+	args = append(args, s.args()...)
+	row := db.Pool.QueryRow(ctx, query, args...)
+	return ScanCheckDef(row)
 }
 
 func (db *PostgresDB) CreateCheckDefinition(ctx context.Context, def models.CheckDefinition) (string, error) {
+	s := db.scope(ctx)
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
-	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
-	targetRegionsJSON := marshalStringSlice(def.TargetRegions)
+	alertChannelsJSON := MarshalAlertChannels(def.AlertChannels)
 
 	if def.Severity == "" {
 		def.Severity = "critical"
 	}
 
-	// insert
-	_, err := db.Pool.Exec(ctx, `INSERT INTO check_definitions
-    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name, run_mode, target_regions)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName), nilIfEmpty(def.RunMode), targetRegionsJSON)
+	var targetRegionsJSON []byte
+	if len(def.TargetRegions) > 0 {
+		targetRegionsJSON, _ = json.Marshal(def.TargetRegions)
+	}
 
+	args := []interface{}{
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled,
+		def.CreatedAt, def.UpdatedAt, def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent,
+		def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON,
+		def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil,
+		NilIfEmpty(def.EscalationPolicyName), NilIfEmpty(def.RunMode), targetRegionsJSON, def.EdgeMinUnhealthy,
+	}
+	args = append(args, s.args()...)
+
+	query := fmt.Sprintf(`INSERT INTO check_definitions
+    (uuid, name, project, group_name, type, description, enabled, created_at, updated_at, last_run, is_healthy, last_message, last_alert_sent, duration, actor_type, config, actor_config, severity, alert_channels, re_alert_interval, retry_count, retry_interval, maintenance_until, escalation_policy_name, run_mode, target_regions, edge_min_unhealthy%s)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27%s)`,
+		s.insertCol(), s.insertPlaceholder(28))
+
+	_, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return "", err
 	}
@@ -264,21 +383,34 @@ func (db *PostgresDB) CreateCheckDefinition(ctx context.Context, def models.Chec
 }
 
 func (db *PostgresDB) UpdateCheckDefinition(ctx context.Context, def models.CheckDefinition) error {
+	s := db.scope(ctx)
 	configJSON, _ := json.Marshal(def.Config)
 	actorConfigJSON, _ := json.Marshal(def.ActorConfig)
-	alertChannelsJSON := marshalAlertChannels(def.AlertChannels)
-	targetRegionsJSON := marshalStringSlice(def.TargetRegions)
+	alertChannelsJSON := MarshalAlertChannels(def.AlertChannels)
 
 	if def.Severity == "" {
 		def.Severity = "critical"
 	}
 
-	// update
-	cmdTag, err := db.Pool.Exec(ctx, `UPDATE check_definitions SET
-    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, config=$15, actor_config=$16, severity=$17, alert_channels=$18, re_alert_interval=$19, retry_count=$20, retry_interval=$21, maintenance_until=$22, escalation_policy_name=$23, run_mode=$24, target_regions=$25
-    WHERE uuid=$1`,
-		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled, time.Now(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent, def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON, def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil, nilIfEmpty(def.EscalationPolicyName), nilIfEmpty(def.RunMode), targetRegionsJSON)
+	var targetRegionsJSON []byte
+	if len(def.TargetRegions) > 0 {
+		targetRegionsJSON, _ = json.Marshal(def.TargetRegions)
+	}
 
+	args := []interface{}{
+		def.UUID, def.Name, def.Project, def.GroupName, def.Type, def.Description, def.Enabled,
+		time.Now().UTC(), def.LastRun, def.IsHealthy, def.LastMessage, def.LastAlertSent,
+		def.Duration, def.ActorType, configJSON, actorConfigJSON, def.Severity, alertChannelsJSON,
+		def.ReAlertInterval, def.RetryCount, def.RetryInterval, def.MaintenanceUntil,
+		NilIfEmpty(def.EscalationPolicyName), NilIfEmpty(def.RunMode), targetRegionsJSON, def.EdgeMinUnhealthy,
+	}
+	args = append(args, s.args()...)
+
+	query := fmt.Sprintf(`UPDATE check_definitions SET
+    name=$2, project=$3, group_name=$4, type=$5, description=$6, enabled=$7, updated_at=$8, last_run=$9, is_healthy=$10, last_message=$11, last_alert_sent=$12, duration=$13, actor_type=$14, config=$15, actor_config=$16, severity=$17, alert_channels=$18, re_alert_interval=$19, retry_count=$20, retry_interval=$21, maintenance_until=$22, escalation_policy_name=$23, run_mode=$24, target_regions=$25, edge_min_unhealthy=$26
+    WHERE uuid=$1%s`, s.and(27))
+
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -289,7 +421,11 @@ func (db *PostgresDB) UpdateCheckDefinition(ctx context.Context, def models.Chec
 }
 
 func (db *PostgresDB) DeleteCheckDefinition(ctx context.Context, uuid string) error {
-	cmdTag, err := db.Pool.Exec(ctx, "DELETE FROM check_definitions WHERE uuid=$1", uuid)
+	s := db.scope(ctx)
+	query := "DELETE FROM check_definitions WHERE uuid = $1" + s.and(2)
+	args := []interface{}{uuid}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -300,17 +436,20 @@ func (db *PostgresDB) DeleteCheckDefinition(ctx context.Context, uuid string) er
 }
 
 func (db *PostgresDB) ToggleCheckDefinition(ctx context.Context, uuid string, enabled bool) error {
+	s := db.scope(ctx)
+	now := time.Now().UTC()
 	var query string
-	now := time.Now()
 	if enabled {
 		// When re-enabling, reset health status so it shows as "pending"
 		// until the first probe result arrives, instead of displaying
 		// stale failure state from before the check was disabled.
-		query = "UPDATE check_definitions SET enabled=$2, is_healthy=true, last_message='', updated_at=$3 WHERE uuid=$1"
+		query = "UPDATE check_definitions SET enabled = $2, is_healthy = true, last_message = '', updated_at = $3 WHERE uuid = $1" + s.and(4)
 	} else {
-		query = "UPDATE check_definitions SET enabled=$2, updated_at=$3 WHERE uuid=$1"
+		query = "UPDATE check_definitions SET enabled = $2, updated_at = $3 WHERE uuid = $1" + s.and(4)
 	}
-	cmdTag, err := db.Pool.Exec(ctx, query, uuid, enabled, now)
+	args := []interface{}{uuid, enabled, now}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -321,11 +460,13 @@ func (db *PostgresDB) ToggleCheckDefinition(ctx context.Context, uuid string, en
 }
 
 func (db *PostgresDB) UpdateCheckStatus(ctx context.Context, status models.CheckStatus) error {
-	cmdTag, err := db.Pool.Exec(ctx, `UPDATE check_definitions SET
+	s := db.scope(ctx)
+	query := `UPDATE check_definitions SET
     last_run=$2, is_healthy=$3, last_message=$4, last_alert_sent=$5, updated_at=$6
-    WHERE uuid=$1`,
-		status.UUID, status.LastRun, status.IsHealthy, status.Message, status.LastAlertSent, time.Now())
-
+    WHERE uuid=$1` + s.and(7)
+	args := []interface{}{status.UUID, status.LastRun, status.IsHealthy, status.Message, status.LastAlertSent, time.Now().UTC()}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -336,9 +477,11 @@ func (db *PostgresDB) UpdateCheckStatus(ctx context.Context, status models.Check
 }
 
 func (db *PostgresDB) BulkToggleCheckDefinitions(ctx context.Context, uuids []string, enabled bool) (int64, error) {
-	cmdTag, err := db.Pool.Exec(ctx,
-		`UPDATE check_definitions SET enabled=$1, updated_at=$2 WHERE uuid = ANY($3)`,
-		enabled, time.Now(), uuids)
+	s := db.scope(ctx)
+	query := `UPDATE check_definitions SET enabled=$1, updated_at=$2 WHERE uuid = ANY($3)` + s.and(4)
+	args := []interface{}{enabled, time.Now().UTC(), uuids}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -346,8 +489,11 @@ func (db *PostgresDB) BulkToggleCheckDefinitions(ctx context.Context, uuids []st
 }
 
 func (db *PostgresDB) BulkDeleteCheckDefinitions(ctx context.Context, uuids []string) (int64, error) {
-	cmdTag, err := db.Pool.Exec(ctx,
-		`DELETE FROM check_definitions WHERE uuid = ANY($1)`, uuids)
+	s := db.scope(ctx)
+	query := `DELETE FROM check_definitions WHERE uuid = ANY($1)` + s.and(2)
+	args := []interface{}{uuids}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -359,27 +505,28 @@ func (db *PostgresDB) BulkUpdateAlertChannels(ctx context.Context, uuids []strin
 		return 0, nil
 	}
 
+	s := db.scope(ctx)
 	channelsJSON, err := json.Marshal(channels)
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal channels: %w", err)
 	}
 
-	var query string
-	now := time.Now()
+	now := time.Now().UTC()
+	tenantAnd := s.and(4)
 
 	switch action {
 	case "replace":
-		// Set alert_channels to the provided list directly
-		query = `UPDATE check_definitions SET alert_channels=$1, updated_at=$2 WHERE uuid = ANY($3)`
-		cmdTag, err := db.Pool.Exec(ctx, query, string(channelsJSON), now, uuids)
+		query := `UPDATE check_definitions SET alert_channels=$1, updated_at=$2 WHERE uuid = ANY($3)` + tenantAnd
+		args := []interface{}{string(channelsJSON), now, uuids}
+		args = append(args, s.args()...)
+		cmdTag, err := db.Pool.Exec(ctx, query, args...)
 		if err != nil {
 			return 0, err
 		}
 		return cmdTag.RowsAffected(), nil
 
 	case "add":
-		// For each row, parse existing JSON array, merge with new channels (dedup), write back
-		query = `UPDATE check_definitions SET
+		query := `UPDATE check_definitions SET
 			alert_channels = (
 				SELECT json_agg(DISTINCT ch)::text FROM (
 					SELECT jsonb_array_elements_text(COALESCE(NULLIF(alert_channels,''),'[]')::jsonb) AS ch
@@ -388,16 +535,17 @@ func (db *PostgresDB) BulkUpdateAlertChannels(ctx context.Context, uuids []strin
 				) sub
 			),
 			updated_at=$2
-			WHERE uuid = ANY($3)`
-		cmdTag, err := db.Pool.Exec(ctx, query, string(channelsJSON), now, uuids)
+			WHERE uuid = ANY($3)` + tenantAnd
+		args := []interface{}{string(channelsJSON), now, uuids}
+		args = append(args, s.args()...)
+		cmdTag, err := db.Pool.Exec(ctx, query, args...)
 		if err != nil {
 			return 0, err
 		}
 		return cmdTag.RowsAffected(), nil
 
 	case "remove":
-		// For each row, parse existing JSON array, filter out the specified channels, write back
-		query = `UPDATE check_definitions SET
+		query := `UPDATE check_definitions SET
 			alert_channels = (
 				SELECT COALESCE(json_agg(ch)::text, '[]') FROM (
 					SELECT jsonb_array_elements_text(COALESCE(NULLIF(alert_channels,''),'[]')::jsonb) AS ch
@@ -406,8 +554,10 @@ func (db *PostgresDB) BulkUpdateAlertChannels(ctx context.Context, uuids []strin
 				) sub
 			),
 			updated_at=$2
-			WHERE uuid = ANY($3)`
-		cmdTag, err := db.Pool.Exec(ctx, query, string(channelsJSON), now, uuids)
+			WHERE uuid = ANY($3)` + tenantAnd
+		args := []interface{}{string(channelsJSON), now, uuids}
+		args = append(args, s.args()...)
+		cmdTag, err := db.Pool.Exec(ctx, query, args...)
 		if err != nil {
 			return 0, err
 		}
@@ -419,9 +569,11 @@ func (db *PostgresDB) BulkUpdateAlertChannels(ctx context.Context, uuids []strin
 }
 
 func (db *PostgresDB) SetMaintenanceWindow(ctx context.Context, uuid string, until *time.Time) error {
-	cmdTag, err := db.Pool.Exec(ctx,
-		`UPDATE check_definitions SET maintenance_until=$2, updated_at=$3 WHERE uuid=$1`,
-		uuid, until, time.Now())
+	s := db.scope(ctx)
+	query := `UPDATE check_definitions SET maintenance_until=$2, updated_at=$3 WHERE uuid=$1` + s.and(4)
+	args := []interface{}{uuid, until, time.Now().UTC()}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -432,7 +584,9 @@ func (db *PostgresDB) SetMaintenanceWindow(ctx context.Context, uuid string, unt
 }
 
 func (db *PostgresDB) GetAllProjects(ctx context.Context) ([]string, error) {
-	rows, err := db.Pool.Query(ctx, "SELECT DISTINCT project FROM check_definitions ORDER BY project")
+	s := db.scope(ctx)
+	query := "SELECT DISTINCT project FROM check_definitions" + s.where(1) + " ORDER BY project"
+	rows, err := db.Pool.Query(ctx, query, s.args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -446,11 +600,13 @@ func (db *PostgresDB) GetAllProjects(ctx context.Context) ([]string, error) {
 		}
 		projects = append(projects, p)
 	}
-	return projects, nil
+	return projects, rows.Err()
 }
 
 func (db *PostgresDB) GetAllCheckTypes(ctx context.Context) ([]string, error) {
-	rows, err := db.Pool.Query(ctx, "SELECT DISTINCT type FROM check_definitions ORDER BY type")
+	s := db.scope(ctx)
+	query := "SELECT DISTINCT type FROM check_definitions" + s.where(1) + " ORDER BY type"
+	rows, err := db.Pool.Query(ctx, query, s.args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +620,7 @@ func (db *PostgresDB) GetAllCheckTypes(ctx context.Context) ([]string, error) {
 		}
 		types = append(types, t)
 	}
-	return types, nil
+	return types, rows.Err()
 }
 
 func (db *PostgresDB) ConvertConfigToCheckDefinitions(ctx context.Context, cfg *config.Config) error {
@@ -638,8 +794,12 @@ func (db *PostgresDB) GetAllDefaultTimeouts() map[string]string {
 // Settings
 
 func (db *PostgresDB) GetSetting(ctx context.Context, key string) (string, error) {
+	s := db.scope(ctx)
+	query := `SELECT value FROM settings WHERE key = $1` + s.and(2)
+	args := []interface{}{key}
+	args = append(args, s.args()...)
 	var value string
-	err := db.Pool.QueryRow(ctx, `SELECT value FROM settings WHERE key = $1`, key).Scan(&value)
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(&value)
 	if err != nil {
 		return "", err
 	}
@@ -647,6 +807,15 @@ func (db *PostgresDB) GetSetting(ctx context.Context, key string) (string, error
 }
 
 func (db *PostgresDB) SetSetting(ctx context.Context, key, value string) error {
+	s := db.scope(ctx)
+	if s != nil {
+		// Multi-tenant: ON CONFLICT includes tenant_id
+		_, err := db.Pool.Exec(ctx,
+			`INSERT INTO settings (key, value, updated_at, tenant_id) VALUES ($1, $2, NOW(), $3)
+			 ON CONFLICT (key, tenant_id) DO UPDATE SET value = $2, updated_at = NOW()`,
+			key, value, s.id)
+		return err
+	}
 	_, err := db.Pool.Exec(ctx,
 		`INSERT INTO settings (key, value, updated_at) VALUES ($1, $2, NOW())
 		 ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
@@ -693,17 +862,24 @@ func (db *PostgresDB) SaveCheckDefaults(ctx context.Context, defaults models.Che
 // Slack thread tracking
 
 func (db *PostgresDB) CreateSlackThread(ctx context.Context, checkUUID, channelID, threadTs, parentTs string) error {
-	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO slack_alert_threads (check_uuid, channel_id, thread_ts, parent_ts) VALUES ($1, $2, $3, $4)`,
-		checkUUID, channelID, threadTs, parentTs)
+	s := db.scope(ctx)
+	query := fmt.Sprintf(
+		`INSERT INTO slack_alert_threads (check_uuid, channel_id, thread_ts, parent_ts%s) VALUES ($1, $2, $3, $4%s)`,
+		s.insertCol(), s.insertPlaceholder(5))
+	args := []interface{}{checkUUID, channelID, threadTs, parentTs}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) GetUnresolvedThread(ctx context.Context, checkUUID string) (models.SlackAlertThread, error) {
+	s := db.scope(ctx)
+	query := `SELECT id, check_uuid, channel_id, thread_ts, parent_ts, is_resolved, created_at, resolved_at
+		 FROM slack_alert_threads WHERE check_uuid=$1 AND is_resolved=false` + s.and(2) + ` ORDER BY created_at DESC LIMIT 1`
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
 	var t models.SlackAlertThread
-	err := db.Pool.QueryRow(ctx,
-		`SELECT id, check_uuid, channel_id, thread_ts, parent_ts, is_resolved, created_at, resolved_at
-		 FROM slack_alert_threads WHERE check_uuid=$1 AND is_resolved=false ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(
 		&t.ID, &t.CheckUUID, &t.ChannelID, &t.ThreadTs, &t.ParentTs, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
 	if err != nil {
 		return models.SlackAlertThread{}, err
@@ -712,38 +888,52 @@ func (db *PostgresDB) GetUnresolvedThread(ctx context.Context, checkUUID string)
 }
 
 func (db *PostgresDB) ResolveThread(ctx context.Context, checkUUID string) error {
-	_, err := db.Pool.Exec(ctx,
-		`UPDATE slack_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false`,
-		checkUUID)
+	s := db.scope(ctx)
+	query := `UPDATE slack_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false` + s.and(2)
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) UpdateSlackThread(ctx context.Context, checkUUID, threadTs, channelID string) error {
-	_, err := db.Pool.Exec(ctx,
-		`UPDATE check_definitions SET slack_thread_ts=$2, slack_channel_id=$3, updated_at=NOW() WHERE uuid=$1`,
-		checkUUID, threadTs, channelID)
+	s := db.scope(ctx)
+	query := `UPDATE check_definitions SET slack_thread_ts=$2, slack_channel_id=$3, updated_at=NOW() WHERE uuid=$1` + s.and(4)
+	args := []interface{}{checkUUID, threadTs, channelID}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 // Alert silences
 
 func (db *PostgresDB) CreateSilence(ctx context.Context, silence models.AlertSilence) error {
-	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO alert_silences (scope, target, channel, silenced_by, silenced_at, expires_at, reason, active) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7)`,
-		silence.Scope, silence.Target, silence.Channel, silence.SilencedBy, silence.ExpiresAt, silence.Reason, silence.Active)
+	s := db.scope(ctx)
+	query := fmt.Sprintf(
+		`INSERT INTO alert_silences (scope, target, channel, silenced_by, silenced_at, expires_at, reason, active%s)
+		 VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7%s)`,
+		s.insertCol(), s.insertPlaceholder(8))
+	args := []interface{}{silence.Scope, silence.Target, silence.Channel, silence.SilencedBy, silence.ExpiresAt, silence.Reason, silence.Active}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) DeactivateSilence(ctx context.Context, scope, target string) error {
-	_, err := db.Pool.Exec(ctx,
-		`UPDATE alert_silences SET active = false WHERE scope = $1 AND target = $2 AND active = true`,
-		scope, target)
+	s := db.scope(ctx)
+	query := `UPDATE alert_silences SET active = false WHERE scope = $1 AND target = $2 AND active = true` + s.and(3)
+	args := []interface{}{scope, target}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) DeactivateSilenceByID(ctx context.Context, id int) error {
-	cmdTag, err := db.Pool.Exec(ctx,
-		`UPDATE alert_silences SET active = false WHERE id = $1 AND active = true`, id)
+	s := db.scope(ctx)
+	query := `UPDATE alert_silences SET active = false WHERE id = $1 AND active = true` + s.and(2)
+	args := []interface{}{id}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -754,10 +944,11 @@ func (db *PostgresDB) DeactivateSilenceByID(ctx context.Context, id int) error {
 }
 
 func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSilence, error) {
-	rows, err := db.Pool.Query(ctx,
-		`SELECT id, scope, target, channel, silenced_by, silenced_at, expires_at, reason
+	s := db.scope(ctx)
+	query := `SELECT id, scope, target, channel, silenced_by, silenced_at, expires_at, reason
 		FROM alert_silences
-		WHERE active = true AND (expires_at IS NULL OR expires_at > NOW())`)
+		WHERE active = true AND (expires_at IS NULL OR expires_at > NOW())` + s.and(1)
+	rows, err := db.Pool.Query(ctx, query, s.args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -765,53 +956,60 @@ func (db *PostgresDB) GetActiveSilences(ctx context.Context) ([]models.AlertSile
 
 	var silences []models.AlertSilence
 	for rows.Next() {
-		var s models.AlertSilence
-		if err := rows.Scan(&s.ID, &s.Scope, &s.Target, &s.Channel, &s.SilencedBy, &s.SilencedAt, &s.ExpiresAt, &s.Reason); err != nil {
+		var si models.AlertSilence
+		if err := rows.Scan(&si.ID, &si.Scope, &si.Target, &si.Channel, &si.SilencedBy, &si.SilencedAt, &si.ExpiresAt, &si.Reason); err != nil {
 			return nil, err
 		}
-		s.Active = true
-		silences = append(silences, s)
+		si.Active = true
+		silences = append(silences, si)
 	}
 	return silences, rows.Err()
 }
 
 func (db *PostgresDB) IsCheckSilenced(ctx context.Context, checkUUID, project string) (bool, error) {
-	var exists bool
-	err := db.Pool.QueryRow(ctx,
-		`SELECT EXISTS(
+	s := db.scope(ctx)
+	query := `SELECT EXISTS(
 			SELECT 1 FROM alert_silences
 			WHERE active = true
-			AND (expires_at IS NULL OR expires_at > NOW())
+			AND (expires_at IS NULL OR expires_at > NOW())` + s.and(3) + `
 			AND (
 				(scope = 'check' AND target = $1)
 				OR (scope = 'project' AND target = $2)
 			)
-		)`, checkUUID, project).Scan(&exists)
+		)`
+	args := []interface{}{checkUUID, project}
+	args = append(args, s.args()...)
+	var exists bool
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(&exists)
 	return exists, err
 }
 
 // IsChannelSilenced checks if a specific channel is silenced for a check.
 // Returns true if there's a silence matching the check/project AND (channel='' OR channel=channelName).
 func (db *PostgresDB) IsChannelSilenced(ctx context.Context, checkUUID, project, channelName string) (bool, error) {
-	var exists bool
-	err := db.Pool.QueryRow(ctx,
-		`SELECT EXISTS(
+	s := db.scope(ctx)
+	query := `SELECT EXISTS(
 			SELECT 1 FROM alert_silences
 			WHERE active = true
-			AND (expires_at IS NULL OR expires_at > NOW())
+			AND (expires_at IS NULL OR expires_at > NOW())` + s.and(4) + `
 			AND (
 				(scope = 'check' AND target = $1)
 				OR (scope = 'project' AND target = $2)
 			)
 			AND (channel = '' OR channel = $3)
-		)`, checkUUID, project, channelName).Scan(&exists)
+		)`
+	args := []interface{}{checkUUID, project, channelName}
+	args = append(args, s.args()...)
+	var exists bool
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(&exists)
 	return exists, err
 }
 
 func (db *PostgresDB) GetUnhealthyChecks(ctx context.Context) ([]models.CheckDefinition, error) {
-	rows, err := db.Pool.Query(ctx,
-		`SELECT uuid, name, project, group_name, type, is_healthy, last_message, last_run
-		 FROM check_definitions WHERE is_healthy = false AND enabled = true`)
+	s := db.scope(ctx)
+	query := `SELECT uuid, name, project, group_name, type, is_healthy, last_message, last_run
+		 FROM check_definitions WHERE is_healthy = false AND enabled = true` + s.and(1)
+	rows, err := db.Pool.Query(ctx, query, s.args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -820,36 +1018,63 @@ func (db *PostgresDB) GetUnhealthyChecks(ctx context.Context) ([]models.CheckDef
 	var checks []models.CheckDefinition
 	for rows.Next() {
 		var c models.CheckDefinition
-		if err := rows.Scan(&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &c.IsHealthy, &c.LastMessage, &c.LastRun); err != nil {
+		var isHealthy *bool
+		var lastMessage *string
+		var lastRun *time.Time
+		if err := rows.Scan(&c.UUID, &c.Name, &c.Project, &c.GroupName, &c.Type, &isHealthy, &lastMessage, &lastRun); err != nil {
 			return nil, err
+		}
+		if isHealthy != nil {
+			c.IsHealthy = *isHealthy
+		}
+		if lastMessage != nil {
+			c.LastMessage = *lastMessage
+		}
+		if lastRun != nil {
+			c.LastRun = *lastRun
 		}
 		checks = append(checks, c)
 	}
-	return checks, nil
+	return checks, rows.Err()
 }
 
 // Alert history
 
 func (db *PostgresDB) CreateAlertEvent(ctx context.Context, event models.AlertEvent) error {
-	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO alert_history (check_uuid, check_name, project, group_name, check_type, message, alert_type, region)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		event.CheckUUID, event.CheckName, event.Project, event.GroupName, event.CheckType, event.Message, event.AlertType, event.Region)
+	s := db.scope(ctx)
+	query := fmt.Sprintf(
+		`INSERT INTO alert_history (check_uuid, check_name, project, group_name, check_type, message, alert_type, region%s)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8%s)`,
+		s.insertCol(), s.insertPlaceholder(9))
+	args := []interface{}{event.CheckUUID, event.CheckName, event.Project, event.GroupName, event.CheckType, event.Message, event.AlertType, event.Region}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) ResolveAlertEvent(ctx context.Context, checkUUID string) error {
-	_, err := db.Pool.Exec(ctx,
-		`UPDATE alert_history SET is_resolved = true, resolved_at = NOW()
-		 WHERE check_uuid = $1 AND is_resolved = false`, checkUUID)
+	s := db.scope(ctx)
+	query := `UPDATE alert_history SET is_resolved = true, resolved_at = NOW()
+		 WHERE check_uuid = $1 AND is_resolved = false` + s.and(2)
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) GetAlertHistory(ctx context.Context, limit, offset int, filters models.AlertHistoryFilters) ([]models.AlertEvent, int, error) {
-	// Build WHERE clause dynamically
+	s := db.scope(ctx)
+
+	// Build WHERE clause dynamically; always start with tenant_id filter when scoped.
 	where := ""
 	args := []interface{}{}
 	argIdx := 1
+
+	if s != nil {
+		where += fmt.Sprintf(" AND tenant_id = $%d", argIdx)
+		args = append(args, s.id)
+		argIdx++
+	}
 
 	if filters.Project != "" {
 		where += fmt.Sprintf(" AND project = $%d", argIdx)
@@ -897,15 +1122,16 @@ func (db *PostgresDB) GetAlertHistory(ctx context.Context, limit, offset int, fi
 	return events, total, rows.Err()
 }
 
-// nilIfEmpty returns nil if s is empty, otherwise a pointer to s.
-func nilIfEmpty(s string) *string {
+// NilIfEmpty returns nil if s is empty, otherwise a pointer to s.
+func NilIfEmpty(s string) *string {
 	if s == "" {
 		return nil
 	}
 	return &s
 }
 
-func unmarshalConfig(checkType string, data []byte) (models.CheckConfig, error) {
+// UnmarshalConfig deserializes a check config JSON blob into the appropriate typed struct.
+func UnmarshalConfig(checkType string, data []byte) (models.CheckConfig, error) {
 	switch checkType {
 	case "http":
 		var conf models.HTTPCheckConfig
@@ -1004,7 +1230,9 @@ func unmarshalConfig(checkType string, data []byte) (models.CheckConfig, error) 
 // Escalation policies
 
 func (db *PostgresDB) GetAllEscalationPolicies(ctx context.Context) ([]models.EscalationPolicy, error) {
-	rows, err := db.Pool.Query(ctx, `SELECT id, name, steps, created_at FROM escalation_policies ORDER BY name`)
+	s := db.scope(ctx)
+	query := `SELECT id, name, steps, created_at FROM escalation_policies` + s.where(1) + ` ORDER BY name`
+	rows, err := db.Pool.Query(ctx, query, s.args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -1026,10 +1254,13 @@ func (db *PostgresDB) GetAllEscalationPolicies(ctx context.Context) ([]models.Es
 }
 
 func (db *PostgresDB) GetEscalationPolicyByName(ctx context.Context, name string) (models.EscalationPolicy, error) {
+	s := db.scope(ctx)
+	query := `SELECT id, name, steps, created_at FROM escalation_policies WHERE name=$1` + s.and(2)
+	args := []interface{}{name}
+	args = append(args, s.args()...)
 	var p models.EscalationPolicy
 	var stepsJSON []byte
-	err := db.Pool.QueryRow(ctx,
-		`SELECT id, name, steps, created_at FROM escalation_policies WHERE name=$1`, name).Scan(
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(
 		&p.ID, &p.Name, &stepsJSON, &p.CreatedAt)
 	if err != nil {
 		return models.EscalationPolicy{}, err
@@ -1041,24 +1272,29 @@ func (db *PostgresDB) GetEscalationPolicyByName(ctx context.Context, name string
 }
 
 func (db *PostgresDB) CreateEscalationPolicy(ctx context.Context, policy models.EscalationPolicy) error {
+	s := db.scope(ctx)
 	stepsJSON, err := json.Marshal(policy.Steps)
 	if err != nil {
 		return fmt.Errorf("failed to marshal steps: %w", err)
 	}
-	_, err = db.Pool.Exec(ctx,
-		`INSERT INTO escalation_policies (name, steps) VALUES ($1, $2)`,
-		policy.Name, stepsJSON)
+	query := fmt.Sprintf(`INSERT INTO escalation_policies (name, steps%s) VALUES ($1, $2%s)`,
+		s.insertCol(), s.insertPlaceholder(3))
+	args := []interface{}{policy.Name, stepsJSON}
+	args = append(args, s.args()...)
+	_, err = db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) UpdateEscalationPolicy(ctx context.Context, policy models.EscalationPolicy) error {
+	s := db.scope(ctx)
 	stepsJSON, err := json.Marshal(policy.Steps)
 	if err != nil {
 		return fmt.Errorf("failed to marshal steps: %w", err)
 	}
-	cmdTag, err := db.Pool.Exec(ctx,
-		`UPDATE escalation_policies SET steps=$2 WHERE name=$1`,
-		policy.Name, stepsJSON)
+	query := `UPDATE escalation_policies SET steps=$2 WHERE name=$1` + s.and(3)
+	args := []interface{}{policy.Name, stepsJSON}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -1069,7 +1305,11 @@ func (db *PostgresDB) UpdateEscalationPolicy(ctx context.Context, policy models.
 }
 
 func (db *PostgresDB) DeleteEscalationPolicy(ctx context.Context, name string) error {
-	cmdTag, err := db.Pool.Exec(ctx, `DELETE FROM escalation_policies WHERE name=$1`, name)
+	s := db.scope(ctx)
+	query := `DELETE FROM escalation_policies WHERE name=$1` + s.and(2)
+	args := []interface{}{name}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -1082,11 +1322,13 @@ func (db *PostgresDB) DeleteEscalationPolicy(ctx context.Context, name string) e
 // Escalation notifications
 
 func (db *PostgresDB) GetEscalationNotifications(ctx context.Context, checkUUID, policyName string) ([]models.EscalationNotification, error) {
-	rows, err := db.Pool.Query(ctx,
-		`SELECT id, check_uuid, policy_name, step_index, notified_at
+	s := db.scope(ctx)
+	query := `SELECT id, check_uuid, policy_name, step_index, notified_at
 		 FROM escalation_notifications
-		 WHERE check_uuid=$1 AND policy_name=$2
-		 ORDER BY step_index`, checkUUID, policyName)
+		 WHERE check_uuid=$1 AND policy_name=$2` + s.and(3) + ` ORDER BY step_index`
+	args := []interface{}{checkUUID, policyName}
+	args = append(args, s.args()...)
+	rows, err := db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1104,27 +1346,34 @@ func (db *PostgresDB) GetEscalationNotifications(ctx context.Context, checkUUID,
 }
 
 func (db *PostgresDB) CreateEscalationNotification(ctx context.Context, notification models.EscalationNotification) error {
-	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO escalation_notifications (check_uuid, policy_name, step_index, notified_at)
-		 VALUES ($1, $2, $3, $4)
+	s := db.scope(ctx)
+	query := fmt.Sprintf(
+		`INSERT INTO escalation_notifications (check_uuid, policy_name, step_index, notified_at%s)
+		 VALUES ($1, $2, $3, $4%s)
 		 ON CONFLICT (check_uuid, policy_name, step_index, notified_at) DO NOTHING`,
-		notification.CheckUUID, notification.PolicyName, notification.StepIndex, notification.NotifiedAt)
+		s.insertCol(), s.insertPlaceholder(5))
+	args := []interface{}{notification.CheckUUID, notification.PolicyName, notification.StepIndex, notification.NotifiedAt}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) DeleteEscalationNotifications(ctx context.Context, checkUUID string) error {
-	_, err := db.Pool.Exec(ctx,
-		`DELETE FROM escalation_notifications WHERE check_uuid=$1`, checkUUID)
+	s := db.scope(ctx)
+	query := `DELETE FROM escalation_notifications WHERE check_uuid=$1` + s.and(2)
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 // Alert channels
 
 func (db *PostgresDB) GetAllAlertChannels(ctx context.Context) ([]models.AlertChannel, error) {
-	rows, err := db.Pool.Query(ctx,
-		`SELECT id, name, type, config, created_at, updated_at
-		 FROM alert_channels
-		 ORDER BY name`)
+	s := db.scope(ctx)
+	query := `SELECT id, name, type, config, created_at, updated_at
+		 FROM alert_channels` + s.where(1) + ` ORDER BY name`
+	rows, err := db.Pool.Query(ctx, query, s.args()...)
 	if err != nil {
 		return nil, err
 	}
@@ -1142,10 +1391,13 @@ func (db *PostgresDB) GetAllAlertChannels(ctx context.Context) ([]models.AlertCh
 }
 
 func (db *PostgresDB) GetAlertChannelByName(ctx context.Context, name string) (models.AlertChannel, error) {
+	s := db.scope(ctx)
+	query := `SELECT id, name, type, config, created_at, updated_at
+		 FROM alert_channels WHERE name=$1` + s.and(2)
+	args := []interface{}{name}
+	args = append(args, s.args()...)
 	var ch models.AlertChannel
-	err := db.Pool.QueryRow(ctx,
-		`SELECT id, name, type, config, created_at, updated_at
-		 FROM alert_channels WHERE name=$1`, name).
+	err := db.Pool.QueryRow(ctx, query, args...).
 		Scan(&ch.ID, &ch.Name, &ch.Type, &ch.Config, &ch.CreatedAt, &ch.UpdatedAt)
 	if err != nil {
 		return ch, fmt.Errorf("alert channel not found: %w", err)
@@ -1154,16 +1406,21 @@ func (db *PostgresDB) GetAlertChannelByName(ctx context.Context, name string) (m
 }
 
 func (db *PostgresDB) CreateAlertChannel(ctx context.Context, channel models.AlertChannel) error {
-	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO alert_channels (name, type, config) VALUES ($1, $2, $3)`,
-		channel.Name, channel.Type, channel.Config)
+	s := db.scope(ctx)
+	query := fmt.Sprintf(`INSERT INTO alert_channels (name, type, config%s) VALUES ($1, $2, $3%s)`,
+		s.insertCol(), s.insertPlaceholder(4))
+	args := []interface{}{channel.Name, channel.Type, channel.Config}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) UpdateAlertChannel(ctx context.Context, channel models.AlertChannel) error {
-	cmdTag, err := db.Pool.Exec(ctx,
-		`UPDATE alert_channels SET type=$2, config=$3, updated_at=NOW() WHERE name=$1`,
-		channel.Name, channel.Type, channel.Config)
+	s := db.scope(ctx)
+	query := `UPDATE alert_channels SET type=$2, config=$3, updated_at=NOW() WHERE name=$1` + s.and(4)
+	args := []interface{}{channel.Name, channel.Type, channel.Config}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -1174,7 +1431,11 @@ func (db *PostgresDB) UpdateAlertChannel(ctx context.Context, channel models.Ale
 }
 
 func (db *PostgresDB) DeleteAlertChannel(ctx context.Context, name string) error {
-	cmdTag, err := db.Pool.Exec(ctx, `DELETE FROM alert_channels WHERE name=$1`, name)
+	s := db.scope(ctx)
+	query := `DELETE FROM alert_channels WHERE name=$1` + s.and(2)
+	args := []interface{}{name}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -1187,17 +1448,24 @@ func (db *PostgresDB) DeleteAlertChannel(ctx context.Context, name string) error
 // Telegram thread tracking
 
 func (db *PostgresDB) CreateTelegramThread(ctx context.Context, checkUUID, chatID string, messageID int) error {
-	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO telegram_alert_threads (check_uuid, chat_id, message_id) VALUES ($1, $2, $3)`,
-		checkUUID, chatID, messageID)
+	s := db.scope(ctx)
+	query := fmt.Sprintf(
+		`INSERT INTO telegram_alert_threads (check_uuid, chat_id, message_id%s) VALUES ($1, $2, $3%s)`,
+		s.insertCol(), s.insertPlaceholder(4))
+	args := []interface{}{checkUUID, chatID, messageID}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) GetUnresolvedTelegramThread(ctx context.Context, checkUUID string) (models.TelegramAlertThread, error) {
+	s := db.scope(ctx)
+	query := `SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
+		 FROM telegram_alert_threads WHERE check_uuid=$1 AND is_resolved=false` + s.and(2) + ` ORDER BY created_at DESC LIMIT 1`
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
 	var t models.TelegramAlertThread
-	err := db.Pool.QueryRow(ctx,
-		`SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
-		 FROM telegram_alert_threads WHERE check_uuid=$1 AND is_resolved=false ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(
 		&t.ID, &t.CheckUUID, &t.ChatID, &t.MessageID, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
 	if err != nil {
 		return models.TelegramAlertThread{}, err
@@ -1206,10 +1474,13 @@ func (db *PostgresDB) GetUnresolvedTelegramThread(ctx context.Context, checkUUID
 }
 
 func (db *PostgresDB) GetTelegramThreadByMessage(ctx context.Context, chatID string, messageID int) (models.TelegramAlertThread, error) {
+	s := db.scope(ctx)
+	query := `SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
+		 FROM telegram_alert_threads WHERE chat_id=$1 AND message_id=$2 AND is_resolved=false` + s.and(3)
+	args := []interface{}{chatID, messageID}
+	args = append(args, s.args()...)
 	var t models.TelegramAlertThread
-	err := db.Pool.QueryRow(ctx,
-		`SELECT id, check_uuid, chat_id, message_id, is_resolved, created_at, resolved_at
-		 FROM telegram_alert_threads WHERE chat_id=$1 AND message_id=$2 AND is_resolved=false`, chatID, messageID).Scan(
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(
 		&t.ID, &t.CheckUUID, &t.ChatID, &t.MessageID, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
 	if err != nil {
 		return models.TelegramAlertThread{}, err
@@ -1218,24 +1489,33 @@ func (db *PostgresDB) GetTelegramThreadByMessage(ctx context.Context, chatID str
 }
 
 func (db *PostgresDB) ResolveTelegramThread(ctx context.Context, checkUUID string) error {
-	_, err := db.Pool.Exec(ctx,
-		`UPDATE telegram_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false`,
-		checkUUID)
+	s := db.scope(ctx)
+	query := `UPDATE telegram_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false` + s.and(2)
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) CreateDiscordThread(ctx context.Context, checkUUID, channelID, messageID, threadID string) error {
-	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO discord_alert_threads (check_uuid, channel_id, message_id, thread_id) VALUES ($1, $2, $3, $4)`,
-		checkUUID, channelID, messageID, threadID)
+	s := db.scope(ctx)
+	query := fmt.Sprintf(
+		`INSERT INTO discord_alert_threads (check_uuid, channel_id, message_id, thread_id%s) VALUES ($1, $2, $3, $4%s)`,
+		s.insertCol(), s.insertPlaceholder(5))
+	args := []interface{}{checkUUID, channelID, messageID, threadID}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) GetUnresolvedDiscordThread(ctx context.Context, checkUUID string) (models.DiscordAlertThread, error) {
+	s := db.scope(ctx)
+	query := `SELECT id, check_uuid, channel_id, message_id, thread_id, is_resolved, created_at, resolved_at
+		 FROM discord_alert_threads WHERE check_uuid=$1 AND is_resolved=false` + s.and(2) + ` ORDER BY created_at DESC LIMIT 1`
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
 	var t models.DiscordAlertThread
-	err := db.Pool.QueryRow(ctx,
-		`SELECT id, check_uuid, channel_id, message_id, thread_id, is_resolved, created_at, resolved_at
-		 FROM discord_alert_threads WHERE check_uuid=$1 AND is_resolved=false ORDER BY created_at DESC LIMIT 1`, checkUUID).Scan(
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(
 		&t.ID, &t.CheckUUID, &t.ChannelID, &t.MessageID, &t.ThreadID, &t.IsResolved, &t.CreatedAt, &t.ResolvedAt)
 	if err != nil {
 		return models.DiscordAlertThread{}, err
@@ -1244,9 +1524,11 @@ func (db *PostgresDB) GetUnresolvedDiscordThread(ctx context.Context, checkUUID 
 }
 
 func (db *PostgresDB) ResolveDiscordThread(ctx context.Context, checkUUID string) error {
-	_, err := db.Pool.Exec(ctx,
-		`UPDATE discord_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false`,
-		checkUUID)
+	s := db.scope(ctx)
+	query := `UPDATE discord_alert_threads SET is_resolved=true, resolved_at=NOW() WHERE check_uuid=$1 AND is_resolved=false` + s.and(2)
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
@@ -1259,11 +1541,14 @@ func (db *PostgresDB) MigrateLegacyAlertFields(ctx context.Context) (int, error)
 // --- Multi-region check results ---
 
 func (db *PostgresDB) GetLatestRegionResults(ctx context.Context, checkUUID string) ([]models.CheckResult, error) {
-	rows, err := db.Pool.Query(ctx,
-		`SELECT DISTINCT ON (region) id, check_uuid, region, is_healthy, message, created_at, cycle_key, evaluated_at
+	s := db.scope(ctx)
+	query := `SELECT DISTINCT ON (region) id, check_uuid, region, is_healthy, message, created_at, cycle_key, evaluated_at
 		 FROM check_results
-		 WHERE check_uuid = $1
-		 ORDER BY region, created_at DESC`, checkUUID)
+		 WHERE check_uuid = $1` + s.and(2) + `
+		 ORDER BY region, created_at DESC`
+	args := []interface{}{checkUUID}
+	args = append(args, s.args()...)
+	rows, err := db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1281,23 +1566,30 @@ func (db *PostgresDB) GetLatestRegionResults(ctx context.Context, checkUUID stri
 }
 
 func (db *PostgresDB) InsertCheckResult(ctx context.Context, result models.CheckResult) error {
-	_, err := db.Pool.Exec(ctx,
-		`INSERT INTO check_results (check_uuid, region, is_healthy, message, created_at, cycle_key)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		result.CheckUUID, result.Region, result.IsHealthy, result.Message, result.CreatedAt, result.CycleKey)
+	s := db.scope(ctx)
+	query := fmt.Sprintf(
+		`INSERT INTO check_results (check_uuid, region, is_healthy, message, created_at, cycle_key%s)
+		 VALUES ($1, $2, $3, $4, $5, $6%s)`,
+		s.insertCol(), s.insertPlaceholder(7))
+	args := []interface{}{result.CheckUUID, result.Region, result.IsHealthy, result.Message, result.CreatedAt, result.CycleKey}
+	args = append(args, s.args()...)
+	_, err := db.Pool.Exec(ctx, query, args...)
 	return err
 }
 
 func (db *PostgresDB) GetUnevaluatedCycles(ctx context.Context, minRegions int, timeout time.Duration) ([]UnevaluatedCycle, error) {
+	s := db.scope(ctx)
 	cutoff := time.Now().Add(-timeout)
-	rows, err := db.Pool.Query(ctx,
-		`SELECT check_uuid, cycle_key, COUNT(DISTINCT region) AS region_count
+	query := `SELECT check_uuid, cycle_key, COUNT(DISTINCT region) AS region_count
 		 FROM check_results
-		 WHERE evaluated_at IS NULL
+		 WHERE evaluated_at IS NULL` + s.and(3) + `
 		 GROUP BY check_uuid, cycle_key
 		 HAVING COUNT(DISTINCT region) >= $1 OR MIN(created_at) < $2
 		 ORDER BY cycle_key ASC
-		 LIMIT 500`, minRegions, cutoff)
+		 LIMIT 500`
+	args := []interface{}{minRegions, cutoff}
+	args = append(args, s.args()...)
+	rows, err := db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1315,10 +1607,12 @@ func (db *PostgresDB) GetUnevaluatedCycles(ctx context.Context, minRegions int, 
 }
 
 func (db *PostgresDB) ClaimCycleForEvaluation(ctx context.Context, checkUUID string, cycleKey time.Time) (bool, error) {
-	cmdTag, err := db.Pool.Exec(ctx,
-		`UPDATE check_results SET evaluated_at = NOW()
-		 WHERE check_uuid = $1 AND cycle_key = $2 AND evaluated_at IS NULL`,
-		checkUUID, cycleKey)
+	s := db.scope(ctx)
+	query := `UPDATE check_results SET evaluated_at = NOW()
+		 WHERE check_uuid = $1 AND cycle_key = $2 AND evaluated_at IS NULL` + s.and(3)
+	args := []interface{}{checkUUID, cycleKey}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return false, err
 	}
@@ -1326,11 +1620,14 @@ func (db *PostgresDB) ClaimCycleForEvaluation(ctx context.Context, checkUUID str
 }
 
 func (db *PostgresDB) GetCycleResults(ctx context.Context, checkUUID string, cycleKey time.Time) ([]models.CheckResult, error) {
-	rows, err := db.Pool.Query(ctx,
-		`SELECT id, check_uuid, region, is_healthy, message, created_at, cycle_key, evaluated_at
+	s := db.scope(ctx)
+	query := `SELECT id, check_uuid, region, is_healthy, message, created_at, cycle_key, evaluated_at
 		 FROM check_results
-		 WHERE check_uuid = $1 AND cycle_key = $2
-		 ORDER BY created_at ASC`, checkUUID, cycleKey)
+		 WHERE check_uuid = $1 AND cycle_key = $2` + s.and(3) + `
+		 ORDER BY created_at ASC`
+	args := []interface{}{checkUUID, cycleKey}
+	args = append(args, s.args()...)
+	rows, err := db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1348,9 +1645,12 @@ func (db *PostgresDB) GetCycleResults(ctx context.Context, checkUUID string, cyc
 }
 
 func (db *PostgresDB) PurgeOldCheckResults(ctx context.Context, olderThan time.Duration) (int64, error) {
+	s := db.scope(ctx)
 	cutoff := time.Now().Add(-olderThan)
-	cmdTag, err := db.Pool.Exec(ctx,
-		`DELETE FROM check_results WHERE created_at < $1`, cutoff)
+	query := `DELETE FROM check_results WHERE created_at < $1` + s.and(2)
+	args := []interface{}{cutoff}
+	args = append(args, s.args()...)
+	cmdTag, err := db.Pool.Exec(ctx, query, args...)
 	if err != nil {
 		return 0, err
 	}

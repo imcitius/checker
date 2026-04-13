@@ -1,0 +1,1 @@
+ALTER TABLE check_definitions ADD COLUMN IF NOT EXISTS edge_min_unhealthy INTEGER NOT NULL DEFAULT 0;

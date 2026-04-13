@@ -358,7 +358,7 @@ export function Settings({
             </TabsTrigger>
             <TabsTrigger value="defaults">
               <SlidersHorizontal className="h-4 w-4 mr-1.5" />
-              Check Defaults
+              Defaults
             </TabsTrigger>
           </TabsList>
 
@@ -711,7 +711,7 @@ function CheckDefaultsTab({ channels }: { channels: AlertChannel[] }) {
           setEscalationPolicies(polRes.map((p: { name: string }) => p.name))
         }
       } catch {
-        toast.error('Failed to load check defaults')
+        toast.error('Failed to load defaults')
       } finally {
         setLoading(false)
       }
@@ -725,9 +725,9 @@ function CheckDefaultsTab({ channels }: { channels: AlertChannel[] }) {
     try {
       const saved = await api.updateCheckDefaults(defaults)
       setDefaults(saved)
-      toast.success('Check defaults saved')
+      toast.success('Defaults saved')
     } catch {
-      toast.error('Failed to save check defaults')
+      toast.error('Failed to save defaults')
     } finally {
       setSaving(false)
     }

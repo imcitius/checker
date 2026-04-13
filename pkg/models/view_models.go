@@ -18,5 +18,6 @@ type CheckViewModel struct {
 	Host        string // Host being checked
 	Periodicity string // How often the check runs
 	URL         string // URL for HTTP checks
-	IsSilenced  bool   // Whether alerts are silenced for this check
+	IsSilenced       bool     // Whether alerts are silenced for this check
+	SilencedChannels []string // Names of individually silenced channels (partial silence)
 }

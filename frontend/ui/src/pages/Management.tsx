@@ -31,7 +31,7 @@ import { useTopBarConfig } from '@/lib/topbar-context'
 import { useChecks } from '@/hooks/useChecks'
 import { useRef } from 'react'
 import { ImportDialog } from '@/components/ImportDialog'
-import { CheckEditDrawer } from '@/components/CheckEditDrawer'
+import { CheckEditDrawer, type ExtraFieldRenderer, type ExtraSectionRenderer } from '@/components/CheckEditDrawer'
 import { Input } from '@/components/ui/input'
 import { api as apiClient } from '@/lib/api'
 import { toast } from 'sonner'
@@ -214,9 +214,13 @@ export interface ManagementProps {
   bulkActions?: unknown[]
   /** Callback when a check is selected */
   onCheckSelect?: (uuid: string) => void
+  /** Extra fields rendered inside the CheckEditDrawer (after General section) */
+  checkEditExtraFields?: ExtraFieldRenderer
+  /** Extra sections rendered inside the CheckEditDrawer (before Maintenance Window) */
+  checkEditExtraSections?: ExtraSectionRenderer
 }
 
-export function Management(_props: ManagementProps = {}) {
+export function Management({ checkEditExtraFields, checkEditExtraSections }: ManagementProps = {}) {
   const topBarConfig = useTopBarConfig()
   const { wsStatus, checksMap } = useChecks()
   const [definitions, setDefinitions] = useState<CheckDefinition[]>([])
@@ -1417,6 +1421,8 @@ export function Management(_props: ManagementProps = {}) {
           saving={saving}
           existingProjects={uniqueProjects}
           existingGroups={uniqueGroups}
+          extraFields={checkEditExtraFields}
+          extraSections={checkEditExtraSections}
         />
 
         {/* Delete Confirmation */}
