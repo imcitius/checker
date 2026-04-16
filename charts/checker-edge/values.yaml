@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/imcitius/checker-edge
-  tag: 1.1.10
+  tag: 1.1.11
   pullPolicy: IfNotPresent
 
 # Required: Ensafely API key (create at app.ensafely.com → Account → API Keys)
@@ -21,6 +21,10 @@ workers: 10
 
 # Port for the health check HTTP server (used by liveness and readiness probes)
 healthPort: 9091
+
+# Heartbeat interval sent from this edge to the control plane over the
+# WebSocket. Shorter = faster offline detection, more idle traffic.
+heartbeatInterval: 10s
 
 replicaCount: 1
 

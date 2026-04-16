@@ -48,6 +48,8 @@ export interface Check {
   URL: string
   IsSilenced: boolean
   SilencedChannels?: string[]
+  RunMode?: string
+  TargetRegions?: string[]
 }
 
 type OnMessage = (msg: WSMessage) => void

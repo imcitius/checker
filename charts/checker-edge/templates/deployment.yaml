@@ -52,6 +52,8 @@ spec:
               value: {{ .Values.workers | quote }}
             - name: CHECKER_EDGE_HEALTH_PORT
               value: {{ .Values.healthPort | quote }}
+            - name: CHECKER_EDGE_HEARTBEAT_INTERVAL
+              value: {{ .Values.heartbeatInterval | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

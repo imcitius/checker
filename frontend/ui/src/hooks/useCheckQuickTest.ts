@@ -45,17 +45,16 @@ export function useCheckQuickTest() {
       }))
 
       try {
-        // Fetch full check definition to get target_regions etc.
-        const checkDef = await api.getCheck(uuid)
-        // Call test-remote (works for both platform and on-premises regions)
-        const response = await api.testCheckRemote(checkDef)
+        // UUID-based endpoint — server loads check from DB, no client round-trip.
+        const response = await api.testCheckByUUID(uuid)
         setResults((prev) => ({
           ...prev,
           [uuid]: { loading: false, results: response.results, error: null, cooldown: PER_CHECK_COOLDOWN_SECONDS },
         }))
       } catch (err) {
-        let message = err instanceof Error ? err.message : 'Unknown error'
+        let message = 'Unknown error'
         if (err instanceof Error) {
+          message = err.message
           try {
             const parsed = JSON.parse(err.message)
             if (parsed.retry_after) {
@@ -64,9 +63,22 @@ export function useCheckQuickTest() {
               if (retryAfter > 0) startGlobalCooldown(retryAfter)
             } else if (parsed.error) {
               message = parsed.error
+            } else if (parsed.message) {
+              message = parsed.message
             }
           } catch {
-            // not JSON, use raw
+            // not JSON, use raw message
+          }
+        } else if (typeof err === 'string') {
+          message = err
+        }
+        // Never show raw JSON to user — if still looks like JSON, extract best-effort
+        if (message.startsWith('{') || message.startsWith('[')) {
+          try {
+            const obj = JSON.parse(message)
+            message = obj.error || obj.message || obj.detail || 'Request failed'
+          } catch {
+            message = 'Request failed'
           }
         }
         setResults((prev) => ({

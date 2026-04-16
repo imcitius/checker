@@ -11,13 +11,16 @@ import { StatusBar } from '@/components/StatusBar'
 import { QuickTestInline } from '@/components/QuickTestButton'
 import { useChecks } from '@/hooks/useChecks'
 import { useCheckQuickTest } from '@/hooks/useCheckQuickTest'
+import { useEdgeStatus } from '@/hooks/useEdgeStatus'
 import { useEventLog } from '@/hooks/useEventLog'
 import { useFavicon } from '@/hooks/useFavicon'
 import { useKeyboard } from '@/hooks/useKeyboard'
 import { api } from '@/lib/api'
 import { useTopBarConfig } from '@/lib/topbar-context'
 import type { Check } from '@/lib/websocket'
-import { LayoutGrid, List, ArrowUp, ArrowDown, ArrowUpDown, ChevronsUpDown, ChevronsDownUp } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { LayoutGrid, List, ArrowUp, ArrowDown, ArrowUpDown, ChevronsUpDown, ChevronsDownUp, WifiOff } from 'lucide-react'
 
 const COLLAPSED_KEY = 'checker-collapsed-groups'
 const VIEW_MODE_KEY = 'checker-view-mode'
@@ -75,8 +78,43 @@ export function Dashboard() {
   const { entries } = useEventLog(checks, previousChecks)
   useFavicon(stats.unhealthy, stats.total - stats.disabled)
 
+  // Edge probe status for offline badges
+  const { offlineRegions } = useEdgeStatus()
+
   // Quick-test from dashboard
   const { getCheckState, runTest, isDisabled, getCooldownLabel } = useCheckQuickTest()
+
+  /**
+   * Show "⚠ Probe offline" badge when a check's only execution sources
+   * are on-premises probes that are all disconnected.
+   */
+  const extraBadges = useCallback(
+    (check: Check) => {
+      if (offlineRegions.size === 0) return null
+      const regions = check.TargetRegions
+      if (!regions || regions.length === 0) return null
+      // Only show if check runs exclusively on edge (on-premises) probes
+      if (check.RunMode !== 'edge_only') return null
+      // Check if ALL target regions are offline
+      const allOffline = regions.every((r) => offlineRegions.has(r))
+      if (!allOffline) return null
+      const offlineNames = regions.filter((r) => offlineRegions.has(r)).join(', ')
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="warning" className="text-[9px] px-1 py-0 gap-0.5 shrink-0">
+              <WifiOff className="h-2.5 w-2.5" />
+              Probe offline
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            Probe {offlineNames} is offline — health data may be stale
+          </TooltipContent>
+        </Tooltip>
+      )
+    },
+    [offlineRegions]
+  )
 
   const trailingAction = useCallback(
     (check: Check) => (
@@ -428,6 +466,7 @@ export function Dashboard() {
               sortColumn={sortColumn}
               sortDirection={sortDirection}
               onSort={handleSort}
+              extraBadges={extraBadges}
               trailingAction={trailingAction}
             />
           ) : (

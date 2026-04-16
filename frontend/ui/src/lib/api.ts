@@ -321,6 +321,10 @@ export function createApiClient(config: ApiClientConfig = {}) {
       request<{ results: TestRemoteLocationResult[] }>(
         '/api/check-definitions/test-remote', { method: 'POST', body: JSON.stringify(data) }
       ),
+    testCheckByUUID: (uuid: string) =>
+      request<{ results: TestRemoteLocationResult[] }>(
+        `/api/check-definitions/${uuid}/test-remote`, { method: 'POST' }
+      ),
     getProjects: () => request<string[]>('/api/metadata/projects'),
     getCheckTypes: () => request<string[]>('/api/metadata/check-types'),
     getDefaultTimeouts: () => request<Record<string, string>>('/api/metadata/default-timeouts'),
