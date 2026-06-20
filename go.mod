@@ -19,7 +19,7 @@ require (
 	github.com/slack-go/slack v0.19.0
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.5
-	go.mongodb.org/mongo-driver v1.17.2
+	go.mongodb.org/mongo-driver v1.17.7
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/grpc v1.79.3
 	gopkg.in/yaml.v2 v2.4.0
